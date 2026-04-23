@@ -62,7 +62,7 @@ Spectator.describe Ktistec::Util do
 
     it "preserves href on links, adds target and rel attributes to remote links" do
       content = "<a class='foo bar' href='https://remote/index.html'>a link</a>"
-      expect(described_class.sanitize(content)).to eq("<a href='https://remote/index.html' target='_blank' rel='external ugc'>a link</a>")
+      expect(described_class.sanitize(content)).to eq("<a href='https://remote/index.html' target='_blank' rel='external ugc noopener'>a link</a>")
     end
 
     it "preserves href on links, adds data-turbo-frame attribute to local links" do
@@ -110,13 +110,13 @@ Spectator.describe Ktistec::Util do
     # for quote posts (FEP-044f)
     it "preserves 'quote-inline' in class attribute on span elements" do
       content = "<span class='quote-inline foo'>RE: <a href='https://example.com/status/1'>link</a></span>"
-      expect(described_class.sanitize(content)).to eq("<span class='quote-inline'>RE: <a href='https://example.com/status/1' target='_blank' rel='external ugc'>link</a></span>")
+      expect(described_class.sanitize(content)).to eq("<span class='quote-inline'>RE: <a href='https://example.com/status/1' target='_blank' rel='external ugc noopener'>link</a></span>")
     end
 
     # for quote posts (FEP-044f)
     it "preserves 'quote-inline' in class attribute on p elements" do
       content = "<p class='quote-inline foo'>RE: <a href='https://example.com/status/1'>link</a></p>"
-      expect(described_class.sanitize(content)).to eq("<p class='quote-inline'>RE: <a href='https://example.com/status/1' target='_blank' rel='external ugc'>link</a></p>")
+      expect(described_class.sanitize(content)).to eq("<p class='quote-inline'>RE: <a href='https://example.com/status/1' target='_blank' rel='external ugc noopener'>link</a></p>")
     end
 
     it "doesn't corrupt element order" do
@@ -144,7 +144,7 @@ Spectator.describe Ktistec::Util do
     it "escapes ampersands in attribute values" do
       content = %Q(<a href="https://example.com/?a=1&amp;b=2">link</a>)
       expect(described_class.sanitize(content)).to eq(
-        "<a href='https://example.com/?a=1&amp;b=2' target='_blank' rel='external ugc'>link</a>",
+        "<a href='https://example.com/?a=1&amp;b=2' target='_blank' rel='external ugc noopener'>link</a>",
       )
     end
 
@@ -156,6 +156,40 @@ Spectator.describe Ktistec::Util do
         XML::HTMLParserOptions::RECOVER | XML::HTMLParserOptions::NODEFDTD | XML::HTMLParserOptions::NOIMPLIED,
       )
       expect(parsed.xpath_nodes("//img/@onerror")).to be_empty
+    end
+
+    it "drops href with javascript scheme" do
+      content = %Q(<a href="javascript:alert(1)">link</a>)
+      expect(described_class.sanitize(content)).to_not match(/href=/)
+    end
+
+    it "drops href with data scheme" do
+      content = %Q(<a href="data:text/html,&lt;script&gt;alert(1)&lt;/script&gt;">x</a>)
+      expect(described_class.sanitize(content)).to_not match(/href=/)
+    end
+
+    it "drops href with vbscript scheme" do
+      content = %Q(<a href="vbscript:msgbox(1)">x</a>)
+      expect(described_class.sanitize(content)).to_not match(/href=/)
+    end
+
+    it "preserves mailto href" do
+      content = %Q(<a href="mailto:alice@example.com">email</a>)
+      expect(described_class.sanitize(content)).to eq(
+        "<a href='mailto:alice@example.com' target='_blank' rel='external ugc noopener'>email</a>",
+      )
+    end
+
+    it "preserves tel href" do
+      content = %Q(<a href="tel:+15551234567">call</a>)
+      expect(described_class.sanitize(content)).to eq(
+        "<a href='tel:+15551234567' target='_blank' rel='external ugc noopener'>call</a>",
+      )
+    end
+
+    it "drops img src with javascript scheme" do
+      content = %Q(<img src="javascript:alert(1)">)
+      expect(described_class.sanitize(content)).to_not match(/src=/)
     end
   end
 

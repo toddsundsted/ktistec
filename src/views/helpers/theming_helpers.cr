@@ -99,7 +99,7 @@ module Ktistec::ViewHelper
       object ? "object-#{object.type.split("::").last.downcase}" : ""
     end
 
-    def actor_icon(actor, classes = nil)
+    def actor_icon(actor, classes = nil, *, include_actor_id = true)
       src = Utils::Avatar.url_for(actor)
       if actor
         if actor.deleted?
@@ -127,7 +127,7 @@ module Ktistec::ViewHelper
         %Q(alt="#{::HTML.escape(alt)}"),
         %Q(loading="lazy"),
       ]
-      attrs.push %Q(data-actor-id="#{actor.id}") if actor && actor.id
+      attrs.push %Q(data-actor-id="#{actor.id}") if actor && actor.id && include_actor_id
       attrs.unshift %Q(class="#{::HTML.escape(classes)}") if classes
       %Q(<img #{attrs.join(" ")}>)
     end

@@ -1,3 +1,4 @@
+require "html"
 require "uri"
 require "xml"
 
@@ -137,7 +138,7 @@ module Ktistec
           build << "<" << name
           if (keep = attributes[:keep]?)
             (keep & html.attributes.map(&.name)).each do |attribute|
-              build << " #{attribute}='#{html[attribute]}'"
+              build << " #{attribute}='#{::HTML.escape(html[attribute])}'"
             end
           end
           if (classes = attributes[:class]?) && (class_attribute = html.attributes["class"]?)
@@ -160,14 +161,14 @@ module Ktistec
                 classes.unshift(attr_value)
                 nil
               elsif attr_value
-                " #{attr_name}='#{attr_value}'"
+                " #{attr_name}='#{::HTML.escape(attr_value)}'"
               else
                 " #{attr_name}"
               end
             end
           end
           unless classes.empty?
-            build << " class='#{classes.join(' ').strip}'"
+            build << " class='#{::HTML.escape(classes.join(' ').strip)}'"
           end
           if temporary
             build << temporary.join

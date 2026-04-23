@@ -133,6 +133,30 @@ Spectator.describe Ktistec::Util do
       content = "&lt;foo&gt;"
       expect(described_class.sanitize(content)).to eq("&lt;foo&gt;")
     end
+
+    it "escapes single quotes in attribute values" do
+      content = %Q(<img src="y&apos; onerror=&apos;alert(1)">)
+      expect(described_class.sanitize(content)).to eq(
+        "<img src='y&#39; onerror=&#39;alert(1)' class='ui image' loading='lazy'>",
+      )
+    end
+
+    it "escapes ampersands in attribute values" do
+      content = %Q(<a href="https://example.com/?a=1&amp;b=2">link</a>)
+      expect(described_class.sanitize(content)).to eq(
+        "<a href='https://example.com/?a=1&amp;b=2' target='_blank' rel='external ugc'>link</a>",
+      )
+    end
+
+    it "the sanitized attribute payload does not parse back as a new attribute" do
+      content = %Q(<img src="y&apos; onerror=&apos;alert(1)">)
+      output = described_class.sanitize(content)
+      parsed = XML.parse_html(
+        "<div>#{output}</div>",
+        XML::HTMLParserOptions::RECOVER | XML::HTMLParserOptions::NODEFDTD | XML::HTMLParserOptions::NOIMPLIED,
+      )
+      expect(parsed.xpath_nodes("//img/@onerror")).to be_empty
+    end
   end
 
   describe ".to_sentence" do

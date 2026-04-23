@@ -337,6 +337,40 @@ Spectator.describe "helpers" do
         end
       end
     end
+
+    context "given an icon that contains a double-quote" do
+      before_each { actor.assign(icon: %(https://evil.example/x"onerror="alert(1)), name: "Test Actor").save }
+
+      it "escapes the src attribute" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly(%(https://evil.example/x"onerror="alert(1)))
+      end
+
+      it "does not produce an onerror attribute" do
+        expect(subject.xpath_nodes("//img/@onerror")).to be_empty
+      end
+    end
+
+    context "given classes containing a double-quote" do
+      let(classes) { %(ui" onclick="alert(1)) }
+
+      before_each { actor.assign(icon: "https://example.com/icon.png", name: "Test Actor").save }
+
+      it "escapes the class attribute value" do
+        expect(subject.xpath_nodes("//img/@class").map(&.text)).to contain_exactly(%(ui" onclick="alert(1)))
+      end
+
+      it "does not produce an onclick attribute" do
+        expect(subject.xpath_nodes("//img/@onclick")).to be_empty
+      end
+    end
+
+    context "given an icon with a javascript scheme" do
+      before_each { actor.assign(icon: "javascript:alert(1)", name: "Test Actor").save }
+
+      it "falls back to the default avatar" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/fallback.png")
+      end
+    end
   end
 
   describe ".actor_type_class" do

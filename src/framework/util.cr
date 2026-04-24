@@ -1,3 +1,4 @@
+require "html"
 require "uri"
 require "xml"
 
@@ -89,7 +90,7 @@ module Ktistec
     private ATTRIBUTES = {
       a: {
         keep:   ["href"],
-        remote: [{"target", "_blank"}, {"rel", "external ugc"}],
+        remote: [{"target", "_blank"}, {"rel", "external ugc noopener"}],
         local:  [{"data-turbo-frame", "_top"}],
         key:    "href",
       },
@@ -128,6 +129,16 @@ module Ktistec
       "br",
     ]
 
+    private SAFE_URL_SCHEMES = %w[http https mailto xmpp matrix tel]
+
+    private def safe_url?(value : String) : Bool
+      uri = URI.parse(value)
+      scheme = uri.scheme.try(&.downcase)
+      scheme.nil? || SAFE_URL_SCHEMES.includes?(scheme)
+    rescue URI::Error
+      false
+    end
+
     private def sanitize(html, build)
       name = html.name.downcase
       if html.element? && name.in?(STRIP)
@@ -137,7 +148,9 @@ module Ktistec
           build << "<" << name
           if (keep = attributes[:keep]?)
             (keep & html.attributes.map(&.name)).each do |attribute|
-              build << " #{attribute}='#{html[attribute]}'"
+              value = html[attribute]
+              next if attribute.in?("href", "src") && !safe_url?(value)
+              build << " #{attribute}='#{::HTML.escape(value)}'"
             end
           end
           if (classes = attributes[:class]?) && (class_attribute = html.attributes["class"]?)
@@ -160,14 +173,14 @@ module Ktistec
                 classes.unshift(attr_value)
                 nil
               elsif attr_value
-                " #{attr_name}='#{attr_value}'"
+                " #{attr_name}='#{::HTML.escape(attr_value)}'"
               else
                 " #{attr_name}"
               end
             end
           end
           unless classes.empty?
-            build << " class='#{classes.join(' ').strip}'"
+            build << " class='#{::HTML.escape(classes.join(' ').strip)}'"
           end
           if temporary
             build << temporary.join

@@ -22,7 +22,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install Crystal
         uses: crystal-lang/install-crystal@v1
         with:
@@ -30,7 +30,7 @@ jobs:
       - name: Install libraries
         run: sudo apt update && sudo apt install -y lld
       - name: Cache shards
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: lib
           key: shards-${{ runner.os }}-${{ hashFiles('shard.lock') }}
@@ -41,12 +41,12 @@ jobs:
       - name: Generate docs
         run: crystal docs
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs/
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   build-and-push-image:
     runs-on: ubuntu-latest
@@ -58,7 +58,7 @@ jobs:
     steps:       
     
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3

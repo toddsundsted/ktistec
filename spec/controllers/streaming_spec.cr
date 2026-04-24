@@ -112,11 +112,22 @@ Spectator.describe StreamingController do
     it "renders a Turbo Stream action" do
       expect(subject).to eq <<-HTML
       data: \
-      <turbo-stream action="replace" targets="img[data-actor-id='#{actor.id}']"><template>\
-      <img class="ui avatar image" src="#{actor.icon}">\
+      <turbo-stream action="replace" targets="img[data-actor-id='#{actor.id}']"><template>#{Ktistec::ViewHelper.actor_icon(actor, "ui avatar image", include_actor_id: false)}\
       </template></turbo-stream>
       \n
       HTML
+    end
+
+    context "given an icon that contains a double-quote" do
+      before_each { actor.assign(icon: %(x" onerror="alert(1))).save }
+
+      it "the sanitized attribute payload does not parse back as a new attribute" do
+        parsed = XML.parse_html(
+          "<div>#{subject}</div>",
+          XML::HTMLParserOptions::RECOVER | XML::HTMLParserOptions::NODEFDTD | XML::HTMLParserOptions::NOIMPLIED,
+        )
+        expect(parsed.xpath_nodes("//img/@onerror")).to be_empty
+      end
     end
   end
 

@@ -1,3 +1,6 @@
+require "html"
+require "uri"
+
 require "../../utils/avatar"
 
 module Ktistec::ViewHelper
@@ -96,7 +99,7 @@ module Ktistec::ViewHelper
       object ? "object-#{object.type.split("::").last.downcase}" : ""
     end
 
-    def actor_icon(actor, classes = nil)
+    def actor_icon(actor, classes = nil, *, include_actor_id = true)
       src = Utils::Avatar.url_for(actor)
       if actor
         if actor.deleted?
@@ -111,13 +114,21 @@ module Ktistec::ViewHelper
       else
         alt = "User"
       end
+      begin
+        uri = URI.parse(src)
+        unless uri.scheme.nil? || uri.scheme.in?(%w[http https])
+          src = "/images/avatars/fallback.png"
+        end
+      rescue URI::Error
+        src = "/images/avatars/fallback.png"
+      end
       attrs = [
-        %Q(src="#{src}"),
+        %Q(src="#{::HTML.escape(src)}"),
         %Q(alt="#{::HTML.escape(alt)}"),
         %Q(loading="lazy"),
       ]
-      attrs.push %Q(data-actor-id="#{actor.id}") if actor && actor.id
-      attrs.unshift %Q(class="#{classes}") if classes
+      attrs.push %Q(data-actor-id="#{actor.id}") if actor && actor.id && include_actor_id
+      attrs.unshift %Q(class="#{::HTML.escape(classes)}") if classes
       %Q(<img #{attrs.join(" ")}>)
     end
 

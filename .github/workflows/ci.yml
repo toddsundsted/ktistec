@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Download source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install Crystal
         uses: crystal-lang/install-crystal@v1
         with:
@@ -28,7 +28,7 @@ jobs:
           fi
         shell: bash
       - name: Cache shards
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: lib
           key: shards-${{ runner.os }}-${{ hashFiles('shard.lock') }}
@@ -39,21 +39,22 @@ jobs:
       - name: Run tests
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-               PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/libxml2/lib/pkgconfig" crystal spec
+               export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/libxml2/lib/pkgconfig"
+               link_flags=()
           elif [ "$RUNNER_OS" == "Linux" ]; then
-               # Run in batches of 25 to avoid some build memory/time limit that causes the suite set to be canceled.
-               find spec -name "*_spec.cr" -print0 | xargs -0 -n 25 crystal spec --link-flags="-fuse-ld=lld"
+               link_flags=(--link-flags=-fuse-ld=lld)
           fi
+          find spec -name "*_spec.cr" -print0 | xargs -0 -n 25 crystal spec "${link_flags[@]}"
         env:
           LOG_LEVEL: NONE
       - name: Build
         run: shards build
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
       - name: Cache node modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: node_modules
           key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}

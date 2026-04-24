@@ -129,9 +129,22 @@ module Ktistec
       "br",
     ]
 
+    # WHATWG URL parsing strips ASCII tab/LF/CR from anywhere in the
+    # input and leading/trailing C0 controls + ASCII space, before
+    # scheme parsing -- so "java\nscript:" navigates as "javascript:"
+    # while URI.parse sees no scheme. Reject any input containing C0
+    # controls (U+0000-U+001F), DEL (U+007F), or ASCII space anywhere:
+    # the spec-mandated cases (tab/LF/CR, leading C0/space) are
+    # required for correctness; the rest is defense in depth --
+    # legitimate URLs do not contain raw control or whitespace
+    # characters in their unencoded form.
+
+    private UNSAFE_URL_CHARS = /[\x00-\x20\x7f]/
+
     private SAFE_URL_SCHEMES = %w[http https mailto xmpp matrix tel]
 
-    private def safe_url?(value : String) : Bool
+    def safe_url?(value : String) : Bool
+      return false if value.matches?(UNSAFE_URL_CHARS)
       uri = URI.parse(value)
       scheme = uri.scheme.try(&.downcase)
       scheme.nil? || SAFE_URL_SCHEMES.includes?(scheme)

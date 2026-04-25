@@ -153,6 +153,20 @@ module ActivityPub
           self.urls = ["#{host}/@#{username}"]
         end
       end
+      if (icon = @icon) && !Ktistec::Util.safe_url?(icon)
+        self.icon = nil
+      end
+      if (image = @image) && !Ktistec::Util.safe_url?(image)
+        self.image = nil
+      end
+      if (urls = @urls)
+        safe = urls.select { |u| Ktistec::Util.safe_url?(u) }
+        self.urls = safe unless safe.size == urls.size
+      end
+      if (attachments = @attachments)
+        safe = attachments.select { |att| Ktistec::Util.safe_url?(att.value) }
+        self.attachments = safe unless safe.size == attachments.size
+      end
     end
 
     def before_save

@@ -2,6 +2,7 @@ require "uri"
 
 require "../../../framework/model"
 require "../../../framework/open"
+require "../../../framework/util"
 require "../../../ktistec/constants"
 require "../../activity_pub"
 
@@ -56,12 +57,17 @@ module Ktistec
         validates(iri) { unique_absolute_uri?(iri) if @@required_iri || iri.presence }
 
         private def unique_absolute_uri?(iri)
+          # don't interpolate the iri into the message: it may contain
+          # unsafe HTML, and `error_messages` interpolates the error
+          # message into pages without escaping.
           if iri.blank?
             "must be present"
           elsif !URI.parse(iri).absolute?
-            "must be an absolute URI: #{iri}"
+            "must be an absolute URI"
+          elsif !Ktistec::Util.safe_url?(iri)
+            "has an unsafe URL scheme"
           elsif (instance = self.class.find?(iri)) && instance.id != self.id
-            "must be unique: #{iri}"
+            "must be unique"
           end
         end
 

@@ -194,6 +194,50 @@ Spectator.describe ActivityPub::Actor do
     it "is valid" do
       expect(described_class.new(iri: "http://test.test/#{random_string}").valid?).to be_true
     end
+
+    it "rejects an IRI with a javascript scheme" do
+      actor = described_class.new(iri: "javascript:alert(1)")
+      expect(actor.valid?).to be_false
+      expect(actor.errors["iri"].first).to start_with("has an unsafe URL scheme")
+    end
+
+    it "rejects an IRI with a data scheme" do
+      actor = described_class.new(iri: "data:text/html,<script>alert(1)</script>")
+      expect(actor.valid?).to be_false
+      expect(actor.errors["iri"].first).to start_with("has an unsafe URL scheme")
+    end
+
+    it "scrubs icon with an unsafe URL scheme" do
+      actor = described_class.new(iri: "http://test.test/#{random_string}", icon: "javascript:alert(1)")
+      expect(actor.valid?).to be_true
+      expect(actor.icon).to be_nil
+    end
+
+    it "scrubs image with an unsafe URL scheme" do
+      actor = described_class.new(iri: "http://test.test/#{random_string}", image: "javascript:alert(1)")
+      expect(actor.valid?).to be_true
+      expect(actor.image).to be_nil
+    end
+
+    it "scrubs unsafe URL entries out of urls" do
+      actor = described_class.new(
+        iri: "http://test.test/#{random_string}",
+        urls: ["https://good.example/", "javascript:alert(1)", "data:text/html,x"],
+      )
+      expect(actor.valid?).to be_true
+      expect(actor.urls).to eq(["https://good.example/"])
+    end
+
+    it "scrubs attachments whose value has an unsafe URL" do
+      good = ActivityPub::Actor::Attachment.new("Website", "PropertyValue", "https://good.example")
+      bad = ActivityPub::Actor::Attachment.new("XSS", "PropertyValue", "javascript:alert(1)")
+      actor = described_class.new(
+        iri: "http://test.test/#{random_string}",
+        attachments: [good, bad],
+      )
+      expect(actor.valid?).to be_true
+      expect(actor.attachments).to eq([good])
+    end
   end
 
   let(json) do
@@ -229,14 +273,14 @@ Spectator.describe ActivityPub::Actor do
         "icon": {
           "type": "Image",
           "mediaType": "image/jpeg",
-          "url": "icon link"
+          "url": "icon-link"
         },
         "image": {
           "type": "Image",
           "mediaType": "image/jpeg",
-          "url": "image link"
+          "url": "image-link"
         },
-        "url":"url link",
+        "url":"url-link",
         "attachment": [
           {"name": "Blog", "type": "PropertyValue", "value": "https://somewhere.example.com/this-is-a-long-url-that-should-be-truncated"},
           {"name": "Website", "type": "PropertyValue", "value": "http://site.example.com"},
@@ -346,9 +390,9 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.featured).to eq("featured link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
-      expect(actor.icon).to eq("icon link")
-      expect(actor.image).to eq("image link")
-      expect(actor.urls).to eq(["url link"])
+      expect(actor.icon).to eq("icon-link")
+      expect(actor.image).to eq("image-link")
+      expect(actor.urls).to eq(["url-link"])
       expect(actor.shared_inbox).to be_nil
       expect(actor.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
 
@@ -368,7 +412,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     context "given an array of URLs" do
-      let(json) { super.gsub(/"url":"url link"/, %q|"url":["url one","url two"]|) }
+      let(json) { super.gsub(/"url":"url-link"/, %q|"url":["url one","url two"]|) }
 
       it "parses the array of URLs" do
         actor = described_class.from_json_ld(json)
@@ -399,9 +443,9 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.featured).to eq("featured link")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
-      expect(actor.icon).to eq("icon link")
-      expect(actor.image).to eq("image link")
-      expect(actor.urls).to eq(["url link"])
+      expect(actor.icon).to eq("icon-link")
+      expect(actor.image).to eq("image-link")
+      expect(actor.urls).to eq(["url-link"])
       expect(actor.shared_inbox).to be_nil
       expect(actor.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
 
@@ -421,7 +465,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     context "given an array of URLs" do
-      let(json) { super.gsub(/"url":"url link"/, %q|"url":["url one","url two"]|) }
+      let(json) { super.gsub(/"url":"url-link"/, %q|"url":["url one","url two"]|) }
 
       it "parses the array of URLs" do
         actor = described_class.new.from_json_ld(json)
@@ -451,7 +495,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "renders the URL" do
-      expect(actor.to_json_ld).to match(/"url":"url link"/)
+      expect(actor.to_json_ld).to match(/"url":"url-link"/)
     end
 
     context "given an array of URLs" do

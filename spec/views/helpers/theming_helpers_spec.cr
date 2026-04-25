@@ -369,7 +369,7 @@ Spectator.describe "helpers" do
     # depth, in case the scrub is ever bypassed or broken.
 
     context "given an icon with a javascript scheme" do
-      before_each { actor.assign(name: "Test Actor").save.assign(icon: "javascript:alert(1)").save }
+      before_each { actor.assign(name: "Test Actor").save.assign(icon: "javascript:alert(1)") }
 
       it "falls back to the default avatar" do
         expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/fallback.png")
@@ -377,7 +377,7 @@ Spectator.describe "helpers" do
     end
 
     context "given an icon with a control-character-obfuscated scheme" do
-      before_each { actor.assign(name: "Test Actor").save.assign(icon: "java\u0000script:alert(1)").save }
+      before_each { actor.assign(name: "Test Actor").save.assign(icon: "java\u0000script:alert(1)") }
 
       it "falls back to the default avatar" do
         expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/fallback.png")

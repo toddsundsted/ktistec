@@ -293,6 +293,14 @@ module ActivityPub
           end
         end
       end
+      if (urls = @urls)
+        safe = urls.select { |u| Ktistec::Util.safe_url?(u) }
+        self.urls = safe unless safe.size == urls.size
+      end
+      if (attachments = @attachments)
+        safe = attachments.select { |att| Ktistec::Util.safe_url?(att.url) }
+        self.attachments = safe unless safe.size == attachments.size
+      end
     end
 
     # indicates whether or not the content is best presented

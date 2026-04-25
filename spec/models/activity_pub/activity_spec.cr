@@ -18,6 +18,12 @@ Spectator.describe ActivityPub::Activity do
     it "is valid" do
       expect(described_class.new(iri: "https://test.test/#{random_string}").valid?).to be_true
     end
+
+    it "rejects an IRI with an unsafe URL scheme" do
+      activity = described_class.new(iri: "javascript:alert(1)")
+      expect(activity.valid?).to be_false
+      expect(activity.errors["iri"].first).to start_with("has an unsafe URL scheme")
+    end
   end
 
   let(json) do

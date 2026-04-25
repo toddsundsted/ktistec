@@ -239,6 +239,38 @@ Spectator.describe ActivityPub::Object do
     it "is valid" do
       expect(subject.valid?).to be_true
     end
+
+    it "rejects an IRI with a javascript scheme" do
+      object = described_class.new(iri: "javascript:alert(1)")
+      expect(object.valid?).to be_false
+      expect(object.errors["iri"].first).to start_with("has an unsafe URL scheme")
+    end
+
+    it "rejects an IRI with a data scheme" do
+      object = described_class.new(iri: "data:text/html,<script>alert(1)</script>")
+      expect(object.valid?).to be_false
+      expect(object.errors["iri"].first).to start_with("has an unsafe URL scheme")
+    end
+
+    it "scrubs unsafe URL entries out of urls" do
+      object = described_class.new(
+        iri: "https://test.test/#{random_string}",
+        urls: ["https://good.example/", "javascript:alert(1)", "data:text/html,x"],
+      )
+      expect(object.valid?).to be_true
+      expect(object.urls).to eq(["https://good.example/"])
+    end
+
+    it "scrubs attachments whose value has an unsafe URL" do
+      good = ActivityPub::Object::Attachment.new("https://good.example/pic.jpg", "image/jpeg")
+      bad = ActivityPub::Object::Attachment.new("javascript:alert(1)", "text/html")
+      object = described_class.new(
+        iri: "https://test.test/#{random_string}",
+        attachments: [good, bad],
+      )
+      expect(object.valid?).to be_true
+      expect(object.attachments).to eq([good])
+    end
   end
 
   context "given embedded objects" do
@@ -357,12 +389,12 @@ Spectator.describe ActivityPub::Object do
         ],
         "attachment":[
           {
-            "url":"attachment link",
+            "url":"attachment-link",
             "mediaType":"type",
             "name":"caption"
           }
         ],
-        "url":"url link"
+        "url":"url-link"
       }
     JSON
   end
@@ -404,8 +436,8 @@ Spectator.describe ActivityPub::Object do
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
       expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
-      expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
-      expect(object.urls).to eq(["url link"])
+      expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
+      expect(object.urls).to eq(["url-link"])
     end
 
     context "when quoteUrl property (FEP-044f compat) is present" do
@@ -508,7 +540,7 @@ Spectator.describe ActivityPub::Object do
     end
 
     context "when attachment url is null" do
-      let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":null|) }
+      let(json) { super.gsub(%q|"url":"attachment-link"|, %q|"url":null|) }
 
       it "is ignored" do
         object = described_class.from_json_ld(json).save
@@ -517,7 +549,7 @@ Spectator.describe ActivityPub::Object do
     end
 
     context "when attachment url is blank" do
-      let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":""|) }
+      let(json) { super.gsub(%q|"url":"attachment-link"|, %q|"url":""|) }
 
       it "is ignored" do
         object = described_class.from_json_ld(json).save
@@ -548,7 +580,7 @@ Spectator.describe ActivityPub::Object do
 
       it "deserializes focal point" do
         object = described_class.from_json_ld(json).save
-        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.2, -0.4})])
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption", {0.2, -0.4})])
       end
     end
 
@@ -557,7 +589,7 @@ Spectator.describe ActivityPub::Object do
 
       it "deserializes center focal point" do
         object = described_class.from_json_ld(json).save
-        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.0, 0.0})])
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption", {0.0, 0.0})])
       end
     end
 
@@ -566,7 +598,7 @@ Spectator.describe ActivityPub::Object do
 
       it "handles malformed focal point gracefully" do
         object = described_class.from_json_ld(json).save
-        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
       end
     end
 
@@ -647,8 +679,8 @@ Spectator.describe ActivityPub::Object do
       expect(object.hashtags.first).to match(Tag::Hashtag.new(name: "hashtag", href: "hashtag href"))
       expect(object.mentions.first).to match(Tag::Mention.new(name: "mention", href: "mention href"))
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
-      expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
-      expect(object.urls).to eq(["url link"])
+      expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
+      expect(object.urls).to eq(["url-link"])
     end
 
     context "when quoteUrl property (FEP-044f compat) is present" do
@@ -751,7 +783,7 @@ Spectator.describe ActivityPub::Object do
     end
 
     context "when attachment url is null" do
-      let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":null|) }
+      let(json) { super.gsub(%q|"url":"attachment-link"|, %q|"url":null|) }
 
       it "is ignored" do
         object = described_class.new.from_json_ld(json).save
@@ -760,7 +792,7 @@ Spectator.describe ActivityPub::Object do
     end
 
     context "when attachment url is blank" do
-      let(json) { super.gsub(%q|"url":"attachment link"|, %q|"url":""|) }
+      let(json) { super.gsub(%q|"url":"attachment-link"|, %q|"url":""|) }
 
       it "is ignored" do
         object = described_class.new.from_json_ld(json).save
@@ -791,7 +823,7 @@ Spectator.describe ActivityPub::Object do
 
       it "deserializes focal point" do
         object = described_class.new.from_json_ld(json).save
-        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.2, -0.4})])
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption", {0.2, -0.4})])
       end
     end
 
@@ -800,7 +832,7 @@ Spectator.describe ActivityPub::Object do
 
       it "deserializes center focal point" do
         object = described_class.new.from_json_ld(json).save
-        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption", {0.0, 0.0})])
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption", {0.0, 0.0})])
       end
     end
 
@@ -809,7 +841,7 @@ Spectator.describe ActivityPub::Object do
 
       it "handles malformed focal point gracefully" do
         object = described_class.new.from_json_ld(json).save
-        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment link", "type", "caption")])
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
       end
     end
 

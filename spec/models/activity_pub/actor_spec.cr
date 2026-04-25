@@ -202,9 +202,21 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "rejects an IRI with a data scheme" do
-      actor = described_class.new(iri: "data:text/html,<script>alert(1)</script>")
+      actor = described_class.new(iri: "data:text/plain,xyz")
       expect(actor.valid?).to be_false
       expect(actor.errors["iri"].first).to start_with("has an unsafe URL scheme")
+    end
+
+    it "rejects an IRI containing a double quote" do
+      actor = described_class.new(iri: %q(https://example.com/x"foo))
+      expect(actor.valid?).to be_false
+      expect(actor.errors["iri"].first).to eq("must be an absolute URI")
+    end
+
+    it "rejects an IRI containing an angle bracket" do
+      actor = described_class.new(iri: "https://example.com/x<script>")
+      expect(actor.valid?).to be_false
+      expect(actor.errors["iri"].first).to eq("must be an absolute URI")
     end
 
     it "scrubs icon with an unsafe URL scheme" do
@@ -496,6 +508,20 @@ Spectator.describe ActivityPub::Actor do
 
     it "renders the URL" do
       expect(actor.to_json_ld).to match(/"url":"url-link"/)
+    end
+
+    it "escapes JSON-breaking characters in publicKey id and owner" do
+      # the validator now rejects iris containing `"` etc., but the
+      # template-side escape is defense in depth -- a future code
+      # path that bypasses validation (skip_validation, fixtures,
+      # direct SQL) must not be able to inject JSON via actor.iri.
+      malicious = described_class.new(
+        iri: %q(https://example.com/x"foo),
+        pem_public_key: "fake-pem",
+      )
+      parsed = JSON.parse(malicious.to_json_ld)
+      expect(parsed.dig("publicKey", "id").as_s).to eq(%q(https://example.com/x"foo#main-key))
+      expect(parsed.dig("publicKey", "owner").as_s).to eq(%q(https://example.com/x"foo))
     end
 
     context "given an array of URLs" do

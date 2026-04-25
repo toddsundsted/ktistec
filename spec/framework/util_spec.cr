@@ -282,6 +282,10 @@ Spectator.describe Ktistec::Util do
     it "rejects a NUL (0x00) anywhere in the URL" do
       expect(described_class.safe_url?("https://example.com/\x00/path")).to be_false
     end
+
+    it "accepts URLs containing a single quote" do
+      expect(described_class.safe_url?("https://example.com/'foo")).to be_true
+    end
   end
 
   describe ".safe_iri?" do
@@ -330,6 +334,26 @@ Spectator.describe Ktistec::Util do
     it "rejects URLs with control characters" do
       expect(described_class.safe_iri?("java\nscript:alert(1)")).to be_false
     end
+
+    it "rejects URLs containing a single quote" do
+      expect(described_class.safe_iri?("https://example.com/'foo")).to be_false
+    end
+
+    it "rejects URLs containing a double quote" do
+      expect(described_class.safe_iri?(%q(https://example.com/"foo))).to be_false
+    end
+
+    it "rejects URLs containing a backslash" do
+      expect(described_class.safe_iri?(%q(https://example.com/\foo))).to be_false
+    end
+
+    it "rejects URLs containing a less-than sign" do
+      expect(described_class.safe_iri?("https://example.com/<foo")).to be_false
+    end
+
+    it "rejects URLs containing a greater-than sign" do
+      expect(described_class.safe_iri?("https://example.com/>foo")).to be_false
+    end
   end
 
   describe ".url_scheme" do
@@ -369,6 +393,18 @@ Spectator.describe Ktistec::Util do
 
     it "rejects URLs with control characters" do
       expect(described_class.absolute_uri?("http\nbad://example.com")).to be_false
+    end
+
+    it "rejects URLs containing a double quote" do
+      expect(described_class.absolute_uri?(%q(https://example.com/"foo))).to be_false
+    end
+
+    it "rejects URLs containing a less-than sign" do
+      expect(described_class.absolute_uri?("https://example.com/<foo")).to be_false
+    end
+
+    it "rejects URLs containing a greater-than sign" do
+      expect(described_class.absolute_uri?("https://example.com/>foo")).to be_false
     end
   end
 

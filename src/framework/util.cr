@@ -140,12 +140,21 @@ module Ktistec
     # - `safe_iri?` is for *identifier* URLs -- `iri` in ActivityPub
     #   records. These MUST be publicly dereferenceable URIs.
     #
-    # Both share a pre-filter that rejects any input containing C0
-    # controls (U+0000-U+001F), DEL (U+007F), or ASCII space
-    # anywhere. WHATWG URL parsing strips ASCII tab/LF/CR from
-    # anywhere and leading/trailing C0 + space before scheme parsing.
+    # Both pre-filter unsafe characters, but with different
+    # strictness. `safe_url?` rejects C0 controls (U+0000-U+001F),
+    # DEL (U+007F), and ASCII space anywhere -- WHATWG URL parsing
+    # strips these before scheme parsing. `safe_iri?` (and
+    # `absolute_uri?`) additionally reject `"`, `'`, `\`, `<`, `>`.
+    # RFC 3986 excludes `"`, `\`, `<`, and `>` from URI characters
+    # entirely; `'` is a sub-delim per the RFC but rejected here as
+    # a stricter project-level safety policy (no Fediverse-emitted
+    # IRI carries it in production data). Rejecting these at the
+    # validator prevents an IRI with one of these characters from
+    # reaching a raw template interpolation.
 
     private UNSAFE_URL_CHARS = /[\x00-\x20\x7f]/
+
+    private UNSAFE_IRI_CHARS = /[\x00-\x20\x7f"'\\<>]/
 
     # Extract via regex rather than `URI.parse` -- Crystal's URI
     # parser rejects some legitimate Fediverse URIs (e.g., ATProto's
@@ -158,11 +167,11 @@ module Ktistec
     SAFE_IRI_SCHEMES = %w[http https]
 
     def safe_url?(value : String) : Bool
-      safe_scheme?(value, SAFE_URL_SCHEMES)
+      safe_scheme?(value, SAFE_URL_SCHEMES, UNSAFE_URL_CHARS)
     end
 
     def safe_iri?(value : String) : Bool
-      safe_scheme?(value, SAFE_IRI_SCHEMES)
+      safe_scheme?(value, SAFE_IRI_SCHEMES, UNSAFE_IRI_CHARS)
     end
 
     def url_scheme(value : String) : String?
@@ -170,12 +179,12 @@ module Ktistec
     end
 
     def absolute_uri?(value : String) : Bool
-      return false if value.matches?(UNSAFE_URL_CHARS)
+      return false if value.matches?(UNSAFE_IRI_CHARS)
       !value.match(URL_SCHEME_RE).nil?
     end
 
-    private def safe_scheme?(value : String, allowlist : Array(String)) : Bool
-      return false if value.matches?(UNSAFE_URL_CHARS)
+    private def safe_scheme?(value : String, allowlist : Array(String), unsafe_chars : Regex) : Bool
+      return false if value.matches?(unsafe_chars)
       scheme = value.match(URL_SCHEME_RE).try(&.[1].downcase)
       scheme.nil? || allowlist.includes?(scheme)
     end

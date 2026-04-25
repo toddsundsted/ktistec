@@ -247,9 +247,21 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "rejects an IRI with a data scheme" do
-      object = described_class.new(iri: "data:text/html,<script>alert(1)</script>")
+      object = described_class.new(iri: "data:text/plain,xyz")
       expect(object.valid?).to be_false
       expect(object.errors["iri"].first).to start_with("has an unsafe URL scheme")
+    end
+
+    it "rejects an IRI containing a double quote" do
+      object = described_class.new(iri: %q(https://example.com/x"foo))
+      expect(object.valid?).to be_false
+      expect(object.errors["iri"].first).to eq("must be an absolute URI")
+    end
+
+    it "rejects an IRI containing an angle bracket" do
+      object = described_class.new(iri: "https://example.com/x<script>")
+      expect(object.valid?).to be_false
+      expect(object.errors["iri"].first).to eq("must be an absolute URI")
     end
 
     it "scrubs unsafe URL entries out of urls" do

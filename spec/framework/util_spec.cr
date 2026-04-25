@@ -226,6 +226,10 @@ Spectator.describe Ktistec::Util do
       expect(described_class.safe_url?("at://did:plc:abc/app.bsky.feed.post/123")).to be_true
     end
 
+    it "accepts did" do
+      expect(described_class.safe_url?("did:plc:abc")).to be_true
+    end
+
     it "rejects javascript" do
       expect(described_class.safe_url?("javascript:alert(1)")).to be_false
     end
@@ -317,6 +321,10 @@ Spectator.describe Ktistec::Util do
 
     it "rejects at" do
       expect(described_class.safe_iri?("at://did:plc:abc/app.bsky.feed.post/123")).to be_false
+    end
+
+    it "rejects did" do
+      expect(described_class.safe_iri?("did:plc:abc")).to be_false
     end
 
     it "rejects URLs with control characters" do

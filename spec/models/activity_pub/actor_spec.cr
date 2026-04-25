@@ -227,6 +227,17 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.valid?).to be_true
       expect(actor.urls).to eq(["https://good.example/"])
     end
+
+    it "drops emojis whose href is unsafe" do
+      good = Tag::Emoji.new(name: "smile", href: "https://example/emoji/smile.png")
+      bad = Tag::Emoji.new(name: "evil", href: "javascript:alert(1)")
+      actor = described_class.new(
+        iri: "http://test.test/#{random_string}",
+        emojis: [good, bad],
+      )
+      expect(actor.valid?).to be_true
+      expect(actor.emojis.to_a).to eq([good])
+    end
   end
 
   let(json) do

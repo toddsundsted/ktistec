@@ -135,7 +135,7 @@ module Ktistec
     # - `safe_url?` is for *display* URLs -- icon, image, urls, etc.
     #   Allowlist of schemes that are either safe to navigate (http,
     #   https) or protocol handlers (mailto, tel, xmpp, matrix,
-    #   magnet, ws, wss, at).
+    #   magnet, ws, wss, at, did).
     #
     # - `safe_iri?` is for *identifier* URLs -- `iri` in ActivityPub
     #   records. These MUST be publicly dereferenceable URIs.
@@ -153,7 +153,7 @@ module Ktistec
 
     private URL_SCHEME_RE = /^([a-zA-Z][a-zA-Z0-9.+\-]*):/
 
-    SAFE_URL_SCHEMES = %w[http https mailto tel xmpp matrix magnet ws wss at]
+    SAFE_URL_SCHEMES = %w[http https mailto tel xmpp matrix magnet ws wss at did]
 
     SAFE_IRI_SCHEMES = %w[http https]
 

@@ -182,6 +182,23 @@ module ActivityPub
           self.urls = safe
         end
       end
+      # custom emoji `href` (the icon URL) arrives raw from federated
+      # JSON-LD with no scheme check upstream. drop the entire emoji
+      # tag if href is unsafe -- `Tag::Emoji.validates(href)` requires
+      # presence, and `Ktistec::Emoji.emojify` calls `href.not_nil!`.
+      if (emojis = @emojis)
+        filtered = emojis.reject do |e|
+          if (href = e.href) && !Ktistec::Util.safe_url?(href)
+            Log.warn { "actor.emojis dropped scheme=#{Ktistec::Util.url_scheme(href).inspect} iri=#{iri.inspect}" }
+            true
+          else
+            false
+          end
+        end
+        if filtered.size != emojis.size
+          self.emojis = filtered
+        end
+      end
     end
 
     def before_save

@@ -319,6 +319,41 @@ module ActivityPub
           self.attachments = safe
         end
       end
+      # tag href values arrive raw from federated JSON-LD with no
+      # scheme check upstream. mention.href / hashtag.href: nil out
+      # unsafe entries (subclasses don't validate presence; render
+      # path uses mention_path / hashtag_path keyed on `name`).
+      # emoji.href: drop the entire tag -- `validates(href)` requires
+      # presence, and `Ktistec::Emoji.emojify` calls `href.not_nil!`.
+      if (mentions = @mentions)
+        mentions.each do |m|
+          if (href = m.href) && !Ktistec::Util.safe_url?(href)
+            Log.warn { "object.mention.href scheme=#{Ktistec::Util.url_scheme(href).inspect} iri=#{iri.inspect}" }
+            m.href = nil
+          end
+        end
+      end
+      if (hashtags = @hashtags)
+        hashtags.each do |h|
+          if (href = h.href) && !Ktistec::Util.safe_url?(href)
+            Log.warn { "object.hashtag.href scheme=#{Ktistec::Util.url_scheme(href).inspect} iri=#{iri.inspect}" }
+            h.href = nil
+          end
+        end
+      end
+      if (emojis = @emojis)
+        filtered = emojis.reject do |e|
+          if (href = e.href) && !Ktistec::Util.safe_url?(href)
+            Log.warn { "object.emojis dropped scheme=#{Ktistec::Util.url_scheme(href).inspect} iri=#{iri.inspect}" }
+            true
+          else
+            false
+          end
+        end
+        if filtered.size != emojis.size
+          self.emojis = filtered
+        end
+      end
     end
 
     # indicates whether or not the content is best presented

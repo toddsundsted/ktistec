@@ -227,17 +227,6 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.valid?).to be_true
       expect(actor.urls).to eq(["https://good.example/"])
     end
-
-    it "scrubs attachments whose value has an unsafe URL" do
-      good = ActivityPub::Actor::Attachment.new("Website", "PropertyValue", "https://good.example")
-      bad = ActivityPub::Actor::Attachment.new("XSS", "PropertyValue", "javascript:alert(1)")
-      actor = described_class.new(
-        iri: "http://test.test/#{random_string}",
-        attachments: [good, bad],
-      )
-      expect(actor.valid?).to be_true
-      expect(actor.attachments).to eq([good])
-    end
   end
 
   let(json) do

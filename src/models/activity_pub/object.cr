@@ -28,6 +28,8 @@ module ActivityPub
     include Ktistec::Model::Blockable
     include ActivityPub
 
+    Log = ::Log.for(self)
+
     @@table_name = "objects"
 
     # Note: a Question is an object, as per Mastodon's implementation:
@@ -293,13 +295,29 @@ module ActivityPub
           end
         end
       end
+      # `urls` and attachment URLs arrive from federated object
+      # documents and flow into Slang `href=`/`src=` attributes in
+      # templates. drop entries whose scheme is not on the `safe_url?`
+      # allowlist. log with the scheme so the operator can spot
+      # legitimate-but-unrecognized schemes arriving from new
+      # Fediverse software.
       if (urls = @urls)
         safe = urls.select { |u| Ktistec::Util.safe_url?(u) }
-        self.urls = safe unless safe.size == urls.size
+        if safe.size != urls.size
+          (urls - safe).each do |dropped|
+            Log.warn { "object.urls scheme=#{Ktistec::Util.url_scheme(dropped).inspect} iri=#{iri.inspect}" }
+          end
+          self.urls = safe
+        end
       end
       if (attachments = @attachments)
         safe = attachments.select { |att| Ktistec::Util.safe_url?(att.url) }
-        self.attachments = safe unless safe.size == attachments.size
+        if safe.size != attachments.size
+          (attachments - safe).each do |dropped|
+            Log.warn { "object.attachments scheme=#{Ktistec::Util.url_scheme(dropped.url).inspect} iri=#{iri.inspect}" }
+          end
+          self.attachments = safe
+        end
       end
     end
 

@@ -44,6 +44,8 @@ module ActivityPub
     include Ktistec::KeyPair
     include ActivityPub
 
+    Log = ::Log.for(self)
+
     ATTACHMENT_LIMIT = 6
 
     @@table_name = "actors"
@@ -153,19 +155,32 @@ module ActivityPub
           self.urls = ["#{host}/@#{username}"]
         end
       end
+      # `icon`, `image`, and entries in `urls` arrive from federated
+      # actor documents and flow into Slang `href=`/`src=` attributes
+      # in templates. drop entries whose scheme is not on the
+      # `safe_url?` allowlist. log with the scheme so the operator can
+      # spot legitimate-but-unrecognized schemes arriving from new
+      # Fediverse software (the allowlist will need an addition).
+      # `attachments` is intentionally NOT scrubbed: per Mastodon's
+      # `PropertyValue` convention the `value` field is freeform
+      # text/HTML/URL, not contractually a URL, and applying
+      # `safe_url?` to it would drop legitimate content.
       if (icon = @icon) && !Ktistec::Util.safe_url?(icon)
+        Log.warn { "actor.icon scheme=#{Ktistec::Util.url_scheme(icon).inspect} iri=#{iri.inspect}" }
         self.icon = nil
       end
       if (image = @image) && !Ktistec::Util.safe_url?(image)
+        Log.warn { "actor.image scheme=#{Ktistec::Util.url_scheme(image).inspect} iri=#{iri.inspect}" }
         self.image = nil
       end
       if (urls = @urls)
         safe = urls.select { |u| Ktistec::Util.safe_url?(u) }
-        self.urls = safe unless safe.size == urls.size
-      end
-      if (attachments = @attachments)
-        safe = attachments.select { |att| Ktistec::Util.safe_url?(att.value) }
-        self.attachments = safe unless safe.size == attachments.size
+        if safe.size != urls.size
+          (urls - safe).each do |dropped|
+            Log.warn { "actor.urls scheme=#{Ktistec::Util.url_scheme(dropped).inspect} iri=#{iri.inspect}" }
+          end
+          self.urls = safe
+        end
       end
     end
 

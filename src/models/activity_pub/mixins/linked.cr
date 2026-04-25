@@ -62,9 +62,9 @@ module Ktistec
           # message into pages without escaping.
           if iri.blank?
             "must be present"
-          elsif !URI.parse(iri).absolute?
+          elsif !Ktistec::Util.absolute_uri?(iri)
             "must be an absolute URI"
-          elsif !Ktistec::Util.safe_url?(iri)
+          elsif !Ktistec::Util.safe_iri?(iri)
             "has an unsafe URL scheme"
           elsif (instance = self.class.find?(iri)) && instance.id != self.id
             "must be unique"

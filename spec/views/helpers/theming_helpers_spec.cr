@@ -364,8 +364,20 @@ Spectator.describe "helpers" do
       end
     end
 
+    # Set icon after save so the model's `before_validate` property
+    # scrub does not null it -- this exercises the helper's defense in
+    # depth, in case the scrub is ever bypassed or broken.
+
     context "given an icon with a javascript scheme" do
-      before_each { actor.assign(icon: "javascript:alert(1)", name: "Test Actor").save }
+      before_each { actor.assign(name: "Test Actor").save.assign(icon: "javascript:alert(1)").save }
+
+      it "falls back to the default avatar" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/fallback.png")
+      end
+    end
+
+    context "given an icon with a control-character-obfuscated scheme" do
+      before_each { actor.assign(name: "Test Actor").save.assign(icon: "java\u0000script:alert(1)").save }
 
       it "falls back to the default avatar" do
         expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("/images/avatars/fallback.png")

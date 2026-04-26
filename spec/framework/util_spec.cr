@@ -559,11 +559,67 @@ Spectator.describe Ktistec::Util do
       end
     end
 
-    context "given a string" do
+    context "given a string that is not a link" do
       let(link) { "this is a string" }
 
       it "returns the string" do
         expect(described_class.wrap_link(link)).to eq(link)
+      end
+
+      context "with HTML metacharacters" do
+        let(link) { %q(<img onerror=x src=x>) }
+
+        it "escapes the string" do
+          expect(described_class.wrap_link(link)).to eq("&lt;img onerror=x src=x&gt;")
+        end
+
+        it "does not introduce an img element" do
+          expect(XML.parse_html(described_class.wrap_link(link), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+        end
+      end
+    end
+
+    context "given a link with HTML metacharacters" do
+      let(link) { %q(https://evil.example/"><img/onerror=x/src=y>) }
+
+      it "escapes the href attribute" do
+        expect(described_class.wrap_link(link)).to contain(%(href="https://evil.example/&quot;&gt;&lt;img/onerror=x/src=y&gt;"))
+      end
+
+      it "does not introduce an img element" do
+        expect(XML.parse_html(described_class.wrap_link(link), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+      end
+
+      it "does not introduce an img element" do
+        expect(XML.parse_html(described_class.wrap_link(link, tag: :span), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+      end
+    end
+
+    context "given a long link with HTML metacharacters" do
+      let(link) { %q(https://evil.example/"><img/onerror=x/src=y>/padding/padding) }
+
+      it "escapes the href attribute" do
+        expect(described_class.wrap_link(link)).to contain(%(href="https://evil.example/&quot;&gt;&lt;img/onerror=x/src=y&gt;/padding/padding"))
+      end
+
+      it "does not introduce a stray img element" do
+        expect(XML.parse_html(described_class.wrap_link(link), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+      end
+
+      it "does not introduce a stray img element" do
+        expect(XML.parse_html(described_class.wrap_link(link, tag: :span), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+      end
+    end
+
+    context "given a link with an unsafe scheme" do
+      let(link) { "javascript://example.com/%0Aalert(1)" }
+
+      it "escapes the string" do
+        expect(described_class.wrap_link(link)).to eq("javascript://example.com/%0Aalert(1)")
+      end
+
+      it "does not produce an anchor" do
+        expect(XML.parse_html(described_class.wrap_link(link), PARSER_OPTIONS).xpath_nodes("//a")).to be_empty
       end
     end
   end

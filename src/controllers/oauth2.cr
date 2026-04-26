@@ -320,6 +320,14 @@ class OAuth2Controller
           Log.debug { "Invalid `client_id`" }
           bad_request "Invalid `client_id`"
         end
+        # require client authentication: either `client_secret` (any
+        # client that registered with one) or a PKCE-protected auth
+        # code (the verifier was already validated against
+        # `code_challenge` above). `client_id` alone is not a secret.
+        unless client_secret_param || auth_code.code_challenge
+          Log.debug { "Client authentication required" }
+          unauthorized "Client authentication required"
+        end
         if client_secret_param
           unless client_secret_param == c.client_secret
             Log.debug { "Invalid `client_secret`" }

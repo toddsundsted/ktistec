@@ -21,9 +21,11 @@ class APIController
 
   Log = ::Log.for("api")
 
-  skip_auth ["/api/*"], OPTIONS
-  skip_auth ["/api/v1/apps"], POST
-  skip_auth ["/api/v1/instance", "/api/v2/instance", "/api/v1/instance/translation_languages", "/api/v1/custom_emojis"], GET
+  # `Ktistec::Auth` is the cookie-backed web-UI gate. the
+  # Mastodon-compatible API authenticates per-route via
+  # `env.account?` and returns its own JSON errors, so `/api/*`
+  # opts out across all methods.
+  skip_auth ["/api/*"], GET, POST, PUT, DELETE, PATCH, OPTIONS
 
   before_all "/api/*" do |env|
     env.response.headers.add("Access-Control-Allow-Origin", "*")

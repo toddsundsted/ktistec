@@ -90,6 +90,22 @@ Spectator.describe Ktistec::Auth do
         expect(response.cookies["__Host-RedirectPath"]?).to be_nil
       end
     end
+
+    context "with a bearer token" do
+      let(account) { register }
+      let_create(:oauth2_provider_client, named: :client)
+      let_create!(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+      it "fails to authenticate" do
+        get "/foo/bar/auth", HTTP::Headers{"Accept" => "text/html", "Authorization" => "Bearer #{access_token.token}"}
+        expect(response.status_code).to eq(401)
+      end
+
+      it "fails to authenticate" do
+        get "/foo/bar/auth", HTTP::Headers{"Accept" => "application/json", "Authorization" => "Bearer #{access_token.token}"}
+        expect(response.status_code).to eq(401)
+      end
+    end
   end
 
   describe "get /foo/bar/skip" do
@@ -140,6 +156,18 @@ Spectator.describe Ktistec::Auth do
       it "doesn't set a redirect cookie" do
         get "/foo/bar/skip", HTTP::Headers{"Accept" => "text/html", "Cookie" => "__Host-AuthToken=#{jwt}"}
         expect(response.cookies["__Host-RedirectPath"]?).to be_nil
+      end
+    end
+
+    context "with a bearer token" do
+      let(account) { register }
+      let_create(:oauth2_provider_client, named: :client)
+      let_create!(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+      it "proceeds" do
+        get "/foo/bar/skip", HTTP::Headers{"Accept" => "application/json", "Authorization" => "Bearer #{access_token.token}"}
+        expect(response.status_code).to eq(200)
+        expect(JSON.parse(response.body).dig("account", "id")).to eq(account.id)
       end
     end
   end

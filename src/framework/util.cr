@@ -276,10 +276,10 @@ module Ktistec
     #
     def wrap_link(str, include_scheme = false, length = 30, tag = :a)
       # `URI.parse` raises on some Fediverse URIs (e.g., ATProto's
-      # `at://did:plc:.../`). on failure, fall through to the else
-      # branch and return the string as plain text.
+      # `at://did:plc:.../`). on failure, fall through to the
+      # plain-text branch.
       uri = URI.parse(str) rescue nil
-      if uri && (scheme = uri.scheme) && (host = uri.host) && (path = uri.path)
+      if uri && (scheme = uri.scheme) && (host = uri.host) && (path = uri.path) && safe_url?(str)
         first = include_scheme ? "#{scheme}://#{host}#{path}" : "#{host}#{path}"
         rest = ""
         if first.size > length
@@ -287,23 +287,23 @@ module Ktistec
         end
         String.build do |io|
           if tag == :a
-            io << %Q|<a href="#{str}" target="_blank" rel="ugc">|
+            io << %Q|<a href="#{::HTML.escape(str)}" target="_blank" rel="ugc">|
           else
             io << %Q|<#{tag}>|
           end
           unless include_scheme
-            io << %Q|<span class="invisible">#{scheme}://</span>|
+            io << %Q|<span class="invisible">#{::HTML.escape(scheme)}://</span>|
           end
           if rest.presence
-            io << %Q|<span class="ellipsis">#{first}</span>|
-            io << %Q|<span class="invisible">#{rest}</span>|
+            io << %Q|<span class="ellipsis">#{::HTML.escape(first)}</span>|
+            io << %Q|<span class="invisible">#{::HTML.escape(rest)}</span>|
           else
-            io << %Q|<span>#{first}</span>|
+            io << %Q|<span>#{::HTML.escape(first)}</span>|
           end
           io << %Q|</#{tag}>|
         end
       else
-        str
+        ::HTML.escape(str)
       end
     end
 

@@ -8,7 +8,11 @@ module Ktistec
   class Auth < Kemal::Handler
     def call(env)
       return call_next(env) unless env.route_lookup.found?
-      return call_next(env) if env.session.account? || exclude_match?(env)
+      return call_next(env) if exclude_match?(env)
+      # this gate exists to protect cookie-backed browser navigation.
+      # bearer-token-derived sessions belong to API/MCP surfaces that
+      # opt into `skip_auth` and authenticate per-route.
+      return call_next(env) if env.session.account? && env.session.oauth_access_token_id.nil?
 
       # only apply on browser navigation
       if env.request.method == "GET" && env.accepts?("text/html")

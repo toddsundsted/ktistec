@@ -420,6 +420,19 @@ Spectator.describe OAuth2Controller do
         expect(json_body["token_type"]?).to eq("Bearer")
         expect(json_body["expires_in"]?).to eq(3600 * 24 * 30)
       end
+
+      context "without a client_secret" do
+        let(body) { super.gsub(/&client_secret=[^&]+/, "") }
+
+        it "returns an error" do
+          post "/oauth/token", headers: HTML_HEADERS, body: body
+          expect(response.status_code).to eq(401)
+        end
+
+        it "does not return an access token" do
+          expect { post "/oauth/token", headers: HTML_HEADERS, body: body }.not_to change { OAuth2::Provider::AccessToken.count }
+        end
+      end
     end
 
     context "with a JSON body" do

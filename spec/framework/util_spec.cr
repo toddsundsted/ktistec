@@ -135,9 +135,9 @@ Spectator.describe Ktistec::Util do
     end
 
     it "escapes single quotes in attribute values" do
-      content = %Q(<img src="y&apos; onerror=&apos;alert(1)">)
+      content = %Q(<img src="y&apos;onerror=&apos;alert(1)">)
       expect(described_class.sanitize(content)).to eq(
-        "<img src='y&#39; onerror=&#39;alert(1)' class='ui image' loading='lazy'>",
+        "<img src='y&#39;onerror=&#39;alert(1)' class='ui image' loading='lazy'>",
       )
     end
 
@@ -190,6 +190,221 @@ Spectator.describe Ktistec::Util do
     it "drops img src with javascript scheme" do
       content = %Q(<img src="javascript:alert(1)">)
       expect(described_class.sanitize(content)).to_not match(/src=/)
+    end
+  end
+
+  describe ".safe_url?" do
+    it "accepts http" do
+      expect(described_class.safe_url?("http://example.com/")).to be_true
+    end
+
+    it "accepts https" do
+      expect(described_class.safe_url?("https://example.com/")).to be_true
+    end
+
+    it "accepts relative paths" do
+      expect(described_class.safe_url?("/relative/path")).to be_true
+    end
+
+    it "accepts mailto" do
+      expect(described_class.safe_url?("mailto:alice@example.com")).to be_true
+    end
+
+    it "accepts tel" do
+      expect(described_class.safe_url?("tel:+15551234567")).to be_true
+    end
+
+    it "accepts magnet" do
+      expect(described_class.safe_url?("magnet:?xt=urn:btih:abcdef&dn=example")).to be_true
+    end
+
+    it "accepts wss" do
+      expect(described_class.safe_url?("wss://tracker.example/socket")).to be_true
+    end
+
+    it "accepts at" do
+      expect(described_class.safe_url?("at://did:plc:abc/app.bsky.feed.post/123")).to be_true
+    end
+
+    it "accepts did" do
+      expect(described_class.safe_url?("did:plc:abc")).to be_true
+    end
+
+    it "rejects javascript" do
+      expect(described_class.safe_url?("javascript:alert(1)")).to be_false
+    end
+
+    it "rejects data" do
+      expect(described_class.safe_url?("data:text/html,<script>alert(1)</script>")).to be_false
+    end
+
+    it "rejects vbscript" do
+      expect(described_class.safe_url?("vbscript:msgbox(1)")).to be_false
+    end
+
+    it "rejects file" do
+      expect(described_class.safe_url?("file:///etc/passwd")).to be_false
+    end
+
+    it "is case-insensitive" do
+      expect(described_class.safe_url?("JavaScript:alert(1)")).to be_false
+      expect(described_class.safe_url?("HTTPS://example.com/")).to be_true
+    end
+
+    it "rejects embedded newline in the scheme" do
+      expect(described_class.safe_url?("java\nscript:alert(1)")).to be_false
+    end
+
+    it "rejects embedded carriage return in the scheme" do
+      expect(described_class.safe_url?("java\rscript:alert(1)")).to be_false
+    end
+
+    it "rejects embedded tab in the scheme" do
+      expect(described_class.safe_url?("java\tscript:alert(1)")).to be_false
+    end
+
+    it "rejects embedded space in the scheme" do
+      expect(described_class.safe_url?("java script:alert(1)")).to be_false
+    end
+
+    it "rejects DEL (0x7f) in the scheme" do
+      expect(described_class.safe_url?("java\x7fscript:alert(1)")).to be_false
+    end
+
+    it "rejects leading control character" do
+      expect(described_class.safe_url?("\x00javascript:alert(1)")).to be_false
+    end
+
+    it "rejects leading whitespace" do
+      expect(described_class.safe_url?(" https://example.com/")).to be_false
+    end
+
+    it "rejects a NUL (0x00) anywhere in the URL" do
+      expect(described_class.safe_url?("https://example.com/\x00/path")).to be_false
+    end
+
+    it "accepts URLs containing a single quote" do
+      expect(described_class.safe_url?("https://example.com/'foo")).to be_true
+    end
+  end
+
+  describe ".safe_iri?" do
+    it "accepts http" do
+      expect(described_class.safe_iri?("http://example.com/")).to be_true
+    end
+
+    it "accepts https" do
+      expect(described_class.safe_iri?("https://example.com/")).to be_true
+    end
+
+    it "rejects javascript" do
+      expect(described_class.safe_iri?("javascript:alert(1)")).to be_false
+    end
+
+    it "rejects data" do
+      expect(described_class.safe_iri?("data:text/html,<script>alert(1)</script>")).to be_false
+    end
+
+    # schemes that pass `safe_url?` (display contexts) but not `safe_iri?` (identifier contexts)
+
+    it "rejects mailto" do
+      expect(described_class.safe_iri?("mailto:alice@example.com")).to be_false
+    end
+
+    it "rejects tel" do
+      expect(described_class.safe_iri?("tel:+15551234567")).to be_false
+    end
+
+    it "rejects magnet" do
+      expect(described_class.safe_iri?("magnet:?xt=urn:btih:abc")).to be_false
+    end
+
+    it "rejects wss" do
+      expect(described_class.safe_iri?("wss://tracker.example/socket")).to be_false
+    end
+
+    it "rejects at" do
+      expect(described_class.safe_iri?("at://did:plc:abc/app.bsky.feed.post/123")).to be_false
+    end
+
+    it "rejects did" do
+      expect(described_class.safe_iri?("did:plc:abc")).to be_false
+    end
+
+    it "rejects URLs with control characters" do
+      expect(described_class.safe_iri?("java\nscript:alert(1)")).to be_false
+    end
+
+    it "rejects URLs containing a single quote" do
+      expect(described_class.safe_iri?("https://example.com/'foo")).to be_false
+    end
+
+    it "rejects URLs containing a double quote" do
+      expect(described_class.safe_iri?(%q(https://example.com/"foo))).to be_false
+    end
+
+    it "rejects URLs containing a backslash" do
+      expect(described_class.safe_iri?(%q(https://example.com/\foo))).to be_false
+    end
+
+    it "rejects URLs containing a less-than sign" do
+      expect(described_class.safe_iri?("https://example.com/<foo")).to be_false
+    end
+
+    it "rejects URLs containing a greater-than sign" do
+      expect(described_class.safe_iri?("https://example.com/>foo")).to be_false
+    end
+  end
+
+  describe ".url_scheme" do
+    it "returns the lowercased scheme" do
+      expect(described_class.url_scheme("HTTPS://example.com/")).to eq("https")
+    end
+
+    it "returns nil" do
+      expect(described_class.url_scheme("/path")).to be_nil
+    end
+
+    it "returns nil" do
+      expect(described_class.url_scheme("")).to be_nil
+    end
+  end
+
+  describe ".absolute_uri?" do
+    it "accepts http" do
+      expect(described_class.absolute_uri?("http://example.com/")).to be_true
+    end
+
+    it "accepts https" do
+      expect(described_class.absolute_uri?("https://example.com/")).to be_true
+    end
+
+    it "accepts at" do
+      expect(described_class.absolute_uri?("at://did:plc:abc/app.bsky.feed.post/123")).to be_true
+    end
+
+    it "rejects relative path" do
+      expect(described_class.absolute_uri?("/path")).to be_false
+    end
+
+    it "rejects empty string" do
+      expect(described_class.absolute_uri?("")).to be_false
+    end
+
+    it "rejects URLs with control characters" do
+      expect(described_class.absolute_uri?("http\nbad://example.com")).to be_false
+    end
+
+    it "rejects URLs containing a double quote" do
+      expect(described_class.absolute_uri?(%q(https://example.com/"foo))).to be_false
+    end
+
+    it "rejects URLs containing a less-than sign" do
+      expect(described_class.absolute_uri?("https://example.com/<foo")).to be_false
+    end
+
+    it "rejects URLs containing a greater-than sign" do
+      expect(described_class.absolute_uri?("https://example.com/>foo")).to be_false
     end
   end
 

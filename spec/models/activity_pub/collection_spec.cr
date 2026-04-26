@@ -37,6 +37,12 @@ Spectator.describe ActivityPub::Collection do
     it "is valid" do
       expect(described_class.new(iri: "http://test.test/#{random_string}").save.valid?).to be_true
     end
+
+    it "rejects an IRI with an unsafe URL scheme" do
+      collection = described_class.new(iri: "javascript:alert(1)")
+      expect(collection.valid?).to be_false
+      expect(collection.errors["iri"].first).to start_with("has an unsafe URL scheme")
+    end
   end
 
   let(model) { ActivityPubModel.new(iri: "https://test.test/item") }

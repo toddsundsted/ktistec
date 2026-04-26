@@ -28,6 +28,8 @@ module ActivityPub
     include Ktistec::Model::Blockable
     include ActivityPub
 
+    Log = ::Log.for(self)
+
     @@table_name = "objects"
 
     # Note: a Question is an object, as per Mastodon's implementation:
@@ -291,6 +293,65 @@ module ActivityPub
               self.to = mention_hrefs
             end
           end
+        end
+      end
+      # `urls` and attachment URLs arrive from federated object
+      # documents and flow into Slang `href=`/`src=` attributes in
+      # templates. drop entries whose scheme is not on the `safe_url?`
+      # allowlist. log with the scheme so the operator can spot
+      # legitimate-but-unrecognized schemes arriving from new
+      # Fediverse software.
+      if (urls = @urls)
+        safe = urls.select { |u| Ktistec::Util.safe_url?(u) }
+        if safe.size != urls.size
+          (urls - safe).each do |dropped|
+            Log.warn { "object.urls scheme=#{Ktistec::Util.url_scheme(dropped).inspect} iri=#{iri.inspect}" }
+          end
+          self.urls = safe
+        end
+      end
+      if (attachments = @attachments)
+        safe = attachments.select { |att| Ktistec::Util.safe_url?(att.url) }
+        if safe.size != attachments.size
+          (attachments - safe).each do |dropped|
+            Log.warn { "object.attachments scheme=#{Ktistec::Util.url_scheme(dropped.url).inspect} iri=#{iri.inspect}" }
+          end
+          self.attachments = safe
+        end
+      end
+      # tag href values arrive raw from federated JSON-LD with no
+      # scheme check upstream. mention.href / hashtag.href: nil out
+      # unsafe entries (subclasses don't validate presence; render
+      # path uses mention_path / hashtag_path keyed on `name`).
+      # emoji.href: drop the entire tag -- `validates(href)` requires
+      # presence, and `Ktistec::Emoji.emojify` calls `href.not_nil!`.
+      if (mentions = @mentions)
+        mentions.each do |m|
+          if (href = m.href) && !Ktistec::Util.safe_url?(href)
+            Log.warn { "object.mention.href scheme=#{Ktistec::Util.url_scheme(href).inspect} iri=#{iri.inspect}" }
+            m.href = nil
+          end
+        end
+      end
+      if (hashtags = @hashtags)
+        hashtags.each do |h|
+          if (href = h.href) && !Ktistec::Util.safe_url?(href)
+            Log.warn { "object.hashtag.href scheme=#{Ktistec::Util.url_scheme(href).inspect} iri=#{iri.inspect}" }
+            h.href = nil
+          end
+        end
+      end
+      if (emojis = @emojis)
+        filtered = emojis.reject do |e|
+          if (href = e.href) && !Ktistec::Util.safe_url?(href)
+            Log.warn { "object.emojis dropped scheme=#{Ktistec::Util.url_scheme(href).inspect} iri=#{iri.inspect}" }
+            true
+          else
+            false
+          end
+        end
+        if filtered.size != emojis.size
+          self.emojis = filtered
         end
       end
     end

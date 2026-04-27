@@ -964,8 +964,11 @@ by (and content is addressed to) a username and a hostname.
 
 You must compile the Ktistec server executable from its source code.
 You will need to install a recent release of the [Crystal programming
-language](https://crystal-lang.org/install/). Ktistec requires at least
-SQLite3 version 3.35.0 (but see notes on [Sqlite3 compatibility](#sqlite3-compatibility)).
+language](https://crystal-lang.org/install/)
+(but see notes on [Crystal compatibility](#crystal-compatibility)).
+
+Ktistec requires at least SQLite3 version 3.35.0 (but see notes
+on [Sqlite3 compatibility](#sqlite3-compatibility)).
 
 To obtain the source code, clone the [Ktistec Github
 repo](https://github.com/toddsundsted/ktistec).
@@ -999,6 +1002,15 @@ something like:
 `Ktistec is ready to lead at http://0.0.0.0:3000`
 
 You can now connect to and configure the server.
+
+### Crystal Compatibility
+
+The following Crystal versions are known to have bugs that cause
+problems for Ktistec:
+
+| Crystal Version | Issue |
+|--|--|
+| 1.20.0 | problems with macros [link](https://github.com/crystal-lang/crystal/issues/16891)
 
 ### SQLite3 Compatibility
 

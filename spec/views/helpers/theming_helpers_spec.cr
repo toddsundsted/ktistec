@@ -385,6 +385,99 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".actor_background_style" do
+    let_build(:actor)
+
+    subject { self.class.actor_background_style(actor) }
+
+    it "returns nil" do
+      expect(subject).to be_nil
+    end
+
+    context "given an empty image" do
+      before_each { actor.assign(image: "").save }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    context "given an image" do
+      before_each { actor.assign(image: "http://example.com/banner.png").save }
+
+      it "wraps the URL" do
+        expect(subject).to eq(%(background-image: url("http://example.com/banner.png");))
+      end
+    end
+
+    context "given an image" do
+      before_each { actor.assign(image: "https://example.com/banner.png").save }
+
+      it "wraps the URL" do
+        expect(subject).to eq(%(background-image: url("https://example.com/banner.png");))
+      end
+    end
+
+    # the actor's `before_validate` drops unsafe schemes, so set
+    # the image after save to exercise the helper's defense.
+
+    context "given a javascript scheme" do
+      before_each { actor.save.assign(image: "javascript:alert(1)") }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    context "given a data scheme" do
+      before_each { actor.save.assign(image: "data:image/png;base64,AAAA") }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    context "given a non-navigational scheme" do
+      before_each { actor.save.assign(image: "mailto:nobody@example.com") }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    context "given an obfuscated scheme" do
+      before_each { actor.save.assign(image: "java\u0000script:alert(1)") }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    context "given a CSS-breakout payload" do
+      before_each { actor.save.assign(image: %[http://x);position:fixed;top:0;background-image:url(http://attacker/x]) }
+
+      it "percent-encodes the payload" do
+        expect(subject).to eq(%[background-image: url("http://x%29;position:fixed;top:0;background-image:url%28http://attacker/x");])
+      end
+    end
+
+    context "given a payload with a double quote" do
+      before_each { actor.save.assign(image: %(http://x"onerror=alert(1))) }
+
+      it "percent-encodes the double quote" do
+        expect(subject).to eq(%(background-image: url("http://x%22onerror=alert%281%29");))
+      end
+    end
+
+    context "given a payload with a backslash" do
+      before_each { actor.save.assign(image: %(http://x\\foo)) }
+
+      it "percent-encodes the backslash" do
+        expect(subject).to eq(%(background-image: url("http://x%5Cfoo");))
+      end
+    end
+  end
+
   describe ".actor_type_class" do
     let_build(:person)
 

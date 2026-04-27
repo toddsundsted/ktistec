@@ -6,9 +6,8 @@
       .variation-label Normal Actor Panel
       .ui.text.container
         .ui.actor.segments
-          - image = actor.image.presence
-          - style = image ? "background-image: url(#{actor.image});" : nil
-          .ui.basic.segment class=(!image ? "placeholder" : nil) style=style
+          - style = actor_background_style(actor)
+          .ui.basic.segment class=(style ? nil : "placeholder") style=style
             .actor-icon-container
               == actor_icon(actor)
               i.actor-type-overlay.user.icon
@@ -70,9 +69,8 @@
       .variation-label Normal Actor Card
       .ui.text.container
         .ui.fluid.actor.card
-          - image = actor.image.presence
-          - style = image ? "background-image: url(#{actor.image});" : nil
-          .content class=(!image ? "placeholder" : nil) style=style
+          - style = actor_background_style(actor)
+          .content class=(style ? nil : "placeholder") style=style
             == actor_icon(actor)
           .extra.content
             a.ui.header href="#" = actor.display_name

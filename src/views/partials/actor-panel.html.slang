@@ -7,9 +7,8 @@
       br: a href=actor.display_link = actor.handle
       br: em This actor is blocked!
   - else
-    - image = actor.image.presence
-    - style = image ? "background-image: url(#{actor.image});" : nil
-    .ui.basic.segment class=(!image ? "placeholder" : nil) style=style
+    - style = actor_background_style(actor)
+    .ui.basic.segment class=(style ? nil : "placeholder") style=style
       .actor-icon-container
         == actor_icon(actor)
         == actor_type(actor)

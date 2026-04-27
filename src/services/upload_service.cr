@@ -2,6 +2,8 @@ require "file_utils"
 require "uuid"
 require "kemal"
 
+require "../ktistec/constants"
+
 module UploadService
   Log = ::Log.for(self)
 
@@ -66,12 +68,15 @@ module UploadService
   ) : UploadResult
     UploadResult.new.tap do |result|
       file_size = file.size
+      extension = File.extname(filename).downcase
       if file_size == 0
         result.add_error("file", "File cannot be empty")
       elsif max_size && file_size > max_size
         result.add_error("file", "File size exceeds maximum (#{max_size} bytes)")
+      elsif !Ktistec::Constants::SUPPORTED_UPLOAD_EXTENSIONS.includes?(extension)
+        result.add_error("file", "File type not allowed")
       else
-        directory, filename = generate_storage_path(actor_id, File.extname(filename))
+        directory, filename = generate_storage_path(actor_id, extension)
         full_dir_path = File.join(public_folder, directory)
         full_file_path = File.join(full_dir_path, filename)
         begin

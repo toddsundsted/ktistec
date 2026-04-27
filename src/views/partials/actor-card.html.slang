@@ -5,9 +5,8 @@
     .blocked.content
       em This actor is blocked!
   - else
-    - image = actor.image.presence
-    - style = image ? "background-image: url(#{actor.image});" : nil
-    .content class=(!image ? "placeholder" : nil) style=style
+    - style = actor_background_style(actor)
+    .content class=(style ? nil : "placeholder") style=style
       == actor_icon(actor)
   .extra.content
     - if _account

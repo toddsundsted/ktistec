@@ -21,7 +21,7 @@ Spectator.describe UploadService do
   end
 
   describe ".upload" do
-    let(filename) { "test.txt" }
+    let(filename) { "test.png" }
 
     let(file_content) { "test content" }
 
@@ -36,7 +36,7 @@ Spectator.describe UploadService do
       pre_condition { expect { result.valid? }.to be_true }
 
       it "generates valid file path" do
-        expect(result.file_path).to match(/^\/uploads\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]+\/#{owner.id!}\.txt$/)
+        expect(result.file_path).to match(/^\/uploads\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]+\/#{owner.id!}\.png$/)
       end
 
       it "generates correct URI" do
@@ -118,6 +118,66 @@ Spectator.describe UploadService do
         expect(File.exists?(uploads_dir)).to be_false
       end
     end
+
+    context "with a disallowed extension" do
+      pre_condition { expect { result.valid? }.to be_false }
+
+      context "given an HTML file" do
+        let(filename) { "evil.html" }
+
+        it "returns error" do
+          expect(result.errors["file"]).to have(/not allowed/)
+        end
+      end
+
+      context "given an SVG" do
+        let(filename) { "evil.svg" }
+
+        it "returns error" do
+          expect(result.errors["file"]).to have(/not allowed/)
+        end
+      end
+
+      context "given a script" do
+        let(filename) { "evil.js" }
+
+        it "returns error" do
+          expect(result.errors["file"]).to have(/not allowed/)
+        end
+      end
+
+      context "given no extension" do
+        let(filename) { "evil" }
+
+        it "returns error" do
+          expect(result.errors["file"]).to have(/not allowed/)
+        end
+      end
+    end
+
+    context "with an allowed video extension" do
+      let(filename) { "movie.mp4" }
+
+      it "uploads successfully" do
+        expect(result.valid?).to be_true
+      end
+    end
+
+    context "with an allowed audio extension" do
+      let(filename) { "song.flac" }
+
+      it "uploads successfully" do
+        expect(result.valid?).to be_true
+      end
+    end
+
+    context "with an uppercase extension" do
+      let(filename) { "PHOTO.JPG" }
+
+      it "uploads successfully" do
+        expect(result.valid?).to be_true
+      end
+    end
   end
 
   describe ".delete" do
@@ -126,7 +186,7 @@ Spectator.describe UploadService do
         tempfile = File.tempfile("upload_test")
         tempfile.print("test content")
         tempfile.rewind
-        result = UploadService.upload(tempfile, "test.txt", owner.id!, public_folder: temp_dir)
+        result = UploadService.upload(tempfile, "test.png", owner.id!, public_folder: temp_dir)
         result.file_path.not_nil!
       end
 
@@ -149,7 +209,7 @@ Spectator.describe UploadService do
       end
 
       it "includes deleted paths" do
-        expect(result.deleted_paths).to have(/#{owner.id!}.txt/)
+        expect(result.deleted_paths).to have(/#{owner.id!}.png/)
       end
     end
 
@@ -160,7 +220,7 @@ Spectator.describe UploadService do
         tempfile = File.tempfile("upload_test")
         tempfile.print("test content")
         tempfile.rewind
-        result = UploadService.upload(tempfile, "test.txt", other.id!, public_folder: temp_dir)
+        result = UploadService.upload(tempfile, "test.png", other.id!, public_folder: temp_dir)
         result.file_path.not_nil!
       end
 

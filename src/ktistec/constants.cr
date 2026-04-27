@@ -36,28 +36,37 @@ module Ktistec
     IMAGE_SIZE_LIMIT = 10_485_760
 
     SUPPORTED_IMAGE_TYPES = %w[
+      image/apng
+      image/avif
       image/bmp
       image/gif
       image/jpeg
       image/png
-      image/svg+xml
-      image/x-icon
-      image/apng
       image/webp
+      image/x-icon
     ]
 
     SUPPORTED_VIDEO_TYPES = %w[
       video/mp4
-      video/webm
       video/ogg
+      video/quicktime
+      video/webm
+      video/x-m4v
     ]
 
     SUPPORTED_AUDIO_TYPES = %w[
-      audio/mpeg
-      audio/mp4
-      audio/webm
-      audio/ogg
       audio/flac
+      audio/mp4
+      audio/mpeg
+      audio/ogg
+      audio/wav
+      audio/webm
+    ]
+
+    SUPPORTED_UPLOAD_EXTENSIONS = %w[
+      .apng .avif .bmp .gif .ico .jpeg .jpg .png .webp
+      .m4v .mov .mp4 .ogv .webm
+      .flac .m4a .mp3 .oga .ogg .wav
     ]
   end
 end

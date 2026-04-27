@@ -120,7 +120,7 @@ module Ktistec::ViewHelper
   macro error_messages(model)
     if (%errors = {{model}}.errors.presence)
       %messages = %errors.transform_keys(&.split(".").last).flat_map do |k, vs|
-        vs.map { |v| "#{k} #{v}" }
+        vs.map { |v| "#{::HTML.escape(k)} #{::HTML.escape(v)}" }
       end.join(", ")
       %Q(<div class="ui error message"><div class="header">#{%messages}</div></div>)
     else

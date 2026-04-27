@@ -20,7 +20,7 @@ Spectator.describe UploadsController do
       let(form) do
         String.build do |io|
           HTTP::FormData.build(io) do |form_data|
-            metadata = HTTP::FormData::FileMetadata.new(filename: "digits.txt")
+            metadata = HTTP::FormData::FileMetadata.new(filename: "digits.png")
             form_data.file("file", IO::Memory.new("0123456789"), metadata)
           end
         end
@@ -41,7 +41,7 @@ Spectator.describe UploadsController do
 
       it "returns the resource URL in the location header" do
         post "/uploads", headers, form
-        expect(response.headers["Location"]).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.txt$/)
+        expect(response.headers["Location"]).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.png$/)
       end
 
       context "and accepting application/json" do
@@ -49,7 +49,7 @@ Spectator.describe UploadsController do
 
         it "returns the resource path in the response" do
           post "/uploads", headers, form
-          expect(JSON.parse(response.body)["msg"].as_s).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.txt$/)
+          expect(JSON.parse(response.body)["msg"].as_s).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.png$/)
         end
       end
 
@@ -58,7 +58,7 @@ Spectator.describe UploadsController do
 
         it "returns the resource path in the response" do
           post "/uploads", headers, form
-          expect(response.body).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.txt$/)
+          expect(response.body).to match(/\/uploads\/[a-z0-9\/]{18}\/#{current_actor_id}\.png$/)
         end
       end
 

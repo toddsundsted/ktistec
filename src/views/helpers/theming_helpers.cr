@@ -132,6 +132,22 @@ module Ktistec::ViewHelper
       %Q(<img #{attrs.join(" ")}>)
     end
 
+    # `(` and `)` are included as defense in depth in case the
+    # `url("...")` wrapping is ever changed to bare `url(...)`.
+    private CSS_URL_ENCODINGS = {
+      '"'  => "%22",
+      '\\' => "%5C",
+      '('  => "%28",
+      ')'  => "%29",
+    }
+
+    def actor_background_style(actor) : String?
+      return unless (image = actor.image.try(&.presence))
+      return unless Ktistec::Util.safe_url?(image) && Ktistec::Util.url_scheme(image).in?(Ktistec::Util::SAFE_IRI_SCHEMES)
+      url = image.gsub(CSS_URL_ENCODINGS)
+      %Q(background-image: url("#{url}");)
+    end
+
     def actor_type(actor)
       icon =
         if actor

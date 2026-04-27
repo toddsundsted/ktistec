@@ -209,6 +209,30 @@ Spectator.describe "helpers" do
     it "emits nested div containing error message" do
       expect(subject.xpath_nodes("/div/div/text()")).to contain_exactly("field is wrong")
     end
+
+    context "given an error value containing HTML" do
+      before_each { model.errors = {"field" => [%[<img src=x onerror="alert(1)">]]} }
+
+      it "renders the value as text" do
+        expect(subject.xpath_nodes("/div/div/text()")).to contain_exactly(%[field <img src=x onerror="alert(1)">])
+      end
+
+      it "does not produce an img element" do
+        expect(subject.xpath_nodes("//img")).to be_empty
+      end
+    end
+
+    context "given an error key containing HTML" do
+      before_each { model.errors = { %[field"><script>alert(1)</script>] => ["is wrong"] } }
+
+      it "renders the key as text" do
+        expect(subject.xpath_nodes("/div/div/text()")).to contain_exactly(%[field"><script>alert(1)</script> is wrong])
+      end
+
+      it "does not produce a script element" do
+        expect(subject.xpath_nodes("//script")).to be_empty
+      end
+    end
   end
 
   describe "form_tag" do

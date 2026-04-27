@@ -1015,6 +1015,10 @@ problems for Ktistec:
 | 1.20.0 | macros changes [link](https://github.com/crystal-lang/crystal/issues/16891) |
 | 1.20.0 | OpenSSL changes [link](https://github.com/crystal-lang/crystal/pull/16640) |
 
+### Building in a Container
+
+See the [Dockerfile](Dockerfile).
+
 ### SQLite3 Compatibility
 
 The following SQLite3 versions are known to have bugs that cause

@@ -36,6 +36,7 @@
     - [OAuth](#oauth)
   - [Prerequisites](#prerequisites)
   - [Building](#building)
+    - [Crystal Compatibility](#crystal-compatibility)
     - [SQLite3 Compatibility](#sqlite3-compatibility)
     - [Running Tests](#running-tests)
   - [Setup, Configuration, and Usage](#setup-configuration-and-usage)
@@ -964,8 +965,8 @@ by (and content is addressed to) a username and a hostname.
 
 You must compile the Ktistec server executable from its source code.
 You will need to install a recent release of the [Crystal programming
-language](https://crystal-lang.org/install/)
-(but see notes on [Crystal compatibility](#crystal-compatibility)).
+language](https://crystal-lang.org/install/) (but see notes on
+[Crystal compatibility](#crystal-compatibility)).
 
 Ktistec requires at least SQLite3 version 3.35.0 (but see notes
 on [Sqlite3 compatibility](#sqlite3-compatibility)).
@@ -1010,7 +1011,9 @@ problems for Ktistec:
 
 | Crystal Version | Issue |
 |--|--|
-| 1.20.0 | problems with macros [link](https://github.com/crystal-lang/crystal/issues/16891)
+| 1.17.0 - 1.18.2 | libxml memory management [link](https://github.com/crystal-lang/crystal/pull/15906) |
+| 1.20.0 | macros changes [link](https://github.com/crystal-lang/crystal/issues/16891) |
+| 1.20.0 | OpenSSL changes [link](https://github.com/crystal-lang/crystal/pull/16640) |
 
 ### SQLite3 Compatibility
 

@@ -37,6 +37,7 @@
   - [Prerequisites](#prerequisites)
   - [Building](#building)
     - [Crystal Compatibility](#crystal-compatibility)
+    - [Building in a Container](#building-in-a-container)
     - [SQLite3 Compatibility](#sqlite3-compatibility)
     - [Running Tests](#running-tests)
   - [Setup, Configuration, and Usage](#setup-configuration-and-usage)

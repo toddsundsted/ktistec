@@ -1006,7 +1006,7 @@ You can now connect to and configure the server.
 
 ### Crystal Compatibility
 
-The following Crystal versions are known to have bugs that cause
+The following Crystal versions are known to have issues that cause
 problems for Ktistec:
 
 | Crystal Version | Issue |

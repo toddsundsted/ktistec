@@ -10,6 +10,7 @@ require "../models/poll"
 require "../services/oauth2/client_registration"
 require "../services/object_factory"
 require "../services/outbox_activity_processor"
+require "../services/upload_service"
 require "../api/serializers/application"
 require "../api/serializers/instance"
 require "../api/serializers/account"
@@ -124,6 +125,79 @@ class APIController
     end
 
     API::V1::Serializers::Account.from_account(account, account.actor, include_source: true).to_json
+  end
+
+  patch "/api/v1/accounts/update_credentials" do |env|
+    unless (account = env.account?)
+      unauthorized "api/error", error: "The access token is invalid"
+    end
+
+    actor = account.actor
+
+    params =
+      begin
+        normalize_params(env.params.body.presence || env.params.json)
+      rescue JSON::ParseException
+        bad_request "Invalid JSON"
+      end
+
+    files =
+      begin
+        env.params.files.presence
+      rescue HTTP::FormData::Error
+      end
+
+    display_name = params["display_name"]?.as?(String)
+    note = params["note"]?.as?(String)
+    language = params["source[language]"]?.as?(String)
+    quote_policy = params["source[quote_policy]"]?.as?(String)
+    locked = parse_bool(params["locked"]?.as?(String))
+    fields = build_fields_from_params(params)
+
+    icon_url = nil
+    image_url = nil
+    if files
+      {"avatar" => :icon, "header" => :image}.each do |form_name, target|
+        if (upload = files[form_name]?) && (filename = upload.filename.presence) && upload.tempfile.size > 0
+          result = UploadService.upload(upload.tempfile, filename, actor.id!)
+          if result.valid?
+            url = "#{host}#{result.file_path.not_nil!}"
+            case target
+            when :icon
+              icon_url = url
+            when :image
+              image_url = url
+            end
+          else
+            Log.warn { result.errors.values.flatten.join(", ") }
+          end
+        end
+      end
+    end
+
+    actor.assign(name: display_name) if display_name
+    actor.assign(summary: note) if note
+    account.assign(language: language) if language
+    account.assign(auto_approve_followers: !locked) unless locked.nil?
+    actor.assign(attachments: fields) if fields
+    actor.assign(icon: icon_url) if icon_url
+    actor.assign(image: image_url) if image_url
+    # ktistec only models the binary `manually_approve_quotes`, so map
+    # `public` to disabled and `approval` to enabled
+    case quote_policy
+    when "public"
+      account.assign(manually_approve_quotes: false)
+    when "approval"
+      account.assign(manually_approve_quotes: true)
+    end
+
+    if account.valid?
+      account.save
+      API::V1::Serializers::Account.from_account(account, actor, include_source: true).to_json
+    else
+      errors = account.errors.map { |field, messages| "#{field}: #{messages.join(", ")}" }.join("; ")
+      unprocessable_entity "api/error", error: errors
+    end
   end
 
   get "/api/v1/accounts" do |env|
@@ -904,4 +978,40 @@ class APIController
 
     "[]"
   end
+
+  # Coerces a Mastodon-style boolean ("true"/"false"/"1"/"0") into
+  # `Bool`. Returns `nil` when absent or unparseable.
+  #
+  private def self.parse_bool(raw : String?) : Bool?
+    return nil if raw.nil?
+    case raw.downcase
+    when "true", "1"
+      true
+    when "false", "0"
+      false
+    end
+  end
+
+  # Scans `fields_attributes[<idx>][name|value]` keys from the
+  # flattened params hash. Groups by `<idx>` and returns attachments
+  # in encounter order. Returns `nil` when no fields_attributes keys
+  # are present.
+  #
+  private def self.build_fields_from_params(params) : Array(ActivityPub::Actor::Attachment)?
+    pairs = {} of String => Hash(String, String)
+    params.each do |key, value|
+      next unless value.is_a?(String)
+      next unless (m = key.match(FIELD_KEY_RE))
+      (pairs[m[1]] ||= Hash(String, String).new)[m[2]] = value
+    end
+    return nil if pairs.empty?
+    pairs.values.compact_map do |pair|
+      name = pair["name"]?.presence
+      value = pair["value"]?.presence
+      next unless name && value
+      ActivityPub::Actor::Attachment.new(name, "PropertyValue", value)
+    end.first(ActivityPub::Actor::ATTACHMENT_LIMIT)
+  end
+
+  private FIELD_KEY_RE = /\Afields_attributes\[([^\]]+)\]\[(name|value)\]\z/
 end

@@ -46,7 +46,7 @@ module Ktistec
     def setup
       @allowed_routes.each do |path|
         class_name = {{@type.name}}
-        %w(GET HEAD OPTIONS TRACE PUT POST).each do |method|
+        %w(GET HEAD OPTIONS TRACE PUT POST PATCH DELETE).each do |method|
           @@exclude_routes_tree.add "#{class_name}/#{method}#{path}", "/#{method}#{path}"
         end
       end

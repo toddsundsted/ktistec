@@ -14,23 +14,23 @@ up do |db|
       "expires_at" datetime NOT NULL,
       "scope" varchar(255) NOT NULL
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE UNIQUE INDEX idx_oauth_access_tokens_token
       ON oauth_access_tokens (token ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_oauth_access_tokens_client_id
       ON oauth_access_tokens (client_id ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_oauth_access_tokens_account_id
       ON oauth_access_tokens (account_id ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE oauth_access_tokens
-  STR
+    STR
 end

@@ -18,14 +18,14 @@ Spectator.describe Ktistec::Model::Linked do
     @[Persistent]
     property linked_model_iri : String?
 
-    belongs_to linked_model, class_name: {{@type}}, foreign_key: linked_model_iri, primary_key: iri
+    belongs_to linked_model, class_name: {{ @type }}, foreign_key: linked_model_iri, primary_key: iri
 
     def to_json_ld(**options)
       JSON.build do |json|
         json.object do
           json.field "@id", iri
           json.field "@type", "LinkedModel"
-          if (linked_model = self.linked_model?)
+          if (linked_model = linked_model?)
             json.field "https://www.w3.org/ns/activitystreams#linked" { json.raw linked_model.to_json_ld }
           elsif (linked_model_iri = self.linked_model_iri)
             json.field "https://www.w3.org/ns/activitystreams#linked", linked_model_iri
@@ -55,7 +55,7 @@ Spectator.describe Ktistec::Model::Linked do
         linked_model_iri text,
         deleted_at datetime
       )
-    SQL
+      SQL
   end
   after_each do
     Ktistec.database.exec "DROP TABLE IF EXISTS linked_models"

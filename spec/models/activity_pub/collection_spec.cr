@@ -61,7 +61,7 @@ Spectator.describe ActivityPub::Collection do
         "next":"next link",
         "current":"current link"
       }
-    JSON
+      JSON
   end
 
   describe ".from_json_ld" do
@@ -85,7 +85,7 @@ Spectator.describe ActivityPub::Collection do
             "item link"
           ]
         }
-      JSON
+        JSON
       collection = described_class.from_json_ld(json).save
       expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq(["item link"])
@@ -103,7 +103,7 @@ Spectator.describe ActivityPub::Collection do
             }
           ]
         }
-      JSON
+        JSON
       collection = described_class.from_json_ld(json).save
       expect(collection.items_iris).to eq(["https://test.test/item"])
       expect(collection.items).to eq([model])
@@ -121,7 +121,7 @@ Spectator.describe ActivityPub::Collection do
             }
           ]
         }
-      JSON
+        JSON
       collection = described_class.from_json_ld(json).save
       expect(collection.items_iris).to eq(["https://test.test/item"])
       expect(collection.items).to eq([model])
@@ -138,7 +138,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.from_json_ld(json).save
       expect(collection.first).to be_a(ActivityPub::Collection)
       expect(collection.first.not_nil!.items_iris).to eq(["item link"])
@@ -155,7 +155,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.from_json_ld(json).save
       expect(collection.last).to be_a(ActivityPub::Collection)
       expect(collection.last.not_nil!.items_iris).to eq(["item link"])
@@ -172,7 +172,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.from_json_ld(json).save
       expect(collection.prev).to be_a(ActivityPub::Collection)
       expect(collection.prev.not_nil!.items_iris).to eq(["item link"])
@@ -189,7 +189,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.from_json_ld(json).save
       expect(collection.next).to be_a(ActivityPub::Collection)
       expect(collection.next.not_nil!.items_iris).to eq(["item link"])
@@ -206,7 +206,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.from_json_ld(json).save
       expect(collection.current).to be_a(ActivityPub::Collection)
       expect(collection.current.not_nil!.items_iris).to eq(["item link"])
@@ -221,7 +221,7 @@ Spectator.describe ActivityPub::Collection do
             []
           ]
         }
-      JSON
+        JSON
       expect { described_class.from_json_ld(json) }.to raise_error(TypeCastError)
     end
   end
@@ -247,7 +247,7 @@ Spectator.describe ActivityPub::Collection do
             "item link"
           ]
         }
-      JSON
+        JSON
       collection = described_class.new.from_json_ld(json).save
       expect(collection.items_iris).to eq(["item link"])
       expect(collection.items).to eq(["item link"])
@@ -265,7 +265,7 @@ Spectator.describe ActivityPub::Collection do
             }
           ]
         }
-      JSON
+        JSON
       collection = described_class.new.from_json_ld(json).save
       expect(collection.items_iris).to eq(["https://test.test/item"])
       expect(collection.items).to eq([model])
@@ -283,7 +283,7 @@ Spectator.describe ActivityPub::Collection do
             }
           ]
         }
-      JSON
+        JSON
       collection = described_class.new.from_json_ld(json).save
       expect(collection.items_iris).to eq(["https://test.test/item"])
       expect(collection.items).to eq([model])
@@ -300,7 +300,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.new.from_json_ld(json).save
       expect(collection.first).to be_a(ActivityPub::Collection)
       expect(collection.first.not_nil!.items_iris).to eq(["item link"])
@@ -317,7 +317,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.new.from_json_ld(json).save
       expect(collection.last).to be_a(ActivityPub::Collection)
       expect(collection.last.not_nil!.items_iris).to eq(["item link"])
@@ -334,7 +334,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.new.from_json_ld(json).save
       expect(collection.prev).to be_a(ActivityPub::Collection)
       expect(collection.prev.not_nil!.items_iris).to eq(["item link"])
@@ -351,7 +351,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.new.from_json_ld(json).save
       expect(collection.next).to be_a(ActivityPub::Collection)
       expect(collection.next.not_nil!.items_iris).to eq(["item link"])
@@ -368,7 +368,7 @@ Spectator.describe ActivityPub::Collection do
             ]
           }
         }
-      JSON
+        JSON
       collection = described_class.new.from_json_ld(json).save
       expect(collection.current).to be_a(ActivityPub::Collection)
       expect(collection.current.not_nil!.items_iris).to eq(["item link"])
@@ -383,7 +383,7 @@ Spectator.describe ActivityPub::Collection do
             []
           ]
         }
-      JSON
+        JSON
       expect { described_class.new.from_json_ld(json) }.to raise_error(TypeCastError)
     end
   end
@@ -575,7 +575,7 @@ Spectator.describe ActivityPub::Collection::ModelHelper do
           "@type":"Collection"
         }
       }
-    JSON
+      JSON
   end
 
   describe ".from_json_ld" do
@@ -816,7 +816,7 @@ Spectator.describe ActivityPub::Collection::ModelHelper do
               }
             ]
           }
-        JSON
+          JSON
       end
 
       let(object) { ActivityPub::Object.new(iri: "https://test.test/object") }

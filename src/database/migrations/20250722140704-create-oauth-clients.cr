@@ -14,15 +14,15 @@ up do |db|
       "redirect_uris" text NOT NULL,
       "scope" varchar(255) NOT NULL
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE UNIQUE INDEX idx_oauth_clients_client_id
       ON oauth_clients (client_id ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE oauth_clients
-  STR
+    STR
 end

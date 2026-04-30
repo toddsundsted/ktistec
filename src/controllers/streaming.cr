@@ -104,11 +104,11 @@ class StreamingController
   @@sessions_pools = Hash(Session, ConnectionPool).new { |h, k| h[k] = ConnectionPool.new(5) }
 
   private macro subscribe(*subjects, &block)
-    Ktistec::Topic{{{subjects.splat}}}.tap do |topic|
+    Ktistec::Topic{{ {subjects.splat} }}.tap do |topic|
       @@sessions_pools[env.session].push(env.response.@io)
-      topic.subscribe(timeout: 1.minute) do |{{block.args.join(",").id}}|
-        if {{block.args.first.id}}
-          {{block.body}}
+      topic.subscribe(timeout: 1.minute) do |{{ block.args.join(",").id }}|
+        if {{ block.args.first.id }}
+          {{ block.body }}
         else # timeout
           stream_no_op(env.response)
         end
@@ -319,12 +319,12 @@ class StreamingController
   end
 
   {% for action in %w(append prepend replace update remove before after morph refresh) %}
-    def self.stream_{{action.id}}(io, body = nil, target = nil, selector = nil, id = false)
-      stream_action(io, body, {{action}}, target, selector, id)
+    def self.stream_{{ action.id }}(io, body = nil, target = nil, selector = nil, id = false)
+      stream_action(io, body, {{ action }}, target, selector, id)
     end
   {% end %}
 
-  def self.stream_action(io : IO, body : String?, action : String, target : String?, selector : String?, id : String | Bool | Nil = false)
+  def self.stream_action(io : IO, body : String?, action : String, target : String?, selector : String?, id : String | Bool? = false)
     String.build do |str|
       if target && !selector
         str << %Q|<turbo-stream action="#{action}" target="#{target}">|
@@ -365,7 +365,7 @@ module ActivityPub
 
     def after_save
       previous_def
-      Ktistec::Topic.rename_subject(self.iri, self.thread)
+      Ktistec::Topic.rename_subject(iri, thread)
     end
   end
 end

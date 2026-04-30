@@ -10,11 +10,11 @@ up do |db|
       "count" integer,
       PRIMARY KEY("type", "name")
     ) WITHOUT ROWID
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE tag_statistics
-  STR
+    STR
 end

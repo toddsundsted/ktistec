@@ -8,10 +8,10 @@ module Ktistec
       property deleted_at : Time?
 
       def delete!
-        self.before_delete if self.responds_to?(:before_delete)
+        self.before_delete if self.responds_to?(:before_delete) # ameba:disable Style/RedundantSelf
         @deleted_at = Time.utc
         update_property(:deleted_at, @deleted_at) unless new_record?
-        self.after_delete if self.responds_to?(:after_delete)
+        self.after_delete if self.responds_to?(:after_delete) # ameba:disable Style/RedundantSelf
         self
       end
 

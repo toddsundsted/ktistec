@@ -152,9 +152,9 @@ Spectator.describe ContentRules do
     class ::Relationship::Content::Notification
       def object_or_activity
         if self.responds_to?(:object)
-          self.object
+          self.object # ameba:disable Style/RedundantSelf
         elsif self.responds_to?(:activity)
-          self.activity
+          self.activity # ameba:disable Style/RedundantSelf
         end
       end
     end

@@ -32,7 +32,7 @@ class Relationship
              AND #{direction} = ?
           ORDER BY id DESC
            LIMIT ? OFFSET ?
-        QUERY
+          QUERY
       end
 
       private def self.follow_count_query(direction)
@@ -42,7 +42,7 @@ class Relationship
            WHERE type = '#{self}'
              AND #{direction} = ?
              AND created_at >= ?
-        QUERY
+          QUERY
       end
 
       # Returns followers.
@@ -90,7 +90,7 @@ class Relationship
       # Returns true if the follow relationship has been accepted.
       #
       def accepted?
-        if (follow_activity = self.activity?)
+        if (follow_activity = activity?)
           follow_activity.accepted_or_rejected?.is_a?(ActivityPub::Activity::Accept)
         end
       end
@@ -98,7 +98,7 @@ class Relationship
       # Returns true if the follow relationship has been rejected.
       #
       def rejected?
-        if (follow_activity = self.activity?)
+        if (follow_activity = activity?)
           follow_activity.accepted_or_rejected?.is_a?(ActivityPub::Activity::Reject)
         end
       end

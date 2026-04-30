@@ -209,7 +209,7 @@ module ActivityPub
     end
 
     def before_save
-      if local? && (saved = @saved_record) && (actor_id = self.id)
+      if local? && (saved = @saved_record) && (actor_id = id)
         if changed?(:icon) && (old_icon = saved.icon) && old_icon != icon
           if (path = URI.parse(old_icon).path)
             UploadService.delete(path, actor_id)
@@ -256,14 +256,14 @@ module ActivityPub
     #
     def self.search_by_username(prefix, limit = 10)
       query = <<-QUERY
-        SELECT #{columns}
-          FROM actors
-         WHERE username LIKE ? ESCAPE '\\'
-           AND deleted_at IS NULL
-           AND blocked_at IS NULL
-      ORDER BY username ASC
-         LIMIT ?
-      QUERY
+          SELECT #{columns}
+            FROM actors
+           WHERE username LIKE ? ESCAPE '\\'
+             AND deleted_at IS NULL
+             AND blocked_at IS NULL
+        ORDER BY username ASC
+           LIMIT ?
+        QUERY
       escaped_prefix = prefix.gsub("%", "\\%").gsub("_", "\\_")
       query_all(query, "#{escaped_prefix}%", limit)
     end
@@ -299,16 +299,16 @@ module ActivityPub
     private def social_query(type, orig, dest, public = true)
       public = public ? "AND r.confirmed = 1 AND r.visible = 1" : nil
       <<-QUERY
-        SELECT #{Actor.columns(prefix: "a")}
-          FROM actors AS a, relationships AS r
-         WHERE a.iri = r.#{orig}
-           #{common_filters(actors: "a")}
-           AND r.type = '#{type}'
-           AND r.#{dest} = ?
-           #{public}
-      ORDER BY r.id DESC
-         LIMIT ? OFFSET ?
-      QUERY
+          SELECT #{Actor.columns(prefix: "a")}
+            FROM actors AS a, relationships AS r
+           WHERE a.iri = r.#{orig}
+             #{common_filters(actors: "a")}
+             AND r.type = '#{type}'
+             AND r.#{dest} = ?
+             #{public}
+        ORDER BY r.id DESC
+           LIMIT ? OFFSET ?
+        QUERY
     end
 
     private def social_cursor_query(type, orig, dest, public = true)
@@ -322,31 +322,31 @@ module ActivityPub
            AND r.#{dest} = ?
            #{public}
            AND %{cursor_condition}
-      QUERY
+        QUERY
     end
 
     def all_following(page = 1, size = 10, public = true)
       Actor.query_and_paginate(
         social_query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-        self.iri, page: page, size: size)
+        iri, page: page, size: size)
     end
 
     def all_following(*, max_id = nil, min_id = nil, limit = 10, public = true)
       Actor.query_with_cursor(
         social_cursor_query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     def all_followers(page = 1, size = 10, public = false)
       Actor.query_and_paginate(
         social_query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-        self.iri, page: page, size: size)
+        iri, page: page, size: size)
     end
 
     def all_followers(*, max_id = nil, min_id = nil, limit = 10, public = false)
       Actor.query_with_cursor(
         social_cursor_query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     def all_follow_requests(*, max_id = nil, min_id = nil, limit = 10)
@@ -359,40 +359,40 @@ module ActivityPub
            AND r.to_iri = ?
            AND r.confirmed = 0
            AND %{cursor_condition}
-      QUERY
+        QUERY
       Actor.query_with_cursor(
-        query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        query, iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     private def activity_query(type)
       <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS c
-             ON c.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-          WHERE a.actor_iri = ?
-            AND a.type = '#{type}'
-            #{common_filters(objects: "o", actors: "c", activities: "a")}
-       ORDER BY o.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
+          SELECT #{Object.columns(prefix: "o")}
+            FROM objects AS o
+            JOIN actors AS c
+              ON c.iri = o.attributed_to_iri
+            JOIN activities AS a
+              ON a.object_iri = o.iri
+           WHERE a.actor_iri = ?
+             AND a.type = '#{type}'
+             #{common_filters(objects: "o", actors: "c", activities: "a")}
+        ORDER BY o.id DESC
+           LIMIT ? OFFSET ?
+        QUERY
     end
 
     private def activity_count_query(type)
       <<-QUERY
-         SELECT count(o.id)
-           FROM objects AS o
-           JOIN actors AS c
-             ON c.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-          WHERE a.actor_iri = ?
-            AND a.type = '#{type}'
-            #{common_filters(objects: "o", actors: "c", activities: "a")}
-            AND a.created_at > ?
-      QUERY
+        SELECT count(o.id)
+          FROM objects AS o
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+         WHERE a.actor_iri = ?
+           AND a.type = '#{type}'
+           #{common_filters(objects: "o", actors: "c", activities: "a")}
+           AND a.created_at > ?
+        QUERY
     end
 
     # Returns the objects that this actor has liked.
@@ -405,7 +405,7 @@ module ActivityPub
     def likes(page = 1, size = 10)
       Object.query_and_paginate(
         activity_query(ActivityPub::Activity::Like),
-        self.iri, page: page, size: size)
+        iri, page: page, size: size)
     end
 
     # Returns the count of objects that this actor has liked since the
@@ -430,7 +430,7 @@ module ActivityPub
     def dislikes(page = 1, size = 10)
       Object.query_and_paginate(
         activity_query(ActivityPub::Activity::Dislike),
-        self.iri, page: page, size: size)
+        iri, page: page, size: size)
     end
 
     # Returns the count of objects that this actor has disliked since the
@@ -455,7 +455,7 @@ module ActivityPub
     def announces(page = 1, size = 10)
       Object.query_and_paginate(
         activity_query(ActivityPub::Activity::Announce),
-        self.iri, page: page, size: size)
+        iri, page: page, size: size)
     end
 
     # Returns the count of objects that this actor has announced
@@ -478,19 +478,19 @@ module ActivityPub
     #
     def bookmarks(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS c
-             ON c.iri = o.attributed_to_iri
-           JOIN relationships AS r
-             ON r.to_iri = o.iri
-            AND r.type = '#{Relationship::Content::Bookmark}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "c")}
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      Object.query_and_paginate(query, self.iri, page: page, size: size)
+          SELECT #{Object.columns(prefix: "o")}
+            FROM objects AS o
+            JOIN actors AS c
+              ON c.iri = o.attributed_to_iri
+            JOIN relationships AS r
+              ON r.to_iri = o.iri
+             AND r.type = '#{Relationship::Content::Bookmark}'
+           WHERE r.from_iri = ?
+             #{common_filters(objects: "o", actors: "c")}
+        ORDER BY r.id DESC
+           LIMIT ? OFFSET ?
+        QUERY
+      Object.query_and_paginate(query, iri, page: page, size: size)
     end
 
     # Returns the count of objects that this actor has bookmarked
@@ -500,17 +500,17 @@ module ActivityPub
     #
     def bookmarks(since : Time)
       query = <<-QUERY
-         SELECT count(o.id)
-           FROM objects AS o
-           JOIN actors AS c
-             ON c.iri = o.attributed_to_iri
-           JOIN relationships AS r
-             ON r.to_iri = o.iri
-            AND r.type = '#{Relationship::Content::Bookmark}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "c")}
-            AND r.created_at > ?
-      QUERY
+        SELECT count(o.id)
+          FROM objects AS o
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+          JOIN relationships AS r
+            ON r.to_iri = o.iri
+           AND r.type = '#{Relationship::Content::Bookmark}'
+         WHERE r.from_iri = ?
+           #{common_filters(objects: "o", actors: "c")}
+           AND r.created_at > ?
+        QUERY
       Object.scalar(query, iri, since).as(Int64)
     end
 
@@ -518,25 +518,23 @@ module ActivityPub
     #
     # Returns objects in reverse chronological order (most recent
     # first). Filters out deleted/blocked objects, and objects by
-    # deleted/blocked actors. Does not include private (not visible)
-    # posts.
+    # deleted/blocked actors.
     #
     def pins(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS c
-             ON c.iri = o.attributed_to_iri
-           JOIN relationships AS r
-             ON r.to_iri = o.iri
-            AND r.type = '#{Relationship::Content::Pin}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "c")}
-            AND o.visible = 1
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      Object.query_and_paginate(query, self.iri, page: page, size: size)
+          SELECT #{Object.columns(prefix: "o")}
+            FROM objects AS o
+            JOIN actors AS c
+              ON c.iri = o.attributed_to_iri
+            JOIN relationships AS r
+              ON r.to_iri = o.iri
+             AND r.type = '#{Relationship::Content::Pin}'
+           WHERE r.from_iri = ?
+             #{common_filters(objects: "o", actors: "c")}
+        ORDER BY r.id DESC
+           LIMIT ? OFFSET ?
+        QUERY
+      Object.query_and_paginate(query, iri, page: page, size: size)
     end
 
     # Returns the count of objects that this actor has pinned since the
@@ -546,19 +544,18 @@ module ActivityPub
     #
     def pins(since : Time)
       query = <<-QUERY
-         SELECT count(o.id)
-           FROM objects AS o
-           JOIN actors AS c
-             ON c.iri = o.attributed_to_iri
-           JOIN relationships AS r
-             ON r.to_iri = o.iri
-            AND r.type = '#{Relationship::Content::Pin}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "c")}
-            AND o.visible = 1
-            AND r.created_at > ?
-      QUERY
-      Object.scalar(query, self.iri, since).as(Int64)
+        SELECT count(o.id)
+          FROM objects AS o
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+          JOIN relationships AS r
+            ON r.to_iri = o.iri
+           AND r.type = '#{Relationship::Content::Pin}'
+         WHERE r.from_iri = ?
+           #{common_filters(objects: "o", actors: "c")}
+           AND r.created_at > ?
+        QUERY
+      Object.scalar(query, iri, since).as(Int64)
     end
 
     # Returns the actor's draft posts.
@@ -569,14 +566,14 @@ module ActivityPub
     #
     def drafts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-          WHERE o.attributed_to_iri = ?
-            AND o.published IS NULL
-            #{common_filters(objects: "o")}
-       ORDER BY o.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
+          SELECT #{Object.columns(prefix: "o")}
+            FROM objects AS o
+           WHERE o.attributed_to_iri = ?
+             AND o.published IS NULL
+             #{common_filters(objects: "o")}
+        ORDER BY o.id DESC
+           LIMIT ? OFFSET ?
+        QUERY
       Object.query_and_paginate(query, iri, page: page, size: size)
     end
 
@@ -586,13 +583,13 @@ module ActivityPub
     #
     def drafts(since : Time)
       query = <<-QUERY
-         SELECT count(o.id)
-           FROM objects AS o
-          WHERE o.attributed_to_iri = ?
-            AND o.published IS NULL
-            #{common_filters(objects: "o")}
-            AND o.created_at > ?
-      QUERY
+        SELECT count(o.id)
+          FROM objects AS o
+         WHERE o.attributed_to_iri = ?
+           AND o.published IS NULL
+           #{common_filters(objects: "o")}
+           AND o.created_at > ?
+        QUERY
       Object.scalar(query, iri, since).as(Int64)
     end
 
@@ -619,25 +616,25 @@ module ActivityPub
           %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
-         SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "obj")}
-           FROM activities AS a
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-      LEFT JOIN actors AS act
-             ON act.iri = a.actor_iri
-      LEFT JOIN objects AS obj
-             ON obj.iri = a.object_iri
-          WHERE r.from_iri LIKE ?
-            #{mailbox}
-            AND r.confirmed = 1
-            #{Actor.common_filters(actors: "act", objects: "obj", activities: "a")}
-            #{inclusion}
-            #{exclusion}
-       #{public ? %Q|AND a.visible = 1| : nil}
-       #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
+           SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "obj")}
+             FROM activities AS a
+             JOIN relationships AS r
+               ON r.to_iri = a.iri
+        LEFT JOIN actors AS act
+               ON act.iri = a.actor_iri
+        LEFT JOIN objects AS obj
+               ON obj.iri = a.object_iri
+            WHERE r.from_iri LIKE ?
+              #{mailbox}
+              AND r.confirmed = 1
+              #{Actor.common_filters(actors: "act", objects: "obj", activities: "a")}
+              #{inclusion}
+              #{exclusion}
+         #{public ? %Q|AND a.visible = 1| : nil}
+         #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
+         ORDER BY r.id DESC
+            LIMIT ? OFFSET ?
+        QUERY
       Activity.query_and_paginate(query, iri, page: page, size: size)
     end
 
@@ -664,27 +661,27 @@ module ActivityPub
           %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
-         SELECT count(a.id)
-           FROM activities AS a
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-           JOIN actors AS act
-             ON act.iri = a.actor_iri
-           JOIN objects AS obj
-             ON obj.iri = a.object_iri
-          WHERE r.from_iri = ?
-            AND obj.iri = ?
-            #{mailbox}
-            AND r.confirmed = 1
-            #{common_filters(actors: "act", objects: "obj", activities: "a")}
-            #{inclusion}
-            #{exclusion}
-      QUERY
-      Activity.scalar(query, self.iri, object.iri).as(Int64) > 0
+        SELECT count(a.id)
+          FROM activities AS a
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+          JOIN actors AS act
+            ON act.iri = a.actor_iri
+          JOIN objects AS obj
+            ON obj.iri = a.object_iri
+         WHERE r.from_iri = ?
+           AND obj.iri = ?
+           #{mailbox}
+           AND r.confirmed = 1
+           #{common_filters(actors: "act", objects: "obj", activities: "a")}
+           #{inclusion}
+           #{exclusion}
+        QUERY
+      Activity.scalar(query, iri, object.iri).as(Int64) > 0
     end
 
     def in_outbox(page = 1, size = 10, public = true)
-      self.class.content(self.iri, Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
+      self.class.content(iri, Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
     def in_outbox?(object : Object, inclusion = nil, exclusion = nil)
@@ -692,7 +689,7 @@ module ActivityPub
     end
 
     def in_inbox(page = 1, size = 10, public = true)
-      self.class.content(self.iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
+      self.class.content(iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
     def in_inbox?(object : Object, inclusion = nil, exclusion = nil)
@@ -715,19 +712,19 @@ module ActivityPub
           %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
-         SELECT #{Activity.columns(prefix: "a")}
-           FROM activities AS a
-           JOIN actors AS act
-             ON act.iri = a.actor_iri
-           JOIN objects AS obj
-             ON obj.iri = a.object_iri
-          WHERE a.actor_iri = ?
-            AND a.object_iri = ?
-            #{common_filters(actors: "act", objects: "obj", activities: "a")}
-            #{inclusion}
-            #{exclusion}
-      QUERY
-      Activity.query_all(query, self.iri, object.iri).first?
+        SELECT #{Activity.columns(prefix: "a")}
+          FROM activities AS a
+          JOIN actors AS act
+            ON act.iri = a.actor_iri
+          JOIN objects AS obj
+            ON obj.iri = a.object_iri
+         WHERE a.actor_iri = ?
+           AND a.object_iri = ?
+           #{common_filters(actors: "act", objects: "obj", activities: "a")}
+           #{inclusion}
+           #{exclusion}
+        QUERY
+      Activity.query_all(query, iri, object.iri).first?
     end
 
     def find_announce_for(object : Object)
@@ -748,20 +745,20 @@ module ActivityPub
     #
     def known_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-      LEFT JOIN relationships AS p
-             ON p.type = '#{Relationship::Content::Pin}'
-            AND p.from_iri = ?
-            AND p.to_iri = o.iri
-          WHERE o.attributed_to_iri = ?
-            #{common_filters(objects: "o")}
-            AND o.published IS NOT NULL
-            AND o.visible = 1
-       ORDER BY p.id DESC, o.published DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
+           SELECT #{Object.columns(prefix: "o")}
+             FROM objects AS o
+        LEFT JOIN relationships AS p
+               ON p.type = '#{Relationship::Content::Pin}'
+              AND p.from_iri = ?
+              AND p.to_iri = o.iri
+            WHERE o.attributed_to_iri = ?
+              #{common_filters(objects: "o")}
+              AND o.published IS NOT NULL
+              AND o.visible = 1
+         ORDER BY p.id DESC, o.published DESC
+            LIMIT ? OFFSET ?
+        QUERY
+      Object.query_and_paginate(query, iri, iri, page: page, size: size)
     end
 
     # Returns the actor's known posts.
@@ -776,15 +773,15 @@ module ActivityPub
     #
     def known_posts(*, max_id = nil, min_id = nil, limit = 10)
       query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-          WHERE o.attributed_to_iri = ?
-            #{common_filters(objects: "o")}
-            AND o.published IS NOT NULL
-            AND o.visible = 1
-            AND %{cursor_condition}
-      QUERY
-      Object.query_with_cursor(query, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
+        SELECT #{Object.columns(prefix: "o")}
+          FROM objects AS o
+         WHERE o.attributed_to_iri = ?
+           #{common_filters(objects: "o")}
+           AND o.published IS NOT NULL
+           AND o.visible = 1
+           AND %{cursor_condition}
+        QUERY
+      Object.query_with_cursor(query, iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the actor's public posts and shares.
@@ -795,24 +792,24 @@ module ActivityPub
     #
     def public_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = '#{Relationship::Content::Outbox}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "t", activities: "a")}
-            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-            AND o.visible = 1
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      Object.query_and_paginate(query, self.iri, page: page, size: size)
+          SELECT DISTINCT #{Object.columns(prefix: "o")}
+            FROM objects AS o
+            JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+            JOIN activities AS a
+              ON a.object_iri = o.iri
+             AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+            JOIN relationships AS r
+              ON r.to_iri = a.iri
+             AND r.type = '#{Relationship::Content::Outbox}'
+           WHERE r.from_iri = ?
+             #{common_filters(objects: "o", actors: "t", activities: "a")}
+             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
+             AND o.visible = 1
+        ORDER BY r.id DESC
+           LIMIT ? OFFSET ?
+        QUERY
+      Object.query_and_paginate(query, iri, page: page, size: size)
     end
 
     # Returns the actor's public posts and shares.
@@ -823,23 +820,23 @@ module ActivityPub
     #
     def public_posts(*, max_id = nil, min_id = nil, limit = 10)
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = '#{Relationship::Content::Outbox}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "t", activities: "a")}
-            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-            AND o.visible = 1
-            AND %{cursor_condition}
-      QUERY
-      Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        SELECT DISTINCT #{Object.columns(prefix: "o")}
+          FROM objects AS o
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+           AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+           AND r.type = '#{Relationship::Content::Outbox}'
+         WHERE r.from_iri = ?
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+           AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
+           AND o.visible = 1
+           AND %{cursor_condition}
+        QUERY
+      Object.query_with_cursor(query, iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the actor's public posts and shares.
@@ -851,17 +848,15 @@ module ActivityPub
     def public_posts_with_pins(page = 1, size = 10)
       base_offset = (page - 1) * size
       all_pinned_query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN relationships AS p
-             ON p.type = '#{Relationship::Content::Pin}'
-            AND p.from_iri = ?
-            AND p.to_iri = o.iri
-          WHERE o.visible = 1
-            #{common_filters(objects: "o")}
-       ORDER BY p.id DESC
-      QUERY
-      all_pinned = Object.query_all(all_pinned_query, self.iri)
+          SELECT #{Object.columns(prefix: "o")}
+            FROM objects AS o
+            JOIN relationships AS p
+              ON p.type = '#{Relationship::Content::Pin}'
+             AND p.from_iri = ?
+             AND p.to_iri = o.iri
+        ORDER BY p.id DESC
+        QUERY
+      all_pinned = Object.query_all(all_pinned_query, iri)
       pinned_to_skip = [base_offset, all_pinned.size].min
       pinned_available = all_pinned.size - pinned_to_skip
       pinned_to_take = [size, pinned_available].min
@@ -869,29 +864,29 @@ module ActivityPub
       non_pinned_needed = size - pinned.size + 1 # +1 for pagination check
       non_pinned_offset = [0, base_offset - all_pinned.size].max
       non_pinned_query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = '#{Relationship::Content::Outbox}'
-      LEFT JOIN relationships AS p
-             ON p.type = '#{Relationship::Content::Pin}'
-            AND p.from_iri = ?
-            AND p.to_iri = o.iri
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "t", activities: "a")}
-            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-            AND o.visible = 1
-            AND p.id IS NULL
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      non_pinned = Object.query_all(non_pinned_query, self.iri, self.iri, non_pinned_needed, non_pinned_offset)
+           SELECT DISTINCT #{Object.columns(prefix: "o")}
+             FROM objects AS o
+             JOIN actors AS t
+               ON t.iri = o.attributed_to_iri
+             JOIN activities AS a
+               ON a.object_iri = o.iri
+              AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+             JOIN relationships AS r
+               ON r.to_iri = a.iri
+              AND r.type = '#{Relationship::Content::Outbox}'
+        LEFT JOIN relationships AS p
+               ON p.type = '#{Relationship::Content::Pin}'
+              AND p.from_iri = ?
+              AND p.to_iri = o.iri
+            WHERE r.from_iri = ?
+              #{common_filters(objects: "o", actors: "t", activities: "a")}
+              AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
+              AND o.visible = 1
+              AND p.id IS NULL
+         ORDER BY r.id DESC
+            LIMIT ? OFFSET ?
+        QUERY
+      non_pinned = Object.query_all(non_pinned_query, iri, iri, non_pinned_needed, non_pinned_offset)
       Ktistec::Util::PaginatedArray(Object).new.tap do |array|
         (pinned + non_pinned).each { |obj| array << obj }
         if array.size > size
@@ -909,22 +904,22 @@ module ActivityPub
     #
     def all_posts(page = 1, size = 10)
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = '#{Relationship::Content::Outbox}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "t", activities: "a")}
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      Object.query_and_paginate(query, self.iri, page: page, size: size)
+          SELECT DISTINCT #{Object.columns(prefix: "o")}
+            FROM objects AS o
+            JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+            JOIN activities AS a
+              ON a.object_iri = o.iri
+             AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+            JOIN relationships AS r
+              ON r.to_iri = a.iri
+             AND r.type = '#{Relationship::Content::Outbox}'
+           WHERE r.from_iri = ?
+             #{common_filters(objects: "o", actors: "t", activities: "a")}
+        ORDER BY r.id DESC
+           LIMIT ? OFFSET ?
+        QUERY
+      Object.query_and_paginate(query, iri, page: page, size: size)
     end
 
     # Returns the actor's posts and shares.
@@ -935,21 +930,21 @@ module ActivityPub
     #
     def all_posts(*, max_id = nil, min_id = nil, limit = 10)
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = '#{Relationship::Content::Outbox}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "t", activities: "a")}
-            AND %{cursor_condition}
-      QUERY
-      Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        SELECT DISTINCT #{Object.columns(prefix: "o")}
+          FROM objects AS o
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+           AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+           AND r.type = '#{Relationship::Content::Outbox}'
+         WHERE r.from_iri = ?
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+           AND %{cursor_condition}
+        QUERY
+      Object.query_with_cursor(query, iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the count of the actor's posts since the given date.
@@ -958,20 +953,20 @@ module ActivityPub
     #
     def all_posts(since : Time)
       query = <<-QUERY
-         SELECT count(r.id)
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = '#{Relationship::Content::Outbox}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "t", activities: "a")}
-            AND r.created_at > ?
-      QUERY
+        SELECT count(r.id)
+          FROM objects AS o
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+           AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+           AND r.type = '#{Relationship::Content::Outbox}'
+         WHERE r.from_iri = ?
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+           AND r.created_at > ?
+        QUERY
       Relationship::Content::Outbox.scalar(query, iri, since).as(Int64)
     end
 
@@ -1013,8 +1008,8 @@ module ActivityPub
              #{common_filters(objects: "o", actors: "c")}
         ORDER BY t.id DESC
            LIMIT ? OFFSET ?
-      QUERY
-      Timeline.query_and_paginate(query, self.iri, page: page, size: size)
+        QUERY
+      Timeline.query_and_paginate(query, iri, page: page, size: size)
     end
 
     # Returns entries in the actor's timeline.
@@ -1043,19 +1038,19 @@ module ActivityPub
           %Q|AND +t.type IN ('#{Timeline.all_subtypes.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
-          SELECT #{Timeline.columns(prefix: "t")}
-            FROM relationships AS t
-            JOIN objects AS o
-              ON o.iri = t.to_iri
-            JOIN actors AS c
-              ON c.iri = o.attributed_to_iri
-           WHERE +t.from_iri = ?
-             #{inclusion}
-             #{exclude_replies}
-             #{common_filters(objects: "o", actors: "c")}
-             AND %{cursor_condition}
-      QUERY
-      Timeline.query_with_cursor(query, self.iri, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
+        SELECT #{Timeline.columns(prefix: "t")}
+          FROM relationships AS t
+          JOIN objects AS o
+            ON o.iri = t.to_iri
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+         WHERE +t.from_iri = ?
+           #{inclusion}
+           #{exclude_replies}
+           #{common_filters(objects: "o", actors: "c")}
+           AND %{cursor_condition}
+        QUERY
+      Timeline.query_with_cursor(query, iri, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the count of entries in the actor's timeline since the
@@ -1076,18 +1071,18 @@ module ActivityPub
           %Q|AND +t.type IN ('#{Timeline.all_subtypes.map(&.to_s).join("','")}')|
         end
       query = <<-QUERY
-          SELECT count(t.id)
-            FROM relationships AS t
-            JOIN objects AS o
-              ON o.iri = t.to_iri
-            JOIN actors AS c
-              ON c.iri = o.attributed_to_iri
-           WHERE +t.from_iri = ?
-             #{inclusion}
-             #{exclude_replies}
-             #{common_filters(objects: "o", actors: "c")}
-             AND t.created_at > ?
-      QUERY
+        SELECT count(t.id)
+          FROM relationships AS t
+          JOIN objects AS o
+            ON o.iri = t.to_iri
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+         WHERE +t.from_iri = ?
+           #{inclusion}
+           #{exclude_replies}
+           #{common_filters(objects: "o", actors: "c")}
+           AND t.created_at > ?
+        QUERY
       Timeline.scalar(query, iri, since).as(Int64)
     end
 
@@ -1099,25 +1094,25 @@ module ActivityPub
     #
     def notifications(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{Notification.columns(prefix: "n")}
-           FROM relationships AS n
-      LEFT JOIN activities AS a
-             ON a.iri = n.to_iri
-      LEFT JOIN actors AS c
-             ON c.iri = a.actor_iri
-      LEFT JOIN objects AS o
-             ON o.iri = a.object_iri
-      LEFT JOIN objects AS e
-             ON e.iri = n.to_iri
-      LEFT JOIN actors AS t
-             ON t.iri = e.attributed_to_iri
-          WHERE +n.from_iri = ?
-            AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
-            #{common_filters(actors: "c", objects: "o", activities: "a")}
-            #{common_filters(objects: "e", actors: "t")}
-       ORDER BY n.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
+           SELECT #{Notification.columns(prefix: "n")}
+             FROM relationships AS n
+        LEFT JOIN activities AS a
+               ON a.iri = n.to_iri
+        LEFT JOIN actors AS c
+               ON c.iri = a.actor_iri
+        LEFT JOIN objects AS o
+               ON o.iri = a.object_iri
+        LEFT JOIN objects AS e
+               ON e.iri = n.to_iri
+        LEFT JOIN actors AS t
+               ON t.iri = e.attributed_to_iri
+            WHERE +n.from_iri = ?
+              AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
+              #{common_filters(actors: "c", objects: "o", activities: "a")}
+              #{common_filters(objects: "e", actors: "t")}
+         ORDER BY n.id DESC
+            LIMIT ? OFFSET ?
+        QUERY
       Notification.query_and_paginate(query, iri, page: page, size: size)
     end
 
@@ -1128,24 +1123,24 @@ module ActivityPub
     #
     def notifications(since : Time)
       query = <<-QUERY
-         SELECT count(*)
-           FROM relationships AS n
-      LEFT JOIN activities AS a
-             ON a.iri = n.to_iri
-      LEFT JOIN actors AS c
-             ON c.iri = a.actor_iri
-      LEFT JOIN objects AS o
-             ON o.iri = a.object_iri
-      LEFT JOIN objects AS e
-             ON e.iri = n.to_iri
-      LEFT JOIN actors AS t
-             ON t.iri = e.attributed_to_iri
-          WHERE +n.from_iri = ?
-            AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
-            #{common_filters(actors: "c", objects: "o", activities: "a")}
-            #{common_filters(objects: "e", actors: "t")}
-            AND n.created_at > ?
-      QUERY
+           SELECT count(*)
+             FROM relationships AS n
+        LEFT JOIN activities AS a
+               ON a.iri = n.to_iri
+        LEFT JOIN actors AS c
+               ON c.iri = a.actor_iri
+        LEFT JOIN objects AS o
+               ON o.iri = a.object_iri
+        LEFT JOIN objects AS e
+               ON e.iri = n.to_iri
+        LEFT JOIN actors AS t
+               ON t.iri = e.attributed_to_iri
+            WHERE +n.from_iri = ?
+              AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
+              #{common_filters(actors: "c", objects: "o", activities: "a")}
+              #{common_filters(objects: "e", actors: "t")}
+              AND n.created_at > ?
+        QUERY
       Notification.scalar(query, iri, since).as(Int64)
     end
 
@@ -1167,43 +1162,43 @@ module ActivityPub
     #
     def terms(page = 1, size = 10)
       query = <<-QUERY
-         SELECT #{FilterTerm.columns(prefix: "f")}
-           FROM filter_terms AS f
-          WHERE f.actor_id = ?
-       ORDER BY f.id ASC
-          LIMIT ? OFFSET ?
-      QUERY
+          SELECT #{FilterTerm.columns(prefix: "f")}
+            FROM filter_terms AS f
+           WHERE f.actor_id = ?
+        ORDER BY f.id ASC
+           LIMIT ? OFFSET ?
+        QUERY
       FilterTerm.query_and_paginate(query, id, page: page, size: size)
     end
 
     getter followed_actors : Set(String) do
       query = <<-QUERY
-         SELECT r.to_iri
-           FROM relationships AS r
-          WHERE r.type = '#{Relationship::Social::Follow}'
-            AND r.from_iri = ?
-            AND r.confirmed = 1
-      QUERY
+        SELECT r.to_iri
+          FROM relationships AS r
+         WHERE r.type = '#{Relationship::Social::Follow}'
+           AND r.from_iri = ?
+           AND r.confirmed = 1
+        QUERY
       Ktistec.database.query_all(query, iri, as: String).to_set
     end
 
     getter followed_hashtags : Set(String) do
       query = <<-QUERY
-         SELECT r.to_iri
-           FROM relationships AS r
-          WHERE r.type = '#{Relationship::Content::Follow::Hashtag}'
-            AND r.from_iri = ?
-      QUERY
+        SELECT r.to_iri
+          FROM relationships AS r
+         WHERE r.type = '#{Relationship::Content::Follow::Hashtag}'
+           AND r.from_iri = ?
+        QUERY
       Ktistec.database.query_all(query, iri, as: String).map(&.downcase).to_set
     end
 
     getter followed_mentions : Set(String) do
       query = <<-QUERY
-         SELECT r.to_iri
-           FROM relationships AS r
-          WHERE r.type = '#{Relationship::Content::Follow::Mention}'
-            AND r.from_iri = ?
-      QUERY
+        SELECT r.to_iri
+          FROM relationships AS r
+         WHERE r.type = '#{Relationship::Content::Follow::Mention}'
+           AND r.from_iri = ?
+        QUERY
       Ktistec.database.query_all(query, iri, as: String).map(&.downcase).to_set
     end
 
@@ -1222,7 +1217,7 @@ module ActivityPub
     end
 
     def from_json_ld(json, *, include_key = false)
-      self.assign(self.class.map(json, include_key: include_key))
+      assign(self.class.map(json, include_key: include_key))
     end
 
     def self.map(json, *, include_key = false, **options)

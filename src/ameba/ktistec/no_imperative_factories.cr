@@ -5,10 +5,9 @@ module Ameba::Rule::Ktistec
   #
   # Prefer declarative factory helpers (`let_build`, `let_create`) over
   # imperative `Factory` method calls (`Factory.build`, `Factory.create`).
-  #
   class NoImperativeFactories < Base
     properties do
-      description "Prefer declarative factory helpers over imperative Factory method calls."
+      description "Prefer declarative factory helpers over imperative `Factory` method calls"
       enabled true
     end
 

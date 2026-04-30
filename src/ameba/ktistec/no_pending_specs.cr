@@ -5,10 +5,9 @@ module Ameba::Rule::Ktistec
   #
   # Pending spec markers (`pending`, `xdescribe`, `xcontext`, `xit`)
   # should not be committed. Either fix the spec or remove it.
-  #
   class NoPendingSpecs < Base
     properties do
-      description "Pending spec markers should not be committed."
+      description "Pending spec markers should not be committed"
       enabled true
     end
 

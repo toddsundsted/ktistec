@@ -5,29 +5,29 @@ extend Ktistec::Database::Migration
 up do |db|
   db.exec <<-STR
     CREATE INDEX idx_tasks_running_complete_backtrace ON tasks (running ASC, complete ASC, backtrace ASC)
-  STR
+    STR
   db.exec <<-STR
     DROP INDEX idx_tasks_type_running_complete_backtrace_next_attempt_at_created_at
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_tasks_created_at ON tasks (created_at DESC)
-  STR
+    STR
   db.exec <<-STR
     DROP INDEX idx_tasks_type
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     CREATE INDEX idx_tasks_type_running_complete_backtrace_next_attempt_at_created_at ON tasks (type ASC, running ASC, complete ASC, backtrace ASC, next_attempt_at ASC, created_at ASC)
-  STR
+    STR
   db.exec <<-STR
     DROP INDEX idx_tasks_running_complete_backtrace
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_tasks_type ON tasks (type ASC)
-  STR
+    STR
   db.exec <<-STR
     DROP INDEX idx_tasks_created_at
-  STR
+    STR
 end

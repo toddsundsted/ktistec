@@ -102,12 +102,12 @@ module ScrubUnsafeUrls
     loop do
       rows = [] of {Int64, String, String?, String?, String?}
       db.query(<<-SQL, last_id, BATCH_SIZE) do |rs|
-        SELECT "id", "iri", "icon", "image", "urls"
-          FROM "actors"
-         WHERE "id" > ? AND "deleted_at" IS NULL
-      ORDER BY "id"
-         LIMIT ?
-      SQL
+          SELECT "id", "iri", "icon", "image", "urls"
+            FROM "actors"
+           WHERE "id" > ? AND "deleted_at" IS NULL
+        ORDER BY "id"
+           LIMIT ?
+        SQL
         rs.each do
           rows << {
             rs.read(Int64),
@@ -142,7 +142,7 @@ module ScrubUnsafeUrls
             UPDATE "actors"
                SET "icon" = ?, "image" = ?, "urls" = ?
              WHERE "id" = ?
-          SQL
+            SQL
           scrubbed += 1
           notes = [] of String
           notes << "icon nulled" if new_icon != icon
@@ -171,12 +171,12 @@ module ScrubUnsafeUrls
     loop do
       rows = [] of {Int64, String, String?, String?}
       db.query(<<-SQL, last_id, BATCH_SIZE) do |rs|
-        SELECT "id", "iri", "urls", "attachments"
-          FROM "objects"
-         WHERE "id" > ? AND "deleted_at" IS NULL
-      ORDER BY "id"
-         LIMIT ?
-      SQL
+          SELECT "id", "iri", "urls", "attachments"
+            FROM "objects"
+           WHERE "id" > ? AND "deleted_at" IS NULL
+        ORDER BY "id"
+           LIMIT ?
+        SQL
         rs.each do
           rows << {
             rs.read(Int64),
@@ -209,7 +209,7 @@ module ScrubUnsafeUrls
             UPDATE "objects"
                SET "urls" = ?, "attachments" = ?
              WHERE "id" = ?
-          SQL
+            SQL
           scrubbed += 1
           notes = [] of String
           notes << "#{urls_dropped} url(s) dropped" if urls_dropped > 0
@@ -237,7 +237,7 @@ module ScrubUnsafeUrls
       rows = [] of {Int64, String}
       db.query(<<-SQL, last_id, BATCH_SIZE) do |rs|
         SELECT "id", "iri" FROM "#{table}" WHERE "id" > ? ORDER BY "id" LIMIT ?
-      SQL
+        SQL
         rs.each do
           rows << {rs.read(Int64), rs.read(String)}
         end
@@ -279,12 +279,12 @@ module ScrubUnsafeUrls
     loop do
       rows = [] of {Int64, String, String?}
       db.query(<<-SQL, last_id, BATCH_SIZE) do |rs|
-        SELECT "id", "type", "href"
-          FROM "tags"
-         WHERE "id" > ?
-      ORDER BY "id"
-         LIMIT ?
-      SQL
+          SELECT "id", "type", "href"
+            FROM "tags"
+           WHERE "id" > ?
+        ORDER BY "id"
+           LIMIT ?
+        SQL
         rs.each do
           rows << {rs.read(Int64), rs.read(String), rs.read(String?)}
         end

@@ -76,8 +76,8 @@ Spectator.describe Tag do
 
   describe ".match" do
     macro create_tag(index, name)
-      let_create!(:object, named: object{{index}}, published: {{index}}.days.ago)
-      let_create!(:tag, named: tag{{index}}, subject_iri: object{{index}}.iri, name: {{name}})
+      let_create!(:object, named: object{{ index }}, published: {{ index }}.days.ago)
+      let_create!(:tag, named: tag{{ index }}, subject_iri: object{{ index }}.iri, name: {{ name }})
     end
 
     create_tag(1, "foobar")

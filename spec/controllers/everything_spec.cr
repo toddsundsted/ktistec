@@ -27,9 +27,9 @@ Spectator.describe EverythingController do
 
       macro create_post(index)
         let_create!(
-          :object, named: post{{index}},
+          :object, named: post{{ index }},
           attributed_to: author,
-          published: Time.utc(2016, 2, 15, 10, 20, {{index}})
+          published: Time.utc(2016, 2, 15, 10, 20, {{ index }})
         )
       end
 

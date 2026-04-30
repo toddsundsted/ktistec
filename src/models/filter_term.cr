@@ -19,7 +19,7 @@ class FilterTerm
   validates(term) do
     if !term.presence
       "can't be blank"
-    elsif (instance = self.class.where(actor: actor, term: term).first?) && instance.id != self.id
+    elsif (instance = self.class.where(actor: actor, term: term).first?) && instance.id != id
       "already exists: #{term}"
     end
   end

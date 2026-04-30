@@ -11,7 +11,7 @@ up do |db|
        SET featured = accounts.iri || '/featured'
       FROM accounts
      WHERE actors.iri = accounts.iri
-  STR
+    STR
 end
 
 down do

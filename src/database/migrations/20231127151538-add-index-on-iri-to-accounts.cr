@@ -6,11 +6,11 @@ up do |db|
   db.exec <<-STR
     CREATE INDEX idx_accounts_iri
       ON accounts (iri ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP INDEX idx_accounts_iri
-  STR
+    STR
 end

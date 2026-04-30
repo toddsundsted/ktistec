@@ -51,9 +51,9 @@ class Session
     self.body =
       if expires_in
         expiry = Time.utc.to_unix + expires_in.to_i
-        self.body.as_h.merge({key => {"value" => value, "expiry" => expiry}})
+        body.as_h.merge({key => {"value" => value, "expiry" => expiry}})
       else
-        self.body.as_h.merge({key => value})
+        body.as_h.merge({key => value})
       end
     save
   end
@@ -69,11 +69,11 @@ class Session
   end
 
   def string(key)
-    check_value(self.body[key]) || raise KeyError.new(%Q|Missing hash key: "#{key}"|)
+    check_value(body[key]) || raise KeyError.new(%Q|Missing hash key: "#{key}"|)
   end
 
   def string?(key)
-    check_value(self.body[key])
+    check_value(body[key])
   rescue KeyError
     # ignore
   end
@@ -120,7 +120,7 @@ class Session
       DELETE FROM sessions
        WHERE (account_id IS NULL AND updated_at < datetime('now', '-1 hour'))
           OR (updated_at < datetime('now', '-1 month'))
-    QUERY
+      QUERY
     exec(delete)
   end
 end

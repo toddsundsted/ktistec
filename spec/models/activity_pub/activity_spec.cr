@@ -45,7 +45,7 @@ Spectator.describe ActivityPub::Activity do
         "audience":["audience link"],
         "summary":"abc"
       }
-    JSON
+      JSON
   end
 
   describe ".from_json_ld" do
@@ -234,7 +234,7 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
           "@type":"Object"
         }
       }
-    JSON
+      JSON
   end
 
   describe ".from_json_ld" do

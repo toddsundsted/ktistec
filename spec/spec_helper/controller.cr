@@ -40,8 +40,8 @@ error 404 do
 end
 
 {% for method in %w(get post put head delete patch options) %}
-  def {{method.id}}(path, headers : HTTP::Headers? = nil, body : String? = nil)
-    request = HTTP::Request.new("{{method.id}}".upcase, path, headers, body )
+  def {{ method.id }}(path, headers : HTTP::Headers? = nil, body : String? = nil)
+    request = HTTP::Request.new("{{ method.id }}".upcase, path, headers, body )
     Global.response = process_request request
   end
 {% end %}
@@ -88,7 +88,7 @@ def _sign_out
 end
 
 macro sign_in(as username = nil)
-  before_each { _sign_in({{username}}) }
+  before_each { _sign_in({{ username }}) }
   after_each { _sign_out }
 end
 

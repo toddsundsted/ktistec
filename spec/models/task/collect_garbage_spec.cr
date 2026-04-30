@@ -66,12 +66,12 @@ Spectator.describe Task::CollectGarbage do
   describe ".objects_attributed_to_followed_actors" do
     let(results) do
       query = <<-SQL
-      WITH
-      followed_or_following_actors AS (
-        #{described_class.followed_or_following_actors}
-      )
-      #{described_class.objects_attributed_to_followed_actors}
-      SQL
+        WITH
+        followed_or_following_actors AS (
+          #{described_class.followed_or_following_actors}
+        )
+        #{described_class.objects_attributed_to_followed_actors}
+        SQL
       Ktistec.database.query_all(query, as: String)
     end
 
@@ -143,12 +143,12 @@ Spectator.describe Task::CollectGarbage do
   describe ".objects_associated_with_followed_actor_activities" do
     let(results) do
       query = <<-SQL
-      WITH
-      followed_or_following_actors AS (
-        #{described_class.followed_or_following_actors}
-      )
-      #{described_class.objects_associated_with_followed_actor_activities}
-      SQL
+        WITH
+        followed_or_following_actors AS (
+          #{described_class.followed_or_following_actors}
+        )
+        #{described_class.objects_associated_with_followed_actor_activities}
+        SQL
       Ktistec.database.query_all(query, as: String)
     end
 
@@ -196,18 +196,18 @@ Spectator.describe Task::CollectGarbage do
   describe ".objects_associated_with_followed_content" do
     let(results) do
       query = <<-SQL
-      WITH
-      followed_hashtags AS (
-        #{described_class.followed_hashtags}
-      ),
-      followed_mentions AS (
-        #{described_class.followed_mentions}
-      ),
-      followed_threads AS (
-        #{described_class.followed_threads}
-      )
-      #{described_class.objects_associated_with_followed_content}
-      SQL
+        WITH
+        followed_hashtags AS (
+          #{described_class.followed_hashtags}
+        ),
+        followed_mentions AS (
+          #{described_class.followed_mentions}
+        ),
+        followed_threads AS (
+          #{described_class.followed_threads}
+        )
+        #{described_class.objects_associated_with_followed_content}
+        SQL
       Ktistec.database.query_all(query, as: String)
     end
 
@@ -393,21 +393,21 @@ Spectator.describe Task::CollectGarbage do
   describe ".objects_in_threads" do
     let(results) do
       query = <<-SQL
-      WITH
-      followed_or_following_actors AS (
-        #{described_class.followed_or_following_actors}
-      ),
-      followed_hashtags AS (
-        #{described_class.followed_hashtags}
-      ),
-      followed_mentions AS (
-        #{described_class.followed_mentions}
-      ),
-      followed_threads AS (
-        #{described_class.followed_threads}
-      )
-      #{described_class.objects_in_threads}
-      SQL
+        WITH
+        followed_or_following_actors AS (
+          #{described_class.followed_or_following_actors}
+        ),
+        followed_hashtags AS (
+          #{described_class.followed_hashtags}
+        ),
+        followed_mentions AS (
+          #{described_class.followed_mentions}
+        ),
+        followed_threads AS (
+          #{described_class.followed_threads}
+        )
+        #{described_class.objects_in_threads}
+        SQL
       Ktistec.database.query_all(query, as: String)
     end
 

@@ -9,13 +9,13 @@ Spectator.describe ActivityPub::Activity::Accept do
 
   describe "#actor" do
     it "returns an actor or actor subclass" do
-      expect(typeof(subject.actor)).to eq({{(ActivityPub::Actor.all_subclasses << ActivityPub::Actor).join("|").id}})
+      expect(typeof(subject.actor)).to eq({{ (ActivityPub::Actor.all_subclasses << ActivityPub::Actor).join("|").id }})
     end
   end
 
   describe "#object" do
     it "returns a activity or activity subclass" do
-      expect(typeof(subject.object)).to eq({{(ActivityPub::Activity.all_subclasses << ActivityPub::Activity).join("|").id}})
+      expect(typeof(subject.object)).to eq({{ (ActivityPub::Activity.all_subclasses << ActivityPub::Activity).join("|").id }})
     end
   end
 end

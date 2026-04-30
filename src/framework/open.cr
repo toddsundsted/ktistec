@@ -80,7 +80,7 @@ module Ktistec
           message = "Secure connection failure"
           break
         rescue IO::TimeoutError # subclass of IO::Error
-          message = "Timeout [#{(Time.instant - start).to_i}s]"
+          message = "Timeout [#{start.elapsed.to_i}s]"
           break
         rescue IO::Error
           message = "I/O error"

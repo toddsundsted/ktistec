@@ -79,12 +79,12 @@ Spectator.describe Ktistec::Model::Polymorphic do
         state text,
         stamp datetime
       )
-    SQL
+      SQL
   end
   after_each do
     Ktistec.database.exec <<-SQL
       DROP TABLE IF EXISTS polymorphic_models
-    SQL
+      SQL
   end
 
   describe ".new" do
@@ -181,7 +181,7 @@ Spectator.describe Ktistec::Model::Polymorphic do
       before_each do
         Ktistec.database.exec <<-SQL
           INSERT INTO polymorphic_models (id, type) VALUES (9999, 'Subclass6')
-        SQL
+          SQL
       end
 
       it "raises an error" do

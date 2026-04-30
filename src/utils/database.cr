@@ -20,7 +20,7 @@ module Ktistec
         AND id > ?
         ORDER BY id ASC
         LIMIT ?
-      QUERY
+        QUERY
 
       Relationship::Content::Notification.all.each(&.destroy)
       Relationship::Content::Timeline.all.each(&.destroy)

@@ -5,11 +5,11 @@ require "../../spec_helper/factory"
 
 private macro with_setting(setting, value)
   around_each do |example|
-    original = Ktistec.settings.{{setting.id}}
-    Ktistec.settings.{{setting.id}} = {{value}}
+    original = Ktistec.settings.{{ setting.id }}
+    Ktistec.settings.{{ setting.id }} = {{ value }}
     Ktistec.settings.save
     example.run
-    Ktistec.settings.{{setting.id}} = original
+    Ktistec.settings.{{ setting.id }} = original
     Ktistec.settings.save
   end
 end

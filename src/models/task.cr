@@ -14,7 +14,7 @@ class Task
     # Returns the name assigned to the associated fiber.
     #
     def fiber_name
-      "#{self.class}-#{self.id}"
+      "#{self.class}-#{id}"
     end
 
     # Returns the associated fiber.
@@ -148,24 +148,24 @@ class Task
   def self.scheduled(now = Time.utc, reserve = false)
     if reserve
       cleanup = <<-SQL
-         DELETE FROM tasks
-          WHERE running = 0
-            AND complete = 1
-            AND backtrace IS NULL
-            AND (
-              ((failures IS NULL OR failures = '[]') AND created_at < ?)
-              OR
-              ((failures IS NOT NULL AND failures != '[]') AND created_at < ?)
-            )
-      SQL
+        DELETE FROM tasks
+         WHERE running = 0
+           AND complete = 1
+           AND backtrace IS NULL
+           AND (
+             ((failures IS NULL OR failures = '[]') AND created_at < ?)
+             OR
+             ((failures IS NOT NULL AND failures != '[]') AND created_at < ?)
+           )
+        SQL
       exec(cleanup, now - SUCCESSFUL_TASK_RETENTION, now - FAILED_TASK_RETENTION)
       query = <<-SQL
-         UPDATE tasks
-            SET running = 1
-          WHERE running = 0 AND complete = 0 AND backtrace IS NULL
-            AND next_attempt_at <= ?
-      RETURNING #{columns}
-      SQL
+           UPDATE tasks
+              SET running = 1
+            WHERE running = 0 AND complete = 0 AND backtrace IS NULL
+              AND next_attempt_at <= ?
+        RETURNING #{columns}
+        SQL
       query_all(query, now).sort do |a, b|
         # RETURNING does not provide a means to guarantee ordering
         if (result = compare_times(a.next_attempt_at, b.next_attempt_at)) == 0
@@ -176,12 +176,12 @@ class Task
       end
     else
       query = <<-SQL
-          SELECT #{columns}
-          FROM tasks
-         WHERE running = 0 AND complete = 0 AND backtrace IS NULL
-           AND next_attempt_at <= ?
-      ORDER BY next_attempt_at, id
-      SQL
+            SELECT #{columns}
+            FROM tasks
+           WHERE running = 0 AND complete = 0 AND backtrace IS NULL
+             AND next_attempt_at <= ?
+        ORDER BY next_attempt_at, id
+        SQL
       query_all(query, now)
     end
   end
@@ -226,7 +226,7 @@ class Task
        WHERE running = 0 AND complete = 0 AND backtrace IS NULL
          AND next_attempt_at IS NOT NULL
          AND next_attempt_at >= ? AND next_attempt_at < ?
-    SQL
+      SQL
     scalar(query, now, threshold).as(Int64)
   end
 

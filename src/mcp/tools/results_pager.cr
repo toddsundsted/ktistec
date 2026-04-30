@@ -173,7 +173,7 @@ module MCP
       parts = Base64.decode_string(cursor).split(' ', 2)
       raise MCPError.new("Malformed cursor", JSON::RPC::ErrorCodes::INVALID_PARAMS) if parts.size != 2
       {parts[0].to_s, parts[1].to_i}
-    rescue ex : Base64::Error | ArgumentError
+    rescue Base64::Error | ArgumentError
       raise MCPError.new("Malformed cursor", JSON::RPC::ErrorCodes::INVALID_PARAMS)
     end
   end

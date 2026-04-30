@@ -20,12 +20,12 @@ Spectator.describe ModelChannel do
         id integer PRIMARY KEY AUTOINCREMENT,
         invocations integer
       )
-    SQL
+      SQL
   end
   after_each do
     Ktistec.database.exec <<-SQL
       DROP TABLE IF EXISTS models
-    SQL
+      SQL
   end
 
   let(model) { TestModel.new.save }
@@ -64,7 +64,7 @@ Spectator.describe ModelChannel do
       before_each do
         spawn do
           subject.subscribe(model) { model.invocations += 1; model.save }
-        rescue ex
+        rescue
         end
         Fiber.yield
       end
@@ -81,7 +81,7 @@ Spectator.describe ModelChannel do
       before_each do
         spawn do
           subject.subscribe(TestModel.new.save) { model.invocations += 1; model.save }
-        rescue ex
+        rescue
         end
         Fiber.yield
       end
@@ -98,7 +98,7 @@ Spectator.describe ModelChannel do
       before_each do
         spawn do
           subject.subscribe(model) { raise "error" }
-        rescue ex
+        rescue
         end
         Fiber.yield
       end
@@ -115,7 +115,7 @@ Spectator.describe ModelChannel do
       before_each do
         spawn do
           subject.subscribe(model) { model.invocations += 1; model.save }
-        rescue ex
+        rescue
         end
         Fiber.yield
       end

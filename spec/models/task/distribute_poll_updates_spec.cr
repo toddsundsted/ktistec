@@ -33,10 +33,10 @@ Spectator.describe Task::DistributePollUpdates do
 
     macro vote(index, voter, name)
       let_create!(
-        :note, named: vote{{index}},
-        name: {{name}},
+        :note, named: vote{{ index }},
+        name: {{ name }},
         in_reply_to: question,
-        attributed_to: {{voter}},
+        attributed_to: {{ voter }},
         special: "vote",
       )
     end

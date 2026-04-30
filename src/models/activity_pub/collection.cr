@@ -36,23 +36,23 @@ module ActivityPub
 
     @[Persistent]
     property first_iri : String?
-    belongs_to :first, class_name: {{@type}}, foreign_key: first_iri, primary_key: iri
+    belongs_to :first, class_name: {{ @type }}, foreign_key: first_iri, primary_key: iri
 
     @[Persistent]
     property last_iri : String?
-    belongs_to :last, class_name: {{@type}}, foreign_key: last_iri, primary_key: iri
+    belongs_to :last, class_name: {{ @type }}, foreign_key: last_iri, primary_key: iri
 
     @[Persistent]
     property prev_iri : String?
-    belongs_to :prev, class_name: {{@type}}, foreign_key: prev_iri, primary_key: iri
+    belongs_to :prev, class_name: {{ @type }}, foreign_key: prev_iri, primary_key: iri
 
     @[Persistent]
     property next_iri : String?
-    belongs_to :next, class_name: {{@type}}, foreign_key: next_iri, primary_key: iri
+    belongs_to :next, class_name: {{ @type }}, foreign_key: next_iri, primary_key: iri
 
     @[Persistent]
     property current_iri : String?
-    belongs_to :current, class_name: {{@type}}, foreign_key: current_iri, primary_key: iri
+    belongs_to :current, class_name: {{ @type }}, foreign_key: current_iri, primary_key: iri
 
     # Traverses the collection and returns IRIs of all items.
     #
@@ -63,7 +63,7 @@ module ActivityPub
     #
     def all_item_iris(source, maximum_depth = 10)
       items_iris || begin
-        if (first = self.first?(source, dereference: true))
+        if (first = first?(source, dereference: true))
           Array(String).new.tap do |items|
             if (iris = first.items_iris)
               items.concat(iris)
@@ -80,7 +80,7 @@ module ActivityPub
               end
             end
           end
-        elsif (last = self.last?(source, dereference: true))
+        elsif (last = last?(source, dereference: true))
           Array(String).new.tap do |items|
             if (iris = last.items_iris)
               items.concat(iris)
@@ -104,7 +104,7 @@ module ActivityPub
     # Allows same-origin matching for collections.
     #
     def iri_matches?(requested_iri : String) : Bool
-      self_uri = URI.parse(self.iri).normalize!
+      self_uri = URI.parse(iri).normalize!
       requested_uri = URI.parse(requested_iri).normalize!
       self_uri.scheme == requested_uri.scheme &&
         self_uri.host == requested_uri.host &&
@@ -118,7 +118,7 @@ module ActivityPub
     end
 
     def from_json_ld(json)
-      self.assign(self.class.map(json))
+      assign(self.class.map(json))
     end
 
     def self.map(json, **options)

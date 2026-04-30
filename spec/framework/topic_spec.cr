@@ -49,7 +49,7 @@ Spectator.describe Ktistec::Topic do
   macro make_subscription(topic, &block)
     before_each do
       spawn do
-        {{topic}}.subscribe {{block}}
+        {{ topic }}.subscribe {{ block }}
       rescue
       end
       Fiber.yield
@@ -146,7 +146,7 @@ Spectator.describe Ktistec::Topic do
     let(invocations) { [0] }
 
     context "given a subscription" do
-      make_subscription(topic) { |_, values| self.invocations[0] += values.size }
+      make_subscription(topic) { |_, values| invocations[0] += values.size }
 
       pre_condition { expect(topic.subscriptions.size).to eq(1) }
 
@@ -194,7 +194,7 @@ Spectator.describe Ktistec::Topic do
     end
 
     context "given a different subject" do
-      make_subscription(Ktistec::Topic{"foobar"}) { self.invocations[0] += 1 }
+      make_subscription(Ktistec::Topic{"foobar"}) { invocations[0] += 1 }
 
       pre_condition { expect(topic.subscriptions.size).to eq(0) }
 
@@ -219,7 +219,7 @@ Spectator.describe Ktistec::Topic do
     end
 
     context "given the same subject" do
-      make_subscription(Ktistec::Topic{"subject"}) { self.invocations[0] += 1 }
+      make_subscription(Ktistec::Topic{"subject"}) { invocations[0] += 1 }
 
       pre_condition { expect(topic.subscriptions.size).to eq(1) }
 

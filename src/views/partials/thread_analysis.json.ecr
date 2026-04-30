@@ -4,7 +4,7 @@
   notable_branches = analysis.notable_branches
 
   contributors = key_participants.compact_map do |participant|
-    if (actor = ActivityPub::Actor.find?(iri: participant.actor_iri))
+    if ActivityPub::Actor.find?(iri: participant.actor_iri)
       {
         actor_iri: participant.actor_iri,
         object_count: participant.object_count,
@@ -34,7 +34,7 @@
   end
 
   branches = notable_branches.compact_map do |branch|
-    if (branch_root = ActivityPub::Object.find?(branch.root_id))
+    if ActivityPub::Object.find?(branch.root_id)
       {
         root_id: branch.root_id,
         object_count: branch.object_count,

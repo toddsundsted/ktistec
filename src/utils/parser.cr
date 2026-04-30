@@ -20,7 +20,7 @@ module Ktistec
     # Clones the node.
     #
     def clone
-      self.dup
+      dup
     end
 
     # Parses expression to the right.
@@ -209,7 +209,7 @@ module Ktistec
     #
     def clone
       super.tap do |clone|
-        clone.patterns = self.patterns.dup
+        clone.patterns = patterns.dup
       end
     end
   end

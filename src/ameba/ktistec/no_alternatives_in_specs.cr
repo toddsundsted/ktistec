@@ -18,10 +18,9 @@ module Ameba::Rule::Ktistec
   # ```
   # expect(subject.url).to eq("https://test.test/actors/blob")
   # ```
-  #
   class NoAlternativesInSpecs < Base
     properties do
-      description "Spec matchers should not contain `||` alternatives."
+      description "Spec matchers should not contain `||` alternatives"
       enabled true
     end
 

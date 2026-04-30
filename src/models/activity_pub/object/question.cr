@@ -17,14 +17,14 @@ class ActivityPub::Object
     def votes : Array(ActivityPub::Object::Note)
       ActivityPub::Object::Note.where(
         "in_reply_to_iri = ? AND special = 'vote'",
-        self.iri,
+        iri,
       )
     end
 
     def votes_by(actor : ActivityPub::Actor) : Array(ActivityPub::Object::Note)
       ActivityPub::Object::Note.where(
         "in_reply_to_iri = ? AND attributed_to_iri = ? AND special = 'vote'",
-        self.iri,
+        iri,
         actor.iri,
       )
     end
@@ -39,14 +39,14 @@ class ActivityPub::Object
 
     def voters : Array(ActivityPub::Actor)
       query = <<-QUERY
-          SELECT #{Actor.columns(prefix: "a")}
-            FROM actors AS a
-            JOIN objects AS o
-              ON o.attributed_to_iri = a.iri
-           WHERE o.type = '#{ActivityPub::Object::Note}'
-             AND o.in_reply_to_iri = ?
-             AND o.special = 'vote'
-      QUERY
+        SELECT #{Actor.columns(prefix: "a")}
+          FROM actors AS a
+          JOIN objects AS o
+            ON o.attributed_to_iri = a.iri
+         WHERE o.type = '#{ActivityPub::Object::Note}'
+           AND o.in_reply_to_iri = ?
+           AND o.special = 'vote'
+        QUERY
       Actor.query_all(query, iri).uniq
     end
 

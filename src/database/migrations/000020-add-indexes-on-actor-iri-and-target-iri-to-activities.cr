@@ -6,18 +6,18 @@ up do |db|
   db.exec <<-STR
     CREATE INDEX idx_activities_actor_iri
       ON activities (actor_iri ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_activities_target_iri
       ON activities (target_iri ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP INDEX idx_activities_actor_iri
-  STR
+    STR
   db.exec <<-STR
     DROP INDEX idx_activities_target_iri
-  STR
+    STR
 end

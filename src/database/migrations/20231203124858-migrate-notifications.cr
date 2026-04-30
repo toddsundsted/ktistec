@@ -16,5 +16,5 @@ up do |db|
        "Relationship::Content::Notification::Thread",
        "Relationship::Content::Notification::Reply"
      )
-  STR
+    STR
 end

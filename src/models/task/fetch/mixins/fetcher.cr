@@ -112,7 +112,7 @@ class Task
     # Indicates whether the task was asynchronously set as complete.
     #
     def interrupted?
-      @interrupted ||= self.class.find(self.id).complete
+      @interrupted ||= self.class.find(id).complete
     end
   end
 end

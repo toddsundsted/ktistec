@@ -77,7 +77,7 @@ Spectator.describe Ktistec::Compiler do
             assert FooBar, "foo_bar", foo: 12345
             retract FooBar, foo_bar, foo: bar
           end
-        END
+          END
       end
 
       context "the compiled domain" do
@@ -213,7 +213,7 @@ Spectator.describe Ktistec::Compiler do
           rule "name"
             condition FooBar, within("foo", "bar")
           end
-        END
+          END
       end
 
       let(condition) { subject.compile.rules.first.conditions.first.as(CompilerSpec::FooBar) }
@@ -229,7 +229,7 @@ Spectator.describe Ktistec::Compiler do
           rule "name"
             condition FooBar, strip("foobar")
           end
-        END
+          END
       end
 
       let(condition) { subject.compile.rules.first.conditions.first.as(CompilerSpec::FooBar) }
@@ -245,7 +245,7 @@ Spectator.describe Ktistec::Compiler do
           rule "name"
             condition FooBar, filter("foobar")
           end
-        END
+          END
       end
 
       let(condition) { subject.compile.rules.first.conditions.first.as(CompilerSpec::FooBar) }

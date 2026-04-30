@@ -14,7 +14,7 @@ class Prompt
     Assistant
 
     def to_yaml(yaml : YAML::Nodes::Builder) : Nil
-      yaml.scalar(self.to_s.downcase)
+      yaml.scalar(to_s.downcase)
     end
   end
 
@@ -24,7 +24,7 @@ class Prompt
     Resource
 
     def to_yaml(yaml : YAML::Nodes::Builder) : Nil
-      yaml.scalar(self.to_s.downcase)
+      yaml.scalar(to_s.downcase)
     end
   end
 

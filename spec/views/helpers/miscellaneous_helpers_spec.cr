@@ -310,9 +310,9 @@ Spectator.describe "helpers" do
   describe "markdown_to_html" do
     subject do
       markdown = <<-MD
-      Markdown
-      ========
-      MD
+        Markdown
+        ========
+        MD
       XML.parse_html(markdown_to_html(markdown), PARSER_OPTIONS).document
     end
 

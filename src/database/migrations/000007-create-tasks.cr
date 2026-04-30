@@ -19,19 +19,19 @@ up do |db|
       "last_attempt_at" datetime,
       "state" text
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_tasks_type
       ON tasks (type ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_tasks_type_running_complete_backtrace_next_attempt_at_created_at
       ON tasks (type ASC, running ASC, complete ASC, backtrace ASC, next_attempt_at ASC, created_at ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE tasks
-  STR
+    STR
 end

@@ -121,7 +121,7 @@ class HTTP::Client
   end
 
   def get(path : String, headers : HTTP::Headers? = nil)
-    url = URI.new(scheme: "https", host: self.host, path: path)
+    url = URI.new(scheme: "https", host: host, path: path)
     @@requests << HTTP::Request.new("GET", url.to_s, headers)
     if url.scheme && url.authority && url.path
       case url.path
@@ -191,7 +191,7 @@ class HTTP::Client
   end
 
   def post(path : String, headers : HTTP::Headers, body : String)
-    url = URI.new(scheme: "https", host: self.host, path: path)
+    url = URI.new(scheme: "https", host: host, path: path)
     @@requests << HTTP::Request.new("POST", url.to_s, headers, body)
     if url.scheme && url.authority && url.path
       case url.path

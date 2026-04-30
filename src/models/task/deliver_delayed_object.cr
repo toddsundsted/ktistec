@@ -56,7 +56,7 @@ class Task
     delegate :reason, to: state
 
     def perform
-      if (object = self.object?) && !object.deleted? && !object.published
+      if (object = object?) && !object.deleted? && !object.published
         unless object.local?
           Log.warn { "non-local object: #{subject_iri}" }
           return

@@ -19,7 +19,7 @@ class TaskWorker
   def self.start(&)
     @@running = true
     yield
-    self.new.tap do |worker|
+    new.tap do |worker|
       spawn do
         Fiber.current.name = "TaskWorker"
         loop do

@@ -2,7 +2,7 @@ version: 2.0
 shards:
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
-    version: 1.6.4
+    version: 1.7.0-dev+git.commit.77bf37bb5d3f7751bb531d2e5e67d66a28474579
 
   backtracer:
     git: https://github.com/sija/backtracer.cr.git
@@ -59,3 +59,4 @@ shards:
   web_finger:
     git: https://github.com/toddsundsted/web_finger.git
     version: 0.2.6
+

@@ -247,7 +247,7 @@ Spectator.describe Poll do
     macro vote(name)
       let_create!(
         :note, named: nil,
-        name: {{name}},
+        name: {{ name }},
         in_reply_to: question,
         attributed_to: actor,
         special: "vote",

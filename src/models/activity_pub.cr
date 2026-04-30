@@ -27,22 +27,22 @@ module ActivityPub
           {% name = subclass.stringify.split("::").last %}
           {% if subclass == includer && includer.has_constant?(:ALIASES) %}
             {% aliases = [name] + includer.constant(:ALIASES).map(&.split("::").last) %}
-            when {{aliases.map(&.stringify).join(",").id}}
+            when {{ aliases.map(&.stringify).join(",").id }}
           {% else %}
-            when {{name}}
+            when {{ name }}
           {% end %}
           {% if subclass.class.methods.map(&.name).includes?("map".id) %}
-            attrs = {{subclass}}.map(json, **options)
+            attrs = {{ subclass }}.map(json, **options)
           {% else %}
-            attrs = {{includer}}.map(json, **options)
+            attrs = {{ includer }}.map(json, **options)
           {% end %}
-          if type == {{name}}
-            attrs["type"] = {{subclass.stringify}}
+          if type == {{ name }}
+            attrs["type"] = {{ subclass.stringify }}
           else
-            attrs["type"] = "{{includer}}::#{type}"
+            attrs["type"] = "{{ includer }}::#{type}"
           end
-          {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
-            {{subclass}}.new(attrs)
+          {{ subclass }}.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
+            {{ subclass }}.new(attrs)
         {% end %}
       {% end %}
       else
@@ -85,16 +85,16 @@ module ActivityPub
   macro common_filters(**options)
     <<-FILTERS
       {% if (key = options[:objects]) %}
-        AND {{key.id}}.special is NULL
-        AND {{key.id}}.deleted_at is NULL
-        AND {{key.id}}.blocked_at is NULL
+        AND {{ key.id }}.special is NULL
+        AND {{ key.id }}.deleted_at is NULL
+        AND {{ key.id }}.blocked_at is NULL
       {% end %}
       {% if (key = options[:actors]) %}
-        AND {{key.id}}.deleted_at IS NULL
-        AND {{key.id}}.blocked_at IS NULL
+        AND {{ key.id }}.deleted_at IS NULL
+        AND {{ key.id }}.blocked_at IS NULL
       {% end %}
       {% if (key = options[:activities]) %}
-        AND {{key.id}}.undone_at IS NULL
+        AND {{ key.id }}.undone_at IS NULL
       {% end %}
     FILTERS
   end

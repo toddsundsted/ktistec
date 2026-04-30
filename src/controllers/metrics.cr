@@ -105,7 +105,7 @@ class MetricsController
   alias Predicate = Chart::Predicate
 
   private macro timezone(env)
-    Time::Location.load({{env}}.account.timezone)
+    Time::Location.load({{ env }}.account.timezone)
   end
 
   get "/metrics" do |env|

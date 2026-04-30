@@ -29,7 +29,7 @@ module Ktistec
         io << "#<"
         self.class.to_s(io)
         io << " iri="
-        self.iri.to_s(io)
+        iri.to_s(io)
         io << ">"
       end
 
@@ -118,36 +118,36 @@ module Ktistec
                   {% name = method.name[13..-1].id %}
                   {% foreign_key = method.body[2].id %}
                   {% clazz = method.body[3].id %}
-                  class ::{{type}}
-                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
-                      if dereference && ({{foreign_key}} = self.{{foreign_key}})
-                        if ignore_changed || ({{name}}_ = self.{{name}}?).nil? || (ignore_cached && !{{name}}_.changed?)
-                          if {{foreign_key}}.starts_with?(Ktistec.host)
-                            {{name}}_ = self.{{name}}?
-                          elsif {{foreign_key}}.includes?("#")
-                            Log.debug { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - skipping dereference for URL with fragment" }
-                            {{name}}_ = self.{{name}}?
+                  class ::{{ type }}
+                    def {{ name }}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
+                      if dereference && ({{ foreign_key }} = self.{{ foreign_key }})
+                        if ignore_changed || ({{ name }}_ = self.{{ name }}?).nil? || (ignore_cached && !{{ name }}_.changed?)
+                          if {{ foreign_key }}.starts_with?(Ktistec.host)
+                            {{ name }}_ = self.{{ name }}?
+                          elsif {{ foreign_key }}.includes?("#")
+                            Log.debug { "#{self.class}##{{{ name.stringify }}}? - #{{{ foreign_key }}} - skipping dereference for URL with fragment" }
+                            {{ name }}_ = self.{{ name }}?
                           else
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-                            Ktistec::Open.open?(key_pair, {{foreign_key}}, headers) do |response|
-                              {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
-                              if {{name}}_ && !{{name}}_.iri_matches?({{foreign_key}})
-                                Log.warn { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - IRI mismatch: requested #{{{foreign_key}}}, got #{{{name}}_.iri}" }
-                                {{name}}_ = nil
+                            Ktistec::Open.open?(key_pair, {{ foreign_key }}, headers) do |response|
+                              {{ name }}_ = ActivityPub.from_json_ld(response.body, **options).as({{ clazz }})
+                              if {{ name }}_ && !{{ name }}_.iri_matches?({{ foreign_key }})
+                                Log.warn { "#{self.class}##{{{ name.stringify }}}? - #{{{ foreign_key }}} - IRI mismatch: requested #{{{ foreign_key }}}, got #{{{ name }}_.iri}" }
+                                {{ name }}_ = nil
                               else
-                                self.{{name}} = {{name}}_
+                                self.{{ name }} = {{ name }}_
                               end
                             rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
-                              Log.info { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} -- #{ex.message}" }
+                              Log.info { "#{self.class}##{{{ name.stringify }}}? - #{{{ foreign_key }}} -- #{ex.message}" }
                             end
                           end
                         else
-                          {{name}}_ = self.{{name}}?
+                          {{ name }}_ = self.{{ name }}?
                         end
                       else
-                        {{name}}_ = self.{{name}}?
+                        {{ name }}_ = self.{{ name }}?
                       end
-                      {{name}}_
+                      {{ name }}_
                     end
                   end
                 {% end %}

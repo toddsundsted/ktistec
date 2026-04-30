@@ -13,7 +13,7 @@ up do |db|
          AND u.object_iri = activities.iri
          AND u.actor_iri = activities.actor_iri
     )
-  STR
+    STR
 end
 
 down do

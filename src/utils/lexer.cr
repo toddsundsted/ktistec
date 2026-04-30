@@ -21,7 +21,7 @@ module Ktistec
 
     # Creates a new token.
     #
-    def initialize(@type : Type, @value : String | Int64 | Float64 | Nil = nil)
+    def initialize(@type : Type, @value : String | Int64 | Float64? = nil)
     end
 
     def eoi?

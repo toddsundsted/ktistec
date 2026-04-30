@@ -111,11 +111,11 @@ Spectator.describe StreamingController do
 
     it "renders a Turbo Stream action" do
       expect(subject).to eq <<-HTML
-      data: \
-      <turbo-stream action="replace" targets="img[data-actor-id='#{actor.id}']"><template>#{Ktistec::ViewHelper.actor_icon(actor, "ui avatar image", include_actor_id: false)}\
-      </template></turbo-stream>
-      \n
-      HTML
+        data: \
+        <turbo-stream action="replace" targets="img[data-actor-id='#{actor.id}']"><template>#{Ktistec::ViewHelper.actor_icon(actor, "ui avatar image", include_actor_id: false)}\
+        </template></turbo-stream>
+        \n
+        HTML
     end
 
     context "given an icon that contains a double-quote" do
@@ -143,17 +143,17 @@ Spectator.describe StreamingController do
     context "given no notifications" do
       it "renders invisible labels" do
         expect(subject).to eq <<-HTML
-      data: \
-      <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
-      <span class="invisible label"></span>\
-      </template></turbo-stream>
+          data: \
+          <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
+          <span class="invisible label"></span>\
+          </template></turbo-stream>
 
-      data: \
-      <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
-      <span class="invisible label"></span>\
-      </template></turbo-stream>
-      \n
-      HTML
+          data: \
+          <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
+          <span class="invisible label"></span>\
+          </template></turbo-stream>
+          \n
+          HTML
       end
     end
 
@@ -162,17 +162,17 @@ Spectator.describe StreamingController do
 
       it "renders red label with tooltip" do
         expect(subject).to eq <<-HTML
-      data: \
-      <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
-      <span class="ui mini transitional horizontal circular label red" title="follow 1">1</span>\
-      </template></turbo-stream>
+          data: \
+          <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
+          <span class="ui mini transitional horizontal circular label red" title="follow 1">1</span>\
+          </template></turbo-stream>
 
-      data: \
-      <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
-      <span class="ui mini transitional horizontal circular label red" title="follow 1">1</span>\
-      </template></turbo-stream>
-      \n
-      HTML
+          data: \
+          <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
+          <span class="ui mini transitional horizontal circular label red" title="follow 1">1</span>\
+          </template></turbo-stream>
+          \n
+          HTML
       end
     end
 
@@ -181,17 +181,17 @@ Spectator.describe StreamingController do
 
       it "renders orange label with tooltip" do
         expect(subject).to eq <<-HTML
-      data: \
-      <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
-      <span class="ui mini transitional horizontal circular label orange" title="social 1">1</span>\
-      </template></turbo-stream>
+          data: \
+          <turbo-stream action="replace" targets=".ui.menu .mobile-menu-toggle .label"><template>\
+          <span class="ui mini transitional horizontal circular label orange" title="social 1">1</span>\
+          </template></turbo-stream>
 
-      data: \
-      <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
-      <span class="ui mini transitional horizontal circular label orange" title="social 1">1</span>\
-      </template></turbo-stream>
-      \n
-      HTML
+          data: \
+          <turbo-stream action="replace" targets=".ui.menu .item.notifications .label"><template>\
+          <span class="ui mini transitional horizontal circular label orange" title="social 1">1</span>\
+          </template></turbo-stream>
+          \n
+          HTML
       end
     end
   end
@@ -205,15 +205,15 @@ Spectator.describe StreamingController do
 
     it "renders a Turbo Stream action" do
       expect(subject).to eq <<-HTML
-      data: \
-      <turbo-stream action="replace" target="refresh-posts-message"><template>\
-      <div id="refresh-posts-message" class="ui info icon message"><i class="sync icon"></i>\
-      <div class="content"><div class="header">There are new posts!</div>\
-      <p><a href="" data-turbo-prefetch="false" data-turbo-action="replace">Refresh</a></p>\
-      </div></div>\
-      </template></turbo-stream>
-      \n
-      HTML
+        data: \
+        <turbo-stream action="replace" target="refresh-posts-message"><template>\
+        <div id="refresh-posts-message" class="ui info icon message"><i class="sync icon"></i>\
+        <div class="content"><div class="header">There are new posts!</div>\
+        <p><a href="" data-turbo-prefetch="false" data-turbo-action="replace">Refresh</a></p>\
+        </div></div>\
+        </template></turbo-stream>
+        \n
+        HTML
     end
   end
 
@@ -244,14 +244,14 @@ Spectator.describe StreamingController do
         described_class.stream_action(io, body: "<br>\n<br>\n<br>", action: "foobar", target: "target", selector: nil)
       end
       expect(str).to eq <<-HTML
-      data: \
-      <turbo-stream action="foobar" target="target"><template>\
-      <br>
-      data: <br>
-      data: <br>\
-      </template></turbo-stream>
-      \n
-      HTML
+        data: \
+        <turbo-stream action="foobar" target="target"><template>\
+        <br>
+        data: <br>
+        data: <br>\
+        </template></turbo-stream>
+        \n
+        HTML
     end
 
     it "sends the body in a Turbo Stream / Server-Sent Events wrapper" do
@@ -259,14 +259,14 @@ Spectator.describe StreamingController do
         described_class.stream_action(io, body: "<br>\n<br>\n<br>", action: "foobar", selector: "target", target: nil)
       end
       expect(str).to eq <<-HTML
-      data: \
-      <turbo-stream action="foobar" targets="target"><template>\
-      <br>
-      data: <br>
-      data: <br>\
-      </template></turbo-stream>
-      \n
-      HTML
+        data: \
+        <turbo-stream action="foobar" targets="target"><template>\
+        <br>
+        data: <br>
+        data: <br>\
+        </template></turbo-stream>
+        \n
+        HTML
     end
 
     it "sets the id" do
@@ -274,10 +274,10 @@ Spectator.describe StreamingController do
         described_class.stream_action(io, body: nil, action: "foobar", id: "xyzzy", target: nil, selector: nil)
       end
       expect(str).to eq <<-HTML
-      data: <turbo-stream action="foobar"></turbo-stream>
-      id: xyzzy
-      \n
-      HTML
+        data: <turbo-stream action="foobar"></turbo-stream>
+        id: xyzzy
+        \n
+        HTML
     end
 
     it "resets the id" do
@@ -285,10 +285,10 @@ Spectator.describe StreamingController do
         described_class.stream_action(io, body: nil, action: "foobar", id: nil, target: nil, selector: nil)
       end
       expect(str).to eq <<-HTML
-      data: <turbo-stream action="foobar"></turbo-stream>
-      id
-      \n
-      HTML
+        data: <turbo-stream action="foobar"></turbo-stream>
+        id
+        \n
+        HTML
     end
   end
 end

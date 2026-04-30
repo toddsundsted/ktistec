@@ -52,9 +52,9 @@ Spectator.describe Task::UpdateMetrics do
 
       macro create_item(index)
         let_create!(
-          :inbox_relationship, named: inbox{{index}},
+          :inbox_relationship, named: inbox{{ index }},
           owner: owner,
-          created_at: Time.utc(2016, 2, {{index}}, 10, 20, 30)
+          created_at: Time.utc(2016, 2, {{ index }}, 10, 20, 30)
         )
       end
 

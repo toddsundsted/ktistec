@@ -13,18 +13,18 @@ class HTTP::Server::Context
   #
   def accepts?(*mime_types)
     @accepts ||=
-      if (accept = self.request.headers["Accept"]?)
+      if (accept = request.headers["Accept"]?)
         accept.split(",").reduce(Hash(String, String).new) do |accepts, content_type|
           accepts.merge({content_type.split(";").first.strip => content_type})
         end
-      elsif (content_type = self.request.headers["Content-Type"]?)
+      elsif (content_type = request.headers["Content-Type"]?)
         {content_type.split(";").first.strip => content_type}
       else
         {} of String => String
       end
     if (accepts = @accepts)
       if (accept = accepts.find(&.first.in?(mime_types)))
-        self.response.content_type = accept.last
+        response.content_type = accept.last
       end
     end
   end
@@ -47,7 +47,7 @@ module Ktistec
     end
 
     macro accepts?(*mime_type)
-      env.accepts?({{mime_type.splat}})
+      env.accepts?({{ mime_type.splat }})
     end
 
     macro accepts_turbo_stream?
@@ -61,8 +61,8 @@ module Ktistec
     # Redirect and end processing.
     #
     macro redirect(url, status_code = 302)
-      env.response.headers.add("Location", {{url}})
-      env.response.status_code = {{status_code}}
+      env.response.headers.add("Location", {{ url }})
+      env.response.status_code = {{ status_code }}
       next
     end
 
@@ -72,7 +72,7 @@ module Ktistec
       %q(<turbo-stream action="refresh"><template></template></turbo-stream>)
     end
 
-    VIEWS = {} of String => { String, String, String? }
+    VIEWS = {} of String => {String, String, String?}
 
     macro register_view(key, view, layout = nil, **opts)
       {%
@@ -86,12 +86,12 @@ module Ktistec
       {% for name, options in VIEWS %}
         {% opts, view, layout = options %}
         {% if layout %}
-          def Ktistec::ViewHelper.{{name.id}}({{opts.id}})
-            render {{view}}, {{layout}}
+          def Ktistec::ViewHelper.{{ name.id }}({{ opts.id }})
+            render {{ view }}, {{ layout }}
           end
         {% else %}
-          def Ktistec::ViewHelper.{{name.id}}({{opts.id}})
-            render {{view}}
+          def Ktistec::ViewHelper.{{ name.id }}({{ opts.id }})
+            render {{ view }}
           end
         {% end %}
       {% end %}
@@ -100,7 +100,7 @@ module Ktistec
     # Define a simple response helper.
     #
     macro def_response_helper(name, status_message, status_code)
-      macro {{name.id}}(_message = {{status_message}}, _status_code = {{status_code}}, _basedir = "src/views", _operation = nil, _method = nil, _target = nil, **opts)
+      macro {{ name.id }}(_message = {{ status_message }}, _status_code = {{ status_code }}, _basedir = "src/views", _operation = nil, _method = nil, _target = nil, **opts)
         \{% if _message.is_a?(StringLiteral) && _message.includes?('/') %}
           # HTML FIRST
           \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.html.slang") %}
@@ -211,20 +211,20 @@ module Ktistec
     def_response_helper(service_unavailable, "Service Unavailable", 503)
 
     macro created(url, *args, **opts)
-      env.response.headers.add("Location", {{url}})
+      env.response.headers.add("Location", {{ url }})
       {% if args.empty? || opts.empty? %}
-        _created {{args.splat}}{{opts.double_splat}}
+        _created {{ args.splat }}{{ opts.double_splat }}
       {% else %}
-        _created {{args.splat}}, {{opts.double_splat}}
+        _created {{ args.splat }}, {{ opts.double_splat }}
       {% end %}
     end
 
     macro method_not_allowed(allowed_methods, *args, **opts)
-      env.response.headers.add("Allow", {{allowed_methods.join(", ")}})
+      env.response.headers.add("Allow", {{ allowed_methods.join(", ") }})
       {% if args.empty? || opts.empty? %}
-        _method_not_allowed {{args.splat}}{{opts.double_splat}}
+        _method_not_allowed {{ args.splat }}{{ opts.double_splat }}
       {% else %}
-        _method_not_allowed {{args.splat}}, {{opts.double_splat}}
+        _method_not_allowed {{ args.splat }}, {{ opts.double_splat }}
       {% end %}
     end
 
@@ -241,10 +241,10 @@ module Ktistec
       class ::Ktistec::Auth < ::Kemal::Handler
         {% methods = (methods << method).map(&.stringify) %}
         {% for method in methods %}
-          exclude {{paths}}, {{method}}
+          exclude {{ paths }}, {{ method }}
         {% end %}
         {% if methods.includes?("GET") && !methods.includes?("HEAD") %}
-          exclude {{paths}}, "HEAD"
+          exclude {{ paths }}, "HEAD"
         {% end %}
       end
     end

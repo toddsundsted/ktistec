@@ -13,7 +13,7 @@ module JSON::RPC
 
     property jsonrpc : String = VERSION
 
-    property id : String | Int32 | Nil
+    property id : String | Int32?
 
     property method : String
 

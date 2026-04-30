@@ -28,7 +28,7 @@ class FooBarTask < Task
   class_property performed = [] of Int64
 
   def perform
-    FooBarTask.performed << self.id.not_nil!
+    FooBarTask.performed << id.not_nil!
   end
 end
 
@@ -109,11 +109,11 @@ Spectator.describe TaskWorker do
     before_each { FooBarTask.performed.clear }
 
     macro create_task!(index, next_attempt_at)
-      let!(task{{index}}) do
+      let!(task{{ index }}) do
         FooBarTask.new(
           source_iri: "https://test.test/source",
           subject_iri: "https://test.test/subject",
-          next_attempt_at: {{next_attempt_at}}
+          next_attempt_at: {{ next_attempt_at }}
         ).save
       end
     end

@@ -173,7 +173,7 @@ Spectator.describe SettingsController do
       context "and posting urlencoded data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"} }
 
-        let(query_string) {
+        let(query_string) do
           [
             "name=Foo+Bar",
             "summary=Blah+Blah",
@@ -183,7 +183,7 @@ Spectator.describe SettingsController do
             "image=%2Ffoo%2Fbar%2Fbaz",
             "icon=%2Ffoo%2Fbar%2Fbaz",
           ].join("&")
-        }
+        end
 
         it "succeeds" do
           post "/settings/actor", headers, query_string
@@ -355,7 +355,7 @@ Spectator.describe SettingsController do
         end
 
         macro uploaded_image(actor)
-          "#{Dir.tempdir}#{URI.parse({{actor}}.reload!.image.not_nil!).path}"
+          "#{Dir.tempdir}#{URI.parse({{ actor }}.reload!.image.not_nil!).path}"
         end
 
         it "updates the image" do
@@ -404,7 +404,7 @@ Spectator.describe SettingsController do
       context "and posting JSON data" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
-        let(json_string) {
+        let(json_string) do
           {
             name:     "Foo Bar",
             summary:  "Blah Blah",
@@ -414,7 +414,7 @@ Spectator.describe SettingsController do
             image:    "/foo/bar/baz",
             icon:     "/foo/bar/baz",
           }.to_json
-        }
+        end
 
         it "succeeds" do
           post "/settings/actor", headers, json_string
@@ -667,7 +667,7 @@ Spectator.describe SettingsController do
         end
 
         macro uploaded_image(settings)
-          "#{Dir.tempdir}#{URI.parse(Ktistec.{{settings}}.image.not_nil!).path}"
+          "#{Dir.tempdir}#{URI.parse(Ktistec.{{ settings }}.image.not_nil!).path}"
         end
 
         it "updates the image" do

@@ -14,7 +14,7 @@ module Ktistec
 
     # Pairs composed of SQL conditions and values.
     #
-    alias ConditionPair = Tuple(String, SupportedType | Array(SupportedType) | Nil)
+    alias ConditionPair = Tuple(String, SupportedType | Array(SupportedType)?)
 
     # Returns a SQL condition and values given an expression. The
     # supplied function must return an appropriate supported type (or
@@ -212,9 +212,9 @@ module Ktistec
     macro make_pattern(name, clazz, associations = nil, properties = nil)
       {% clazz = clazz.resolve %}
 
-      class ::{{clazz}} ; include ::School::DomainType ; end
+      class ::{{ clazz }} ; include ::School::DomainType ; end
 
-      class {{name.id}} < School::Pattern
+      class {{ name.id }} < School::Pattern
         @vars = [] of String
 
         alias Supported = School::Lit | School::Var | School::Not | School::Within
@@ -269,15 +269,15 @@ module Ktistec
         private def match_all(bindings : School::Bindings, trace : School::TraceNode?) : Enumerable(School::Bindings)
           keys = @options.keys
           {% if associations %}
-            keys -= {{associations.map(&.id.stringify)}}
+            keys -= {{ associations.map(&.id.stringify) }}
           {% end %}
           {% if properties %}
-            keys -= {{properties.map(&.id.stringify)}}
+            keys -= {{ properties.map(&.id.stringify) }}
           {% end %}
           raise ArgumentError.new("invalid arguments: #{keys.join(",")}") unless keys.empty?
 
-          table_name = {{clazz.id}}.table_name
-          column_names = {{clazz.id}}.columns(table_name)
+          table_name = {{ clazz.id }}.table_name
+          column_names = {{ clazz.id }}.columns(table_name)
 
           conditions = [] of Ktistec::Rule::ConditionPair?
 
@@ -298,10 +298,10 @@ module Ktistec
               {% end %}
               {% definition = method.body %}
               {% if definition[0] == :belongs_to %}
-                if @options.has_key?({{association.id.stringify}})
-                  conditions << Ktistec::Rule.condition(table_name, {{definition[2].id.stringify}}, @options[{{association.id.stringify}}], bindings, ->(value : School::DomainTypes) {
-                    if value.responds_to?({{definition[1]}}) && value.{{definition[1].id}}
-                      value.{{definition[1].id}}
+                if @options.has_key?({{ association.id.stringify }})
+                  conditions << Ktistec::Rule.condition(table_name, {{ definition[2].id.stringify }}, @options[{{ association.id.stringify }}], bindings, ->(value : School::DomainTypes) {
+                    if value.responds_to?({{ definition[1] }}) && value.{{ definition[1].id }}
+                      value.{{ definition[1].id }}
                     end
                   })
                 end
@@ -321,8 +321,8 @@ module Ktistec
                   {% derived_name = method.body[2] %}
                 {% end %}
               {% end %}
-              if @options.has_key?({{property.id.stringify}})
-                conditions << Ktistec::Rule.condition(table_name, {{derived_name.id.stringify}}, @options[{{property.id.stringify}}], bindings, ->(value : School::DomainTypes) {
+              if @options.has_key?({{ property.id.stringify }})
+                conditions << Ktistec::Rule.condition(table_name, {{ derived_name.id.stringify }}, @options[{{ property.id.stringify }}], bindings, ->(value : School::DomainTypes) {
                   raise "values of type #{value.class} are currently unsupported" unless value.is_a?(Ktistec::Rule::SupportedType?)
                   value
                 })
@@ -338,7 +338,7 @@ module Ktistec
           {% end %}
           {% if clazz < Model::Polymorphic %}
             unless @options.has_key?("type")
-              types = {{clazz}}.all_subtypes.join("','")
+              types = {{ clazz }}.all_subtypes.join("','")
               conditions << { %Q|#{table_name}."type" IN ('#{types}')|, nil }
             end
           {% end %}
@@ -353,7 +353,7 @@ module Ktistec
 
           trace.condition(self) if trace
 
-          {{clazz.id}}.sql(query, args: args).map do |model|
+          {{ clazz.id }}.sql(query, args: args).map do |model|
             bindings.dup.tap do |temporary|
               if (target = @target) && (name = target.name?) && !temporary.has_key?(name)
                 temporary[name] = model
@@ -361,9 +361,9 @@ module Ktistec
 
               {% if associations %}
                 {% for association in associations %}
-                  if @options.has_key?({{association.id.stringify}})
-                    if (target = @options[{{association.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
-                      break unless (value = model.{{association.id}}?(include_deleted: true, include_undone: true))
+                  if @options.has_key?({{ association.id.stringify }})
+                    if (target = @options[{{ association.id.stringify }}]) && (name = target.name?) && !temporary.has_key?(name)
+                      break unless (value = model.{{ association.id }}?(include_deleted: true, include_undone: true))
                       temporary[name] = value
                     end
                   end
@@ -372,9 +372,9 @@ module Ktistec
 
               {% if properties %}
                 {% for property in properties %}
-                  if @options.has_key?({{property.id.stringify}})
-                    if (target = @options[{{property.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
-                      break unless (value = model.{{property.id}})
+                  if @options.has_key?({{ property.id.stringify }})
+                    if (target = @options[{{ property.id.stringify }}]) && (name = target.name?) && !temporary.has_key?(name)
+                      break unless (value = model.{{ property.id }})
                       temporary[name] = value
                     end
                   end
@@ -387,19 +387,19 @@ module Ktistec
         end
 
         def self.assert(target : School::DomainTypes?, **options : School::DomainTypes)
-          {{clazz}}.new(**options).save
+          {{ clazz }}.new(**options).save
         end
 
         def self.assert(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-          {{clazz}}.new(options).save
+          {{ clazz }}.new(options).save
         end
 
         def self.retract(target : School::DomainTypes?, **options : School::DomainTypes)
-          {{clazz}}.find(**options).destroy
+          {{ clazz }}.find(**options).destroy
         end
 
         def self.retract(target : School::DomainTypes?, options : Hash(String, School::DomainTypes))
-          {{clazz}}.find(options).destroy
+          {{ clazz }}.find(options).destroy
         end
       end
     end

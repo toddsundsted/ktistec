@@ -79,7 +79,7 @@ class Poll
     #
     # Only apply this conversion to local polls!
     #
-    if (question = self.question?) && question.local? && question.changed?(:published) && question.published && (closed_at = self.closed_at)
+    if (question = question?) && question.local? && question.changed?(:published) && question.published && (closed_at = self.closed_at)
       self.closed_at = Time.utc + closed_at.to_unix.seconds
     end
   end

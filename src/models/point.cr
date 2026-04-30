@@ -19,7 +19,7 @@ class Point
     query = <<-QUERY
       SELECT DISTINCT chart
         FROM points
-    QUERY
+      QUERY
     Internal.log_query(query) do
       Ktistec.database.query_all(query, as: String)
     end
@@ -27,13 +27,13 @@ class Point
 
   def self.chart(chart, begin _begin = nil, end _end = nil)
     query = <<-QUERY
-      SELECT #{Point.columns(prefix: "p")}
-        FROM points AS p
-       WHERE p.chart = ?
-        #{_begin ? "AND p.timestamp >= ?" : ""}
-        #{_end ? "AND p.timestamp <= ?" : ""}
-    ORDER BY p.timestamp ASC
-    QUERY
+        SELECT #{Point.columns(prefix: "p")}
+          FROM points AS p
+         WHERE p.chart = ?
+          #{_begin ? "AND p.timestamp >= ?" : ""}
+          #{_end ? "AND p.timestamp <= ?" : ""}
+      ORDER BY p.timestamp ASC
+      QUERY
     if _begin && _end
       Point.query_all(query, chart, _begin, _end)
     elsif _begin

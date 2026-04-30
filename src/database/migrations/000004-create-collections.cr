@@ -17,15 +17,15 @@ up do |db|
       next varchar(255),
       current varchar(255)
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE UNIQUE INDEX idx_collections_iri
       ON collections (iri ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE collections
-  STR
+    STR
 end

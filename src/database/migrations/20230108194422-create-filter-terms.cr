@@ -11,15 +11,15 @@ up do |db|
       "actor_id" integer,
       "term" text NOT NULL
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_filter_terms_actor_id
       ON filter_terms (actor_id ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE filter_terms
-  STR
+    STR
 end

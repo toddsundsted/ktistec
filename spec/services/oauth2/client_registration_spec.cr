@@ -11,7 +11,7 @@ Spectator.describe OAuth2::ClientRegistration do
   end
 
   macro register_client(*args)
-    described_class.register({{args.splat}})
+    described_class.register({{ args.splat }})
   end
 
   describe ".register" do

@@ -13,15 +13,15 @@ up do |db|
       "content" text,
       "name" text
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_translations_origin_id
       ON translations (origin_id ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE translations
-  STR
+    STR
 end

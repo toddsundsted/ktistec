@@ -140,11 +140,11 @@ module Ktistec
       def add_column(table, column, definition, index = nil)
         Ktistec.database.exec <<-STR
           ALTER TABLE #{table} ADD COLUMN #{column} #{definition}
-        STR
+          STR
         if index
           Ktistec.database.exec <<-STR
             CREATE INDEX idx_#{table}_#{column} ON #{table} (#{column} #{index})
-          STR
+            STR
         end
       end
 
@@ -157,12 +157,12 @@ module Ktistec
             next unless columns.split(",").map(&.split.first).includes?(column)
             Ktistec.database.exec <<-STR
               DROP INDEX #{index}
-            STR
+              STR
           end
         end
         Ktistec.database.exec <<-STR
           ALTER TABLE #{table} DROP COLUMN #{column}
-        STR
+          STR
       end
 
       # Applies the migration.

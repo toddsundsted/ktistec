@@ -15,7 +15,7 @@ class Tag
 
     def before_save
       # mastodon shortcodes are case-sensitive (:blob: ≠ :Blob:)
-      self.name = self.name.strip.delete(':')
+      self.name = name.strip.delete(':')
     end
 
     # emoji tags don't participate in tag statistics

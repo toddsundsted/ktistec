@@ -29,7 +29,7 @@ module MCP
       matches: Regex?,
       minimum: Int32?,
       maximum: Int32?,
-      default: String | Int32 | Bool | Time | Array(String) | Array(Int32) | Array(Bool) | Nil,
+      default: String | Int32 | Bool | Time | Array(String) | Array(Int32) | Array(Bool)?,
       enum: Array(String)?, # enum values for string types
       # array-specific properties
       items: String?, # type of array items ("string", "integer")
@@ -60,7 +60,7 @@ module MCP
     macro def_tool(name, description, properties = [] of ToolPropertyDefinition, &block)
       {% TOOL_DEFINITIONS << {name: name, description: description, properties: properties} %}
 
-      def MCP::Tools.handle_tool_{{name.id}}(params : JSON::Any, account : Account) : JSON::Any
+      def MCP::Tools.handle_tool_{{ name.id }}(params : JSON::Any, account : Account) : JSON::Any
         unless (arguments = params["arguments"]?)
           raise MCPError.new("Missing arguments", JSON::RPC::ErrorCodes::INVALID_PARAMS)
         end
@@ -68,7 +68,7 @@ module MCP
         missing_fields = [] of String
         {% for prop in properties %}
           {% if prop[:required] %}
-            missing_fields << {{prop[:name]}} unless arguments[{{prop[:name]}}]?
+            missing_fields << {{ prop[:name] }} unless arguments[{{ prop[:name] }}]?
           {% end %}
         {% end %}
         unless missing_fields.empty?
@@ -76,26 +76,26 @@ module MCP
         end
 
         {% for prop in properties %}
-          if (value = arguments[{{prop[:name]}}]?)
+          if (value = arguments[{{ prop[:name] }}]?)
             {% if prop[:type] == "integer" %}
               unless value.raw.is_a?(Int32) || value.raw.is_a?(Int64)
-                raise MCPError.new("`#{{{prop[:name]}}}` must be an integer", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                raise MCPError.new("`#{{{ prop[:name] }}}` must be an integer", JSON::RPC::ErrorCodes::INVALID_PARAMS)
               end
             {% elsif prop[:type] == "boolean" %}
               unless value.raw.is_a?(Bool)
-                raise MCPError.new("`#{{{prop[:name]}}}` must be a boolean", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                raise MCPError.new("`#{{{ prop[:name] }}}` must be a boolean", JSON::RPC::ErrorCodes::INVALID_PARAMS)
               end
             {% elsif prop[:type] == "string" %}
               unless value.raw.is_a?(String)
-                raise MCPError.new("`#{{{prop[:name]}}}` must be a string", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                raise MCPError.new("`#{{{ prop[:name] }}}` must be a string", JSON::RPC::ErrorCodes::INVALID_PARAMS)
               end
             {% elsif prop[:type] == "time" %}
               unless value.raw.is_a?(String)
-                raise MCPError.new("`#{{{prop[:name]}}}` must be a RFC3339 timestamp", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                raise MCPError.new("`#{{{ prop[:name] }}}` must be a RFC3339 timestamp", JSON::RPC::ErrorCodes::INVALID_PARAMS)
               end
             {% elsif prop[:type] == "array" %}
               unless value.raw.is_a?(Array)
-                raise MCPError.new("`#{{{prop[:name]}}}` must be an array", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                raise MCPError.new("`#{{{ prop[:name] }}}` must be an array", JSON::RPC::ErrorCodes::INVALID_PARAMS)
               end
             {% end %}
           end
@@ -103,47 +103,47 @@ module MCP
 
         {% for prop in properties %}
           {% if prop[:type] == "integer" %}
-            if (value = arguments[{{prop[:name]}}]?)
+            if (value = arguments[{{ prop[:name] }}]?)
               int_value = value.as_i
               {% if prop[:minimum] %}
-                if int_value < {{prop[:minimum]}}
-                  raise MCPError.new("`#{{{prop[:name]}}}` must be >= {{prop[:minimum]}}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                if int_value < {{ prop[:minimum] }}
+                  raise MCPError.new("`#{{{ prop[:name] }}}` must be >= {{ prop[:minimum] }}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
                 end
               {% end %}
               {% if prop[:maximum] %}
-                if int_value > {{prop[:maximum]}}
-                  raise MCPError.new("`#{{{prop[:name]}}}` must be <= {{prop[:maximum]}}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                if int_value > {{ prop[:maximum] }}
+                  raise MCPError.new("`#{{{ prop[:name] }}}` must be <= {{ prop[:maximum] }}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
                 end
               {% end %}
             end
           {% elsif prop[:type] == "string" && prop[:matches] %}
-            if (value = arguments[{{prop[:name]}}]?)
+            if (value = arguments[{{ prop[:name] }}]?)
               string_value = value.as_s
-              unless {{prop[:matches]}}.match(string_value)
-                raise MCPError.new("`#{{{prop[:name]}}}` format is invalid", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+              unless {{ prop[:matches] }}.match(string_value)
+                raise MCPError.new("`#{{{ prop[:name] }}}` format is invalid", JSON::RPC::ErrorCodes::INVALID_PARAMS)
               end
             end
           {% elsif prop[:type] == "time" %}
-            if (value = arguments[{{prop[:name]}}]?)
+            if (value = arguments[{{ prop[:name] }}]?)
               time_string = value.as_s
               begin
                 Time.parse_rfc3339(time_string)
               rescue
-                raise MCPError.new("`#{{{prop[:name]}}}` must be a RFC3339 timestamp", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                raise MCPError.new("`#{{{ prop[:name] }}}` must be a RFC3339 timestamp", JSON::RPC::ErrorCodes::INVALID_PARAMS)
               end
             end
           {% elsif prop[:type] == "array" %}
-            if (value = arguments[{{prop[:name]}}]?)
+            if (value = arguments[{{ prop[:name] }}]?)
               array_value = value.as_a
 
               {% if prop[:min_items] %}
-                if array_value.size < {{prop[:min_items]}}
-                  raise MCPError.new("`#{{{prop[:name]}}}` size must be >= {{prop[:min_items]}}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                if array_value.size < {{ prop[:min_items] }}
+                  raise MCPError.new("`#{{{ prop[:name] }}}` size must be >= {{ prop[:min_items] }}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
                 end
               {% end %}
               {% if prop[:max_items] %}
-                if array_value.size > {{prop[:max_items]}}
-                  raise MCPError.new("`#{{{prop[:name]}}}` size must be <= {{prop[:max_items]}}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                if array_value.size > {{ prop[:max_items] }}
+                  raise MCPError.new("`#{{{ prop[:name] }}}` size must be <= {{ prop[:max_items] }}", JSON::RPC::ErrorCodes::INVALID_PARAMS)
                 end
               {% end %}
 
@@ -151,15 +151,15 @@ module MCP
                 array_value.each_with_index do |item, index|
                   {% if prop[:items] == "string" %}
                     unless item.raw.is_a?(String)
-                      raise MCPError.new("`#{{{prop[:name]}}}[#{index}]` must be a string", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                      raise MCPError.new("`#{{{ prop[:name] }}}[#{index}]` must be a string", JSON::RPC::ErrorCodes::INVALID_PARAMS)
                     end
                   {% elsif prop[:items] == "integer" %}
                     unless item.raw.is_a?(Int32) || item.raw.is_a?(Int64)
-                      raise MCPError.new("`#{{{prop[:name]}}}[#{index}]` must be an integer", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                      raise MCPError.new("`#{{{ prop[:name] }}}[#{index}]` must be an integer", JSON::RPC::ErrorCodes::INVALID_PARAMS)
                     end
                   {% elsif prop[:items] == "boolean" %}
                     unless item.raw.is_a?(Bool)
-                      raise MCPError.new("`#{{{prop[:name]}}}[#{index}]` must be a boolean", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                      raise MCPError.new("`#{{{ prop[:name] }}}[#{index}]` must be a boolean", JSON::RPC::ErrorCodes::INVALID_PARAMS)
                     end
                   {% end %}
                 end
@@ -168,7 +168,7 @@ module MCP
               {% if prop[:unique_items] %}
                 string_items = array_value.map(&.to_s)
                 if string_items.size != string_items.uniq.size
-                  raise MCPError.new("`#{{{prop[:name]}}}` items must be unique", JSON::RPC::ErrorCodes::INVALID_PARAMS)
+                  raise MCPError.new("`#{{{ prop[:name] }}}` items must be unique", JSON::RPC::ErrorCodes::INVALID_PARAMS)
                 end
               {% end %}
             end
@@ -176,56 +176,56 @@ module MCP
         {% end %}
 
         {% for prop in properties %}
-            {{prop[:name].id}} =
+            {{ prop[:name].id }} =
           {% if prop[:required] %} \
             {% if prop[:type] == "string" %}
-              arguments[{{prop[:name]}}].as_s
+              arguments[{{ prop[:name] }}].as_s
             {% elsif prop[:type] == "integer" %}
-              arguments[{{prop[:name]}}].as_i
+              arguments[{{ prop[:name] }}].as_i
             {% elsif prop[:type] == "boolean" %}
-              arguments[{{prop[:name]}}].as_bool
+              arguments[{{ prop[:name] }}].as_bool
             {% elsif prop[:type] == "time" %}
-              Time.parse_rfc3339(arguments[{{prop[:name]}}].as_s)
+              Time.parse_rfc3339(arguments[{{ prop[:name] }}].as_s)
             {% elsif prop[:type] == "array" %}
               {% if prop[:items] == "string" %}
-                arguments[{{prop[:name]}}].as_a.map(&.as_s)
+                arguments[{{ prop[:name] }}].as_a.map(&.as_s)
               {% elsif prop[:items] == "integer" %}
-                arguments[{{prop[:name]}}].as_a.map(&.as_i)
+                arguments[{{ prop[:name] }}].as_a.map(&.as_i)
               {% elsif prop[:items] == "boolean" %}
-                arguments[{{prop[:name]}}].as_a.map(&.as_bool)
+                arguments[{{ prop[:name] }}].as_a.map(&.as_bool)
               {% else %}
-                arguments[{{prop[:name]}}].as_a
+                arguments[{{ prop[:name] }}].as_a
               {% end %}
             {% end %}
           {% else %}
             {% if prop[:type] == "string" %}
-              arguments[{{prop[:name]}}]?.try(&.as_s) || {{prop[:default]}}
+              arguments[{{ prop[:name] }}]?.try(&.as_s) || {{ prop[:default] }}
             {% elsif prop[:type] == "integer" %}
-              arguments[{{prop[:name]}}]?.try(&.as_i) || {{prop[:default]}}
+              arguments[{{ prop[:name] }}]?.try(&.as_i) || {{ prop[:default] }}
             {% elsif prop[:type] == "boolean" %}
-              arguments[{{prop[:name]}}]?.try(&.as_bool) || {{prop[:default]}}
+              arguments[{{ prop[:name] }}]?.try(&.as_bool) || {{ prop[:default] }}
             {% elsif prop[:type] == "time" %}
-              arguments[{{prop[:name]}}]? ? Time.parse_rfc3339(arguments[{{prop[:name]}}].as_s) : {{prop[:default]}}
+              arguments[{{ prop[:name] }}]? ? Time.parse_rfc3339(arguments[{{ prop[:name] }}].as_s) : {{ prop[:default] }}
             {% elsif prop[:type] == "array" %}
               {% if prop[:items] == "string" %}
-                arguments[{{prop[:name]}}]?.try(&.as_a.map(&.as_s)) || {{prop[:default]}}
+                arguments[{{ prop[:name] }}]?.try(&.as_a.map(&.as_s)) || {{ prop[:default] }}
               {% elsif prop[:items] == "integer" %}
-                arguments[{{prop[:name]}}]?.try(&.as_a.map(&.as_i)) || {{prop[:default]}}
+                arguments[{{ prop[:name] }}]?.try(&.as_a.map(&.as_i)) || {{ prop[:default] }}
               {% elsif prop[:items] == "boolean" %}
-                arguments[{{prop[:name]}}]?.try(&.as_a.map(&.as_bool)) || {{prop[:default]}}
+                arguments[{{ prop[:name] }}]?.try(&.as_a.map(&.as_bool)) || {{ prop[:default] }}
               {% else %}
-                arguments[{{prop[:name]}}]?.try(&.as_a) || {{prop[:default]}}
+                arguments[{{ prop[:name] }}]?.try(&.as_a) || {{ prop[:default] }}
               {% end %}
             {% end %}
           {% end %}
         {% end %}
 
         {% if block %}
-            {{block.body}}
+            {{ block.body }}
         {% else %}
             {
               {% for prop in properties %}
-                {{prop[:name].id}}: {{prop[:name].id}},
+                {{ prop[:name].id }}: {{ prop[:name].id }},
               {% end %}
             }
         {% end %}
@@ -733,48 +733,48 @@ module MCP
       tools = [
         {% for tool in TOOL_DEFINITIONS %}
           JSON::Any.new({
-            "name" => JSON::Any.new({{tool[:name]}}),
-            "description" => JSON::Any.new({{tool[:description]}}),
+            "name" => JSON::Any.new({{ tool[:name] }}),
+            "description" => JSON::Any.new({{ tool[:description] }}),
             {% if tool[:raw_schema_json] %}
-              "inputSchema" => JSON.parse({{tool[:raw_schema_json]}}),
+              "inputSchema" => JSON.parse({{ tool[:raw_schema_json] }}),
             {% else %}
               "inputSchema" => JSON::Any.new({
                 "type" => JSON::Any.new("object"),
                 "properties" => JSON::Any.new({
                   {% for prop in tool[:properties] %}
                     {% if prop[:type] == "array" %}
-                      {{prop[:name]}} => JSON::Any.new({
+                      {{ prop[:name] }} => JSON::Any.new({
                         "type" => JSON::Any.new("array"),
-                        "description" => JSON::Any.new({{prop[:description]}}),
+                        "description" => JSON::Any.new({{ prop[:description] }}),
                         {% if prop[:items] %}
                           "items" => JSON::Any.new({
-                            "type" => JSON::Any.new({{prop[:items]}})
+                            "type" => JSON::Any.new({{ prop[:items] }})
                           }),
                         {% end %}
                         {% if prop[:min_items] %}
-                          "minItems" => JSON::Any.new({{prop[:min_items]}}),
+                          "minItems" => JSON::Any.new({{ prop[:min_items] }}),
                         {% end %}
                         {% if prop[:max_items] %}
-                          "maxItems" => JSON::Any.new({{prop[:max_items]}}),
+                          "maxItems" => JSON::Any.new({{ prop[:max_items] }}),
                         {% end %}
                         {% if prop[:unique_items] %}
-                          "uniqueItems" => JSON::Any.new({{prop[:unique_items]}}),
+                          "uniqueItems" => JSON::Any.new({{ prop[:unique_items] }}),
                         {% end %}
                       }),
                     {% else %}
-                      {{prop[:name]}} => JSON::Any.new({
-                        "type" => JSON::Any.new({{prop[:type] == "time" ? "string" : prop[:type]}}),
-                        "description" => JSON::Any.new({{prop[:description]}}),
+                      {{ prop[:name] }} => JSON::Any.new({
+                        "type" => JSON::Any.new({{ prop[:type] == "time" ? "string" : prop[:type] }}),
+                        "description" => JSON::Any.new({{ prop[:description] }}),
                         {% if prop[:minimum] %}
-                          "minimum" => JSON::Any.new({{prop[:minimum]}}),
+                          "minimum" => JSON::Any.new({{ prop[:minimum] }}),
                         {% end %}
                         {% if prop[:maximum] %}
-                          "maximum" => JSON::Any.new({{prop[:maximum]}}),
+                          "maximum" => JSON::Any.new({{ prop[:maximum] }}),
                         {% end %}
                         {% if prop[:enum] %}
                           "enum" => JSON::Any.new([
                             {% for value in prop[:enum] %}
-                              JSON::Any.new({{value}}),
+                              JSON::Any.new({{ value }}),
                             {% end %}
                           ]),
                         {% end %}
@@ -785,7 +785,7 @@ module MCP
                 "required" => JSON::Any.new([
                   {% for prop in tool[:properties] %}
                     {% if prop[:required] %}
-                      JSON::Any.new({{prop[:name]}}),
+                      JSON::Any.new({{ prop[:name] }}),
                     {% end %}
                   {% end %}
                 ] of JSON::Any)

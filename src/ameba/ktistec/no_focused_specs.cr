@@ -6,10 +6,9 @@ module Ameba::Rule::Ktistec
   # Focused spec markers (`fdescribe`, `fcontext`, `fit`) cause only
   # the focused specs to run, masking failures elsewhere. They should
   # not be committed.
-  #
   class NoFocusedSpecs < Base
     properties do
-      description "Focused spec markers should not be committed."
+      description "Focused spec markers should not be committed"
       enabled true
     end
 

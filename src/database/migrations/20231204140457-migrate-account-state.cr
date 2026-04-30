@@ -45,5 +45,5 @@ end
 down do |db|
   db.exec <<-STR
     DELETE FROM "last_times"
-  STR
+    STR
 end

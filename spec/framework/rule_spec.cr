@@ -81,14 +81,14 @@ Spectator.describe Ktistec::Rule do
             parent_id integer,
             name text
           )
-        SQL
+          SQL
         Ktistec.database.exec <<-SQL
           INSERT INTO rule_models
                  (id, type, parent_id, name)
           VALUES (1, 'RuleModel', null, 'one'),
                  (2, 'RuleModel', 1, 'two'),
                  (3, 'RuleModel', 2, 'three')
-        SQL
+          SQL
       end
       after_each do
         Ktistec.database.exec "DROP TABLE IF EXISTS rule_models"

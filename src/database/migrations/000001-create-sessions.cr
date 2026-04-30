@@ -12,19 +12,19 @@ up do |db|
       session_key varchar(22) NOT NULL,
       account_id integer
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE UNIQUE INDEX idx_sessions_session_key
       ON sessions (session_key ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_sessions_account_id
       ON sessions (account_id ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE sessions
-  STR
+    STR
 end

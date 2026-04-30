@@ -25,23 +25,23 @@ up do |db|
       "urls" text,
       "deleted_at" datetime
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_objects_iri
       ON objects (iri ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_objects_in_reply_to_iri
       ON objects (in_reply_to_iri ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_objects_published
       ON objects (published ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE objects
-  STR
+    STR
 end

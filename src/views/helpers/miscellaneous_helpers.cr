@@ -148,7 +148,7 @@ module Ktistec::ViewHelper
   #     <%= s string %>
   #
   macro s(str)
-    Ktistec::Util.sanitize({{str}})
+    Ktistec::Util.sanitize({{ str }})
   end
 
   # Renders HTML as plain text by stripping out all HTML.
@@ -157,7 +157,7 @@ module Ktistec::ViewHelper
   #     <%= t string %>
   #
   macro t(str)
-    Ktistec::Util.render_as_text({{str}})
+    Ktistec::Util.render_as_text({{ str }})
   end
 
   # Renders HTML as plain text and truncates it to `n` characters.
@@ -166,7 +166,7 @@ module Ktistec::ViewHelper
   #     <%= … string, n %>
   #
   macro …(str, n)
-    Ktistec::Util.render_as_text_and_truncate({{str}}, {{n}})
+    Ktistec::Util.render_as_text_and_truncate({{ str }}, {{ n }})
   end
 
   # Transforms the span of time between two different times into
@@ -176,7 +176,7 @@ module Ktistec::ViewHelper
   #     <%= distance_of_time_in_words(from_time, to_time) %>
   #
   macro distance_of_time_in_words(*args)
-    Ktistec::Util.distance_of_time_in_words({{args.splat}})
+    Ktistec::Util.distance_of_time_in_words({{ args.splat }})
   end
 
   # Wraps a string in a link if it is a URL.
@@ -185,7 +185,7 @@ module Ktistec::ViewHelper
   # https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb
   #
   macro wrap_link(*args, **opts)
-    Ktistec::Util.wrap_link({{args.splat}}, {{opts.double_splat}})
+    Ktistec::Util.wrap_link({{ args.splat }}, {{ opts.double_splat }})
   end
 
   # Pluralizes the noun.
@@ -197,13 +197,13 @@ module Ktistec::ViewHelper
   #     <%= pluralize(1, "fox") %>
   #
   macro pluralize(count, noun)
-    case {{count}}
+    case {{ count }}
     when 0
-      {{noun}}
+      {{ noun }}
     when 1
-      "1 #{{{noun}}}"
+      "1 #{{{ noun }}}"
     else
-      "#{{{count}}} #{Ktistec::Util.pluralize({{noun}})}"
+      "#{{{ count }}} #{Ktistec::Util.pluralize({{ noun }})}"
     end
   end
 
@@ -211,13 +211,13 @@ module Ktistec::ViewHelper
   # a collection.
   #
   macro comma(collection, counter)
-    {{counter}} < {{collection}}.size - 1 ? "," : ""
+    {{ counter }} < {{ collection }}.size - 1 ? "," : ""
   end
 
   # Converts Markdown to HTML.
   #
   macro markdown_to_html(markdown)
-    Markd.to_html({{markdown}})
+    Markd.to_html({{ markdown }})
   end
 
   # Generates a random, URL-safe identifier.
@@ -229,16 +229,16 @@ module Ktistec::ViewHelper
   # Returns the task status line.
   #
   macro task_status_line(task, detail = false)
-    if !{{task}}.complete
-      if {{task}}.backtrace
+    if !{{ task }}.complete
+      if {{ task }}.backtrace
         "The task failed."
       else
         %now = Time.utc
         String.build do |%io|
-          if {{task}}.running
+          if {{ task }}.running
             %io << "Running."
           else
-            if (%next_attempt_at = {{task}}.next_attempt_at)
+            if (%next_attempt_at = {{ task }}.next_attempt_at)
               if %next_attempt_at > %now
                 %io << "The next run is in "
                 %io << distance_of_time_in_words(%next_attempt_at, %now)
@@ -249,8 +249,8 @@ module Ktistec::ViewHelper
             else
               %io << "The task isn't scheduled."
             end
-            if {{detail}}
-              if (%last_attempt_at = {{task}}.last_attempt_at) && %last_attempt_at < %now
+            if {{ detail }}
+              if (%last_attempt_at = {{ task }}.last_attempt_at) && %last_attempt_at < %now
                 %io << " The last run was "
                 %io << distance_of_time_in_words(%last_attempt_at, %now)
                 %io << " ago."
@@ -268,16 +268,16 @@ module Ktistec::ViewHelper
   # `published` date of posts in that collection.
   #
   macro fetch_task_status_line(task, collection = nil, detail = false)
-    if !{{task}}.complete
-      if {{task}}.backtrace
+    if !{{ task }}.complete
+      if {{ task }}.backtrace
         "The task failed."
       else
         %now = Time.utc
         String.build do |%io|
-          if {{task}}.running
+          if {{ task }}.running
             %io << "Checking for new posts."
           else
-            if (%next_attempt_at = {{task}}.next_attempt_at)
+            if (%next_attempt_at = {{ task }}.next_attempt_at)
               if %next_attempt_at > %now
                 %io << "The next check for new posts is in "
                 %io << distance_of_time_in_words(%next_attempt_at, %now)
@@ -288,20 +288,20 @@ module Ktistec::ViewHelper
             else
               %io << "The next check for new posts isn't scheduled."
             end
-            if {{detail}}
-              if (%last_attempt_at = {{task}}.last_attempt_at) && %last_attempt_at < %now
+            if {{ detail }}
+              if (%last_attempt_at = {{ task }}.last_attempt_at) && %last_attempt_at < %now
                 %io << " The last check was "
                 %io << distance_of_time_in_words(%last_attempt_at, %now)
                 %io << " ago."
               end
-              if (%last_success_at = {{task}}.last_success_at) && %last_success_at < %now
+              if (%last_success_at = {{ task }}.last_success_at) && %last_success_at < %now
                 %io << " The last new post was fetched "
                 %io << distance_of_time_in_words(%last_success_at, %now)
                 %io << " ago."
               end
             end
           end
-          if (%collection = {{collection}}) && (%published = %collection.map(&.published).compact.max?)
+          if (%collection = {{ collection }}) && (%published = %collection.map(&.published).compact.max?)
             %io << " The most recent post was "
             %io << distance_of_time_in_words(%published, %now)
             %io << " ago."

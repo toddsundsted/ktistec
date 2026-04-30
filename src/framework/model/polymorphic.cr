@@ -5,20 +5,20 @@ module Ktistec
     module Polymorphic
       macro find(_id id, *, as _as)
         {% raise "can't convert #{@type} to #{_as}" unless _as.resolve < @type %}
-        {{_as}}.find({{id}})
+        {{ _as }}.find({{ id }})
       end
 
       macro find(*, as _as, **options)
         {% raise "can't convert #{@type} to #{_as}" unless _as.resolve < @type %}
-        {{_as}}.find({{options.double_splat}})
+        {{ _as }}.find({{ options.double_splat }})
       end
 
       def as_a(as _as : T.class) : T forall T
-        T.find(self.id)
+        T.find(id)
       end
 
       @[Persistent]
-      property type : String { {{@type.stringify}} }
+      property type : String { {{ @type.stringify }} }
 
       # NOTE: this is implemented as if it had been created by the
       # `validates` macro because the `validates` macro is not
@@ -33,9 +33,9 @@ module Ktistec
               all_types += @type.constant(:ALIASES)
             end
           %}
-          unless type.in?({{all_types}})
+          unless type.in?({{ all_types }})
             {% if @type.has_constant?(:ALLOWED_TYPE_MIGRATIONS) %}
-              if type.in?({{@type.constant(:ALLOWED_TYPE_MIGRATIONS)}})
+              if type.in?({{ @type.constant(:ALLOWED_TYPE_MIGRATIONS) }})
                 return
               end
             {% end %}
@@ -69,7 +69,7 @@ module Ktistec
           # Returns type and all concrete (non-abstract) subtypes,
           # including any aliases defined on the type.
           #
-          def {{includer}}.all_subtypes
+          def {{ includer }}.all_subtypes
             \{% if @type.has_constant?("ALIASES") %}
               super + ALIASES
             \{% else %}

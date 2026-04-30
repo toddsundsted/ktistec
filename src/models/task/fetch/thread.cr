@@ -234,8 +234,8 @@ class Task
     private def fetch_up
       100.times do # for safety, cap loops
         break if interrupted?
-        Log.trace { "fetch_up [#{id}] - iri: #{self.thread}" }
-        fetched, object = find_or_fetch_object(self.thread, include_deleted: true)
+        Log.trace { "fetch_up [#{id}] - iri: #{thread}" }
+        fetched, object = find_or_fetch_object(thread, include_deleted: true)
         state.root_object = object.id if object && object.root?
         break if object.nil?
         self.thread = object.thread.not_nil!
@@ -358,7 +358,7 @@ module ActivityPub
   class Object
     def after_save
       previous_def
-      Task::Fetch::Thread.merge_into(self.iri, self.thread)
+      Task::Fetch::Thread.merge_into(iri, thread)
     end
   end
 end

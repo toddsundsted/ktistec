@@ -5,11 +5,10 @@ module Ameba::Rule::Ktistec
   #
   # Prefer declarative factory helpers (`let_build`, `let_create`)
   # over factory method calls (e.g., `actor_factory`, `poll_factory`).
-  #
   class NoDirectFactoryCalls < Base
     properties do
-      description "Prefer declarative factory helpers over direct factory method calls."
-      excluded_factories ["env_factory"]
+      description "Prefer declarative factory helpers over direct factory method calls"
+      excluded_factories %w[env_factory]
       enabled true
     end
 

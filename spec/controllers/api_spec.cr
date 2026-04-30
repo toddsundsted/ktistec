@@ -548,8 +548,8 @@ Spectator.describe APIController do
 
   describe "GET /api/v1/accounts/:id/statuses" do
     macro published_post(index, actor, visible = true)
-      let_create(:object, named: post{{index}}, attributed_to: {{actor}}, visible: {{visible}}, local: true, published: Time.utc)
-      let_create(:create, named: create{{index}}, actor: {{actor}}, object: post{{index}}, local: true)
+      let_create(:object, named: post{{ index }}, attributed_to: {{ actor }}, visible: {{ visible }}, local: true, published: Time.utc)
+      let_create(:create, named: create{{ index }}, actor: {{ actor }}, object: post{{ index }}, local: true)
     end
 
     it "returns 401" do

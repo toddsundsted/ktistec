@@ -124,7 +124,7 @@ Spectator.describe Ktistec::Model do
         foo text,
         bar text
       )
-    SQL
+      SQL
     Ktistec.database.exec <<-SQL
       CREATE TABLE IF NOT EXISTS not_nil_models (
         id integer PRIMARY KEY AUTOINCREMENT,
@@ -134,12 +134,12 @@ Spectator.describe Ktistec::Model do
         key text NOT NULL,
         val text NOT NULL
       )
-    SQL
+      SQL
     Ktistec.database.exec <<-SQL
       CREATE TABLE IF NOT EXISTS models (
         id integer PRIMARY KEY AUTOINCREMENT
       )
-    SQL
+      SQL
   end
   after_each do
     Ktistec.database.exec "DROP TABLE IF EXISTS foo_bar_models"
@@ -208,7 +208,7 @@ Spectator.describe Ktistec::Model do
           foo text,
           bar text
         )
-      SQL
+        SQL
       5.times do |i|
         Ktistec.database.exec %Q|INSERT INTO query_models (id) VALUES (?)|, i + 1
       end
@@ -564,7 +564,7 @@ Spectator.describe Ktistec::Model do
       before_each do
         Ktistec.database.exec <<-SQL
           INSERT INTO models (id) VALUES (9999)
-        SQL
+          SQL
       end
 
       it "raises an error" do
@@ -1051,16 +1051,16 @@ Spectator.describe Ktistec::Model do
       @@table_name = "not_nil_models"
 
       macro def_callback(name)
-        getter {{"before_#{name.id}_called".id}} = false
+        getter {{ "before_#{name.id}_called".id }} = false
 
-        def before_{{name.id}}
-          @before_{{name.id}}_called = true
+        def before_{{ name.id }}
+          @before_{{ name.id }}_called = true
         end
 
-        getter {{"after_#{name.id}_called".id}} = false
+        getter {{ "after_#{name.id}_called".id }} = false
 
-        def after_{{name.id}}
-          @after_{{name.id}}_called = true
+        def after_{{ name.id }}
+          @after_{{ name.id }}_called = true
         end
       end
 

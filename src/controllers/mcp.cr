@@ -36,7 +36,7 @@ class MCPController
 
   private macro mcp_response(status_code, response)
     env.response.content_type = "application/json"
-    halt env, status_code: {{status_code}}, response: {{response}}.try(&.to_json)
+    halt env, status_code: {{ status_code }}, response: {{ response }}.try(&.to_json)
   end
 
   private macro set_headers
@@ -97,9 +97,9 @@ class MCPController
       error = JSON::RPC::Response::Error.new(JSON::RPC::ErrorCodes::PARSE_ERROR, "Parse error")
       error_response = JSON::RPC::Response.new("null", error: error)
       mcp_response 400, error_response
-    rescue err : MCPError
-      Log.warn { "MCP error: #{err.message} (code=#{err.code})" }
-      error = JSON::RPC::Response::Error.new(err.code, err.message || "Unknown error")
+    rescue ex : MCPError
+      Log.warn { "MCP error: #{ex.message} (code=#{ex.code})" }
+      error = JSON::RPC::Response::Error.new(ex.code, ex.message || "Unknown error")
       error_response = JSON::RPC::Response.new(request.try(&.id) || "null", error: error)
       mcp_response 400, error_response
     rescue ex

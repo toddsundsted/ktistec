@@ -68,15 +68,15 @@ Spectator.describe Ktistec::Database::Migration do
 
   before_each do
     Ktistec.database.exec <<-STR
-    CREATE TABLE foobars (
-    id integer PRIMARY KEY AUTOINCREMENT,
-    name varchar(244) NOT NULL DEFAULT '',
-    value integer
-    )
-    STR
+      CREATE TABLE foobars (
+      id integer PRIMARY KEY AUTOINCREMENT,
+      name varchar(244) NOT NULL DEFAULT '',
+      value integer
+      )
+      STR
     Ktistec.database.exec <<-STR
-    CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)
-    STR
+      CREATE UNIQUE INDEX idx_foobars_name ON foobars (name ASC)
+      STR
     Ktistec.database.exec %q|INSERT INTO foobars VALUES (1, 'one', 1)|
     Ktistec.database.exec %q|INSERT INTO foobars VALUES (2, 'two', 2)|
   end

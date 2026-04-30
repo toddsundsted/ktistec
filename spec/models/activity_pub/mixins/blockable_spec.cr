@@ -14,7 +14,7 @@ Spectator.describe Ktistec::Model::Blockable do
         id integer PRIMARY KEY AUTOINCREMENT,
         blocked_at datetime
       )
-    SQL
+      SQL
   end
   after_each do
     Ktistec.database.exec "DROP TABLE IF EXISTS blockable_models"

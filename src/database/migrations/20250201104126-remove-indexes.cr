@@ -5,40 +5,40 @@ extend Ktistec::Database::Migration
 up do |db|
   db.exec <<-STR
     DROP INDEX IF EXISTS idx_sessions_account_id
-  STR
+    STR
   db.exec <<-STR
     DROP INDEX IF EXISTS idx_sessions_updated_at
-  STR
+    STR
   db.exec <<-STR
     DROP INDEX IF EXISTS idx_actors_username
-  STR
+    STR
   db.exec <<-STR
     DROP INDEX IF EXISTS idx_objects_published
-  STR
+    STR
   db.exec <<-STR
     DROP INDEX IF EXISTS idx_activities_target_iri
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     CREATE INDEX IF NOT EXISTS idx_sessions_account_id
       ON sessions (account_id ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX IF NOT EXISTS idx_sessions_updated_at
       ON sessions (updated_at DESC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX IF NOT EXISTS idx_actors_username
       ON actors (username ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX IF NOT EXISTS idx_objects_published
       ON objects (published ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX IF NOT EXISTS idx_activities_target_iri
       ON activities (target_iri ASC)
-  STR
+    STR
 end

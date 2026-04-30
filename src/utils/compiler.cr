@@ -64,7 +64,7 @@ module Ktistec
 
       # :inherit:
       def ==(other : self)
-        self.target == other.target
+        target == other.target
       end
     end
 
@@ -77,7 +77,7 @@ module Ktistec
 
       # :inherit:
       def ==(other : self)
-        self.target == other.target
+        target == other.target
       end
     end
 
@@ -172,19 +172,19 @@ module Ktistec
       private def instantiate(name, arguments, options)
         case name
         {% for clazz in CONSTANTS %}
-          when {{clazz.id.stringify.split("::").last}}
+          when {{ clazz.id.stringify.split("::").last }}
             {% if clazz < School::Pattern %}
               raise LinkError.new(self, "too many arguments") if arguments.size > 1
-              {{clazz}}.new(arguments[0]?, options)
+              {{ clazz }}.new(arguments[0]?, options)
             {% elsif clazz < School::Relationship %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 2
-              School::BinaryPattern.new({{clazz}}, arguments[0], arguments[1])
+              School::BinaryPattern.new({{ clazz }}, arguments[0], arguments[1])
             {% elsif clazz < School::Property %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 1
-              School::UnaryPattern.new({{clazz}}, arguments[0])
+              School::UnaryPattern.new({{ clazz }}, arguments[0])
             {% elsif clazz < School::Fact %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 0
-              School::NullaryPattern.new({{clazz}})
+              School::NullaryPattern.new({{ clazz }})
             {% end %}
         {% end %}
         else
@@ -194,24 +194,24 @@ module Ktistec
       private def assert(name, context, arguments, options)
         case name
         {% for clazz in CONSTANTS %}
-          when {{clazz.stringify.split("::").last}}
+          when {{ clazz.stringify.split("::").last }}
             {% if clazz < School::Pattern %}
               raise LinkError.new(self, "too many arguments") if arguments.size > 1
-              {{clazz}}.assert(transform_arguments(context.bindings, arguments)[0]?, transform_options(context.bindings, options))
+              {{ clazz }}.assert(transform_arguments(context.bindings, arguments)[0]?, transform_options(context.bindings, options))
             {% elsif clazz < School::Relationship %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 2
               arguments = transform_arguments(context.bindings, arguments)
-              a = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
-              b = arguments[1].as({{clazz.ancestors[0].type_vars[1]}})
-              context.facts.add({{clazz}}.new(a, b))
+              a = arguments[0].as({{ clazz.ancestors[0].type_vars[0] }})
+              b = arguments[1].as({{ clazz.ancestors[0].type_vars[1] }})
+              context.facts.add({{ clazz }}.new(a, b))
             {% elsif clazz < School::Property %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 1
               arguments = transform_arguments(context.bindings, arguments)
-              c = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
-              context.facts.add({{clazz}}.new(c))
+              c = arguments[0].as({{ clazz.ancestors[0].type_vars[0] }})
+              context.facts.add({{ clazz }}.new(c))
             {% elsif clazz < School::Fact %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 0
-              context.facts.add({{clazz}}.new)
+              context.facts.add({{ clazz }}.new)
             {% end %}
         {% end %}
         else
@@ -221,24 +221,24 @@ module Ktistec
       private def retract(name, context, arguments, options)
         case name
         {% for clazz in CONSTANTS %}
-          when {{clazz.stringify.split("::").last}}
+          when {{ clazz.stringify.split("::").last }}
             {% if clazz < School::Pattern %}
               raise LinkError.new(self, "too many arguments") if arguments.size > 1
-              {{clazz}}.retract(transform_arguments(context.bindings, arguments)[0]?, transform_options(context.bindings, options))
+              {{ clazz }}.retract(transform_arguments(context.bindings, arguments)[0]?, transform_options(context.bindings, options))
             {% elsif clazz < School::Relationship %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 2
               arguments = transform_arguments(context.bindings, arguments)
-              a = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
-              b = arguments[1].as({{clazz.ancestors[0].type_vars[1]}})
-              context.facts.delete({{clazz}}.new(a, b))
+              a = arguments[0].as({{ clazz.ancestors[0].type_vars[0] }})
+              b = arguments[1].as({{ clazz.ancestors[0].type_vars[1] }})
+              context.facts.delete({{ clazz }}.new(a, b))
             {% elsif clazz < School::Property %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 1
               arguments = transform_arguments(context.bindings, arguments)
-              c = arguments[0].as({{clazz.ancestors[0].type_vars[0]}})
-              context.facts.delete({{clazz}}.new(c))
+              c = arguments[0].as({{ clazz.ancestors[0].type_vars[0] }})
+              context.facts.delete({{ clazz }}.new(c))
             {% elsif clazz < School::Fact %}
               raise LinkError.new(self, "too many arguments") if arguments.size != 0
-              context.facts.delete({{clazz}}.new)
+              context.facts.delete({{ clazz }}.new)
             {% end %}
         {% end %}
         else
@@ -259,13 +259,13 @@ module Ktistec
       private def accessor(key, name)
         case name
         {% for accessor in ACCESSOR %}
-          when {{accessor.stringify}}
+          when {{ accessor.stringify }}
             School::Accessor.new do |bindings|
               if bindings.has_key?(key)
-                if (object = bindings[key]).responds_to?({{accessor.symbolize}})
-                  object.{{accessor}}
+                if (object = bindings[key]).responds_to?({{ accessor.symbolize }})
+                  object.{{ accessor }}
                 else
-                  raise LinkError.new(self, "invalid accessor: {{accessor}}")
+                  raise LinkError.new(self, "invalid accessor: {{ accessor }}")
                 end
               else
                 raise LinkError.new(self, "unbound receiver: #{key}")

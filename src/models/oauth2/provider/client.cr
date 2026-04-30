@@ -102,7 +102,7 @@ module OAuth2
       end
 
       def after_validate
-        self.redirect_uris = self.redirect_uris.split.join(" ")
+        self.redirect_uris = redirect_uris.split.join(" ")
       end
 
       def before_destroy

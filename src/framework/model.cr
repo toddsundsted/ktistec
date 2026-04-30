@@ -98,7 +98,7 @@ module Ktistec
       # Returns the table name.
       #
       def table_name
-        @@table_name ||= Util.pluralize(self.to_s.gsub("::", "").underscore)
+        @@table_name ||= Util.pluralize(to_s.gsub("::", "").underscore)
       end
 
       # Returns true if no instances exist.
@@ -134,14 +134,14 @@ module Ktistec
         {% begin %}
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           (options || options_).map do |o, v|
-            if o.to_s.in?({{vs.map(&.stringify)}})
+            if o.to_s.in?({{ vs.map(&.stringify) }})
               v
             {% ancestors = @type.ancestors << @type %}
             {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
             {% methods = methods.select(&.name.starts_with?("_association_")) %}
             {% for method in methods %}
-              elsif "_association_#{o}" == {{method.name.stringify}} && v.responds_to?({{method.body[1]}})
-                v.{{method.body[1].id}}
+              elsif "_association_#{o}" == {{ method.name.stringify }} && v.responds_to?({{ method.body[1] }})
+                v.{{ method.body[1].id }}
             {% end %}
             else
               raise ColumnError.new("no such column: #{o}")
@@ -155,14 +155,14 @@ module Ktistec
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           conditions =
             (options || options_).keys.reduce([] of String) do |c, o|
-              if o.to_s.in?({{vs.map(&.stringify)}})
+              if o.to_s.in?({{ vs.map(&.stringify) }})
                 c << %Q|"#{o}" = ?|
               {% ancestors = @type.ancestors << @type %}
               {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
               {% methods = methods.select(&.name.starts_with?("_association_")) %}
               {% for method in methods %}
-                elsif "_association_#{o}" == {{method.name.stringify}}
-                  c << %Q|"{{method.body[2].id}}" = ?|
+                elsif "_association_#{o}" == {{ method.name.stringify }}
+                  c << %Q|"{{ method.body[2].id }}" = ?|
               {% end %}
               else
                 raise ColumnError.new("no such column: #{o}")
@@ -181,7 +181,7 @@ module Ktistec
           # subclasses, since all rows and all subclasses should
           # belong to the hierarchy and should be included.
           {% if @type < Polymorphic && @type.superclass != Reference %}
-            conditions << %Q|"type" IN ('%s')| % {{(@type.all_subclasses << @type).map(&.stringify).join("','")}}
+            conditions << %Q|"type" IN ('%s')| % {{ (@type.all_subclasses << @type).map(&.stringify).join("','") }}
           {% end %}
           conditions += terms.to_a
           conditions.size > 0 ?
@@ -198,7 +198,7 @@ module Ktistec
           {% if subtypes.empty? %}
             [] of String
           {% else %}
-            {{subtypes.map(&.stringify)}}
+            {{ subtypes.map(&.stringify) }}
           {% end %}
         {% end %}
       end
@@ -227,7 +227,7 @@ module Ktistec
         {% begin %}
           {
             {% for v in @type.instance_vars.select(&.annotation(Persistent)) %}
-              {{v}}: {{v.type}},
+              {{ v }}: {{ v.type }},
             {% end %}
           }
         {% end %}
@@ -246,9 +246,9 @@ module Ktistec
           {% if @type < Polymorphic %}
             case rs.read(String) # type
             {% for subclass in @type.all_subclasses %}
-              when {{subclass.stringify}}
+              when {{ subclass.stringify }}
                 {% if subclass.abstract? %}
-                  raise TypeError.new("cannot instantiate abstract model {{subclass}}")
+                  raise TypeError.new("cannot instantiate abstract model {{ subclass }}")
                 {% else %}
                   options = rs.read(**self.persistent_columns.merge(additional_columns))
                   {% temp = @type.instance_vars.select(&.annotation(Persistent)).map(&.name) %}
@@ -258,8 +258,8 @@ module Ktistec
                       table_columns.each do |column|
                         case column
                         {% for v in vars %}
-                        when {{v.stringify}}
-                          options = options.merge({ {{v.name}}: rs.read({{v.type}}) })
+                        when {{ v.stringify }}
+                          options = options.merge({ {{ v.name }}: rs.read({{ v.type }}) })
                         {% end %}
                         else
                           rs.read # discard, it's not a property
@@ -267,14 +267,14 @@ module Ktistec
                       end
                     end
                   {% end %}
-                  {{subclass}}.allocate.tap do |instance|
-                    instance.as({{subclass}}).__for_internal_use_only(options).clear_changed!
+                  {{ subclass }}.allocate.tap do |instance|
+                    instance.as({{ subclass }}).__for_internal_use_only(options).clear_changed!
                   end
                 {% end %}
             {% end %}
             {% if @type.abstract? %}
               else
-                raise TypeError.new("cannot instantiate abstract model {{@type}}")
+                raise TypeError.new("cannot instantiate abstract model {{ @type }}")
             {% else %}
               else
                 options = rs.read(**self.persistent_columns.merge(additional_columns))
@@ -285,7 +285,7 @@ module Ktistec
             end
           {% else %}
             {% if @type.abstract? %}
-              raise TypeError.new("cannot instantiate abstract model {{@type}}")
+              raise TypeError.new("cannot instantiate abstract model {{ @type }}")
             {% else %}
               options = rs.read(**self.persistent_columns.merge(additional_columns))
               self.allocate.tap do |instance|
@@ -585,16 +585,16 @@ module Ktistec
       {% begin %}
         {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
         {% for v in vs %}
-          key = {{v.symbolize}}
+          key = {{ v.symbolize }}
           if options.has_key?(key)
-            if (o = options[key]).is_a?(typeof(@{{v}}))
-              @{{v}} = o
+            if (o = options[key]).is_a?(typeof(@{{ v }}))
+              @{{ v }} = o
             end
           end
         {% end %}
       {% end %}
       # dup but don't maintain a linked list of previously saved records
-      @saved_record = self.dup.clear_saved_record
+      @saved_record = dup.clear_saved_record
     end
 
     # Initializes a new instance.
@@ -614,18 +614,18 @@ module Ktistec
         options = properties.keys
         {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
         {% for v in vs %}
-          key = {{v.stringify}}
+          key = {{ v.stringify }}
           if properties.has_key?(key)
             options.delete(key)
-            if (o = properties[key]).is_a?(typeof(self.{{v}}))
-              @changed << {{v.symbolize}}
-              if self.responds_to?({{"#{v}=".id.symbolize}})
-                self.{{v}} = o.as(typeof(self.{{v}}))
+            if (o = properties[key]).is_a?(typeof(self.{{ v }}))
+              @changed << {{ v.symbolize }}
+              if self.responds_to?({{ "#{v}=".id.symbolize }})
+                self.{{ v }} = o.as(typeof(self.{{ v }}))
               else
                 raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
               end
             else
-              raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{v}}))} for property '#{key}'")
+              raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{ v }}))} for property '#{key}'")
             end
           end
         {% end %}
@@ -633,9 +633,9 @@ module Ktistec
           raise TypeError.new("#{self.class}.new: '#{key}' is not a property and may not be assigned")
         end
         {% for v in vs %}
-          key = {{v.stringify}}
+          key = {{ v.stringify }}
           {% unless v.has_default_value? || v.type.nilable? || v.type.struct? %}
-            unless {{v.symbolize}}.in?(@changed)
+            unless {{ v.symbolize }}.in?(@changed)
               raise TypeError.new("#{self.class}.new: property '#{key}' is not nilable and must be assigned")
             end
           {% end %}
@@ -643,7 +643,7 @@ module Ktistec
       {% end %}
       super()
       # dup but don't maintain a linked list of previously saved records
-      @saved_record = self.dup.clear_saved_record
+      @saved_record = dup.clear_saved_record
     end
 
     # :ditto:
@@ -653,18 +653,18 @@ module Ktistec
         options = properties.keys.map(&.to_s).to_a
         {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
         {% for v in vs %}
-          key = {{v.stringify}}
+          key = {{ v.stringify }}
           if properties.has_key?(key)
             options.delete(key)
-            if (o = properties[key]).is_a?(typeof(self.{{v}}))
-              @changed << {{v.symbolize}}
-              if self.responds_to?({{"#{v}=".id.symbolize}})
-                self.{{v}} = o.as(typeof(self.{{v}}))
+            if (o = properties[key]).is_a?(typeof(self.{{ v }}))
+              @changed << {{ v.symbolize }}
+              if self.responds_to?({{ "#{v}=".id.symbolize }})
+                self.{{ v }} = o.as(typeof(self.{{ v }}))
               else
                 raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
               end
             else
-              raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{v}}))} for property '#{key}'")
+              raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{ v }}))} for property '#{key}'")
             end
           end
         {% end %}
@@ -672,9 +672,9 @@ module Ktistec
           raise TypeError.new("#{self.class}.new: '#{key}' is not a property and may not be assigned")
         end
         {% for v in vs %}
-          key = {{v.stringify}}
+          key = {{ v.stringify }}
           {% unless v.has_default_value? || v.type.nilable? || v.type.struct? %}
-            unless {{v.symbolize}}.in?(@changed)
+            unless {{ v.symbolize }}.in?(@changed)
               raise TypeError.new("#{self.class}.new: property '#{key}' is not nilable and must be assigned")
             end
           {% end %}
@@ -682,7 +682,7 @@ module Ktistec
       {% end %}
       super()
       # dup but don't maintain a linked list of previously saved records
-      @saved_record = self.dup.clear_saved_record
+      @saved_record = dup.clear_saved_record
     end
 
     # Bulk assigns properties.
@@ -701,27 +701,27 @@ module Ktistec
         options = properties.keys
         {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
         {% for v in vs %}
-          key = {{v.stringify}}
+          key = {{ v.stringify }}
           if properties.has_key?(key)
             options.delete(key)
-            if (o = properties[key]).is_a?(typeof(self.{{v}}))
-              if self.responds_to?({{"#{v}=".id.symbolize}})
-                if self.responds_to?({{"#{v}?".id.symbolize}}) # more effectively handles the `nil` case
-                  unless self.{{v}}? == o
-                    self.{{v}} = o.as(typeof(self.{{v}}))
-                    @changed << {{v.symbolize}}
+            if (o = properties[key]).is_a?(typeof(self.{{ v }}))
+              if self.responds_to?({{ "#{v}=".id.symbolize }})
+                if self.responds_to?({{ "#{v}?".id.symbolize }}) # more effectively handles the `nil` case
+                  unless self.{{ v }}? == o
+                    self.{{ v }} = o.as(typeof(self.{{ v }}))
+                    @changed << {{ v.symbolize }}
                   end
                 else
-                  unless @{{v.id}} == o
-                    self.{{v}} = o.as(typeof(self.{{v}}))
-                    @changed << {{v.symbolize}}
+                  unless @{{ v.id }} == o
+                    self.{{ v }} = o.as(typeof(self.{{ v }}))
+                    @changed << {{ v.symbolize }}
                   end
                 end
               else
                 raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
               end
             else
-              raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{v}}))} for property '#{key}'")
+              raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{ v }}))} for property '#{key}'")
             end
           end
         {% end %}
@@ -738,27 +738,27 @@ module Ktistec
         options = properties.keys.map(&.to_s).to_a
         {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
         {% for v in vs %}
-          key = {{v.stringify}}
+          key = {{ v.stringify }}
           if properties.has_key?(key)
             options.delete(key)
-            if (o = properties[key]).is_a?(typeof(self.{{v}}))
-              if self.responds_to?({{"#{v}=".id.symbolize}})
-                if self.responds_to?({{"#{v}?".id.symbolize}}) # more effectively handles the `nil` case
-                  unless self.{{v}}? == o
-                    self.{{v}} = o.as(typeof(self.{{v}}))
-                    @changed << {{v.symbolize}}
+            if (o = properties[key]).is_a?(typeof(self.{{ v }}))
+              if self.responds_to?({{ "#{v}=".id.symbolize }})
+                if self.responds_to?({{ "#{v}?".id.symbolize }}) # more effectively handles the `nil` case
+                  unless self.{{ v }}? == o
+                    self.{{ v }} = o.as(typeof(self.{{ v }}))
+                    @changed << {{ v.symbolize }}
                   end
                 else
-                  unless self.{{v}} == o
-                    self.{{v}} = o.as(typeof(self.{{v}}))
-                    @changed << {{v.symbolize}}
+                  unless self.{{ v }} == o
+                    self.{{ v }} = o.as(typeof(self.{{ v }}))
+                    @changed << {{ v.symbolize }}
                   end
                 end
               else
                 raise TypeError.new("#{self.class}.new: property '#{key}' lacks a setter and may not be assigned")
               end
             else
-              raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{v}}))} for property '#{key}'")
+              raise TypeError.new("#{self.class}.new: #{o.inspect} (#{o.class}) is not a #{Internal.to_sentence(typeof(self.{{ v }}))} for property '#{key}'")
             end
           end
         {% end %}
@@ -774,7 +774,7 @@ module Ktistec
     def ==(other : self)
       {% begin %}
         {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
-        self.same?(other) || ({{vs.map { |v| "self.#{v} == other.#{v}" }.join(" && ").id}})
+        self.same?(other) || ({{ vs.map { |v| "self.#{v} == other.#{v}" }.join(" && ").id }})
       {% end %}
     end
 
@@ -790,7 +790,7 @@ module Ktistec
       {% begin %}
         {% vs = @type.instance_vars.select { |v| v.annotation(Persistent) && !v.annotation(Insignificant) } %}
         {% for v in vs %}
-          hasher = self.{{v}}.hash(hasher)
+          hasher = self.{{ v }}.hash(hasher)
         {% end %}
       {% end %}
       hasher
@@ -806,17 +806,17 @@ module Ktistec
     #
     macro derived(decl, *, aliased_to)
       @[Assignable]
-      @{{decl.var}} : {{decl.type}}?
-      def {{decl.var}}=({{decl.var}} : {{decl.type}}) : {{decl.type}}
-        @{{decl.var}} = @{{aliased_to}} = {{decl.var}}
-        changed!({{decl.var.symbolize}}, {{aliased_to.symbolize}})
-        {{decl.var}}
+      @{{ decl.var }} : {{ decl.type }}?
+      def {{ decl.var }}=({{ decl.var }} : {{ decl.type }}) : {{ decl.type }}
+        @{{ decl.var }} = @{{ aliased_to }} = {{ decl.var }}
+        changed!({{ decl.var.symbolize }}, {{ aliased_to.symbolize }})
+        {{ decl.var }}
       end
-      def {{decl.var}} : {{decl.type}}
-        @{{decl.var}} = @{{aliased_to}}
+      def {{ decl.var }} : {{ decl.type }}
+        @{{ decl.var }} = @{{ aliased_to }}
       end
-      def _association_{{decl.var}}
-        {:derived, :itself, {{aliased_to.symbolize}}, {{decl.type}}, @{{decl.var}}}
+      def _association_{{ decl.var }}
+        {:derived, :itself, {{ aliased_to.symbolize }}, {{ decl.type }}, @{{ decl.var }}}
       end
     end
 
@@ -827,44 +827,44 @@ module Ktistec
       {% class_name = class_name ? class_name.id : name.id.stringify.camelcase.id %}
       {% union_types = class_name.split("|").map(&.strip.id) %}
       @[Assignable]
-      @{{name.id}} : {{class_name}}?
-      def {{name.id}}=({{name.id}}_ : {{class_name}}) : {{class_name}}
-        _belongs_to_setter_for_{{name.id}}({{name.id}}_)
+      @{{ name.id }} : {{ class_name }}?
+      def {{ name.id }}=({{ name.id }}_ : {{ class_name }}) : {{ class_name }}
+        _belongs_to_setter_for_{{ name.id }}({{ name.id }}_)
       end
-      def _belongs_to_setter_for_{{name.id}}({{name.id}}_ : {{class_name}}, update_associations = true) : {{class_name}}
-        @{{name.id}} = {{name.id}}_
-        changed!({{name.id.symbolize}}, {{foreign_key.id.symbolize}})
-        self.{{foreign_key.id}} = {{name.id}}_.{{primary_key.id}}.as(typeof(self.{{foreign_key.id}}))
+      def _belongs_to_setter_for_{{ name.id }}({{ name.id }}_ : {{ class_name }}, update_associations = true) : {{ class_name }}
+        @{{ name.id }} = {{ name.id }}_
+        changed!({{ name.id.symbolize }}, {{ foreign_key.id.symbolize }})
+        self.{{ foreign_key.id }} = {{ name.id }}_.{{ primary_key.id }}.as(typeof(self.{{ foreign_key.id }}))
         {% if inverse_of %}
           if update_associations
-            if {{name.id}}_.responds_to?(:_has_one_setter_for_{{inverse_of.id}})
-              {{name.id}}_._has_one_setter_for_{{inverse_of.id}}(self, false)
-            elsif {{name.id}}_.responds_to?(:_has_many_setter_for_{{inverse_of.id}})
-              {{name.id}}_._has_many_setter_for_{{inverse_of.id}}({{name.id}}_.{{inverse_of.id}} << self, false)
+            if {{ name.id }}_.responds_to?(:_has_one_setter_for_{{ inverse_of.id }})
+              {{ name.id }}_._has_one_setter_for_{{ inverse_of.id }}(self, false)
+            elsif {{ name.id }}_.responds_to?(:_has_many_setter_for_{{ inverse_of.id }})
+              {{ name.id }}_._has_many_setter_for_{{ inverse_of.id }}({{ name.id }}_.{{ inverse_of.id }} << self, false)
             end
-            {{name.id}}_.clear_changed!({{inverse_of.id.symbolize}})
+            {{ name.id }}_.clear_changed!({{ inverse_of.id.symbolize }})
           end
         {% end %}
-        {{name.id}}_
+        {{ name.id }}_
       end
-      def {{name.id}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
-        @{{name.id}} ||= begin
+      def {{ name.id }}?(include_deleted : Bool = false, include_undone : Bool = false) : {{ class_name }}?
+        @{{ name.id }} ||= begin
           {% for union_type in union_types %}
-            {{union_type}}.find?({{primary_key.id}}: self.{{foreign_key.id}}, include_deleted: include_deleted, include_undone: include_undone) ||
+            {{ union_type }}.find?({{ primary_key.id }}: self.{{ foreign_key.id }}, include_deleted: include_deleted, include_undone: include_undone) ||
           {% end %}
           nil
         end
       end
-      def {{name.id}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
-        @{{name.id}} ||= begin
+      def {{ name.id }}(include_deleted : Bool = false, include_undone : Bool = false) : {{ class_name }}
+        @{{ name.id }} ||= begin
           {% for union_type in union_types %}
-            {{union_type}}.find?({{primary_key.id}}: self.{{foreign_key.id}}, include_deleted: include_deleted, include_undone: include_undone) ||
+            {{ union_type }}.find?({{ primary_key.id }}: self.{{ foreign_key.id }}, include_deleted: include_deleted, include_undone: include_undone) ||
           {% end %}
-          raise NotFound.new("#{self.class} {{name.id}} {{primary_key.id}}=#{self.{{foreign_key.id}}}: not found")
+          raise NotFound.new("#{self.class} {{ name.id }} {{ primary_key.id }}=#{self.{{ foreign_key.id }}}: not found")
         end
       end
-      def _association_{{name.id}}
-        {:belongs_to, {{primary_key.id.symbolize}}, {{foreign_key.id.symbolize}}, {{class_name}}, @{{name.id}}}
+      def _association_{{ name.id }}
+        {:belongs_to, {{ primary_key.id.symbolize }}, {{ foreign_key.id.symbolize }}, {{ class_name }}, @{{ name.id }}}
       end
     end
 
@@ -876,33 +876,33 @@ module Ktistec
       {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
       {% class_name = class_name || singular.camelcase.id %}
       @[Assignable]
-      @{{name.id}} : Array({{class_name}})?
-      def {{name.id}}=({{name.id}}_ : Enumerable({{class_name}})) : Enumerable({{class_name}})
-        _has_many_setter_for_{{name.id}}({{name.id}}_)
+      @{{ name.id }} : Array({{ class_name }})?
+      def {{ name.id }}=({{ name.id }}_ : Enumerable({{ class_name }})) : Enumerable({{ class_name }})
+        _has_many_setter_for_{{ name.id }}({{ name.id }}_)
       end
-      def _has_many_setter_for_{{name.id}}({{name.id}}_ : Enumerable({{class_name}}), update_associations = true) : Enumerable({{class_name}})
-        @{{name.id}} = {{name.id}}_.to_a
-        changed!({{name.id.symbolize}})
-        {{name.id}}_.each do |n|
-          n.{{foreign_key.id}} = self.{{primary_key.id}}.as(typeof(n.{{foreign_key.id}}))
+      def _has_many_setter_for_{{ name.id }}({{ name.id }}_ : Enumerable({{ class_name }}), update_associations = true) : Enumerable({{ class_name }})
+        @{{ name.id }} = {{ name.id }}_.to_a
+        changed!({{ name.id.symbolize }})
+        {{ name.id }}_.each do |n|
+          n.{{ foreign_key.id }} = self.{{ primary_key.id }}.as(typeof(n.{{ foreign_key.id }}))
           {% if inverse_of %}
             if update_associations
-              n._belongs_to_setter_for_{{inverse_of.id}}(self, false)
-              n.clear_changed!({{inverse_of.id.symbolize}}, {{foreign_key.id.symbolize}})
+              n._belongs_to_setter_for_{{ inverse_of.id }}(self, false)
+              n.clear_changed!({{ inverse_of.id.symbolize }}, {{ foreign_key.id.symbolize }})
             end
           {% end %}
         end
-        {{name.id}}_
+        {{ name.id }}_
       end
-      def {{name.id}}(include_deleted : Bool = false, include_undone : Bool = false) : Enumerable({{class_name}})
-        {{name.id}} = @{{name.id}}
-        if {{name.id}}.nil?
-          @{{name.id}} = {{class_name}}.where({{foreign_key.id}}: self.{{primary_key.id}}, include_deleted: include_deleted, include_undone: include_undone)
+      def {{ name.id }}(include_deleted : Bool = false, include_undone : Bool = false) : Enumerable({{ class_name }})
+        {{ name.id }} = @{{ name.id }}
+        if {{ name.id }}.nil?
+          @{{ name.id }} = {{ class_name }}.where({{ foreign_key.id }}: self.{{ primary_key.id }}, include_deleted: include_deleted, include_undone: include_undone)
         end
-        @{{name.id}}.not_nil!
+        @{{ name.id }}.not_nil!
       end
-      def _association_{{name.id}}
-        {:has_many, {{primary_key.id.symbolize}}, {{foreign_key.id.symbolize}}, Enumerable({{class_name}}), @{{name.id}}}
+      def _association_{{ name.id }}
+        {:has_many, {{ primary_key.id.symbolize }}, {{ foreign_key.id.symbolize }}, Enumerable({{ class_name }}), @{{ name.id }}}
       end
     end
 
@@ -912,30 +912,30 @@ module Ktistec
       {% foreign_key = foreign_key || "#{@type.stringify.split("::").last.underscore.id}_id".id %}
       {% class_name = class_name || name.id.stringify.camelcase.id %}
       @[Assignable]
-      @{{name.id}} : {{class_name}}?
-      def {{name.id}}=({{name.id}}_ : {{class_name}}) : {{class_name}}
-        _has_one_setter_for_{{name.id}}({{name.id}}_)
+      @{{ name.id }} : {{ class_name }}?
+      def {{ name.id }}=({{ name.id }}_ : {{ class_name }}) : {{ class_name }}
+        _has_one_setter_for_{{ name.id }}({{ name.id }}_)
       end
-      def _has_one_setter_for_{{name.id}}({{name.id}}_ : {{class_name}}, update_associations = true) : {{class_name}}
-        @{{name.id}} = {{name.id}}_
-        changed!({{name.id.symbolize}})
-        {{name.id}}_.{{foreign_key.id}} = self.{{primary_key.id}}.as(typeof({{name.id}}_.{{foreign_key.id}}))
+      def _has_one_setter_for_{{ name.id }}({{ name.id }}_ : {{ class_name }}, update_associations = true) : {{ class_name }}
+        @{{ name.id }} = {{ name.id }}_
+        changed!({{ name.id.symbolize }})
+        {{ name.id }}_.{{ foreign_key.id }} = self.{{ primary_key.id }}.as(typeof({{ name.id }}_.{{ foreign_key.id }}))
         {% if inverse_of %}
           if update_associations
-            {{name.id}}_._belongs_to_setter_for_{{inverse_of.id}}(self, false)
-            {{name.id}}_.clear_changed!({{inverse_of.id.symbolize}}, {{foreign_key.id.symbolize}})
+            {{ name.id }}_._belongs_to_setter_for_{{ inverse_of.id }}(self, false)
+            {{ name.id }}_.clear_changed!({{ inverse_of.id.symbolize }}, {{ foreign_key.id.symbolize }})
           end
         {% end %}
-        {{name.id}}_
+        {{ name.id }}_
       end
-      def {{name.id}}?(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}?
-        @{{name.id}} ||= {{class_name}}.find?({{foreign_key.id}}: self.{{primary_key.id}}, include_deleted: include_deleted, include_undone: include_undone)
+      def {{ name.id }}?(include_deleted : Bool = false, include_undone : Bool = false) : {{ class_name }}?
+        @{{ name.id }} ||= {{ class_name }}.find?({{ foreign_key.id }}: self.{{ primary_key.id }}, include_deleted: include_deleted, include_undone: include_undone)
       end
-      def {{name.id}}(include_deleted : Bool = false, include_undone : Bool = false) : {{class_name}}
-        @{{name.id}} ||= {{class_name}}.find({{foreign_key.id}}: self.{{primary_key.id}}, include_deleted: include_deleted, include_undone: include_undone)
+      def {{ name.id }}(include_deleted : Bool = false, include_undone : Bool = false) : {{ class_name }}
+        @{{ name.id }} ||= {{ class_name }}.find({{ foreign_key.id }}: self.{{ primary_key.id }}, include_deleted: include_deleted, include_undone: include_undone)
       end
-      def _association_{{name.id}}
-        {:has_one, {{primary_key.id.symbolize}}, {{foreign_key.id.symbolize}}, {{class_name}}, @{{name.id}}}
+      def _association_{{ name.id }}
+        {:has_one, {{ primary_key.id.symbolize }}, {{ foreign_key.id.symbolize }}, {{ class_name }}, @{{ name.id }}}
       end
     end
 
@@ -953,7 +953,7 @@ module Ktistec
     end
 
     def _serialize_graph(nodes, association = nil, index = nil, skip_associated = false)
-      return if self.destroyed?
+      return if destroyed?
       {% if @type < Deletable %}
         return if self.deleted?
       {% end %}
@@ -967,19 +967,19 @@ module Ktistec
         {% methods = methods.select(&.name.starts_with?("_association_")) %}
         unless skip_associated
           {% for method in methods %}
-            if (%body = {{method.body.last}})
+            if (%body = {{ method.body.last }})
               if %body.responds_to?(:each_with_index)
                 %body.each_with_index do |model, i|
                   unless nodes.any? { |node| model == node.model }
                     if model.responds_to?(:_serialize_graph)
-                      model._serialize_graph(nodes, {{method.name[13..-1].stringify}}, i, skip_associated: false)
+                      model._serialize_graph(nodes, {{ method.name[13..-1].stringify }}, i, skip_associated: false)
                     end
                   end
                 end
               else
                 unless nodes.any? { |node| %body == node.model }
                   if %body.responds_to?(:_serialize_graph)
-                    %body._serialize_graph(nodes, {{method.name[13..-1].stringify}}, skip_associated: false)
+                    %body._serialize_graph(nodes, {{ method.name[13..-1].stringify }}, skip_associated: false)
                   end
                 end
               end
@@ -1002,8 +1002,8 @@ module Ktistec
         %delta.each do |%node|
           %model = %node.model
           next unless %model == self || %model.changed?
-          if %model.responds_to?({{before.symbolize}})
-            %model.{{before.id}}
+          if %model.responds_to?({{ before.symbolize }})
+            %model.{{ before.id }}
           end
         end
       end
@@ -1011,10 +1011,10 @@ module Ktistec
         %model = %node.model
         next unless %model == self || %model.changed?
         {% (param = block.args.first) || raise "with_callbacks block must have one parameter" %}
-        {{param.id}} = %node
-        {{block.body}}
-        if %model.responds_to?({{after.symbolize}})
-          %model.{{after.id}}
+        {{ param.id }} = %node
+        {{ block.body }}
+        if %model.responds_to?({{ after.symbolize }})
+          %model.{{ after.id }}
         end
       end
     end
@@ -1054,9 +1054,9 @@ module Ktistec
         end
         {% vs = @type.instance_vars.select { |v| v.annotation(Assignable) || v.annotation(Persistent) } %}
         {% for v in vs %}
-          if self.responds_to?(:_validate_{{v}})
-            if error = self._validate_{{v}}
-              @errors[{{v.stringify}}] = [error]
+          if self.responds_to?(:_validate_{{ v }})
+            if error = self._validate_{{ v }}
+              @errors[{{ v.stringify }}] = [error]
             end
           end
         {% end %}
@@ -1078,11 +1078,11 @@ module Ktistec
         {% end %}
       {% end %}
 
-      private def _validate_{{property.name}}
+      private def _validate_{{ property.name }}
         {% if block %}
-          {{block.body}}
+          {{ block.body }}
         {% else %}
-          {{property.block.body}}
+          {{ property.block.body }}
         {% end %}
       end
     end
@@ -1111,15 +1111,15 @@ module Ktistec
     def _save_model(skip_validation = false)
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        columns = {{vs.map(&.stringify.stringify).join(",")}}
-        values = (["?"] * {{vs.size}}).join(",")
+        columns = {{ vs.map(&.stringify.stringify).join(",") }}
+        values = (["?"] * {{ vs.size }}).join(",")
         if self.responds_to?(:updated_at=)
           self.updated_at = Time.utc
         end
         query = "INSERT OR REPLACE INTO #{table_name} (#{columns}) VALUES (#{values})"
         args = [
           {% for v in vs %}
-            self.{{v}},
+            self.{{ v }},
           {% end %}
         ]
         old = @id
@@ -1137,17 +1137,17 @@ module Ktistec
         if @id != old
           {% for method in methods %}
             {% if method.body[0] == :has_one && method.body[1] == :id %}
-              if (model = {{method.body.last}})
-                model.{{method.body[2].id}} = @id
-                model.update_property({{method.body[2].id.symbolize}}, @id) unless model.new_record?
-                model.clear_changed!({{method.body[2]}})
+              if (model = {{ method.body.last }})
+                model.{{ method.body[2].id }} = @id
+                model.update_property({{ method.body[2].id.symbolize }}, @id) unless model.new_record?
+                model.clear_changed!({{ method.body[2] }})
               end
             {% elsif method.body[0] == :has_many && method.body[1] == :id %}
-              if (models = {{method.body.last}})
+              if (models = {{ method.body.last }})
                 models.each do |model|
-                  model.{{method.body[2].id}} = @id
-                  model.update_property({{method.body[2].id.symbolize}}, @id) unless model.new_record?
-                  model.clear_changed!({{method.body[2]}})
+                  model.{{ method.body[2].id }} = @id
+                  model.update_property({{ method.body[2].id.symbolize }}, @id) unless model.new_record?
+                  model.clear_changed!({{ method.body[2] }})
                 end
               end
             {% end %}
@@ -1158,15 +1158,15 @@ module Ktistec
           {% for method in methods %}
             {% name = method.name[13..-1] %}
             {% if method.body.first == :has_one %}
-              if (self.changed?({{name.symbolize}}))
-                if (model = saved_record.{{name}}?)
-                  model.destroy unless self.{{name}} == model
+              if (self.changed?({{ name.symbolize }}))
+                if (model = saved_record.{{ name }}?)
+                  model.destroy unless self.{{ name }} == model
                 end
               end
             {% elsif method.body.first == :has_many %}
-              if (self.changed?({{name.symbolize}}))
-                saved_record.{{name}}.each do |model|
-                  model.destroy unless self.{{name}}.includes?(model)
+              if (self.changed?({{ name.symbolize }}))
+                saved_record.{{ name }}.each do |model|
+                  model.destroy unless self.{{ name }}.includes?(model)
                 end
               end
             {% end %}
@@ -1174,7 +1174,7 @@ module Ktistec
         end
       {% end %}
       # dup but don't maintain a linked list of previously saved records
-      @saved_record = self.dup.clear_saved_record
+      @saved_record = dup.clear_saved_record
       clear_changed!
     end
 
@@ -1186,7 +1186,7 @@ module Ktistec
     #
     def update_property(property, value)
       raise NilAssertionError.new("#{self.class}: 'id' can't be `nil`") if @id.nil?
-      self.assign({property.to_s => value}, _strict: true)
+      assign({property.to_s => value}, _strict: true)
       self.class.exec("UPDATE #{table_name} SET #{property} = ? WHERE id = ?", value, @id)
     end
 
@@ -1195,9 +1195,9 @@ module Ktistec
     # Destroys the instance.
     #
     def destroy
-      self.before_destroy if self.responds_to?(:before_destroy)
+      self.before_destroy if self.responds_to?(:before_destroy) # ameba:disable Style/RedundantSelf
       self.class.exec("DELETE FROM #{table_name} WHERE id = ?", @id)
-      self.after_destroy if self.responds_to?(:after_destroy)
+      self.after_destroy if self.responds_to?(:after_destroy) # ameba:disable Style/RedundantSelf
       @destroyed = true
       @id = nil
       self
@@ -1212,7 +1212,7 @@ module Ktistec
     def reload!
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
-        columns = {{vs.map(&.stringify.stringify).join(",")}}
+        columns = {{ vs.map(&.stringify.stringify).join(",") }}
         query = "SELECT #{columns} FROM #{table_name} WHERE id = ?"
         args = [id]
         Internal.log_query(query, args) do
@@ -1221,7 +1221,7 @@ module Ktistec
           ) do |rs|
             __for_internal_use_only({
               {% for v in vs %}
-                {{v}}: rs.read({{v.type}}),
+                {{ v }}: rs.read({{ v.type }}),
               {% end %}
             })
           end
@@ -1232,11 +1232,11 @@ module Ktistec
         {% methods = methods.select(&.name.starts_with?("_association_")) %}
         {% for method in methods %}
           {% if method.body[0] == :belongs_to %}
-            {{method.body.last}} = nil
+            {{ method.body.last }} = nil
           {% elsif method.body[0] == :has_one %}
-            {{method.body.last}} = nil
+            {{ method.body.last }} = nil
           {% elsif method.body[0] == :has_many %}
-            {{method.body.last}} = nil
+            {{ method.body.last }} = nil
           {% end %}
         {% end %}
         self
@@ -1258,7 +1258,7 @@ module Ktistec
       io << "#<"
       self.class.to_s(io)
       io << " id="
-      self.id.to_s(io)
+      id.to_s(io)
       io << ">"
     end
 
@@ -1266,12 +1266,12 @@ module Ktistec
       io << "#<"
       self.class.to_s(io)
       io << ":0x"
-      self.object_id.to_s(io, 16)
+      object_id.to_s(io, 16)
       {% begin %}
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
         {% for v in vs %}
-          io << " " << {{v.stringify}} << "="
-          self.{{v}}.inspect(io)
+          io << " " << {{ v.stringify }} << "="
+          self.{{ v }}.inspect(io)
         {% end %}
       {% end %}
       io << ">"
@@ -1282,7 +1282,7 @@ module Ktistec
         {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
         json.object do
           {% for v in vs %}
-            json.field({{v.stringify}}, self.{{v}})
+            json.field({{ v.stringify }}, self.{{ v }})
           {% end %}
         end
       {% end %}
@@ -1293,7 +1293,7 @@ module Ktistec
         {
           {% vs = @type.instance_vars.select(&.annotation(Persistent)) %}
           {% for v in vs %}
-            {{v.stringify}} => self.{{v}},
+            {{ v.stringify }} => self.{{ v }},
           {% end %}
         }
       {% end %}

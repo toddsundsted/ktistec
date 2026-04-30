@@ -142,76 +142,76 @@ class Task
 
     def self.followed_or_following_actors
       <<-SQL
-      SELECT DISTINCT to_iri as actor_iri FROM relationships r
-      JOIN accounts ua ON r.from_iri = ua.iri
-      WHERE r.type = 'Relationship::Social::Follow'
-      UNION
-      SELECT DISTINCT from_iri as actor_iri FROM relationships r
-      JOIN accounts ua ON r.to_iri = ua.iri
-      WHERE r.type = 'Relationship::Social::Follow'
-      SQL
+        SELECT DISTINCT to_iri as actor_iri FROM relationships r
+        JOIN accounts ua ON r.from_iri = ua.iri
+        WHERE r.type = 'Relationship::Social::Follow'
+        UNION
+        SELECT DISTINCT from_iri as actor_iri FROM relationships r
+        JOIN accounts ua ON r.to_iri = ua.iri
+        WHERE r.type = 'Relationship::Social::Follow'
+        SQL
     end
 
     def self.objects_attributed_to_user
       <<-SQL
-      SELECT o.iri FROM objects o
-      JOIN accounts ua ON o.attributed_to_iri = ua.iri
-      SQL
+        SELECT o.iri FROM objects o
+        JOIN accounts ua ON o.attributed_to_iri = ua.iri
+        SQL
     end
 
     def self.objects_attributed_to_followed_actors
       <<-SQL
-      SELECT DISTINCT o.iri FROM objects o
-      JOIN followed_or_following_actors ff ON o.attributed_to_iri = ff.actor_iri
-      SQL
+        SELECT DISTINCT o.iri FROM objects o
+        JOIN followed_or_following_actors ff ON o.attributed_to_iri = ff.actor_iri
+        SQL
     end
 
     def self.objects_associated_with_user_activities
       <<-SQL
-      SELECT DISTINCT object_iri AS iri FROM activities a
-      JOIN accounts ua ON a.actor_iri = ua.iri
-      WHERE object_iri IS NOT NULL
-      UNION
-      SELECT DISTINCT target_iri AS iri FROM activities a
-      JOIN accounts ua ON a.actor_iri = ua.iri
-      WHERE target_iri IS NOT NULL
-      SQL
+        SELECT DISTINCT object_iri AS iri FROM activities a
+        JOIN accounts ua ON a.actor_iri = ua.iri
+        WHERE object_iri IS NOT NULL
+        UNION
+        SELECT DISTINCT target_iri AS iri FROM activities a
+        JOIN accounts ua ON a.actor_iri = ua.iri
+        WHERE target_iri IS NOT NULL
+        SQL
     end
 
     def self.objects_associated_with_followed_actor_activities
       <<-SQL
-      SELECT DISTINCT object_iri AS iri FROM activities a
-      JOIN followed_or_following_actors ff ON a.actor_iri = ff.actor_iri
-      WHERE object_iri IS NOT NULL
-      UNION
-      SELECT DISTINCT target_iri AS iri FROM activities a
-      JOIN followed_or_following_actors ff ON a.actor_iri = ff.actor_iri
-      WHERE target_iri IS NOT NULL
-      SQL
+        SELECT DISTINCT object_iri AS iri FROM activities a
+        JOIN followed_or_following_actors ff ON a.actor_iri = ff.actor_iri
+        WHERE object_iri IS NOT NULL
+        UNION
+        SELECT DISTINCT target_iri AS iri FROM activities a
+        JOIN followed_or_following_actors ff ON a.actor_iri = ff.actor_iri
+        WHERE target_iri IS NOT NULL
+        SQL
     end
 
     def self.followed_hashtags
       <<-SQL
-      SELECT DISTINCT to_iri as hashtag_name FROM relationships r
-      JOIN accounts ua ON r.from_iri = ua.iri
-      WHERE r.type = 'Relationship::Content::Follow::Hashtag'
-      SQL
+        SELECT DISTINCT to_iri as hashtag_name FROM relationships r
+        JOIN accounts ua ON r.from_iri = ua.iri
+        WHERE r.type = 'Relationship::Content::Follow::Hashtag'
+        SQL
     end
 
     def self.followed_mentions
       <<-SQL
-      SELECT DISTINCT to_iri as mention_href FROM relationships r
-      JOIN accounts ua ON r.from_iri = ua.iri
-      WHERE r.type = 'Relationship::Content::Follow::Mention'
-      SQL
+        SELECT DISTINCT to_iri as mention_href FROM relationships r
+        JOIN accounts ua ON r.from_iri = ua.iri
+        WHERE r.type = 'Relationship::Content::Follow::Mention'
+        SQL
     end
 
     def self.followed_threads
       <<-SQL
-      SELECT DISTINCT to_iri as thread_iri FROM relationships r
-      JOIN accounts ua ON r.from_iri = ua.iri
-      WHERE r.type = 'Relationship::Content::Follow::Thread'
-      SQL
+        SELECT DISTINCT to_iri as thread_iri FROM relationships r
+        JOIN accounts ua ON r.from_iri = ua.iri
+        WHERE r.type = 'Relationship::Content::Follow::Thread'
+        SQL
     end
 
     # NOTE: this use of "thread" is okay, because if a thread is
@@ -220,62 +220,62 @@ class Task
 
     def self.objects_associated_with_followed_content
       <<-SQL
-      SELECT DISTINCT t.subject_iri AS iri FROM tags t
-      JOIN followed_hashtags fh ON t.name = fh.hashtag_name
-      WHERE t.type = 'Tag::Hashtag'
-      UNION
-      SELECT DISTINCT t.subject_iri AS iri FROM tags t
-      JOIN followed_mentions fm ON t.href = fm.mention_href
-      WHERE t.type = 'Tag::Mention'
-      UNION
-      SELECT DISTINCT o.iri FROM objects o
-      JOIN followed_threads ft ON o.thread = ft.thread_iri
-      SQL
+        SELECT DISTINCT t.subject_iri AS iri FROM tags t
+        JOIN followed_hashtags fh ON t.name = fh.hashtag_name
+        WHERE t.type = 'Tag::Hashtag'
+        UNION
+        SELECT DISTINCT t.subject_iri AS iri FROM tags t
+        JOIN followed_mentions fm ON t.href = fm.mention_href
+        WHERE t.type = 'Tag::Mention'
+        UNION
+        SELECT DISTINCT o.iri FROM objects o
+        JOIN followed_threads ft ON o.thread = ft.thread_iri
+        SQL
     end
 
     def self.objects_in_user_relationships
       <<-SQL
-      SELECT DISTINCT r.to_iri AS iri FROM relationships r
-      JOIN accounts ua ON r.from_iri = ua.iri
-      WHERE r.type != 'Relationship::Content::Inbox'
-      UNION
-      SELECT DISTINCT a.object_iri AS iri FROM relationships r
-      JOIN accounts ua ON r.from_iri = ua.iri
-      JOIN activities a ON a.iri = r.to_iri
-      WHERE r.type != 'Relationship::Content::Inbox'
-        AND a.object_iri IS NOT NULL
-      UNION
-      SELECT DISTINCT a.target_iri AS iri FROM relationships r
-      JOIN accounts ua ON r.from_iri = ua.iri
-      JOIN activities a ON a.iri = r.to_iri
-      WHERE r.type != 'Relationship::Content::Inbox'
-        AND a.target_iri IS NOT NULL
-      SQL
+        SELECT DISTINCT r.to_iri AS iri FROM relationships r
+        JOIN accounts ua ON r.from_iri = ua.iri
+        WHERE r.type != 'Relationship::Content::Inbox'
+        UNION
+        SELECT DISTINCT a.object_iri AS iri FROM relationships r
+        JOIN accounts ua ON r.from_iri = ua.iri
+        JOIN activities a ON a.iri = r.to_iri
+        WHERE r.type != 'Relationship::Content::Inbox'
+          AND a.object_iri IS NOT NULL
+        UNION
+        SELECT DISTINCT a.target_iri AS iri FROM relationships r
+        JOIN accounts ua ON r.from_iri = ua.iri
+        JOIN activities a ON a.iri = r.to_iri
+        WHERE r.type != 'Relationship::Content::Inbox'
+          AND a.target_iri IS NOT NULL
+        SQL
     end
 
     def self.objects_too_recent_to_delete
       <<-SQL
-      SELECT o.iri FROM objects o
-      WHERE o.created_at >= datetime('now', '-#{get_max_age_days} days')
-      SQL
+        SELECT o.iri FROM objects o
+        WHERE o.created_at >= datetime('now', '-#{get_max_age_days} days')
+        SQL
     end
 
     def self.objects_to_preserve
       <<-SQL
-      #{objects_attributed_to_user}
-      UNION
-      #{objects_attributed_to_followed_actors}
-      UNION
-      #{objects_associated_with_user_activities}
-      UNION
-      #{objects_associated_with_followed_actor_activities}
-      UNION
-      #{objects_associated_with_followed_content}
-      UNION
-      #{objects_in_user_relationships}
-      UNION
-      #{objects_too_recent_to_delete}
-      SQL
+        #{objects_attributed_to_user}
+        UNION
+        #{objects_attributed_to_followed_actors}
+        UNION
+        #{objects_associated_with_user_activities}
+        UNION
+        #{objects_associated_with_followed_actor_activities}
+        UNION
+        #{objects_associated_with_followed_content}
+        UNION
+        #{objects_in_user_relationships}
+        UNION
+        #{objects_too_recent_to_delete}
+        SQL
     end
 
     # Finds all objects that are part of the same thread as any
@@ -286,68 +286,68 @@ class Task
     #
     def self.objects_in_threads
       <<-SQL
-      SELECT DISTINCT o.iri FROM objects o
-      WHERE
-        -- objects in modern threads
-        (o.thread IS NOT NULL
-         AND o.thread IN (
-           SELECT DISTINCT p.thread FROM objects p
-            WHERE p.thread IS NOT NULL
-              AND p.iri IN (#{objects_to_preserve})
-         ))
-        OR
-        -- objects in legacy threads. find root and traverse
-        (o.thread IS NULL
-         AND o.iri IN (
-           -- find common root
-           WITH RECURSIVE reply_chain(iri, root_iri) AS (
-             -- objects that aren't replies (roots)
-             SELECT o1.iri, o1.iri as root_iri
-               FROM objects o1
-              WHERE o1.thread IS NULL AND o1.in_reply_to_iri IS NULL
-             UNION
-             -- recursive case: objects that are replies
-             SELECT o2.iri, rc.root_iri
-               FROM objects o2, reply_chain rc
-              WHERE o2.thread IS NULL AND o2.in_reply_to_iri = rc.iri
-           )
-           SELECT DISTINCT rc.iri
-             FROM reply_chain rc
-            WHERE rc.root_iri IN (
-             SELECT DISTINCT rc2.root_iri
-               FROM reply_chain rc2
-              WHERE rc2.iri IN (#{objects_to_preserve})
-           )
-         ))
-      SQL
+        SELECT DISTINCT o.iri FROM objects o
+        WHERE
+          -- objects in modern threads
+          (o.thread IS NOT NULL
+           AND o.thread IN (
+             SELECT DISTINCT p.thread FROM objects p
+              WHERE p.thread IS NOT NULL
+                AND p.iri IN (#{objects_to_preserve})
+           ))
+          OR
+          -- objects in legacy threads. find root and traverse
+          (o.thread IS NULL
+           AND o.iri IN (
+             -- find common root
+             WITH RECURSIVE reply_chain(iri, root_iri) AS (
+               -- objects that aren't replies (roots)
+               SELECT o1.iri, o1.iri as root_iri
+                 FROM objects o1
+                WHERE o1.thread IS NULL AND o1.in_reply_to_iri IS NULL
+               UNION
+               -- recursive case: objects that are replies
+               SELECT o2.iri, rc.root_iri
+                 FROM objects o2, reply_chain rc
+                WHERE o2.thread IS NULL AND o2.in_reply_to_iri = rc.iri
+             )
+             SELECT DISTINCT rc.iri
+               FROM reply_chain rc
+              WHERE rc.root_iri IN (
+               SELECT DISTINCT rc2.root_iri
+                 FROM reply_chain rc2
+                WHERE rc2.iri IN (#{objects_to_preserve})
+             )
+           ))
+        SQL
     end
 
     private def get_objects_for_deletion(maximum : Int32)
       query = <<-SQL
-      WITH
-      followed_or_following_actors AS (
-        #{self.class.followed_or_following_actors}
-      ),
-      followed_hashtags AS (
-        #{self.class.followed_hashtags}
-      ),
-      followed_mentions AS (
-        #{self.class.followed_mentions}
-      ),
-      followed_threads AS (
-        #{self.class.followed_threads}
-      ),
-      objects_to_preserve AS (
-        #{self.class.objects_to_preserve}
-        UNION
-        #{self.class.objects_in_threads}
-      )
-      SELECT o.iri FROM objects o
-      LEFT JOIN objects_to_preserve otp ON o.iri = otp.iri
-      WHERE otp.iri IS NULL
-      ORDER BY o.created_at ASC
-      LIMIT ?
-      SQL
+        WITH
+        followed_or_following_actors AS (
+          #{self.class.followed_or_following_actors}
+        ),
+        followed_hashtags AS (
+          #{self.class.followed_hashtags}
+        ),
+        followed_mentions AS (
+          #{self.class.followed_mentions}
+        ),
+        followed_threads AS (
+          #{self.class.followed_threads}
+        ),
+        objects_to_preserve AS (
+          #{self.class.objects_to_preserve}
+          UNION
+          #{self.class.objects_in_threads}
+        )
+        SELECT o.iri FROM objects o
+        LEFT JOIN objects_to_preserve otp ON o.iri = otp.iri
+        WHERE otp.iri IS NULL
+        ORDER BY o.created_at ASC
+        LIMIT ?
+        SQL
 
       Ktistec.database.query_all(query, maximum, as: String)
     end

@@ -13,15 +13,15 @@ Spectator.describe MentionsController do
 
   macro create_object_with_mentions(index, *mentions)
     let_create(
-      :object, named: object{{index}},
+      :object, named: object{{ index }},
       attributed_to: author,
-      published: Time.utc(2016, 2, 15, 10, 20, {{index}})
+      published: Time.utc(2016, 2, 15, 10, 20, {{ index }})
     )
     {% for mention in mentions %}
       let_create!(
         :mention, named: nil,
-        name: {{mention}},
-        subject: object{{index}}
+        name: {{ mention }},
+        subject: object{{ index }}
       )
     {% end %}
   end

@@ -10,19 +10,19 @@ Spectator.describe ActivityPub::Activity::QuoteRequest do
 
   describe "#actor" do
     it "returns an actor or actor subclass" do
-      expect(typeof(subject.actor)).to eq({{(ActivityPub::Actor.all_subclasses << ActivityPub::Actor).join("|").id}})
+      expect(typeof(subject.actor)).to eq({{ (ActivityPub::Actor.all_subclasses << ActivityPub::Actor).join("|").id }})
     end
   end
 
   describe "#object" do
     it "returns an object or object subclass" do
-      expect(typeof(subject.object)).to eq({{(ActivityPub::Object.all_subclasses << ActivityPub::Object).join("|").id}})
+      expect(typeof(subject.object)).to eq({{ (ActivityPub::Object.all_subclasses << ActivityPub::Object).join("|").id }})
     end
   end
 
   describe "#instrument" do
     it "returns an object or object subclass" do
-      expect(typeof(subject.instrument)).to eq({{(ActivityPub::Object.all_subclasses << ActivityPub::Object).join("|").id}})
+      expect(typeof(subject.instrument)).to eq({{ (ActivityPub::Object.all_subclasses << ActivityPub::Object).join("|").id }})
     end
   end
 end

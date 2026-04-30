@@ -52,18 +52,18 @@ Spectator.describe ActivityPub::Object::Question do
     context "with votersCount" do
       let(json_string) do
         <<-JSON
-        {
-          "@context": [
-            "https://www.w3.org/ns/activitystreams",
-            {
-              "votersCount": "http://joinmastodon.org/ns#votersCount"
-            }
-          ],
-          "type": "Question",
-          "id": "https://remote/questions/1",
-          "votersCount": 42
-        }
-        JSON
+          {
+            "@context": [
+              "https://www.w3.org/ns/activitystreams",
+              {
+                "votersCount": "http://joinmastodon.org/ns#votersCount"
+              }
+            ],
+            "type": "Question",
+            "id": "https://remote/questions/1",
+            "votersCount": 42
+          }
+          JSON
       end
 
       it "extracts voters count" do
@@ -74,24 +74,24 @@ Spectator.describe ActivityPub::Object::Question do
     context "with oneOf" do
       let(json_string) do
         <<-JSON
-        {
-          "@context": "https://www.w3.org/ns/activitystreams",
-          "type": "Question",
-          "id": "https://remote/questions/1",
-          "oneOf": [
-            {
-              "type": "Note",
-              "name": "Yes",
-              "replies": {"type": "Collection", "totalItems": 42}
-            },
-            {
-              "type": "Note",
-              "name": "No",
-              "replies": {"type": "Collection", "totalItems": 8}
-            }
-          ]
-        }
-        JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "type": "Question",
+            "id": "https://remote/questions/1",
+            "oneOf": [
+              {
+                "type": "Note",
+                "name": "Yes",
+                "replies": {"type": "Collection", "totalItems": 42}
+              },
+              {
+                "type": "Note",
+                "name": "No",
+                "replies": {"type": "Collection", "totalItems": 8}
+              }
+            ]
+          }
+          JSON
       end
 
       it "creates poll with options" do
@@ -116,29 +116,29 @@ Spectator.describe ActivityPub::Object::Question do
     context "with anyOf" do
       let(json_string) do
         <<-JSON
-        {
-          "@context": "https://www.w3.org/ns/activitystreams",
-          "type": "Question",
-          "id": "https://remote/questions/2",
-          "anyOf": [
-            {
-              "type": "Note",
-              "name": "Option A",
-              "replies": {"type": "Collection", "totalItems": 10}
-            },
-            {
-              "type": "Note",
-              "name": "Option B",
-              "replies": {"type": "Collection", "totalItems": 15}
-            },
-            {
-              "type": "Note",
-              "name": "Option C",
-              "replies": {"type": "Collection", "totalItems": 5}
-            }
-          ]
-        }
-        JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "type": "Question",
+            "id": "https://remote/questions/2",
+            "anyOf": [
+              {
+                "type": "Note",
+                "name": "Option A",
+                "replies": {"type": "Collection", "totalItems": 10}
+              },
+              {
+                "type": "Note",
+                "name": "Option B",
+                "replies": {"type": "Collection", "totalItems": 15}
+              },
+              {
+                "type": "Note",
+                "name": "Option C",
+                "replies": {"type": "Collection", "totalItems": 5}
+              }
+            ]
+          }
+          JSON
       end
 
       it "creates poll with options" do
@@ -165,13 +165,13 @@ Spectator.describe ActivityPub::Object::Question do
     context "with endTime" do
       let(json_string) do
         <<-JSON
-        {
-          "@context": "https://www.w3.org/ns/activitystreams",
-          "type": "Question",
-          "id": "https://remote/questions/3",
-          "endTime": "2025-12-31T23:59:59Z"
-        }
-        JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "type": "Question",
+            "id": "https://remote/questions/3",
+            "endTime": "2025-12-31T23:59:59Z"
+          }
+          JSON
       end
 
       it "extracts endTime as closed_at" do
@@ -184,16 +184,16 @@ Spectator.describe ActivityPub::Object::Question do
     context "with closed timestamp" do
       let(json_string) do
         <<-JSON
-        {
-          "@context": [
-            "https://www.w3.org/ns/activitystreams",
-            {"closed": "http://joinmastodon.org/ns#closed"}
-          ],
-          "type": "Question",
-          "id": "https://remote/questions/4",
-          "closed": "2025-01-15T10:00:00Z"
-        }
-        JSON
+          {
+            "@context": [
+              "https://www.w3.org/ns/activitystreams",
+              {"closed": "http://joinmastodon.org/ns#closed"}
+            ],
+            "type": "Question",
+            "id": "https://remote/questions/4",
+            "closed": "2025-01-15T10:00:00Z"
+          }
+          JSON
       end
 
       it "extracts closed as closed_at" do
@@ -206,13 +206,13 @@ Spectator.describe ActivityPub::Object::Question do
     context "without poll-specific fields" do
       let(json_string) do
         <<-JSON
-        {
-          "@context": "https://www.w3.org/ns/activitystreams",
-          "type": "Question",
-          "id": "https://remote/questions/6",
-          "content": "Just a question"
-        }
-        JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "type": "Question",
+            "id": "https://remote/questions/6",
+            "content": "Just a question"
+          }
+          JSON
       end
 
       it "does not create poll when oneOf/anyOf missing" do
@@ -225,32 +225,32 @@ Spectator.describe ActivityPub::Object::Question do
   describe ".from_json_ld" do
     let(json_string) do
       <<-JSON
-      {
-        "@context": [
-          "https://www.w3.org/ns/activitystreams",
-          {
-            "votersCount": "http://joinmastodon.org/ns#votersCount"
-          }
-        ],
-        "type": "Question",
-        "id": "https://remote/questions/1",
-        "content": "Do you like polls?",
-        "oneOf": [
-          {
-            "type": "Note",
-            "name": "Yes",
-            "replies": {"type": "Collection", "totalItems": 42}
-          },
-          {
-            "type": "Note",
-            "name": "No",
-            "replies": {"type": "Collection", "totalItems": 8}
-          }
-        ],
-        "endTime": "2025-12-31T23:59:59Z",
-        "votersCount": 50
-      }
-      JSON
+        {
+          "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            {
+              "votersCount": "http://joinmastodon.org/ns#votersCount"
+            }
+          ],
+          "type": "Question",
+          "id": "https://remote/questions/1",
+          "content": "Do you like polls?",
+          "oneOf": [
+            {
+              "type": "Note",
+              "name": "Yes",
+              "replies": {"type": "Collection", "totalItems": 42}
+            },
+            {
+              "type": "Note",
+              "name": "No",
+              "replies": {"type": "Collection", "totalItems": 8}
+            }
+          ],
+          "endTime": "2025-12-31T23:59:59Z",
+          "votersCount": 50
+        }
+        JSON
     end
 
     let(question) { ActivityPub::Object.from_json_ld(json_string) }
@@ -277,29 +277,29 @@ Spectator.describe ActivityPub::Object::Question do
 
     let(json_string) do
       <<-JSON
-      {
-        "@context": [
-          "https://www.w3.org/ns/activitystreams",
-          {"votersCount": "http://joinmastodon.org/ns#votersCount"}
-        ],
-        "id": #{question.iri.to_json},
-        "type": "Question",
-        "content": "Do you like polls?",
-        "oneOf": [
-          {
-            "type": "Note",
-            "name": "Yes",
-            "replies": {"type": "Collection", "totalItems": 42}
-          },
-          {
-            "type": "Note",
-            "name": "No",
-            "replies": {"type": "Collection", "totalItems": 8}
-          }
-        ],
-        "votersCount": 50
-      }
-      JSON
+        {
+          "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            {"votersCount": "http://joinmastodon.org/ns#votersCount"}
+          ],
+          "id": #{question.iri.to_json},
+          "type": "Question",
+          "content": "Do you like polls?",
+          "oneOf": [
+            {
+              "type": "Note",
+              "name": "Yes",
+              "replies": {"type": "Collection", "totalItems": 42}
+            },
+            {
+              "type": "Note",
+              "name": "No",
+              "replies": {"type": "Collection", "totalItems": 8}
+            }
+          ],
+          "votersCount": 50
+        }
+        JSON
     end
 
     it "replaces poll instance" do
@@ -355,10 +355,10 @@ Spectator.describe ActivityPub::Object::Question do
   macro vote(index, actor = actor)
     let_create!(
       :note,
-      named: vote{{index}},
-      name: poll.options[{{index}}].name,
+      named: vote{{ index }},
+      name: poll.options[{{ index }}].name,
       in_reply_to: question,
-      attributed_to: {{actor}},
+      attributed_to: {{ actor }},
       content: nil,
       special: "vote",
     )

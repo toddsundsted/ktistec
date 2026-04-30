@@ -4,7 +4,7 @@ module Ktistec::ViewHelper
   macro activity_pub_collection(collection, &block)
     %path = env.request.path
     %query = env.params.query
-    %cursor = {{collection}}.cursor_start
+    %cursor = {{ collection }}.cursor_start
     if %cursor
       # cursor-based pagination
       content_io << %Q({)
@@ -23,20 +23,20 @@ module Ktistec::ViewHelper
         %temp = %query.dup
         %temp.delete_all("max_id")
         %temp.delete_all("min_id")
-        %temp["min_id"] = {{collection}}.cursor_start.to_s
+        %temp["min_id"] = {{ collection }}.cursor_start.to_s
         content_io << %Q("prev":"#{host}#{%path}?#{%temp}",)
       end
-      if {{collection}}.more?
+      if {{ collection }}.more?
         %temp = %query.dup
         %temp.delete_all("max_id")
         %temp.delete_all("min_id")
-        %temp["max_id"] = {{collection}}.cursor_end.to_s
+        %temp["max_id"] = {{ collection }}.cursor_end.to_s
         content_io << %Q("next":"#{host}#{%path}?#{%temp}",)
       end
       content_io << %Q("orderedItems":[)
       {% if block %}
-        {{collection}}.each_with_index do |{{block.args.join(",").id}}|
-          {{block.body}}
+        {{ collection }}.each_with_index do |{{ block.args.join(",").id }}|
+          {{ block.body }}
         end
       {% end %}
       content_io << %Q(])
@@ -66,14 +66,14 @@ module Ktistec::ViewHelper
           content_io << %Q("prev":"#{host}#{%path}?#{%query}",)
         end
       end
-      if {{collection}}.more?
+      if {{ collection }}.more?
         %query["page"] = (%page + 1).to_s
         content_io << %Q("next":"#{host}#{%path}?#{%query}",)
       end
       content_io << %Q("orderedItems":[)
       {% if block %}
-        {{collection}}.each_with_index do |{{block.args.join(",").id}}|
-          {{block.body}}
+        {{ collection }}.each_with_index do |{{ block.args.join(",").id }}|
+          {{ block.body }}
         end
       {% end %}
       content_io << %Q(])
@@ -85,8 +85,8 @@ module Ktistec::ViewHelper
   end
 
   macro error_block(model, comma = true)
-    if (%errors = {{model}}.errors.presence)
-      %comma = {{comma}} ? "," : ""
+    if (%errors = {{ model }}.errors.presence)
+      %comma = {{ comma }} ? "," : ""
       %errors = %errors.transform_keys(&.split(".").last).to_json
       %Q("errors":#{%errors}#{%comma})
     else
@@ -95,8 +95,8 @@ module Ktistec::ViewHelper
   end
 
   macro field_pair(model, field, comma = true)
-    %comma = {{comma}} ? "," : ""
-    %value = {{model}}.{{field.id}}.try(&.inspect) || "null"
-    %Q("{{field.id}}":#{%value}#{%comma})
+    %comma = {{ comma }} ? "," : ""
+    %value = {{ model }}.{{ field.id }}.try(&.inspect) || "null"
+    %Q("{{ field.id }}":#{%value}#{%comma})
   end
 end

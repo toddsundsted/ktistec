@@ -19,19 +19,19 @@ up do |db|
       "cc" text,
       "summary" text
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE UNIQUE INDEX idx_activities_iri
       ON activities (iri ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_activities_object_iri
       ON activities (object_iri ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE activities
-  STR
+    STR
 end

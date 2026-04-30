@@ -60,22 +60,22 @@ Spectator.describe Tag::Hashtag do
 
   macro create_tagged_object(index, *tags)
     let_create!(
-      :object, named: object{{index}},
+      :object, named: object{{ index }},
       attributed_to: author,
-      published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+      published: Time.utc(2016, 2, 15, 10, 20, {{ index }}),
       local: true,
     )
     let_create!(
-      :create, named: create{{index}},
-      object: object{{index}},
+      :create, named: create{{ index }},
+      object: object{{ index }},
       actor: author,
     )
     before_each do
-      put_in_outbox(author, create{{index}})
+      put_in_outbox(author, create{{ index }})
       {% for tag in tags %}
         described_class.new(
-          name: {{tag}},
-          subject: object{{index}},
+          name: {{ tag }},
+          subject: object{{ index }},
         ).save
       {% end %}
     end

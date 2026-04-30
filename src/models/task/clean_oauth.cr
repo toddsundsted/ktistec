@@ -31,9 +31,9 @@ class Task
     private def cleanup_expired_tokens
       result = Ktistec.database.exec(
         <<-SQL
-        DELETE FROM oauth_access_tokens
-         WHERE expires_at < datetime('now')
-        SQL
+          DELETE FROM oauth_access_tokens
+           WHERE expires_at < datetime('now')
+          SQL
       )
       deleted_count = result.rows_affected.to_i
       Log.info { "Deleted #{deleted_count} expired access tokens" }
@@ -43,14 +43,14 @@ class Task
     private def cleanup_orphaned_clients
       result = Ktistec.database.exec(
         <<-SQL
-        DELETE FROM oauth_clients
-         WHERE manual = 0
-           AND (
-             (last_accessed_at IS NULL AND created_at < datetime('now', '-1 month'))
-              OR
-             (last_accessed_at < datetime('now', '-1 year'))
-           )
-        SQL
+          DELETE FROM oauth_clients
+           WHERE manual = 0
+             AND (
+               (last_accessed_at IS NULL AND created_at < datetime('now', '-1 month'))
+                OR
+               (last_accessed_at < datetime('now', '-1 year'))
+             )
+          SQL
       )
       deleted_count = result.rows_affected.to_i
       Log.info { "Deleted #{deleted_count} inactive clients" }

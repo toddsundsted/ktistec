@@ -6,11 +6,11 @@ module Ktistec::ViewHelper
       {% action = arg1; object = arg2; type = arg3 %}
       %block =
         begin
-          {{block.body}}
+          {{ block.body }}
         end
     {% else %}
       {% action = arg2; object = arg3; text = arg1 %}
-      %block = {{text}}
+      %block = {{ text }}
     {% end %}
     {% if method == "DELETE" %}
       {% method = "POST" %}
@@ -19,25 +19,25 @@ module Ktistec::ViewHelper
       %input = ""
     {% end %}
     {% if csrf && method != "GET" %}
-     %csrf = %Q(<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">)
+     %csrf = %Q(<input type="hidden" name="authenticity_token" value="#{{{ csrf }}}">)
     {% else %}
       %csrf = ""
     {% end %}
     %form_attrs = [
-      %Q(class="#{{{form_class}}}"),
-      %Q(action="#{{{action}}}"),
-      %Q(method="#{{{method}}}"),
+      %Q(class="#{{{ form_class }}}"),
+      %Q(action="#{{{ action }}}"),
+      %Q(method="#{{{ method }}}"),
       {% if form_data %}
         {% for key, value in form_data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{ key.id }}="#{{{ value }}}"),
         {% end %}
       {% end %}
     ]
     %button_attrs = [
-      %Q(class="#{{{button_class}}}"),
+      %Q(class="#{{{ button_class }}}"),
       {% if button_data %}
         {% for key, value in button_data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{ key.id }}="#{{{ value }}}"),
         {% end %}
       {% end %}
     ]
@@ -45,9 +45,9 @@ module Ktistec::ViewHelper
     <form #{%form_attrs.join(" ")}>\
     #{%csrf}\
     #{%input}\
-    <input type="hidden" name="object" value="#{{{object}}}">\
-    <input type="hidden" name="type" value="#{{{type || text}}}">\
-    <input type="hidden" name="visibility" value="#{{{public}} ? "public" : "private"}">\
+    <input type="hidden" name="object" value="#{{{ object }}}">\
+    <input type="hidden" name="type" value="#{{{ type || text }}}">\
+    <input type="hidden" name="visibility" value="#{{{ public }} ? "public" : "private"}">\
     <button #{%button_attrs.join(" ")} type="submit">\
     #{%block}\
     </button>\
@@ -62,10 +62,10 @@ module Ktistec::ViewHelper
       {% action = arg1 %}
       %block =
         begin
-          {{block.body}}
+          {{ block.body }}
         end
     {% else %}
-      %block = {{arg1}}
+      %block = {{ arg1 }}
     {% end %}
     {% if method == "DELETE" %}
       {% method = "POST" %}
@@ -74,31 +74,31 @@ module Ktistec::ViewHelper
       %input = ""
     {% end %}
     {% if csrf && method != "GET" %}
-     %csrf = %Q(<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">)
+     %csrf = %Q(<input type="hidden" name="authenticity_token" value="#{{{ csrf }}}">)
     {% else %}
       %csrf = ""
     {% end %}
     %form_attrs = [
       {% if form_id %}
-        %Q(id="#{{{form_id}}}"),
+        %Q(id="#{{{ form_id }}}"),
       {% end %}
-      %Q(class="#{{{form_class}}}"),
-      %Q(action="#{{{action}}}"),
-      %Q(method="#{{{method}}}"),
+      %Q(class="#{{{ form_class }}}"),
+      %Q(action="#{{{ action }}}"),
+      %Q(method="#{{{ method }}}"),
       {% if form_data %}
         {% for key, value in form_data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{ key.id }}="#{{{ value }}}"),
         {% end %}
       {% end %}
     ]
     %button_attrs = [
       {% if button_id %}
-        %Q(id="#{{{button_id}}}"),
+        %Q(id="#{{{ button_id }}}"),
       {% end %}
-      %Q(class="#{{{button_class}}}"),
+      %Q(class="#{{{ button_class }}}"),
       {% if button_data %}
         {% for key, value in button_data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{ key.id }}="#{{{ value }}}"),
         {% end %}
       {% end %}
     ]
@@ -114,11 +114,11 @@ module Ktistec::ViewHelper
   end
 
   macro authenticity_token(env)
-    %Q(<input type="hidden" name="authenticity_token" value="#{{{env}}.session.csrf_token}">)
+    %Q(<input type="hidden" name="authenticity_token" value="#{{{ env }}.session.csrf_token}">)
   end
 
   macro error_messages(model)
-    if (%errors = {{model}}.errors.presence)
+    if (%errors = {{ model }}.errors.presence)
       %messages = %errors.transform_keys(&.split(".").last).flat_map do |k, vs|
         vs.map { |v| "#{::HTML.escape(k)} #{::HTML.escape(v)}" }
       end.join(", ")
@@ -131,11 +131,11 @@ module Ktistec::ViewHelper
   macro form_tag(model, action, *, method = "POST", form = nil, class _class = "ui form", data = nil, csrf = env.session.csrf_token, &block)
     {% if model %}
       %classes =
-        {{model}}.errors.presence ?
-          "#{{{_class}}} error" :
-          {{_class}}
+        {{ model }}.errors.presence ?
+          "#{{{ _class }}} error" :
+          {{ _class }}
     {% else %}
-      %classes = {{_class}}
+      %classes = {{ _class }}
     {% end %}
     {% if method == "DELETE" %}
       {% method = "POST" %}
@@ -144,18 +144,18 @@ module Ktistec::ViewHelper
       %input = ""
     {% end %}
     {% if csrf && method != "GET" %}
-     %csrf = %Q(<input type="hidden" name="authenticity_token" value="#{{{csrf}}}">)
+     %csrf = %Q(<input type="hidden" name="authenticity_token" value="#{{{ csrf }}}">)
     {% else %}
       %csrf = ""
     {% end %}
     %block =
       begin
-        {{block.body}}
+        {{ block.body }}
       end
     %attributes = [
       %Q(class="#{%classes}"),
-      %Q(action="#{{{action}}}"),
-      %Q(method="#{{{method}}}"),
+      %Q(action="#{{{ action }}}"),
+      %Q(method="#{{{ method }}}"),
       {% if method == "POST" && form %}
         {% if form == "data" %}
           %Q(enctype="multipart/form-data")
@@ -169,7 +169,7 @@ module Ktistec::ViewHelper
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{ key.id }}="#{{{ value }}}"),
         {% end %}
       {% end %}
     ]
@@ -185,39 +185,39 @@ module Ktistec::ViewHelper
   macro input_tag(label, model, field, id = nil, class _class = "", type = "text", placeholder = nil, autofocus = nil, data = nil)
     {% if model %}
       %classes =
-        {{model}}.errors.has_key?("{{field.id}}") ?
+        {{ model }}.errors.has_key?("{{ field.id }}") ?
           "field error" :
           "field"
-      %name = {{field.id.stringify}}
-      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
+      %name = {{ field.id.stringify }}
+      %value = {{ model }}.{{ field.id }}.try { |string| ::HTML.escape(string) }
     {% else %}
       %classes = "field"
-      %name = {{field.id.stringify}}
+      %name = {{ field.id.stringify }}
       %value = nil
     {% end %}
     %attributes = [
-      %Q(class="#{{{_class}}}"),
-      %Q(type="#{{{type}}}"),
+      %Q(class="#{{{ _class }}}"),
+      %Q(type="#{{{ type }}}"),
       %Q(name="#{%name}"),
       %Q(value="#{%value}"),
       {% if id %}
-        %Q(id="#{{{id}}}"),
+        %Q(id="#{{{ id }}}"),
       {% end %}
       {% if placeholder %}
-        %Q(placeholder="#{{{placeholder}}}"),
+        %Q(placeholder="#{{{ placeholder }}}"),
       {% end %}
       {% if autofocus %}
         %Q(autofocus),
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{ key.id }}="#{{{ value }}}"),
         {% end %}
       {% end %}
     ]
     <<-HTML
     <div class="#{%classes}">\
-    <label>#{{{label}}}</label>\
+    <label>#{{{ label }}}</label>\
     <input #{%attributes.join(" ")}>\
     </div>
     HTML
@@ -226,38 +226,38 @@ module Ktistec::ViewHelper
   macro textarea_tag(label, model, field, id = nil, class _class = "", rows = 4, placeholder = nil, autofocus = nil, data = nil)
     {% if model %}
       %classes =
-        {{model}}.errors.has_key?("{{field.id}}") ?
+        {{ model }}.errors.has_key?("{{ field.id }}") ?
           "field error" :
           "field"
-      %name = {{field.id.stringify}}
-      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
+      %name = {{ field.id.stringify }}
+      %value = {{ model }}.{{ field.id }}.try { |string| ::HTML.escape(string) }
     {% else %}
       %classes = "field"
-      %name = {{field.id.stringify}}
+      %name = {{ field.id.stringify }}
       %value = nil
     {% end %}
     %attributes = [
-      %Q(class="#{{{_class}}}"),
+      %Q(class="#{{{ _class }}}"),
       %Q(name="#{%name}"),
-      %Q(rows="#{{{rows}}}"),
+      %Q(rows="#{{{ rows }}}"),
       {% if id %}
-        %Q(id="#{{{id}}}"),
+        %Q(id="#{{{ id }}}"),
       {% end %}
       {% if placeholder %}
-        %Q(placeholder="#{{{placeholder}}}"),
+        %Q(placeholder="#{{{ placeholder }}}"),
       {% end %}
       {% if autofocus %}
         %Q(autofocus),
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{ key.id }}="#{{{ value }}}"),
         {% end %}
       {% end %}
     ]
     <<-HTML
     <div class="#{%classes}">\
-    <label>#{{{label}}}</label>\
+    <label>#{{{ label }}}</label>\
     <textarea #{%attributes.join(" ")}>#{%value}</textarea>\
     </div>
     HTML
@@ -266,29 +266,29 @@ module Ktistec::ViewHelper
   macro select_tag(label, model, field, options, selected = nil, id = nil, class _class = "ui selection dropdown", data = nil)
     {% if model %}
       %classes =
-        {{model}}.errors.has_key?("{{field.id}}") ?
+        {{ model }}.errors.has_key?("{{ field.id }}") ?
           "field error" :
           "field"
-      %name = {{field.id.stringify}}
-      %selected = {{model}}.{{field.id}}
+      %name = {{ field.id.stringify }}
+      %selected = {{ model }}.{{ field.id }}
     {% else %}
       %classes = "field"
-      %name = {{field.id.stringify}}
-      %selected = {{selected}}
+      %name = {{ field.id.stringify }}
+      %selected = {{ selected }}
     {% end %}
     %attributes = [
-      %Q(class="#{{{_class}}}"),
+      %Q(class="#{{{ _class }}}"),
       %Q(name="#{%name}"),
       {% if id %}
-        %Q(id="#{{{id}}}"),
+        %Q(id="#{{{ id }}}"),
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{ key.id }}="#{{{ value }}}"),
         {% end %}
       {% end %}
     ]
-    %options = {{options}}.map do |key, value|
+    %options = {{ options }}.map do |key, value|
       if %selected && %selected.to_s == key.to_s
         %Q(<option value="#{key}" selected>#{value}</option>)
       else
@@ -297,7 +297,7 @@ module Ktistec::ViewHelper
     end
     <<-HTML
     <div class="#{%classes}">\
-    <label>#{{{label}}}</label>\
+    <label>#{{{ label }}}</label>\
     <select #{%attributes.join(" ")}>#{%options.join("")}</select>\
     </div>
     HTML
@@ -306,22 +306,22 @@ module Ktistec::ViewHelper
   macro trix_editor(label, model, field, id = nil, class _class = "")
     {% if model %}
       %classes =
-        {{model}}.errors.has_key?("{{field.id}}") ?
+        {{ model }}.errors.has_key?("{{ field.id }}") ?
           "field error" :
           "field"
-      %name = {{field.id.stringify}}
-      %value = {{model}}.{{field.id}}.try { |string| ::HTML.escape(string) }
+      %name = {{ field.id.stringify }}
+      %value = {{ model }}.{{ field.id }}.try { |string| ::HTML.escape(string) }
     {% else %}
       %classes = "field"
-      %name = {{field.id.stringify}}
+      %name = {{ field.id.stringify }}
       %value = nil
     {% end %}
-    %id = {{id}} || "#{%name}-#{Time.utc.to_unix_ms}"
+    %id = {{ id }} || "#{%name}-#{Time.utc.to_unix_ms}"
     %trix_editor_attributes = [
       %Q(data-controller="editor--trix"),
       %Q(input="#{%id}"),
       {% if _class %}
-        %Q(class="#{{{_class}}}"),
+        %Q(class="#{{{ _class }}}"),
       {% end %}
     ]
     %textarea_attributes = [
@@ -331,7 +331,7 @@ module Ktistec::ViewHelper
     ]
     <<-HTML
     <div class="#{%classes}" data-turbo-permanent>\
-    <label>#{{{label}}}</label>\
+    <label>#{{{ label }}}</label>\
     <trix-editor #{%trix_editor_attributes.join(" ")}></trix-editor>\
     <textarea #{%textarea_attributes.join(" ")}>#{%value}</textarea>\
     </div>
@@ -339,15 +339,15 @@ module Ktistec::ViewHelper
   end
 
   macro submit_button(value = "Submit", class _class = "ui primary button")
-    %Q(<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">)
+    %Q(<input class="#{{{ _class }}}" type="submit" value="#{{{ value }}}">)
   end
 
   macro params_to_inputs(params, exclude exclude_ = nil, include include_ = nil)
-    {{params}}.map do |%name, %value|
-      if (%exclude = {{exclude_}})
+    {{ params }}.map do |%name, %value|
+      if (%exclude = {{ exclude_ }})
         next if %exclude.includes?(%name)
       end
-      if (%include = {{include_}})
+      if (%include = {{ include_ }})
         next unless %include.includes?(%name)
       end
       %Q(<input type="hidden" name="#{::HTML.escape(%name)}" value="#{::HTML.escape(%value)}">)

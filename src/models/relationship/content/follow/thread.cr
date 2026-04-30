@@ -75,7 +75,7 @@ module ActivityPub
   class Object
     def after_save
       previous_def
-      Relationship::Content::Follow::Thread.merge_into(self.iri, self.thread)
+      Relationship::Content::Follow::Thread.merge_into(iri, thread)
     end
   end
 end

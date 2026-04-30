@@ -23,11 +23,11 @@ KTISTEC_FACTORY_STATE = {:nonce => 0, :moment => 0}
 
 abstract class Factory
   macro build(type, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **__options)
-    {{type.id}}_factory(created_at: {{created_at}}, {{__options.double_splat}})
+    {{ type.id }}_factory(created_at: {{ created_at }}, {{ __options.double_splat }})
   end
 
   macro create(type, created_at = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second, **__options)
-    {{type.id}}_factory(created_at: {{created_at}}, {{__options.double_splat}}).save
+    {{ type.id }}_factory(created_at: {{ created_at }}, {{ __options.double_splat }}).save
   end
 end
 
@@ -60,22 +60,22 @@ end
 
 macro let_build(type, named = false, **__options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.build({{type}}, {{__options.double_splat}}) }
+  let({{ (named || type).id }}) { Factory.build({{ type }}, {{ __options.double_splat }}) }
 end
 
 macro let_build!(type, named = false, **__options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.build({{type}}, {{__options.double_splat}}) }
+  let!({{ (named || type).id }}) { Factory.build({{ type }}, {{ __options.double_splat }}) }
 end
 
 macro let_create(type, named = false, **__options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let({{(named || type).id}}) { Factory.create({{type}}, {{__options.double_splat}}) }
+  let({{ (named || type).id }}) { Factory.create({{ type }}, {{ __options.double_splat }}) }
 end
 
 macro let_create!(type, named = false, **__options)
   {% named = "__anon_#{KTISTEC_FACTORY_STATE[:nonce] += 1}" if named == nil %}
-  let!({{(named || type).id}}) { Factory.create({{type}}, {{__options.double_splat}}) }
+  let!({{ (named || type).id }}) { Factory.create({{ type }}, {{ __options.double_splat }}) }
 end
 
 def base_url(iri, thing, local = nil)

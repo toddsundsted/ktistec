@@ -18,7 +18,7 @@ class LastTime
   validates(name) do
     if !name.presence
       "can't be blank"
-    elsif (instance = self.class.where(name: name, account_id: account_id).first?) && instance.id != self.id
+    elsif (instance = self.class.where(name: name, account_id: account_id).first?) && instance.id != id
       "already exists: #{name}"
     end
   end

@@ -14,15 +14,15 @@ up do |db|
       "created_at" datetime NOT NULL,
       "updated_at" datetime NOT NULL
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE UNIQUE INDEX idx_polls_question_iri
       ON polls (question_iri)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE polls
-  STR
+    STR
 end

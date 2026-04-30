@@ -23,7 +23,7 @@ class Tag
   end
 
   def self.short_type
-    self.to_s.split("::").last.underscore
+    to_s.split("::").last.underscore
   end
 
   def short_type
@@ -35,16 +35,16 @@ class Tag
   macro common_filters(**options)
     <<-FILTERS
       {% if (key = options[:objects]) %}
-        AND {{key.id}}.special is NULL
-        AND {{key.id}}.deleted_at is NULL
-        AND {{key.id}}.blocked_at is NULL
+        AND {{ key.id }}.special is NULL
+        AND {{ key.id }}.deleted_at is NULL
+        AND {{ key.id }}.blocked_at is NULL
       {% end %}
       {% if (key = options[:actors]) %}
-        AND {{key.id}}.deleted_at IS NULL
-        AND {{key.id}}.blocked_at IS NULL
+        AND {{ key.id }}.deleted_at IS NULL
+        AND {{ key.id }}.blocked_at IS NULL
       {% end %}
       {% if (key = options[:activities]) %}
-        AND {{key.id}}.undone_at IS NULL
+        AND {{ key.id }}.undone_at IS NULL
       {% end %}
     FILTERS
   end
@@ -66,7 +66,7 @@ class Tag
            AND name LIKE ? ESCAPE '\\'
       ORDER BY count DESC
          LIMIT ?
-    QUERY
+      QUERY
     escaped_prefix = prefix.gsub("%", "\\%").gsub("_", "\\_")
     args = {short_type, escaped_prefix + "%", limit}
     Internal.log_query(query, args) do
@@ -95,7 +95,7 @@ class Tag
            #{common_filters(objects: "o", actors: "a")}
         )
       )
-    QUERY
+      QUERY
     args = {short_type, name, type, name}
     Internal.log_query(query, args) do
       Ktistec.database.exec(
@@ -118,7 +118,7 @@ class Tag
          AND a.iri = o.attributed_to_iri
          AND o.published IS NOT NULL
          #{common_filters(objects: "o", actors: "a")}
-    QUERY
+      QUERY
     args = {difference, short_type, name, id}
     Internal.log_query(query, args) do
       Ktistec.database.exec(

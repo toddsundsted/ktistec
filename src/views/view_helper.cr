@@ -21,14 +21,14 @@ macro render(content, layout)
   # used by Kemal's implementation of "content_for" and must be in
   # scope for `yield_content` to work.
 
-  __content_filename__ = {{content}}
+  __content_filename__ = {{ content }}
 
   content_io = IO::Memory.new
-  Ktistec::ViewHelper.embed {{content}}, content_io
+  Ktistec::ViewHelper.embed {{ content }}, content_io
   %content = content_io.to_s
 
   {% layout = "_layout_#{layout.gsub(%r[\/|\.], "_").id}" %}
-  Ktistec::ViewHelper.{{layout.id}}(
+  Ktistec::ViewHelper.{{ layout.id }}(
     env,
     yield_content("title"),
     yield_content("og_metadata"),
@@ -41,7 +41,7 @@ end
 #
 macro render(content)
   String.build do |content_io|
-    Ktistec::ViewHelper.embed {{content}}, content_io
+    Ktistec::ViewHelper.embed {{ content }}, content_io
   end
 end
 
@@ -102,9 +102,9 @@ module Ktistec::ViewHelper
   macro embed(filename, io_name)
     {% ext = filename.split(".").last %}
     {% if ext == "ecr" %}
-      ECR.embed {{filename}}, {{io_name}}
+      ECR.embed {{ filename }}, {{ io_name }}
     {% elsif ext == "slang" %}
-      Slang.embed {{filename}}, {{io_name}}
+      Slang.embed {{ filename }}, {{ io_name }}
     {% else %}
       {% raise "unsupported template extension: #{ext.id}" %}
     {% end %}
@@ -114,7 +114,7 @@ module Ktistec::ViewHelper
 
   macro id_param(env, type = :url, name = "id")
     begin
-      env.params.{{type.id}}[{{name.id.stringify}}].to_i64
+      env.params.{{ type.id }}[{{ name.id.stringify }}].to_i64
     rescue ArgumentError
       bad_request
     end
@@ -122,8 +122,8 @@ module Ktistec::ViewHelper
 
   macro iri_param(env, path = nil, type = :url, name = "id")
     begin
-      Base64.decode(%id = env.params.{{type.id}}[{{name.id.stringify}}])
-      %path = {{path}} || {{env}}.request.path.split("/")[0..-2].join("/")
+      Base64.decode(%id = env.params.{{ type.id }}[{{ name.id.stringify }}])
+      %path = {{ path }} || {{ env }}.request.path.split("/")[0..-2].join("/")
       "#{host}#{%path}/#{%id}"
     rescue Base64::Error
       bad_request

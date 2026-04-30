@@ -302,7 +302,7 @@ Spectator.describe ActivityPub::Actor do
           {"type":"Emoji","name":":batman:","icon":{"type":"Image","mediaType":"image/png","url":"https://example.com/batman.png"}}
         ]
       }
-    JSON
+      JSON
   end
 
   describe ".map" do
@@ -320,7 +320,7 @@ Spectator.describe ActivityPub::Actor do
             "height": 120, "width": 120,
             "url": "second link"
           }]
-        ICON
+          ICON
       end
 
       let(json) { super.gsub(/"icon": {[^}]+}/, icon) }
@@ -342,7 +342,7 @@ Spectator.describe ActivityPub::Actor do
             "mediaType": "image/jpeg",
             "url": "second link"
           }]
-        ICON
+          ICON
       end
 
       let(json) { super.gsub(/"icon": {[^}]+}/, icon) }
@@ -364,7 +364,7 @@ Spectator.describe ActivityPub::Actor do
             "mediaType": "image/jpeg",
             "url": "second link"
           }]
-        IMAGE
+          IMAGE
       end
 
       let(json) { super.gsub(/"image": {[^}]+}/, image) }
@@ -379,8 +379,8 @@ Spectator.describe ActivityPub::Actor do
   class ::Tag
     def ===(other : Tag)
       self.type == other.type &&
-        self.name == other.name &&
-        self.href == other.href
+        name == other.name &&
+        href == other.href
     end
   end
 
@@ -722,8 +722,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_following(index, confirmed = true, visible = true)
-      let(following{{index}}) { described_class.new(iri: "https://test.test/#{random_string}").save }
-      let!(follow{{index}}) { subject.follow(following{{index}}, confirmed: {{confirmed}}, visible: {{visible}}).save }
+      let(following{{ index }}) { described_class.new(iri: "https://test.test/#{random_string}").save }
+      let!(follow{{ index }}) { subject.follow(following{{ index }}, confirmed: {{ confirmed }}, visible: {{ visible }}).save }
     end
 
     create_following(1)
@@ -775,8 +775,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_follower(index, confirmed = true, visible = true)
-      let(follower{{index}}) { described_class.new(iri: "https://test.test/#{random_string}").save }
-      let!(follow{{index}}) { follower{{index}}.follow(subject, confirmed: {{confirmed}}, visible: {{visible}}).save }
+      let(follower{{ index }}) { described_class.new(iri: "https://test.test/#{random_string}").save }
+      let!(follow{{ index }}) { follower{{ index }}.follow(subject, confirmed: {{ confirmed }}, visible: {{ visible }}).save }
     end
 
     create_follower(1)
@@ -828,8 +828,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_requester(index, confirmed = false)
-      let(requester{{index}}) { described_class.new(iri: "https://test.test/#{random_string}").save }
-      let!(request{{index}}) { requester{{index}}.follow(subject, confirmed: {{confirmed}}, visible: false).save }
+      let(requester{{ index }}) { described_class.new(iri: "https://test.test/#{random_string}").save }
+      let!(request{{ index }}) { requester{{ index }}.follow(subject, confirmed: {{ confirmed }}, visible: false).save }
     end
 
     create_requester(1)
@@ -877,8 +877,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_like(index)
-      let_create!(:note, named: note{{index}})
-      let_create!(:like, named: like{{index}}, actor: subject, object: note{{index}})
+      let_create!(:note, named: note{{ index }})
+      let_create!(:like, named: like{{ index }}, actor: subject, object: note{{ index }})
     end
 
     create_like(1)
@@ -938,8 +938,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_dislike(index)
-      let_create!(:note, named: note{{index}})
-      let_create!(:dislike, named: dislike{{index}}, actor: subject, object: note{{index}})
+      let_create!(:note, named: note{{ index }})
+      let_create!(:dislike, named: dislike{{ index }}, actor: subject, object: note{{ index }})
     end
 
     create_dislike(1)
@@ -999,8 +999,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_announce(index)
-      let_create!(:note, named: note{{index}})
-      let_create!(:announce, named: announce{{index}}, actor: subject, object: note{{index}})
+      let_create!(:note, named: note{{ index }})
+      let_create!(:announce, named: announce{{ index }}, actor: subject, object: note{{ index }})
     end
 
     create_announce(1)
@@ -1060,8 +1060,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_bookmark(index)
-      let_create!(:note, named: note{{index}})
-      let_create!(:bookmark_relationship, named: bookmark{{index}}, actor: subject, object: note{{index}})
+      let_create!(:note, named: note{{ index }})
+      let_create!(:bookmark_relationship, named: bookmark{{ index }}, actor: subject, object: note{{ index }})
     end
 
     create_bookmark(1)
@@ -1119,8 +1119,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_pin(index)
-      let_create!(:note, named: note{{index}}, attributed_to: subject, local: true)
-      let_create!(:pin_relationship, named: pin{{index}}, actor: subject, object: note{{index}})
+      let_create!(:note, named: note{{ index }}, attributed_to: subject, local: true)
+      let_create!(:pin_relationship, named: pin{{ index }}, actor: subject, object: note{{ index }})
     end
 
     create_pin(1)
@@ -1185,7 +1185,7 @@ Spectator.describe ActivityPub::Actor do
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_draft(index)
-      let_create!(:note, named: note{{index}}, attributed_to: subject)
+      let_create!(:note, named: note{{ index }}, attributed_to: subject)
     end
 
     create_draft(1)
@@ -1242,17 +1242,17 @@ Spectator.describe ActivityPub::Actor do
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_outbox(index)
-      let_build(:note, named: note{{index}})
+      let_build(:note, named: note{{ index }})
       let_build(
-        :create, named: activity{{index}},
+        :create, named: activity{{ index }},
         actor: subject,
-        object: note{{index}},
+        object: note{{ index }},
         visible: false
       )
       let_create!(
         :outbox_relationship, named: nil,
         owner: subject,
-        activity: activity{{index}},
+        activity: activity{{ index }},
         confirmed: true
       )
     end
@@ -1354,17 +1354,17 @@ Spectator.describe ActivityPub::Actor do
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro add_to_inbox(index)
-      let_build(:note, named: note{{index}})
+      let_build(:note, named: note{{ index }})
       let_build(
-        :create, named: activity{{index}},
+        :create, named: activity{{ index }},
         actor: subject,
-        object: note{{index}},
+        object: note{{ index }},
         visible: false
       )
       let_create!(
         :inbox_relationship, named: nil,
         owner: subject,
-        activity: activity{{index}},
+        activity: activity{{ index }},
         confirmed: true
       )
     end
@@ -1463,8 +1463,8 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_activity(index)
-      let_build(:note, named: note{{index}})
-      let_create!(:create, named: activity{{index}}, actor: subject, object: note{{index}})
+      let_build(:note, named: note{{ index }})
+      let_create!(:create, named: activity{{ index }}, actor: subject, object: note{{ index }})
     end
 
     create_activity(1)
@@ -1517,10 +1517,10 @@ Spectator.describe ActivityPub::Actor do
 
     macro post(index)
       let_create!(
-        :object, named: post{{index}},
+        :object, named: post{{ index }},
         attributed_to: subject,
-        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-        visible: {{index}}.odd?
+        published: Time.utc(2016, 2, 15, 10, 20, {{ index }}),
+        visible: {{ index }}.odd?
       )
     end
 
@@ -1578,10 +1578,10 @@ Spectator.describe ActivityPub::Actor do
 
     macro post(index)
       let_create!(
-        :object, named: post{{index}},
+        :object, named: post{{ index }},
         attributed_to: subject,
-        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-        visible: {{index}}.odd?
+        published: Time.utc(2016, 2, 15, 10, 20, {{ index }}),
+        visible: {{ index }}.odd?
       )
     end
 
@@ -1635,10 +1635,10 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: object{{ index }}, attributed_to: actor{{ index }})
+      let_build(:announce, named: activity{{ index }}, actor: subject, object: object{{ index }})
+      let_create!(:outbox_relationship, named: outbox{{ index }}, owner: subject, activity: activity{{ index }})
     end
 
     post(1)
@@ -1732,10 +1732,10 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: object{{ index }}, attributed_to: actor{{ index }})
+      let_build(:announce, named: activity{{ index }}, actor: subject, object: object{{ index }})
+      let_create!(:outbox_relationship, named: outbox{{ index }}, owner: subject, activity: activity{{ index }})
     end
 
     post(1)
@@ -1800,10 +1800,10 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: object{{ index }}, attributed_to: actor{{ index }})
+      let_build(:announce, named: activity{{ index }}, actor: subject, object: object{{ index }})
+      let_create!(:outbox_relationship, named: outbox{{ index }}, owner: subject, activity: activity{{ index }})
     end
 
     post(1)
@@ -1878,10 +1878,10 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: object{{ index }}, attributed_to: actor{{ index }})
+      let_build(:announce, named: activity{{ index }}, actor: subject, object: object{{ index }})
+      let_create!(:outbox_relationship, named: outbox{{ index }}, owner: subject, activity: activity{{ index }})
     end
 
     post(1)
@@ -1964,10 +1964,10 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: object{{ index }}, attributed_to: actor{{ index }})
+      let_build(:announce, named: activity{{ index }}, actor: subject, object: object{{ index }})
+      let_create!(:outbox_relationship, named: outbox{{ index }}, owner: subject, activity: activity{{ index }})
     end
 
     post(1)
@@ -2057,11 +2057,11 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_create!(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
-      let_create!(:inbox_relationship, named: nil, owner: subject, activity: activity{{index}})
-      let_create!(:timeline_announce, named: timeline{{index}}, owner: subject, object: object{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: object{{ index }}, attributed_to: actor{{ index }})
+      let_create!(:announce, named: activity{{ index }}, actor: actor{{ index }}, object: object{{ index }})
+      let_create!(:inbox_relationship, named: nil, owner: subject, activity: activity{{ index }})
+      let_create!(:timeline_announce, named: timeline{{ index }}, owner: subject, object: object{{ index }})
     end
 
     post(1)
@@ -2186,11 +2186,11 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_create!(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
-      let_create!(:inbox_relationship, named: nil, owner: subject, activity: activity{{index}})
-      let_create!(:timeline_announce, named: timeline{{index}}, owner: subject, object: object{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: object{{ index }}, attributed_to: actor{{ index }})
+      let_create!(:announce, named: activity{{ index }}, actor: actor{{ index }}, object: object{{ index }})
+      let_create!(:inbox_relationship, named: nil, owner: subject, activity: activity{{ index }})
+      let_create!(:timeline_announce, named: timeline{{ index }}, owner: subject, object: object{{ index }})
     end
 
     post(1)
@@ -2319,10 +2319,10 @@ Spectator.describe ActivityPub::Actor do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro notification(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}})
-      let_build(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
-      let_create!(:notification_announce, named: notification{{index}}, owner: subject, activity: activity{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: object{{ index }})
+      let_build(:announce, named: activity{{ index }}, actor: actor{{ index }}, object: object{{ index }})
+      let_create!(:notification_announce, named: notification{{ index }}, owner: subject, activity: activity{{ index }})
     end
 
     notification(1)

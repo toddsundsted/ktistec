@@ -54,7 +54,7 @@ class Task
     end
 
     def recipients
-      [activity.to, activity.cc, self.deliver_to].flatten.flat_map do |recipient|
+      [activity.to, activity.cc, deliver_to].flatten.flat_map do |recipient|
         if recipient == receiver.iri
           # 1. recipient is the receiver
           recipient

@@ -13,19 +13,19 @@ up do |db|
       "name" varchar(99) NOT NULL COLLATE NOCASE,
       "href" text
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_tags_type_subject_iri
       ON tags (type ASC, subject_iri ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_tags_type_name
       ON tags (type ASC, name ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE tags
-  STR
+    STR
 end

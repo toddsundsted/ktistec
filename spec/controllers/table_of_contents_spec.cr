@@ -13,9 +13,9 @@ Spectator.describe TableOfContentsController do
 
   macro publish_object(named, canonical_path)
     let_create!(
-      :object, named: {{named.id}},
+      :object, named: {{ named.id }},
       attributed_to: actor,
-      canonical_path: {{canonical_path}},
+      canonical_path: {{ canonical_path }},
       published: published,
       local: true,
     )

@@ -24,19 +24,19 @@ up do |db|
       "urls" text,
       "deleted_at" datetime
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_actors_iri
       ON actors (iri ASC)
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_actors_username
       ON actors (username ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE actors
-  STR
+    STR
 end

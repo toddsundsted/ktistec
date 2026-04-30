@@ -46,7 +46,7 @@ development_dependencies:
     version: ~> 0.12.0
   ameba:
     github: crystal-ameba/ameba
-    version: ~> 1.6.0
+    branch: master
 
 crystal: 1.19.1
 

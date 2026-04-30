@@ -16,7 +16,7 @@ Spectator.describe Ktistec::Model::Deletable do
         id integer PRIMARY KEY AUTOINCREMENT,
         deleted_at datetime
       )
-    SQL
+      SQL
   end
   after_each do
     Ktistec.database.exec "DROP TABLE IF EXISTS deletable_models"

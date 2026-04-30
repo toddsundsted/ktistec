@@ -271,8 +271,8 @@ module Ktistec
         {% contexts = `find "#{__DIR__}/../../etc/contexts" -name '*.jsonld'`.chomp.split("\n").sort %}
         {% for context in (contexts) %}
           {% name = context.split("/etc/contexts/").last %}
-          {{name}} => JSON.parse(
-            {{read_file(context)}}
+          {{ name }} => JSON.parse(
+            {{ read_file(context) }}
           ),
         {% end %}
       }

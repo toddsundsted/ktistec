@@ -12,15 +12,15 @@ up do |db|
       "name" varchar(63) NOT NULL,
       "account_id" integer
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX "idx_last_times_name"
       ON "last_times" ("name" ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE "last_times"
-  STR
+    STR
 end

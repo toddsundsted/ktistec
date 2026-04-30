@@ -32,10 +32,10 @@ Spectator.describe Task::NotifyPollExpiry do
     macro vote(index, actor, name)
       let_create!(
         :note,
-        named: vote{{index}},
-        name: {{name}},
+        named: vote{{ index }},
+        name: {{ name }},
         in_reply_to: question,
-        attributed_to: {{actor}},
+        attributed_to: {{ actor }},
         content: nil,
         special: "vote",
       )

@@ -73,11 +73,11 @@ class WellKnownController
   class_property cached_posts_count = CachedPostsCount.new(0, 0)
 
   def self.local_posts
-    if (id = ActivityPub::Object.latest_public_post) != self.cached_posts_count.id
+    if (id = ActivityPub::Object.latest_public_post) != cached_posts_count.id
       count = ActivityPub::Object.public_posts_count
       self.cached_posts_count = CachedPostsCount.new(id, count)
     end
-    self.cached_posts_count.count
+    cached_posts_count.count
   end
 
   record CachedMAUCount, timestamp : Int64, count : Int64
@@ -85,11 +85,11 @@ class WellKnownController
   class_property cached_mau_count = CachedMAUCount.new(0, 0)
 
   def self.monthly_active_users
-    if (timestamp = Time.utc.at_beginning_of_day.to_unix) != self.cached_mau_count.timestamp
+    if (timestamp = Time.utc.at_beginning_of_day.to_unix) != cached_mau_count.timestamp
       count = Account.monthly_active_accounts_count
       self.cached_mau_count = CachedMAUCount.new(timestamp, count)
     end
-    self.cached_mau_count.count
+    cached_mau_count.count
   end
 
   get "/.well-known/nodeinfo/2.1" do |env|

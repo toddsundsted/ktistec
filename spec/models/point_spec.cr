@@ -6,11 +6,11 @@ Spectator.describe Point do
   setup_spec
 
   macro create_point!(index, chart = "foo-bar-chart")
-    let!(point{{index}}) do
+    let!(point{{ index }}) do
       described_class.new(
-        chart: {{chart}},
-        timestamp: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-        value: {{index}}
+        chart: {{ chart }},
+        timestamp: Time.utc(2016, 2, 15, 10, 20, {{ index }}),
+        value: {{ index }}
       ).save
     end
   end

@@ -292,7 +292,7 @@ class InboxesController
       unless actor
         bad_request
       end
-      unless (object = activity.object?(account.actor, dereference: true))
+      unless activity.object?(account.actor, dereference: true)
         bad_request
       end
       # compatibility with implementations that don't address follows

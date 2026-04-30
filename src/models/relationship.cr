@@ -27,7 +27,7 @@ class Relationship
   def validate_model
     if @@must_be_unique
       relationship = Relationship.find?(from_iri: from_iri, to_iri: to_iri, type: type)
-      if relationship && relationship.id != self.id
+      if relationship && relationship.id != id
         errors["relationship"] = ["already exists"]
       end
     end

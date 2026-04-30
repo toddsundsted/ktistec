@@ -13,21 +13,21 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
     context "with interactingObject and interactionTarget" do
       let(json_string) do
         <<-JSON
-        {
-          "@context": [
-            "https://www.w3.org/ns/activitystreams",
-            {
-              "gts": "https://gotosocial.org/ns#",
-              "interactingObject": "gts:interactingObject",
-              "interactionTarget": "gts:interactionTarget"
-            }
-          ],
-          "type": "QuoteAuthorization",
-          "id": "https://remote/stamps/123",
-          "interactingObject": "https://remote/posts/456",
-          "interactionTarget": "https://test.test/objects/789"
-        }
-        JSON
+          {
+            "@context": [
+              "https://www.w3.org/ns/activitystreams",
+              {
+                "gts": "https://gotosocial.org/ns#",
+                "interactingObject": "gts:interactingObject",
+                "interactionTarget": "gts:interactionTarget"
+              }
+            ],
+            "type": "QuoteAuthorization",
+            "id": "https://remote/stamps/123",
+            "interactingObject": "https://remote/posts/456",
+            "interactionTarget": "https://test.test/objects/789"
+          }
+          JSON
       end
 
       it "extracts interacting_object_iri" do
@@ -46,12 +46,12 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
     context "without quote-specific fields" do
       let(json_string) do
         <<-JSON
-        {
-          "@context": "https://www.w3.org/ns/activitystreams",
-          "type": "QuoteAuthorization",
-          "id": "https://remote/stamps/123"
-        }
-        JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "type": "QuoteAuthorization",
+            "id": "https://remote/stamps/123"
+          }
+          JSON
       end
 
       it "creates quote_decision with nil IRIs" do
@@ -64,29 +64,29 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
   describe ".from_json_ld" do
     let(json_string) do
       <<-JSON
-      {
-        "@context": [
-          "https://www.w3.org/ns/activitystreams",
-          {
-            "QuoteAuthorization": "https://w3id.org/fep/044f#QuoteAuthorization",
-            "gts": "https://gotosocial.org/ns#",
-            "interactingObject": {
-              "@id": "gts:interactingObject",
-              "@type": "@id"
-            },
-            "interactionTarget": {
-              "@id": "gts:interactionTarget",
-              "@type": "@id"
+        {
+          "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            {
+              "QuoteAuthorization": "https://w3id.org/fep/044f#QuoteAuthorization",
+              "gts": "https://gotosocial.org/ns#",
+              "interactingObject": {
+                "@id": "gts:interactingObject",
+                "@type": "@id"
+              },
+              "interactionTarget": {
+                "@id": "gts:interactionTarget",
+                "@type": "@id"
+              }
             }
-          }
-        ],
-        "type": "QuoteAuthorization",
-        "id": "https://remote/stamps/123",
-        "attributedTo": "https://remote/actors/alice",
-        "interactingObject": "https://remote/posts/456",
-        "interactionTarget": "https://test.test/objects/789"
-      }
-      JSON
+          ],
+          "type": "QuoteAuthorization",
+          "id": "https://remote/stamps/123",
+          "attributedTo": "https://remote/actors/alice",
+          "interactingObject": "https://remote/posts/456",
+          "interactionTarget": "https://test.test/objects/789"
+        }
+        JSON
     end
 
     let(quote_authorization) { ActivityPub::Object.from_json_ld(json_string) }
@@ -120,28 +120,28 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
 
     let(json_string) do
       <<-JSON
-      {
-        "@context": [
-          "https://www.w3.org/ns/activitystreams",
-          {
-            "QuoteAuthorization": "https://w3id.org/fep/044f#QuoteAuthorization",
-            "gts": "https://gotosocial.org/ns#",
-            "interactingObject": {
-              "@id": "gts:interactingObject",
-              "@type": "@id"
-            },
-            "interactionTarget": {
-              "@id": "gts:interactionTarget",
-              "@type": "@id"
+        {
+          "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            {
+              "QuoteAuthorization": "https://w3id.org/fep/044f#QuoteAuthorization",
+              "gts": "https://gotosocial.org/ns#",
+              "interactingObject": {
+                "@id": "gts:interactingObject",
+                "@type": "@id"
+              },
+              "interactionTarget": {
+                "@id": "gts:interactionTarget",
+                "@type": "@id"
+              }
             }
-          }
-        ],
-        "id": #{quote_authorization.iri.to_json},
-        "type": "QuoteAuthorization",
-        "interactingObject": "https://remote/posts/999",
-        "interactionTarget": "https://test.test/objects/888"
-      }
-      JSON
+          ],
+          "id": #{quote_authorization.iri.to_json},
+          "type": "QuoteAuthorization",
+          "interactingObject": "https://remote/posts/999",
+          "interactionTarget": "https://test.test/objects/888"
+        }
+        JSON
     end
 
     it "replaces quote_decision instance" do

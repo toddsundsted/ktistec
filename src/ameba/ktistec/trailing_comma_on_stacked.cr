@@ -1,12 +1,10 @@
 require "ameba"
 
 module Ameba::Rule::Ktistec
-  # Enforces trailing commas on stacked arguments and collection
-  # elements.
-  #
+  # Enforces trailing commas on stacked arguments and collection elements.
   class TrailingCommaOnStacked < Base
     properties do
-      description "Enforce trailing commas on stacked arguments and collection elements."
+      description "Enforce trailing commas on stacked arguments and collection elements"
       enabled true
     end
 

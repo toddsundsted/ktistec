@@ -10,15 +10,15 @@ up do |db|
       "timestamp" datetime NOT NULL,
       "value" integer NOT NULL
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE INDEX idx_points_chart_timestamp
       ON points (chart ASC, timestamp ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE points
-  STR
+    STR
 end

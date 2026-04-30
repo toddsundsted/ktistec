@@ -18,7 +18,7 @@ class Task
       #
       def self.find_active : self?
         query = <<-SQL
-          SELECT #{{{@type}}.columns}
+          SELECT #{{{ @type }}.columns}
           FROM tasks
           WHERE type = ?
             AND complete = 0
@@ -26,7 +26,7 @@ class Task
           ORDER BY id DESC
           LIMIT 1
         SQL
-        {{@type}}.query_all(query, {{@type}}.name).first?
+        {{ @type }}.query_all(query, {{ @type }}.name).first?
       end
 
       # Returns the current active instance of this singleton task.
@@ -34,7 +34,7 @@ class Task
       # Creates and saves a new instance if no active instance exists.
       #
       def self.current_instance : self
-        find_active || {{@type}}.new.save
+        find_active || {{ @type }}.new.save
       end
 
       # Ensures the singleton task is scheduled.

@@ -26,11 +26,11 @@ module MCP
     macro def_prompt(name, title = nil, description = nil, arguments = [] of PromptArgumentDefinition, &block)
       {% PROMPT_DEFINITIONS << {name: name, title: title, description: description, arguments: arguments} %}
 
-      def MCP::Prompts.handle_prompt_{{name.id}}(arguments : JSON::Any, account : Account) : JSON::Any
+      def MCP::Prompts.handle_prompt_{{ name.id }}(arguments : JSON::Any, account : Account) : JSON::Any
         missing_fields = [] of String
         {% for arg in arguments %}
           {% if arg[:required] %}
-            missing_fields << {{arg[:name]}} unless arguments[{{arg[:name]}}]?
+            missing_fields << {{ arg[:name] }} unless arguments[{{ arg[:name] }}]?
           {% end %}
         {% end %}
         unless missing_fields.empty?
@@ -38,16 +38,16 @@ module MCP
         end
 
         {% for arg in arguments %}
-          {{arg[:name].id}} =
+          {{ arg[:name].id }} =
             {% if arg[:required] %}
-              arguments[{{arg[:name]}}].as_s
+              arguments[{{ arg[:name] }}].as_s
             {% else %}
-              arguments[{{arg[:name]}}]?.try(&.as_s) || ""
+              arguments[{{ arg[:name] }}]?.try(&.as_s) || ""
             {% end %}
         {% end %}
 
         {% if block %}
-          {{block.body}}
+          {{ block.body }}
         {% else %}
           {% raise "`def_prompt` requires a block" %}
         {% end %}
@@ -60,24 +60,24 @@ module MCP
       # built-in prompts
       {% for prompt in PROMPT_DEFINITIONS %}
         prompt_hash = {} of String => JSON::Any
-        prompt_hash["name"] = JSON::Any.new({{prompt[:name]}})
+        prompt_hash["name"] = JSON::Any.new({{ prompt[:name] }})
         {% if prompt[:title] %}
-          prompt_hash["title"] = JSON::Any.new({{prompt[:title]}})
+          prompt_hash["title"] = JSON::Any.new({{ prompt[:title] }})
         {% end %}
         {% if prompt[:description] %}
-          prompt_hash["description"] = JSON::Any.new({{prompt[:description]}})
+          prompt_hash["description"] = JSON::Any.new({{ prompt[:description] }})
         {% end %}
         arguments = [] of JSON::Any
         {% for arg in prompt[:arguments] %}
           arg_hash = {} of String => JSON::Any
-          arg_hash["name"] = JSON::Any.new({{arg[:name]}})
+          arg_hash["name"] = JSON::Any.new({{ arg[:name] }})
           {% if arg[:title] %}
-            arg_hash["title"] = JSON::Any.new({{arg[:title]}})
+            arg_hash["title"] = JSON::Any.new({{ arg[:title] }})
           {% end %}
           {% if arg[:description] %}
-            arg_hash["description"] = JSON::Any.new({{arg[:description]}})
+            arg_hash["description"] = JSON::Any.new({{ arg[:description] }})
           {% end %}
-          arg_hash["required"] = JSON::Any.new({{arg[:required]}})
+          arg_hash["required"] = JSON::Any.new({{ arg[:required] }})
           arguments << JSON::Any.new(arg_hash)
         {% end %}
         prompt_hash["arguments"] = JSON::Any.new(arguments)
@@ -128,14 +128,14 @@ module MCP
 
       # built-in prompts
       {% for prompt in PROMPT_DEFINITIONS %}
-        if name == {{prompt[:name]}}
-          return self.handle_prompt_{{prompt[:name].id}}(params, account)
+        if name == {{ prompt[:name] }}
+          return self.handle_prompt_{{ prompt[:name].id }}(params, account)
         end
       {% end %}
 
       # YAML prompts
       if (prompt = Prompt.find?(name))
-        return self.handle_prompt(prompt, params, account)
+        return handle_prompt(prompt, params, account)
       end
 
       Log.warn { "unknown prompt: #{name}" }

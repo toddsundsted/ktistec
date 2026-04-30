@@ -19,7 +19,7 @@ class Task
         "missing: #{subject_iri}"
       elsif actor.local?
         "local: #{subject_iri}"
-      elsif !(instances = self.class.where(EXISTS_QUERY, subject_iri)).empty? && instances.any? { |instance| instance.id != self.id }
+      elsif !(instances = self.class.where(EXISTS_QUERY, subject_iri)).empty? && instances.any? { |instance| instance.id != id }
         "scheduled: #{subject_iri}"
       end
     end

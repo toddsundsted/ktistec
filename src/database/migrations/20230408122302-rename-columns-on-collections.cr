@@ -6,44 +6,44 @@ up do |db|
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN first TO first_iri
-  STR
+    STR
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN last TO last_iri
-  STR
+    STR
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN prev TO prev_iri
-  STR
+    STR
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN next TO next_iri
-  STR
+    STR
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN current TO current_iri
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN first_iri TO first
-  STR
+    STR
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN last_iri TO last
-  STR
+    STR
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN prev_iri TO prev
-  STR
+    STR
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN next_iri TO next
-  STR
+    STR
   db.exec <<-STR
     ALTER TABLE collections
     RENAME COLUMN current_iri TO current
-  STR
+    STR
 end

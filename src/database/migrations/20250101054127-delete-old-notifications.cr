@@ -9,11 +9,11 @@ extend Ktistec::Database::Migration
 up do |db|
   db.exec <<-STR
     DELETE FROM migrations WHERE id = 20240212125448;
-  STR
+    STR
   db.exec <<-STR
     DELETE FROM relationships
     WHERE type IN ("Relationship::Content::Notification::Hashtag", "Relationship::Content::Notification::Thread")
-  STR
+    STR
   db.exec <<-STR
     DELETE FROM relationships
     WHERE type = "Relationship::Content::Notification::Mention"
@@ -25,5 +25,5 @@ up do |db|
       WHERE relationships.type = "Relationship::Content::Notification::Mention"
       AND tags.type = "Tag::Mention"
     )
-  STR
+    STR
 end

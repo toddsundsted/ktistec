@@ -84,7 +84,7 @@ module ActivityPub
     end
 
     def from_json_ld(json)
-      self.assign(self.class.map(json))
+      assign(self.class.map(json))
     end
 
     def self.map(json, **options)

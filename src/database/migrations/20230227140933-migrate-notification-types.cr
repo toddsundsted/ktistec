@@ -14,7 +14,7 @@ up do |db|
           AND a.type = "ActivityPub::Activity::Follow"
         WHERE n.type = "Relationship::Content::Notification"
      )
-  STR
+    STR
   db.exec <<-STR
     UPDATE relationships
        SET type = "Relationship::Content::Notification::Like"
@@ -26,7 +26,7 @@ up do |db|
           AND a.type = "ActivityPub::Activity::Like"
         WHERE n.type = "Relationship::Content::Notification"
      )
-  STR
+    STR
   db.exec <<-STR
     UPDATE relationships
        SET type = "Relationship::Content::Notification::Announce"
@@ -38,7 +38,7 @@ up do |db|
           AND a.type = "ActivityPub::Activity::Announce"
         WHERE n.type = "Relationship::Content::Notification"
      )
-  STR
+    STR
   db.exec <<-STR
     UPDATE relationships
        SET type = "Relationship::Content::Notification::Reply"
@@ -55,7 +55,7 @@ up do |db|
           AND o.attributed_to_iri = n.from_iri
         WHERE n.type = "Relationship::Content::Notification"
      )
-  STR
+    STR
   db.exec <<-STR
     UPDATE relationships
        SET type = "Relationship::Content::Notification::Mention"
@@ -73,7 +73,7 @@ up do |db|
           AND t.type = "Tag::Mention"
         WHERE n.type = "Relationship::Content::Notification"
      )
-  STR
+    STR
 end
 
 down do |db|
@@ -81,5 +81,5 @@ down do |db|
     UPDATE relationships
        SET type = "Relationship::Content::Notification"
      WHERE type LIKE "Relationship::Content::Notification::%"
-  STR
+    STR
 end

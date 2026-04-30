@@ -15,7 +15,7 @@ Spectator.describe Ktistec::Model::Common do
         created_at datetime NOT NULL,
         updated_at datetime NOT NULL
       )
-    SQL
+      SQL
   end
   after_each do
     Ktistec.database.exec "DROP TABLE IF EXISTS common_models"

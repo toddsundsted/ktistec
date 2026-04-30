@@ -77,10 +77,10 @@ Spectator.describe MetricsController::Chart do
 
     macro create_point!(index)
       let_create!(
-        :point, named: point{{index}},
+        :point, named: point{{ index }},
         chart: "test-chart",
-        timestamp: Time.utc(2016, 12, 30) + {{index}}.days,
-        value: {{index}}
+        timestamp: Time.utc(2016, 12, 30) + {{ index }}.days,
+        value: {{ index }}
       )
     end
 
@@ -160,10 +160,10 @@ Spectator.describe MetricsController do
 
       macro create_point!(index)
         let_create!(
-          :point, named: point{{index}},
+          :point, named: point{{ index }},
           chart: "inbox-test-chart",
-          timestamp: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-          value: {{index}}
+          timestamp: Time.utc(2016, 2, 15, 10, 20, {{ index }}),
+          value: {{ index }}
         )
       end
 

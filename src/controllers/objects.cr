@@ -549,7 +549,7 @@ class ObjectsController
               summary: translations[:summary],
               content: translations[:content],
             ).save
-          rescue ex : KeyError
+          rescue KeyError
             # ignore
           end
         end

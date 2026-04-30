@@ -183,7 +183,7 @@ Spectator.describe Prompt do
             content:
               type: "text"
               text: "Test!"
-      YAML
+        YAML
 
       # deserialization
       prompt = Prompt.from_yaml(yaml)

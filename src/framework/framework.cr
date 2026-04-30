@@ -78,7 +78,7 @@ module Ktistec
     }
 
     {% for property, type in PROPERTIES %}
-      getter {{property.id}} : {{type.id}}?
+      getter {{ property.id }} : {{ type.id }}?
     {% end %}
 
     getter errors = Hash(String, Array(String)).new
@@ -97,7 +97,7 @@ module Ktistec
 
     def assign(options)
       {% for property, type in PROPERTIES %}
-        @{{property.id}} = options["{{property.id}}"].as({{type.id}}?) if options.has_key?("{{property.id}}")
+        @{{ property.id }} = options["{{ property.id }}"].as({{ type.id }}?) if options.has_key?("{{ property.id }}")
       {% end %}
       @@nonce += 1
       self
@@ -108,7 +108,7 @@ module Ktistec
     def save
       raise "invalid settings" unless valid?
       {% for property, _ in PROPERTIES %}
-        Ktistec.database.exec(SQL, "{{property.id}}", @{{property.id}})
+        Ktistec.database.exec(SQL, "{{ property.id }}", @{{ property.id }})
       {% end %}
       self
     end
@@ -195,8 +195,8 @@ module Ktistec
   end
 
   {% for property, _ in Settings::PROPERTIES %}
-    def self.{{property.id}}
-      settings.{{property.id}}.not_nil!
+    def self.{{ property.id }}
+      settings.{{ property.id }}.not_nil!
     end
   {% end %}
 
@@ -218,8 +218,7 @@ module Ktistec
       with new yield
 
       unless Kemal.config.env == "test"
-        Signal::INT.trap { shutdown }
-        Signal::TERM.trap { shutdown }
+        Process.on_terminate { shutdown }
       end
 
       Kemal.config.app_name = "Ktistec"

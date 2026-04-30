@@ -341,7 +341,7 @@ Spectator.describe ActivityPub::Object do
             "type":"Collection"
           }
         }
-      JSON
+        JSON
     end
 
     it "gets the ids" do
@@ -459,15 +459,15 @@ Spectator.describe ActivityPub::Object do
         ],
         "url":"url-link"
       }
-    JSON
+      JSON
   end
 
   # matcher
   class ::Tag
     def ===(other : Tag)
       self.type == other.type &&
-        self.name == other.name &&
-        self.href == other.href
+        name == other.name &&
+        href == other.href
     end
   end
 
@@ -690,7 +690,7 @@ Spectator.describe ActivityPub::Object do
               "name": "English"
             }
           }
-        JSON
+          JSON
       end
 
       it "sets the language" do
@@ -709,7 +709,7 @@ Spectator.describe ActivityPub::Object do
             "@id":"https://remote/foo_bar",
             "@type":"FooBarObject"
           }
-        JSON
+          JSON
       end
 
       it "defaults sensitive to false" do
@@ -933,7 +933,7 @@ Spectator.describe ActivityPub::Object do
               "name": "English"
             }
           }
-        JSON
+          JSON
       end
 
       it "sets the language" do
@@ -952,7 +952,7 @@ Spectator.describe ActivityPub::Object do
             "@id":"https://remote/foo_bar",
             "@type":"FooBarObject"
           }
-        JSON
+          JSON
       end
 
       it "defaults sensitive to false" do
@@ -1105,12 +1105,12 @@ Spectator.describe ActivityPub::Object do
 
   describe ".federated_posts" do
     macro post(index)
-      let_build(:actor, named: actor{{index}})
+      let_build(:actor, named: actor{{ index }})
       let_create!(
-        :object, named: post{{index}},
-        attributed_to: actor{{index}},
-        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-        visible: {{index}}.odd?
+        :object, named: post{{ index }},
+        attributed_to: actor{{ index }},
+        published: Time.utc(2016, 2, 15, 10, 20, {{ index }}),
+        visible: {{ index }}.odd?
       )
     end
 
@@ -1169,12 +1169,12 @@ Spectator.describe ActivityPub::Object do
 
   describe ".federated_posts" do
     macro post(index)
-      let_build(:actor, named: actor{{index}})
+      let_build(:actor, named: actor{{ index }})
       let_create!(
-        :object, named: post{{index}},
-        attributed_to: actor{{index}},
-        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-        visible: {{index}}.odd?
+        :object, named: post{{ index }},
+        attributed_to: actor{{ index }},
+        published: Time.utc(2016, 2, 15, 10, 20, {{ index }}),
+        visible: {{ index }}.odd?
       )
     end
 
@@ -1237,12 +1237,12 @@ Spectator.describe ActivityPub::Object do
 
   describe ".federated_posts_count" do
     macro post(index)
-      let_build(:actor, named: actor{{index}})
+      let_build(:actor, named: actor{{ index }})
       let_create!(
-        :object, named: post{{index}},
-        attributed_to: actor{{index}},
-        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-        visible: {{index}}.odd?
+        :object, named: post{{ index }},
+        attributed_to: actor{{ index }},
+        published: Time.utc(2016, 2, 15, 10, 20, {{ index }}),
+        visible: {{ index }}.odd?
       )
     end
 
@@ -1295,18 +1295,18 @@ Spectator.describe ActivityPub::Object do
 
   macro public_post(index, factory)
     {% if factory == :create %}
-      let_build(:object, named: post{{index}}, attributed_to: actor)
-      let_build(:create, named: activity{{index}}, actor: actor, object: post{{index}})
+      let_build(:object, named: post{{ index }}, attributed_to: actor)
+      let_build(:create, named: activity{{ index }}, actor: actor, object: post{{ index }})
     {% elsif factory == :announce %}
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: actor, object: post{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: post{{ index }}, attributed_to: actor{{ index }})
+      let_build(:announce, named: activity{{ index }}, actor: actor, object: post{{ index }})
     {% elsif factory == :like %}
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: post{{index}}, attributed_to: actor{{index}})
-      let_build(:like, named: activity{{index}}, actor: actor, object: post{{index}})
+      let_build(:actor, named: actor{{ index }})
+      let_build(:object, named: post{{ index }}, attributed_to: actor{{ index }})
+      let_build(:like, named: activity{{ index }}, actor: actor, object: post{{ index }})
     {% end %}
-    before_each { put_in_outbox(actor, activity{{index}}) }
+    before_each { put_in_outbox(actor, activity{{ index }}) }
   end
 
   describe ".public_posts" do
@@ -1596,12 +1596,12 @@ Spectator.describe ActivityPub::Object do
 
     macro reply_to!(object, reply)
       {% actor = reply.name.gsub(/object/, "actor") %}
-      let_create(:actor, named: {{actor}})
-      let!({{reply}}) do
+      let_create(:actor, named: {{ actor }})
+      let!({{ reply }}) do
         described_class.new(
           iri: "https://test.test/objects/#{random_string}",
-          attributed_to: {{actor}},
-          in_reply_to: {{object}},
+          attributed_to: {{ actor }},
+          in_reply_to: {{ object }},
           visible: true,
         ).save
       end
@@ -2121,10 +2121,10 @@ Spectator.describe ActivityPub::Object do
     end
 
     macro activity(index)
-      let_create(:actor, named: actor{{index}})
+      let_create(:actor, named: actor{{ index }})
       let_create!(
-        :activity, named: activity{{index}},
-        actor_iri: actor{{index}}.iri,
+        :activity, named: activity{{ index }},
+        actor_iri: actor{{ index }}.iri,
         object_iri: subject.iri,
       )
     end
@@ -2449,7 +2449,7 @@ Spectator.describe ActivityPub::Object::ModelHelper do
           "@type":"Collection"
         }
       }
-    JSON
+      JSON
   end
 
   describe ".from_json_ld" do

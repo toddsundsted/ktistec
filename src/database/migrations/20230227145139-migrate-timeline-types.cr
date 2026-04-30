@@ -26,7 +26,7 @@ up do |db|
         WHERE t.type = "Relationship::Content::Timeline"
           AND a.type = "ActivityPub::Activity::Announce"
      )
-  STR
+    STR
   db.exec <<-STR
     UPDATE relationships
        SET type = "Relationship::Content::Timeline::Create"
@@ -50,7 +50,7 @@ up do |db|
         WHERE t.type = "Relationship::Content::Timeline"
           AND a.type = "ActivityPub::Activity::Create"
      )
-  STR
+    STR
 end
 
 down do |db|
@@ -58,5 +58,5 @@ down do |db|
     UPDATE relationships
        SET type = "Relationship::Content::Timeline"
      WHERE type LIKE "Relationship::Content::Timeline::%"
-  STR
+    STR
 end

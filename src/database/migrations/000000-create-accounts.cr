@@ -12,15 +12,15 @@ up do |db|
       encrypted_password varchar(255) NOT NULL,
       iri varchar(255) NOT NULL COLLATE NOCASE
     )
-  STR
+    STR
   db.exec <<-STR
     CREATE UNIQUE INDEX idx_accounts_username
       ON accounts (username ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP TABLE accounts
-  STR
+    STR
 end

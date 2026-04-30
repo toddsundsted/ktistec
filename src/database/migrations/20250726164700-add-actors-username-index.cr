@@ -9,11 +9,11 @@ up do |db|
   db.exec <<-STR
     CREATE INDEX IF NOT EXISTS idx_actors_username
       ON actors (username ASC)
-  STR
+    STR
 end
 
 down do |db|
   db.exec <<-STR
     DROP INDEX IF EXISTS idx_actors_username
-  STR
+    STR
 end

@@ -42,21 +42,21 @@ end
 
 class HTTP::Request
   def ===(other : String)
-    other == "#{self.method} #{self.resource}"
+    other == "#{method} #{resource}"
   end
 
   def ===(other : Regex)
-    other =~ "#{self.method} #{self.resource}"
+    other =~ "#{method} #{resource}"
   end
 end
 
 class XML::Node
   def ==(other : String)
-    other == self.content
+    other == content
   end
 
   def ==(other : Regex)
-    !!(other =~ self.content)
+    !!(other =~ content)
   end
 end
 
@@ -113,7 +113,7 @@ end
 # testing, so use task worker `perform` to mimic its behavior.
 
 class TaskWorker
-  class_property instance : self { self.new }
+  class_property instance : self { new }
 
   def perform(task)
     previous_def(task)
@@ -145,18 +145,18 @@ module Ktistec
 
   class Settings
     {% for property, type in PROPERTIES %}
-      setter {{property.id}} : {{type.id}}?
+      setter {{ property.id }} : {{ type.id }}?
 
-      def clear_{{property.id}}
-        Ktistec.database.exec("DELETE FROM options WHERE key = ?", "{{property.id}}")
-        @{{property.id}} = nil
+      def clear_{{ property.id }}
+        Ktistec.database.exec("DELETE FROM options WHERE key = ?", "{{ property.id }}")
+        @{{ property.id }} = nil
       end
     {% end %}
   end
 
   def self.clear_settings
     {% for property in Settings::PROPERTIES %}
-      settings.clear_{{property.id}}
+      settings.clear_{{ property.id }}
     {% end %}
     @@settings = nil
   end

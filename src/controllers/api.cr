@@ -983,7 +983,7 @@ class APIController
   # `Bool`. Returns `nil` when absent or unparseable.
   #
   private def self.parse_bool(raw : String?) : Bool?
-    return nil if raw.nil?
+    return if raw.nil?
     case raw.downcase
     when "true", "1"
       true
@@ -1004,7 +1004,7 @@ class APIController
       next unless (m = key.match(FIELD_KEY_RE))
       (pairs[m[1]] ||= Hash(String, String).new)[m[2]] = value
     end
-    return nil if pairs.empty?
+    return if pairs.empty?
     pairs.values.compact_map do |pair|
       name = pair["name"]?.presence
       value = pair["value"]?.presence

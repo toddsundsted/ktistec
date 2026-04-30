@@ -492,7 +492,7 @@ Spectator.describe APIController do
 
           it "reflects locked in the response" do
             patch "/api/v1/accounts/update_credentials", headers: headers, body: body
-            expect(JSON.parse(response.body)["locked"]).to eq(true)
+            expect(JSON.parse(response.body)["locked"]).to be_true
           end
         end
 

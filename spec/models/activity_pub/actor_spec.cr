@@ -1151,6 +1151,12 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.pins(since: since)).to eq(4)
     end
 
+    it "filters out non-public posts" do
+      note5.assign(visible: false).save
+      expect(subject.pins).to eq([note4, note3, note2, note1])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
     it "filters out posts by deleted actors" do
       subject.delete!
       expect(subject.pins).to be_empty
@@ -1697,6 +1703,21 @@ Spectator.describe ActivityPub::Actor do
       it "does not duplicate pinned posts" do
         result = subject.public_posts_with_pins(1, 10)
         expect(result.to_a.count { |o| o.id == object1.id }).to eq(1)
+      end
+
+      it "filters out deleted posts" do
+        object1.delete!
+        expect(subject.public_posts_with_pins(1, 3)).to eq([object5, object4, object3])
+      end
+
+      it "filters out blocked posts" do
+        object1.block!
+        expect(subject.public_posts_with_pins(1, 3)).to eq([object5, object4, object3])
+      end
+
+      it "filters out non-public posts" do
+        object1.assign(visible: false).save
+        expect(subject.public_posts_with_pins(1, 3)).to eq([object5, object4, object3])
       end
     end
 
@@ -2574,6 +2595,61 @@ Spectator.describe ActivityPub::Actor do
 
       it "does not attempt to delete" do
         expect { new_actor.save }.not_to raise_error
+      end
+    end
+  end
+end
+
+Spectator.describe ActivityPub::Actor::Attachment do
+  describe "#value_as_html" do
+    subject { described_class.new("Field", "PropertyValue", value).value_as_html }
+
+    context "given a URL" do
+      let(value) { "https://example.com/path" }
+
+      it "wraps the URL" do
+        expect(XML.parse_html(subject).xpath_nodes("//a/@href")).to contain(value)
+      end
+    end
+
+    context "given Mastodon-style HTML" do
+      let(value) { %q(<a href="https://example.com/" rel="me">https://example.com/</a>) }
+
+      it "preserves the anchor" do
+        expect(XML.parse_html(subject).xpath_nodes("//a/@href")).to contain("https://example.com/")
+        expect(XML.parse_html(subject).xpath_nodes("//a/text()").map(&.text)).to contain("https://example.com/")
+      end
+    end
+
+    context "given plain text" do
+      let(value) { "he/him" }
+
+      it "renders the text" do
+        expect(XML.parse_html(subject).xpath_nodes("//text()").map(&.text).join).to contain("he/him")
+      end
+
+      it "does not wrap the text" do
+        expect(XML.parse_html(subject).xpath_nodes("//a")).to be_empty
+      end
+    end
+
+    context "given HTML with unsafe elements" do
+      let(value) { %q(<script>alert(1)</script>safe text) }
+
+      it "preserves the text" do
+        expect(XML.parse_html(subject).xpath_nodes("//text()").map(&.text).join).to contain("safe text")
+      end
+
+      it "strips the unsafe elements" do
+        expect(XML.parse_html(subject).xpath_nodes("//script")).to be_empty
+      end
+    end
+
+    context "given a an unsafe scheme" do
+      let(value) { "javascript:alert(1)" }
+
+      it "does not render the link" do
+        expect(XML.parse_html(subject).xpath_nodes("//a")).to be_empty
       end
     end
   end

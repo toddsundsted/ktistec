@@ -117,14 +117,14 @@ module API
       # When `include_source` is true, includes the `source` field.
       #
       def self.from_account(account : ::Account, actor : ActivityPub::Actor, include_source : Bool = false) : Account
-        fields = build_fields(actor)
+        fields = build_public_fields(actor)
 
         source =
           if include_source
             Source.new(
               attribution_domains: [] of String,
               note: Ktistec::Util.render_as_text(actor.summary).strip,
-              fields: fields,
+              fields: build_source_fields(actor),
               privacy: "public",
               sensitive: false,
               language: account.language || "",
@@ -170,7 +170,7 @@ module API
       # For remote actors.
       #
       def self.from_actor(actor : ActivityPub::Actor) : Account
-        fields = build_fields(actor)
+        fields = build_public_fields(actor)
 
         avatar = Utils::Avatar.url_for(actor)
         header = actor.image || ""
@@ -203,7 +203,15 @@ module API
         )
       end
 
-      private def self.build_fields(actor : ActivityPub::Actor) : Array(Field)
+      # public fields carry rendered HTML for display
+      private def self.build_public_fields(actor : ActivityPub::Actor) : Array(Field)
+        (actor.attachments || [] of ActivityPub::Actor::Attachment).map do |attachment|
+          Field.new(name: attachment.name, value: attachment.value_as_html)
+        end
+      end
+
+      # source fields carry the raw values
+      private def self.build_source_fields(actor : ActivityPub::Actor) : Array(Field)
         (actor.attachments || [] of ActivityPub::Actor::Attachment).map do |attachment|
           Field.new(name: attachment.name, value: attachment.value)
         end

@@ -244,7 +244,7 @@ class ObjectsController
   end
 
   get "/remote/objects/:id/quote" do |env|
-    unless (quoted = get_object(env, id_param(env))) && !quoted.draft?
+    unless (quoted = get_object(env, id_param(env))) && !quoted.draft? && quoted.visible
       not_found
     end
 
@@ -260,7 +260,7 @@ class ObjectsController
   alias State = Task::DeliverDelayedObject::State
 
   post "/remote/objects/:id/quote" do |env|
-    unless (quoted = get_object(env, id_param(env))) && !quoted.draft?
+    unless (quoted = get_object(env, id_param(env))) && !quoted.draft? && quoted.visible
       not_found
     end
 
@@ -489,7 +489,7 @@ class ObjectsController
 
   post "/remote/objects/:id/pin" do |env|
     not_found unless (object = get_object(env, id_param(env))) && !object.draft?
-    forbidden unless object.attributed_to == env.account.actor
+    forbidden unless object.attributed_to == env.account.actor && object.visible
 
     pin = Relationship::Content::Pin.find_or_new(actor: env.account.actor, object: object)
     pin.save if pin.new_record?

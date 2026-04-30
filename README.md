@@ -36,7 +36,9 @@
     - [OAuth](#oauth)
   - [Prerequisites](#prerequisites)
   - [Building](#building)
+    - [Crystal Compatibility](#crystal-compatibility)
     - [SQLite3 Compatibility](#sqlite3-compatibility)
+    - [Building in a Container](#building-in-a-container)
     - [Running Tests](#running-tests)
   - [Setup, Configuration, and Usage](#setup-configuration-and-usage)
     - [Command Line Options](#command-line-options)
@@ -964,8 +966,11 @@ by (and content is addressed to) a username and a hostname.
 
 You must compile the Ktistec server executable from its source code.
 You will need to install a recent release of the [Crystal programming
-language](https://crystal-lang.org/install/). Ktistec requires at least
-SQLite3 version 3.35.0 (but see notes on [Sqlite3 compatibility](#sqlite3-compatibility)).
+language](https://crystal-lang.org/install/) (but see notes on
+[Crystal compatibility](#crystal-compatibility)).
+
+Ktistec requires at least SQLite3 version 3.35.0 (but see notes
+on [Sqlite3 compatibility](#sqlite3-compatibility)).
 
 To obtain the source code, clone the [Ktistec Github
 repo](https://github.com/toddsundsted/ktistec).
@@ -1000,6 +1005,17 @@ something like:
 
 You can now connect to and configure the server.
 
+### Crystal Compatibility
+
+The following Crystal versions are known to have issues that cause
+problems for Ktistec:
+
+| Crystal Version | Issue |
+|--|--|
+| 1.17.0 - 1.18.2 | libxml memory management [link](https://github.com/crystal-lang/crystal/pull/15906) |
+| 1.20.0 | macros changes [link](https://github.com/crystal-lang/crystal/issues/16891) |
+| 1.20.0 | OpenSSL changes [link](https://github.com/crystal-lang/crystal/pull/16640) |
+
 ### SQLite3 Compatibility
 
 The following SQLite3 versions are known to have bugs that cause
@@ -1009,6 +1025,10 @@ problems for Ktistec:
 |--|--|
 | 3.39.x | problems with bloom filters and recursive queries [link](https://sqlite.org/forum/forumpost/56de336385) |
 | 3.40.x | problems with bloom filters and recursive queries [link](https://sqlite.org/forum/forumpost/56de336385) |
+
+### Building in a Container
+
+See the [Dockerfile](Dockerfile).
 
 ### Running Tests
 

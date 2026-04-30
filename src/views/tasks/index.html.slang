@@ -40,7 +40,7 @@ h1 Tasks
               a href=path_to = task.class
             - else
               = task.class
-          td == wrap_link(subject_iri, include_scheme: true, length: 60, tag: :span)
+          td == wrap_link(subject_iri, include_scheme: true, length: 60, tag: :span) || ::HTML.escape(subject_iri)
         tr
           - if task.is_a?(Task::Fetch::Fetcher)
             td = fetch_task_status_line(task, detail: true)

@@ -2009,6 +2009,18 @@ Spectator.describe ObjectsController do
         expect(JSON.parse(response.body)["errors"].as_h).not_to be_empty
       end
 
+      it "returns 404 if object is not visible" do
+        visible.assign(visible: false).save
+        post "/remote/objects/#{visible.id}/quote", FORM_DATA, "content=&quote=#{URI.encode_www_form(visible.iri)}"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is not visible" do
+        visible.assign(visible: false).save
+        post "/remote/objects/#{visible.id}/quote", JSON_DATA, %Q|{"content":"","quote":"#{visible.iri}"}|
+        expect(response.status_code).to eq(404)
+      end
+
       it "returns 404 if object is a draft" do
         post "/remote/objects/#{draft.id}/quote", FORM_DATA, "content="
         expect(response.status_code).to eq(404)
@@ -2691,6 +2703,18 @@ Spectator.describe ObjectsController do
       it "returns 404 if object is draft" do
         post "/remote/objects/#{draft.id}/pin"
         expect(response.status_code).to eq(404)
+      end
+
+      it "returns 403 if object is not visible" do
+        reply.assign(visible: false).save
+        post "/remote/objects/#{reply.id}/pin"
+        expect(response.status_code).to eq(403)
+      end
+
+      it "does not create a pin relationship if object is not visible" do
+        reply.assign(visible: false).save
+        expect { post "/remote/objects/#{reply.id}/pin" }
+          .not_to change { Relationship::Content::Pin.count(actor: actor, object: reply) }
       end
 
       it "returns 404 if object does not exist" do

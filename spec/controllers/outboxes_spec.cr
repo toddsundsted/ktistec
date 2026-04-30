@@ -86,6 +86,18 @@ Spectator.describe OutboxesController do
 
         let_create(:object, attributed_to: other)
 
+        it "returns 400 if object is not visible" do
+          object.assign(visible: false).save
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if object is not visible" do
+          object.assign(visible: false).save
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|
+          expect(response.status_code).to eq(400)
+        end
+
         it "redirects when successful" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
           expect(response.status_code).to eq(302)

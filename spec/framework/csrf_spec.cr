@@ -152,8 +152,8 @@ Spectator.describe Ktistec::CSRF do
   end
 
   it "allows POSTs to allowed route" do
-    handler = described_class.new(allowed_routes: ["/allowed"])
-    request = HTTP::Request.new("POST", "/allowed/",
+    handler = described_class.new(allowed_routes: ["/post-allowed"])
+    request = HTTP::Request.new("POST", "/post-allowed/",
       body: "authenticity_token=cemal&hasan=lamec",
       headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"},
     )
@@ -179,6 +179,26 @@ Spectator.describe Ktistec::CSRF do
     )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)
+  end
+
+  it "allows PATCHes to allowed route" do
+    handler = described_class.new(allowed_routes: ["/patch-allowed"])
+    request = HTTP::Request.new("PATCH", "/patch-allowed/",
+      body: "authenticity_token=cemal&hasan=lamec",
+      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"},
+    )
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(404)
+  end
+
+  it "allows DELETEs to allowed route" do
+    handler = described_class.new(allowed_routes: ["/delete-allowed"])
+    request = HTTP::Request.new("DELETE", "/delete-allowed/",
+      body: "authenticity_token=cemal&hasan=lamec",
+      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"},
+    )
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(404)
   end
 
   it "outputs error string" do

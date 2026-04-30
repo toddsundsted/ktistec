@@ -682,6 +682,26 @@ Spectator.describe "helpers" do
         expect(subject.xpath_nodes("//input[@type='hidden']/@value")).to contain_exactly("1")
       end
     end
+
+    context "with HTML metacharacters in the name" do
+      let(params) { URI::Params.parse("%22%3E%3Cscript%3Ealert(2)%3C%2Fscript%3E=x") }
+
+      it "escapes the name" do
+        rendered = params_to_inputs(params, exclude: exclude_list, include: include_list)
+        expect(rendered).not_to contain(%{"><script>alert(2)</script>})
+        expect(rendered).to contain(%{&lt;script&gt;alert(2)&lt;/script&gt;})
+      end
+    end
+
+    context "with HTML metacharacters in the value" do
+      let(params) { URI::Params.parse("x=%22%3E%3Cscript%3Ealert(1)%3C%2Fscript%3E") }
+
+      it "escapes the value" do
+        rendered = params_to_inputs(params, exclude: exclude_list, include: include_list)
+        expect(rendered).not_to contain(%{"><script>alert(1)</script>})
+        expect(rendered).to contain(%{&lt;script&gt;alert(1)&lt;/script&gt;})
+      end
+    end
   end
 
   describe ".number_to_word" do

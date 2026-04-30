@@ -177,8 +177,16 @@ Spectator.describe API::V1::Serializers::Account do
         expect(subject.fields.first.name).to eq("Website")
       end
 
-      it "returns value" do
-        expect(subject.fields.first.value).to eq("https://example.com")
+      it "wraps URL value" do
+        expect(subject.fields.first.value).to eq("<a href=\"https://example.com\" target=\"_blank\" rel=\"ugc\"><span class=\"invisible\">https://</span><span>example.com</span></a>")
+      end
+
+      context "with `include_source: true`" do
+        let(include_source) { true }
+
+        it "returns raw URL value" do
+          expect(source.fields.first.value).to eq("https://example.com")
+        end
       end
     end
 
@@ -456,8 +464,8 @@ Spectator.describe API::V1::Serializers::Account do
         expect(subject.fields.first.name).to eq("Website")
       end
 
-      it "returns value" do
-        expect(subject.fields.first.value).to eq("https://example.com")
+      it "wraps URL value" do
+        expect(subject.fields.first.value).to eq("<a href=\"https://example.com\" target=\"_blank\" rel=\"ugc\"><span class=\"invisible\">https://</span><span>example.com</span></a>")
       end
     end
 

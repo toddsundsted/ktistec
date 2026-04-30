@@ -344,7 +344,7 @@ class OAuth2Controller
       token: Random::Secure.urlsafe_base64,
       client_id: client.id,
       account_id: auth_code.account_id,
-      expires_at: Time.utc + 30.days,
+      expires_at: Time.utc + OAuth2::Provider::AccessToken::TTL,
       scope: auth_code.scope,
     ).save
 
@@ -353,7 +353,7 @@ class OAuth2Controller
       access_token: access_token.token,
       scope:        access_token.scope,
       created_at:   access_token.created_at.to_unix,
-      expires_in:   30.days.to_i,
+      expires_in:   OAuth2::Provider::AccessToken::TTL.to_i,
     }.to_json
   end
 end

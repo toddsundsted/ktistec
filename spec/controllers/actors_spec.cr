@@ -200,6 +200,20 @@ Spectator.describe ActorsController do
           expect(Global.session.not_nil!.string?("timeline_filters")).to be_nil
         end
       end
+
+      context "with HTML metacharacters in a query parameter" do
+        it "does not render the name unescaped" do
+          get %{/actors/#{actor.username}?%22%3E%3Cscript%3Ealert(2)%3C%2Fscript%3E=x}, ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).not_to contain(%{"><script>alert(2)</script>})
+        end
+
+        it "does not render the value unescaped" do
+          get %{/actors/#{actor.username}?x=%22%3E%3Cscript%3Ealert(1)%3C%2Fscript%3E}, ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).not_to contain(%{"><script>alert(1)</script>})
+        end
+      end
     end
 
     describe "filter preferences" do

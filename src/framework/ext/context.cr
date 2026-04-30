@@ -1,10 +1,14 @@
+require "db"
 require "http/server"
+require "sqlite3"
 
 require "../../models/account"
 require "../../models/session"
 require "../../models/oauth2/provider/access_token"
 
 class HTTP::Server::Context
+  Log = ::Log.for(self)
+
   property! session : Session
 
   delegate :account, :account?, :account=, to: session
@@ -50,6 +54,12 @@ class HTTP::Server::Context
 
   private def find_session_from_oauth_token(token : String) : Session
     if (access_token = OAuth2::Provider::AccessToken.find_by_token?(token)) && !access_token.expired?
+      # slide the expiration forward. a failed DB write must not fail the request.
+      begin
+        access_token.touch
+      rescue ex : DB::Error | SQLite3::Exception
+        Log.warn(exception: ex) { "Failed to slide OAuth access token expiration" }
+      end
       access_token.session? || new_session(access_token)
     else
       new_session

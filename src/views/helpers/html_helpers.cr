@@ -350,7 +350,7 @@ module Ktistec::ViewHelper
       if (%include = {{include_}})
         next unless %include.includes?(%name)
       end
-      %Q(<input type="hidden" name="#{%name}" value="#{%value}">)
+      %Q(<input type="hidden" name="#{::HTML.escape(%name)}" value="#{::HTML.escape(%value)}">)
     end.join
   end
 

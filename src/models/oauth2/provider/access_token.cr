@@ -62,6 +62,15 @@ module OAuth2
       @[Persistent]
       property scope : String
 
+      # The lifetime granted to a token at issue or renewal.
+      #
+      TTL = 30.days
+
+      # Renew once more than 1/8th of the TTL has elapsed since the
+      # last renewal.
+      #
+      RENEWAL_THRESHOLD = TTL * 7 / 8
+
       # Finds an access token given its token string.
       #
       def self.find_by_token?(token : String)
@@ -72,6 +81,24 @@ module OAuth2
       #
       def expired?
         Time.utc > expires_at
+      end
+
+      # Slides the expiration forward when the token is used.
+      #
+      # No-op for expired tokens and for tokens still within the
+      # renewal threshold.
+      #
+      def touch
+        return self if expired?
+        if (expires_at - Time.utc) < RENEWAL_THRESHOLD
+          new_expires_at = Time.utc + TTL
+          rows_affected = self.class.exec(
+            "UPDATE #{table_name} SET expires_at = ? WHERE id = ?",
+            new_expires_at, id!,
+          )
+          self.expires_at = new_expires_at if rows_affected > 0
+        end
+        self
       end
 
       # Checks if the access token has "mcp" scope.

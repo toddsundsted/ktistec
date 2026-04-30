@@ -29,6 +29,9 @@ class OutboxesController
       unless object_iri && (object = ActivityPub::Object.find?(object_iri))
         bad_request
       end
+      unless object.visible
+        bad_request
+      end
       now = Time.utc
       visible, to, cc = addressing(activity, account.actor)
       if (attributed_to = object.attributed_to?)

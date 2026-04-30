@@ -29,7 +29,7 @@
                 - attachments.each do |attachment|
                   tr
                     th.name = attachment.name
-                    td.value == s wrap_link(attachment.value, length: 50)
+                    td.value == attachment.value_as_html
           .ui.basic.segment
             details
               summary

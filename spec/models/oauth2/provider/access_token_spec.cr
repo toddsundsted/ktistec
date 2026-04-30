@@ -50,6 +50,46 @@ Spectator.describe OAuth2::Provider::AccessToken do
     end
   end
 
+  describe "#touch" do
+    context "with nearly expired token" do
+      let(access_token) { super.assign(expires_at: Time.utc + 1.day).save }
+
+      it "slides expires_at forward" do
+        access_token.touch
+        expect(access_token.reload!.expires_at).to be_close(Time.utc + OAuth2::Provider::AccessToken::TTL, delta: 1.minute)
+      end
+    end
+
+    context "with freshly issued token" do
+      let(access_token) { super.assign(expires_at: Time.utc + OAuth2::Provider::AccessToken::TTL).save }
+
+      it "leaves expires_at unchanged" do
+        expires_at = access_token.expires_at
+        access_token.touch
+        expect(access_token.reload!.expires_at).to be_close(expires_at, delta: 1.second)
+      end
+    end
+
+    context "when expired" do
+      let(access_token) { super.assign(expires_at: Time.utc - 1.hour).save }
+
+      it "leaves expires_at unchanged" do
+        expires_at = access_token.expires_at
+        access_token.touch
+        expect(access_token.expires_at).to eq(expires_at)
+      end
+    end
+
+    it "does not resurrect a token that was deleted" do
+      expires_at = access_token.expires_at
+      token_id = access_token.id!
+      OAuth2::Provider::AccessToken.exec("DELETE FROM oauth_access_tokens WHERE id = ?", token_id)
+      access_token.touch
+      expect(access_token.expires_at).to eq(expires_at)
+      expect(OAuth2::Provider::AccessToken.find?(token_id)).to be_nil
+    end
+  end
+
   describe "#has_mcp_scope?" do
     context "when scope includes 'mcp'" do
       let_create!(oauth2_provider_access_token, named: mcp_token, client: client, account: account, scope: "mcp read")

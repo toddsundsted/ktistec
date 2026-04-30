@@ -501,7 +501,7 @@ Spectator.describe Ktistec::Util do
 
     let(link) { "https://example.com/this-is-a-url" }
 
-    subject { XML.parse_html(described_class.wrap_link(link), PARSER_OPTIONS) }
+    subject { XML.parse_html(described_class.wrap_link(link).not_nil!, PARSER_OPTIONS) }
 
     it "wraps the link in an anchor" do
       expect(subject.xpath_nodes("/a/@href")).to contain(link)
@@ -527,7 +527,7 @@ Spectator.describe Ktistec::Util do
       end
 
       context "with length specified" do
-        subject { XML.parse_html(described_class.wrap_link(link, length: 20), PARSER_OPTIONS) }
+        subject { XML.parse_html(described_class.wrap_link(link, length: 20).not_nil!, PARSER_OPTIONS) }
 
         it "wraps the truncated host and path in an ellipsis span" do
           expect(subject.xpath_nodes("/a/span[contains(@class,'ellipsis')]/text()")).to contain("example.com/this-is-")
@@ -540,7 +540,7 @@ Spectator.describe Ktistec::Util do
     end
 
     context "with scheme included" do
-      subject { XML.parse_html(described_class.wrap_link(link, include_scheme: true), PARSER_OPTIONS) }
+      subject { XML.parse_html(described_class.wrap_link(link, include_scheme: true).not_nil!, PARSER_OPTIONS) }
 
       it "does not wrap the scheme in an invisible span" do
         expect(subject.xpath_nodes("/a/span[contains(@class,'invisible')]/text()")).not_to contain("https://")
@@ -552,30 +552,10 @@ Spectator.describe Ktistec::Util do
     end
 
     context "with tag specified" do
-      subject { XML.parse_html(described_class.wrap_link(link, tag: :td), PARSER_OPTIONS) }
+      subject { XML.parse_html(described_class.wrap_link(link, tag: :td).not_nil!, PARSER_OPTIONS) }
 
       it "wraps the link in the tag" do
         expect(subject.xpath_nodes("/td/span/text()")).to contain_exactly("https://", "example.com/this-is-a-url")
-      end
-    end
-
-    context "given a string that is not a link" do
-      let(link) { "this is a string" }
-
-      it "returns the string" do
-        expect(described_class.wrap_link(link)).to eq(link)
-      end
-
-      context "with HTML metacharacters" do
-        let(link) { %q(<img onerror=x src=x>) }
-
-        it "escapes the string" do
-          expect(described_class.wrap_link(link)).to eq("&lt;img onerror=x src=x&gt;")
-        end
-
-        it "does not introduce an img element" do
-          expect(XML.parse_html(described_class.wrap_link(link), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
-        end
       end
     end
 
@@ -587,11 +567,11 @@ Spectator.describe Ktistec::Util do
       end
 
       it "does not introduce an img element" do
-        expect(XML.parse_html(described_class.wrap_link(link), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+        expect(XML.parse_html(described_class.wrap_link(link).not_nil!, PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
       end
 
       it "does not introduce an img element" do
-        expect(XML.parse_html(described_class.wrap_link(link, tag: :span), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+        expect(XML.parse_html(described_class.wrap_link(link, tag: :span).not_nil!, PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
       end
     end
 
@@ -603,23 +583,35 @@ Spectator.describe Ktistec::Util do
       end
 
       it "does not introduce a stray img element" do
-        expect(XML.parse_html(described_class.wrap_link(link), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+        expect(XML.parse_html(described_class.wrap_link(link).not_nil!, PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
       end
 
       it "does not introduce a stray img element" do
-        expect(XML.parse_html(described_class.wrap_link(link, tag: :span), PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+        expect(XML.parse_html(described_class.wrap_link(link, tag: :span).not_nil!, PARSER_OPTIONS).xpath_nodes("//img")).to be_empty
+      end
+    end
+
+    context "given a string that is not a link" do
+      let(link) { "this is a string" }
+
+      it "returns nil" do
+        expect(described_class.wrap_link(link)).to be_nil
       end
     end
 
     context "given a link with an unsafe scheme" do
       let(link) { "javascript://example.com/%0Aalert(1)" }
 
-      it "escapes the string" do
-        expect(described_class.wrap_link(link)).to eq("javascript://example.com/%0Aalert(1)")
+      it "returns nil" do
+        expect(described_class.wrap_link(link)).to be_nil
       end
+    end
 
-      it "does not produce an anchor" do
-        expect(XML.parse_html(described_class.wrap_link(link), PARSER_OPTIONS).xpath_nodes("//a")).to be_empty
+    context "given a link that URI.parse cannot parse" do
+      let(link) { "at://did:plc:foo/bar" }
+
+      it "returns nil" do
+        expect(described_class.wrap_link(link)).to be_nil
       end
     end
   end

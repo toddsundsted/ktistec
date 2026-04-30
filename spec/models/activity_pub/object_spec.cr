@@ -351,6 +351,22 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  context "before_save" do
+    let_create(:actor)
+    let_create!(:object, named: :subject, attributed_to: actor, visible: true)
+    let_create!(:pin_relationship, actor: actor, object: subject)
+
+    it "destroys pin relationship" do
+      expect { subject.assign(visible: false).save }
+        .to change { Relationship::Content::Pin.count(actor: actor, object: subject) }.from(1).to(0)
+    end
+
+    it "does not destroy pin relationship" do
+      expect { subject.assign(visible: true).save }
+        .not_to change { Relationship::Content::Pin.count(actor: actor, object: subject) }
+    end
+  end
+
   describe "before_destroy" do
     let_create(:object, local: true)
 

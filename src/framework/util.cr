@@ -269,15 +269,16 @@ module Ktistec
       text.size > length ? text[0, length - ellipsis.size] + ellipsis : text
     end
 
-    # Wraps a string in a link if it is a URL.
-    #
-    # By default, matches the weird format used by Mastodon:
+    # Wraps a URL in a link, in the format used by Mastodon:
     # https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb
     #
-    def wrap_link(str, include_scheme = false, length = 30, tag = :a)
+    # Returns the wrapped HTML when `str` is a structurally-wrappable
+    # URL (parses with scheme/host/path and passes `safe_url?`).
+    # Returns `nil` otherwise.
+    #
+    def wrap_link(str, include_scheme = false, length = 30, tag = :a) : String?
       # `URI.parse` raises on some Fediverse URIs (e.g., ATProto's
-      # `at://did:plc:.../`). on failure, fall through to the
-      # plain-text branch.
+      # `at://did:plc:.../`). on failure, return nil.
       uri = URI.parse(str) rescue nil
       if uri && (scheme = uri.scheme) && (host = uri.host) && (path = uri.path) && safe_url?(str)
         first = include_scheme ? "#{scheme}://#{host}#{path}" : "#{host}#{path}"
@@ -302,8 +303,6 @@ module Ktistec
           end
           io << %Q|</#{tag}>|
         end
-      else
-        ::HTML.escape(str)
       end
     end
 

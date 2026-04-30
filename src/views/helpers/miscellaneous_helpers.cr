@@ -50,7 +50,7 @@ module Ktistec::ViewHelper
     end
 
     def wrap_filter_term(str)
-      str = str.gsub(/\\?[%_]/) { %Q(<span class="wildcard">#{$0}</span>) }
+      str = ::HTML.escape(str).gsub(/\\?[%_]/) { %Q(<span class="wildcard">#{$0}</span>) }
       %Q(<span class="ui filter term">#{str}</span>)
     end
 
@@ -113,26 +113,43 @@ module Ktistec::ViewHelper
     def normalize_params(params : Hash(String, JSON::Any::Type)) : Hash(String, String | Array(String))
       result = Hash(String, String | Array(String)).new
       params.each do |key, value|
-        next if value.nil?
-        case value
-        when Array
-          array_values = value.compact_map do |item|
-            next if item.raw.nil?
-            case item.raw
-            when Int, Float, Bool, String
-              item.to_s
+        flatten_param_into(result, key, value)
+      end
+      result
+    end
+
+    private def flatten_param_into(result : Hash(String, String | Array(String)), key : String, value)
+      case value
+      when Nil
+        # skip
+      when Bool, Int, Float, String
+        result[key] = value.to_s
+      when Hash
+        value.each do |k, v|
+          flatten_param_into(result, "#{key}[#{k}]", v.raw)
+        end
+      when Array
+        if value.any? { |item| item.raw.is_a?(Hash) || item.raw.is_a?(Array) }
+          value.each_with_index do |item, i|
+            flatten_param_into(result, "#{key}[#{i}]", item.raw)
+          end
+        else
+          strings = value.compact_map do |item|
+            raw = item.raw
+            case raw
+            when Nil
+              nil
+            when Bool, Int, Float, String
+              raw.to_s
             else
               raise "Unsupported value"
             end
           end
-          result[key] = array_values unless array_values.empty?
-        when Int, Float, Bool, String
-          result[key] = value.to_s
-        else
-          raise "Unsupported value"
+          result[key] = strings unless strings.empty?
         end
+      else
+        raise "Unsupported value"
       end
-      result
     end
   end
 

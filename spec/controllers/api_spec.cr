@@ -376,6 +376,330 @@ Spectator.describe APIController do
         expect(json.dig?("source", "language")).to eq("en")
       end
     end
+
+    context "with nearly expired token" do
+      let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account, expires_at: 1.day.from_now)
+
+      it "slides expires_at forward" do
+        get "/api/v1/accounts/verify_credentials", headers: json_bearer_headers(access_token.token)
+        expect(access_token.reload!.expires_at).to be_close(Time.utc + OAuth2::Provider::AccessToken::TTL, delta: 1.minute)
+      end
+    end
+
+    context "with freshly issued token" do
+      let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account, expires_at: Time.utc + OAuth2::Provider::AccessToken::TTL)
+
+      it "leaves expires_at unchanged" do
+        expires_at = access_token.expires_at
+        get "/api/v1/accounts/verify_credentials", headers: json_bearer_headers(access_token.token)
+        expect(access_token.reload!.expires_at).to be_close(expires_at, delta: 1.second)
+      end
+    end
+  end
+
+  describe "PATCH /api/v1/accounts/update_credentials" do
+    let(actor) { account.actor }
+
+    it "returns 401" do
+      patch "/api/v1/accounts/update_credentials", headers: JSON_HEADERS
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+      let(headers) { json_bearer_headers(access_token.token) }
+
+      context "with a JSON body" do
+        context "given display_name" do
+          let(body) { {display_name: "Display Name"}.to_json }
+
+          it "succeeds" do
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+            expect(response.status_code).to eq(200)
+          end
+
+          it "updates the display name" do
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { actor.reload!.name }.to("Display Name")
+          end
+
+          it "echoes the display name in the response" do
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+            expect(JSON.parse(response.body)["display_name"]).to eq("Display Name")
+          end
+
+          it "includes source in the response" do
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+            expect(JSON.parse(response.body)["source"]).to be_truthy
+          end
+        end
+
+        it "updates the note" do
+          body = {note: "About me..."}.to_json
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { actor.reload!.summary }.to("About me...")
+        end
+
+        it "updates the language" do
+          body = {source: {language: "fr"}}.to_json
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { account.reload!.language }.to("fr")
+        end
+
+        it "unrestricts the quote policy" do
+          body = {source: {quote_policy: "public"}}.to_json
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { account.reload!.manually_approve_quotes }.to(false)
+        end
+
+        context "given an unrestricted account" do
+          before_each { account.assign(manually_approve_quotes: false).save }
+
+          let(body) { {source: {quote_policy: "approval"}}.to_json }
+
+          it "restricts the quote policy" do
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { account.reload!.manually_approve_quotes }.to(true)
+          end
+
+          it "reflects the policy in the response" do
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+            expect(JSON.parse(response.body).dig?("source", "quote_policy")).to eq("approval")
+          end
+        end
+
+        it "ignores unmappable quote_policy values" do
+          body = {source: {quote_policy: "nobody"}}.to_json
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .not_to change { account.reload!.manually_approve_quotes }
+        end
+
+        it "unlocks the account" do
+          body = {locked: false}.to_json
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { account.reload!.auto_approve_followers }.to(true)
+        end
+
+        context "given an unlocked account" do
+          before_each { account.assign(auto_approve_followers: true).save }
+
+          let(body) { {locked: true}.to_json }
+
+          it "locks the account" do
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { account.reload!.auto_approve_followers }.to(false)
+          end
+
+          it "reflects locked in the response" do
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+            expect(JSON.parse(response.body)["locked"]).to be_true
+          end
+        end
+
+        context "given fields_attributes as an array" do
+          context "with an entry" do
+            let(body) { {fields_attributes: [{name: "Website", value: "https://example.com"}]}.to_json }
+
+            before_each { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+
+            let(attachment) { actor.reload!.attachments.not_nil!.first }
+
+            it "stores PropertyValue type" do
+              expect(attachment.type).to eq("PropertyValue")
+            end
+
+            it "stores the name" do
+              expect(attachment.name).to eq("Website")
+            end
+
+            it "stores the value" do
+              expect(attachment.value).to eq("https://example.com")
+            end
+          end
+
+          it "stores attachments" do
+            body = {fields_attributes: [{name: "Website", value: "https://example.com"}, {name: "Pronouns", value: "they/them"}]}.to_json
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { actor.reload!.attachments.try(&.size) }.to(2)
+          end
+
+          it "ignores entries with blank name or value" do
+            body = {fields_attributes: [{name: "Website", value: "https://example.com"}, {name: "", value: "skip"}, {name: "Empty", value: ""}]}.to_json
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+            expect(actor.reload!.attachments.try(&.size)).to eq(1)
+          end
+        end
+
+        context "given fields_attributes as an indexed object" do
+          it "stores attachments" do
+            body = {fields_attributes: {"0" => {name: "Website", value: "https://example.com"}, "1" => {name: "Pronouns", value: "they/them"}}}.to_json
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { actor.reload!.attachments.try(&.size) }.to(2)
+          end
+
+          # the keys do not actually matter. fields are populated by
+          # the order in which they are provided
+          it "preserves the order" do
+            body = {fields_attributes: {"5" => {name: "First", value: "a"}, "2" => {name: "Second", value: "b"}}}.to_json
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+            names = actor.reload!.attachments.not_nil!.map(&.name)
+            expect(names).to eq(["First", "Second"])
+          end
+
+          it "accepts non-numeric keys" do
+            body = {fields_attributes: {"first" => {name: "Website", value: "https://example.com"}}}.to_json
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+            names = actor.reload!.attachments.not_nil!.map(&.name)
+            expect(names).to eq(["Website"])
+          end
+        end
+
+        it "leaves unspecified fields unchanged" do
+          actor.assign(name: "Original").save
+          body = {note: "About me"}.to_json
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .not_to change { actor.reload!.name }
+        end
+
+        it "ignores unsupported parameters" do
+          body = {display_name: "Cool", bot: true, discoverable: false, indexable: false}.to_json
+          patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+          expect(response.status_code).to eq(200)
+        end
+
+        context "given malformed JSON" do
+          it "returns 400" do
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: "{not json"
+            expect(response.status_code).to eq(400)
+          end
+        end
+      end
+
+      context "with a form-encoded body" do
+        let(headers) { form_bearer_headers(access_token.token) }
+
+        it "succeeds" do
+          body = "display_name=Display+Name"
+          patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+          expect(response.status_code).to eq(200)
+        end
+
+        it "updates the display name" do
+          body = "display_name=Display+Name"
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { actor.reload!.name }.to("Display Name")
+        end
+
+        it "updates the note" do
+          body = "note=About+me..."
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { actor.reload!.summary }.to("About me...")
+        end
+
+        it "updates the language" do
+          body = "source%5Blanguage%5D=de"
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { account.reload!.language }.to("de")
+        end
+
+        it "unrestricts the quote policy" do
+          body = "source%5Bquote_policy%5D=public"
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { account.reload!.manually_approve_quotes }.to(false)
+        end
+
+        context "given an unrestricted account" do
+          before_each { account.assign(manually_approve_quotes: false).save }
+
+          let(body) { "source%5Bquote_policy%5D=approval" }
+
+          it "restricts the quote policy" do
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { account.reload!.manually_approve_quotes }.to(true)
+          end
+        end
+
+        it "ignores unmappable quote_policy values" do
+          body = "source%5Bquote_policy%5D=nobody"
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .not_to change { account.reload!.manually_approve_quotes }
+        end
+
+        it "unlocks the account" do
+          body = "locked=false"
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { account.reload!.auto_approve_followers }.to(true)
+        end
+
+        context "given an unlocked account" do
+          before_each { account.assign(auto_approve_followers: true).save }
+
+          it "locks the account when locked=true" do
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: "locked=true" }
+              .to change { account.reload!.auto_approve_followers }.to(false)
+          end
+
+          it "locks the account when locked=1" do
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: "locked=1" }
+              .to change { account.reload!.auto_approve_followers }.to(false)
+          end
+        end
+
+        it "stores attachments" do
+          body = "fields_attributes%5B0%5D%5Bname%5D=Website&fields_attributes%5B0%5D%5Bvalue%5D=https%3A%2F%2Fexample.com"
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { actor.reload!.attachments.try(&.size) }.to(1)
+        end
+
+        it "ignores partial entries" do
+          body = "fields_attributes%5B0%5D%5Bname%5D=NoValue"
+          patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+          expect(actor.reload!.attachments.try(&.empty?)).to be_truthy
+        end
+      end
+
+      context "with a multipart body" do
+        let(form) do
+          String.build do |io|
+            HTTP::FormData.build(io) do |form_data|
+              form_data.field("display_name", "Multipart Name")
+              avatar = HTTP::FormData::FileMetadata.new(filename: "avatar.jpg")
+              form_data.file("avatar", IO::Memory.new("0123456789"), avatar)
+              header_file = HTTP::FormData::FileMetadata.new(filename: "header.jpg")
+              form_data.file("header", IO::Memory.new("0123456789"), header_file)
+            end
+          end
+        end
+
+        let(headers) do
+          HTTP::Headers{
+            "Authorization" => "Bearer #{access_token.token}",
+            "Accept"        => "application/json",
+            "Content-Type"  => %Q{multipart/form-data; boundary="#{form.lines.first[2..-1]}"},
+          }
+        end
+
+        it "succeeds" do
+          patch "/api/v1/accounts/update_credentials", headers: headers, body: form
+          expect(response.status_code).to eq(200)
+        end
+
+        it "updates the display name" do
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: form }
+            .to change { actor.reload!.name }.to("Multipart Name")
+        end
+
+        it "updates the icon" do
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: form }
+            .to change { actor.reload!.icon }.from(nil)
+        end
+
+        it "updates the image" do
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: form }
+            .to change { actor.reload!.image }.from(nil)
+        end
+      end
+    end
   end
 
   describe "GET /api/v1/accounts" do

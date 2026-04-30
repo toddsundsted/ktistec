@@ -496,6 +496,45 @@ Spectator.describe "partials" do
         end
       end
     end
+
+    context "with attachments" do
+      before_each do
+        actor.assign(attachments: [
+          ActivityPub::Actor::Attachment.new(
+            "Website",
+            "http://schema.org#PropertyValue",
+            %q(<a href="https://example.com/" rel="me">https://example.com/</a>),
+          ),
+          ActivityPub::Actor::Attachment.new(
+            "Homepage",
+            "http://schema.org#PropertyValue",
+            "https://example.org/intro",
+          ),
+          ActivityPub::Actor::Attachment.new(
+            "Bio",
+            "PropertyValue",
+            %q(<script>alert(1)</script>safe text),
+          ),
+        ]).save
+      end
+
+      it "renders attachment names" do
+        expect(subject.xpath_nodes("//table//th[@class='name']/text()")).to have("Website")
+      end
+
+      it "preserves anchors in HTML attachment values" do
+        expect(subject.xpath_nodes("//table//td[@class='value']//a/@href")).to have("https://example.com/")
+      end
+
+      it "wraps URL attachment values in an anchor" do
+        expect(subject.xpath_nodes("//table//td[@class='value']//a/@href")).to have("https://example.org/intro")
+      end
+
+      it "scrubs unsafe HTML from attachment values" do
+        expect(subject.xpath_nodes("//table//td[@class='value']//text()")).to have(/safe text/)
+        expect(subject.xpath_nodes("//table//td[@class='value']//script")).to be_empty
+      end
+    end
   end
 
   describe "actor-card.html.slang" do

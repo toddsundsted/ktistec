@@ -188,6 +188,18 @@ Spectator.describe "helpers" do
     it "does not wrap text" do
       expect(subject.xpath_nodes("/span/text()")).to contain("f", "o")
     end
+
+    context "with HTML metacharacters" do
+      let(term) { %{<script>alert(1)</script>} }
+
+      it "does not emit the script tag unescaped" do
+        expect(self.class.wrap_filter_term(term)).not_to contain(%{<script>alert(1)</script>})
+      end
+
+      it "emits the term as escaped HTML" do
+        expect(self.class.wrap_filter_term(term)).to contain(%{&lt;script&gt;alert(1)&lt;/script&gt;})
+      end
+    end
   end
 
   describe ".normalize_params" do
@@ -246,9 +258,28 @@ Spectator.describe "helpers" do
         expect(result["tags"]).to eq(["ruby", "crystal", "go"])
       end
 
-      it "raises error for nested objects" do
-        params = Hash(String, JSON::Any::Type){"user" => {"name" => JSON::Any.new("Alice")}}
-        expect { self.class.normalize_params(params) }.to raise_error(Exception)
+      it "flattens nested objects to bracket notation" do
+        params = Hash(String, JSON::Any::Type){"user" => {"name" => JSON::Any.new("Alice"), "age" => JSON::Any.new(30_i64)}}
+        result = self.class.normalize_params(params)
+        expect(result["user[name]"]).to eq("Alice")
+        expect(result["user[age]"]).to eq("30")
+      end
+
+      it "flattens deeply nested objects to bracket notation" do
+        params = Hash(String, JSON::Any::Type){"source" => {"prefs" => JSON::Any.new({"language" => JSON::Any.new("fr")})}}
+        result = self.class.normalize_params(params)
+        expect(result["source[prefs][language]"]).to eq("fr")
+      end
+
+      it "flattens arrays of objects" do
+        entries = [
+          JSON::Any.new({"name" => JSON::Any.new("X")}),
+          JSON::Any.new({"name" => JSON::Any.new("Y")}),
+        ]
+        params = Hash(String, JSON::Any::Type){"fields_attributes" => entries}
+        result = self.class.normalize_params(params)
+        expect(result["fields_attributes[0][name]"]).to eq("X")
+        expect(result["fields_attributes[1][name]"]).to eq("Y")
       end
     end
   end

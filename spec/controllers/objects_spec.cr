@@ -2081,6 +2081,22 @@ Spectator.describe ObjectsController do
           end
         end
 
+        context "when the attributed_to actor is not fetchable" do
+          before_each do
+            HTTP::Client.objects << quote
+          end
+
+          it "returns error message" do
+            get "/remote/objects/#{visible.id}/fetch/quote", TURBO_FRAME
+            expect(response.status_code).to eq(200)
+            expect(response.body).to contain("Failed to load!")
+          end
+
+          it "does not persist the quoted object" do
+            expect { get "/remote/objects/#{visible.id}/fetch/quote" }.not_to change { ActivityPub::Object.count(iri: quote.iri) }
+          end
+        end
+
         it "succeeds even if dereference fails" do
           get "/remote/objects/#{visible.id}/fetch/quote", TURBO_FRAME
           expect(response.status_code).to eq(200)

@@ -110,14 +110,14 @@ module Ktistec
     def open?(key_pair, url, headers = HTTP::Headers.new, attempts = 10)
       open(key_pair, url, headers, attempts)
     rescue ex : Error
-      Log.debug { "#{self}.open? - #{ex.message}" }
+      Log.info { "#{self}.open? - #{ex.message}" }
     end
 
     # :ditto:
     def open?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, &)
       yield open(key_pair, url, headers, attempts)
     rescue ex : Error
-      Log.debug { "#{self}.open? - #{ex.message}" }
+      Log.info { "#{self}.open? - #{ex.message}" }
     end
 
     class Error < Exception

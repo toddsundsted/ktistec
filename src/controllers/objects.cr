@@ -319,7 +319,7 @@ class ObjectsController
       attributed_to = quote.attributed_to?(include_deleted: true) || quote.attributed_to?(env.account.actor, dereference: true)
     end
 
-    object.save
+    object.save if quote && attributed_to
 
     if in_turbo_frame?
       ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: !(quote && attributed_to), error_message: nil, show_quote: true

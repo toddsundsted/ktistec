@@ -1,6 +1,23 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.3.7]
+### Added
+- Sliding token expiration for OAuth2 access tokens.
+- Mastodon-compatible API: `/api/v1/accounts/update_credentials` endpoint.
+
+### Fixed
+- Prevent pinning of (and auto-unpin) private objects.
+- Don't save a quote if the quoted actor cannot be dereferenced.
+- Fix rendering of federated actor profile attachment values.
+- Remove `href` attributes with unsafe schemes from sanitized HTML.
+- Escape interpolated values in view helpers and the actor icon streaming refresh.
+- Restrict upload extensions and serve uploads with `X-Content-Type-Options: nosniff`.
+- Escape `publicKey` and scrub `Tag.href`.
+- Sanitizer no longer permits single-quote attribute injection.
+- Ensure bearer-token sessions cannot reach the web UI.
+- Require client authentication on the OAuth token endpoint.
+
 ## [v3.3.6]
 Pins Crystal version to 1.19.1. 1.20.0 introduces breaking changes.
 
@@ -741,6 +758,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.3.7]: https://github.com/toddsundsted/ktistec/compare/0de33ac0...408900a5
 [v3.3.6]: https://github.com/toddsundsted/ktistec/compare/99046b6d...3b5cf8dc
 [v3.3.5]: https://github.com/toddsundsted/ktistec/compare/5e87aae6...6f54cac5
 [v3.3.4]: https://github.com/toddsundsted/ktistec/compare/f64f24d1...df77bdab

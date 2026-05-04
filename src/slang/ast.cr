@@ -185,16 +185,6 @@ module Slang
       end
     end
 
-    class ConditionalComment < Node
-      getter condition : String
-      getter children : Array(Node)
-
-      def initialize(@condition : String, loc : SourceLoc)
-        super(loc)
-        @children = [] of Node
-      end
-    end
-
     class Doctype < Node
       getter value : String
 

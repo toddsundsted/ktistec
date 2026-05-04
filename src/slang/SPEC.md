@@ -823,7 +823,7 @@ that happen to receive raw-content handling for their children.
 
 ### 5.6 Comments
 
-Three forms, distinguished by what follows the `/`:
+Two forms, distinguished by what follows the `/`:
 
 #### 5.6.1 Hidden Comment (`/`)
 
@@ -850,18 +850,6 @@ inside the comment, followed by a single `\n` before the closing
 
 Emits `<!--Note<span>note body</span>\n-->`. The trailing `\n`
 appears only when at least one child is present.
-
-#### 5.6.3 Conditional Comment (`/[expr]`)
-
-```slang
-/[if IE]
-  p Old browser
-```
-
-Emits `<!--[if IE]><p>Old browser</p>\n<![endif]-->`. As with
-visible comments, the `\n` before `<![endif]-->` appears only
-when the comment has children; a childless `/[if IE]` emits
-`<!--[if IE]><![endif]-->`.
 
 ### 5.7 Doctype (`doctype`)
 

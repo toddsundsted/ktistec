@@ -531,14 +531,6 @@ Spectator.describe Slang::CodeGen do
           span note body
         SLANG
     end
-
-    it "emits a conditional comment" do
-      expected = "<!--[if IE]><p>Old browser</p>\n<![endif]-->"
-      expect(render_string(<<-SLANG)).to eq(expected)
-        /[if IE]
-          p Old browser
-        SLANG
-    end
   end
 
   describe "Doctype" do

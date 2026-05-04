@@ -91,17 +91,16 @@ module Slang
 
     private def emit_node(node : AST::Node) : Nil
       case node
-      when AST::Element            then emit_element(node)
-      when AST::Output             then emit_output(node)
-      when AST::Code               then emit_code(node)
-      when AST::Text               then emit_text_node(node)
-      when AST::TextBlock          then emit_text_block(node)
-      when AST::RawHtml            then emit_raw_html(node)
-      when AST::HiddenComment      then emit_hidden_comment(node)
-      when AST::VisibleComment     then emit_visible_comment(node)
-      when AST::ConditionalComment then emit_conditional_comment(node)
-      when AST::Doctype            then emit_doctype(node)
-      when AST::Rawstuff           then emit_rawstuff(node)
+      when AST::Element        then emit_element(node)
+      when AST::Output         then emit_output(node)
+      when AST::Code           then emit_code(node)
+      when AST::Text           then emit_text_node(node)
+      when AST::TextBlock      then emit_text_block(node)
+      when AST::RawHtml        then emit_raw_html(node)
+      when AST::HiddenComment  then emit_hidden_comment(node)
+      when AST::VisibleComment then emit_visible_comment(node)
+      when AST::Doctype        then emit_doctype(node)
+      when AST::Rawstuff       then emit_rawstuff(node)
       else
         # Document is handled by `generate`; reaching here means the
         # parser produced an unexpected node type for `emit_node` to
@@ -385,17 +384,6 @@ module Slang
         emit_literal("\n")
       end
       emit_literal("-->")
-    end
-
-    private def emit_conditional_comment(node : AST::ConditionalComment) : Nil
-      emit_literal("<!--[")
-      emit_literal(node.condition)
-      emit_literal("]>")
-      unless node.children.empty?
-        node.children.each { |c| emit_node(c) }
-        emit_literal("\n")
-      end
-      emit_literal("<![endif]-->")
     end
 
     # ----- Doctype -----

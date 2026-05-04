@@ -432,19 +432,6 @@ Spectator.describe Slang::Parser do
       end
     end
 
-    context "conditional comments" do
-      it "parses `/[expr]` as a ConditionalComment with condition" do
-        node = parse_one("/[if IE]").as(AST::ConditionalComment)
-        expect(node.condition).to eq("if IE")
-      end
-
-      it "attaches indented children" do
-        node = parse_one("/[if IE]\n  p old browser").as(AST::ConditionalComment)
-        expect(node.children.size).to eq(1)
-        expect(node.children.first.as(AST::Element).tag).to eq("p")
-      end
-    end
-
     context "doctype" do
       it "parses `doctype html`" do
         node = parse_one("doctype html").as(AST::Doctype)

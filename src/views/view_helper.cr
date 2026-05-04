@@ -1,8 +1,8 @@
 require "ecr"
-require "slang"
 require "kemal"
 require "markd"
 
+require "../slang"
 require "../utils/emoji"
 require "../utils/paths"
 
@@ -19,7 +19,9 @@ require "./helpers/theming_helpers"
 macro render(content, layout)
   # Note: `__content_filename__` and `content_io` are magic variables
   # used by Kemal's implementation of "content_for" and must be in
-  # scope for `yield_content` to work.
+  # scope for `yield_content` to work. `content_io` must be a plain
+  # local (assignable), not a `String.build` block parameter — Kemal's
+  # `yield_content` macro reassigns it to capture nested output.
 
   __content_filename__ = {{content}}
 

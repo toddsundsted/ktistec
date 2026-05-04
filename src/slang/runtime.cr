@@ -1,0 +1,71 @@
+require "html"
+
+# Runtime helpers used by codegen-emitted templates.
+#
+# The codegen emits direct `<<` writes for the literal-and-static
+# common case. These helpers handle the dynamic cases where a runtime
+# value must be inspected before being emitted (presence-checked,
+# bool-aware attribute rendering, splat iteration).
+#
+module Slang::Runtime
+  extend self
+
+  # Emits a single attribute for an unwrapped `name=expr` source
+  # form.
+  #
+  # - `true`  -> emit ` name`
+  # - `false` -> omit entirely
+  # - else    -> emit ` name="<HTML-escaped value.to_s>"`
+  #
+  def emit_attr(io : IO, name : String, value) : Nil
+    case value
+    when true
+      io << ' ' << name
+    when false
+      # omit
+    else
+      io << ' ' << name << "=\""
+      ::HTML.escape(value.to_s, io)
+      io << '"'
+    end
+  end
+
+  # Emits a merged `class="..."` attribute combining a literal prefix
+  # and any number of dynamic class sources.
+  #
+  def emit_class(io : IO, literal_prefix : String, *dynamics : String?) : Nil
+    has_literal = !literal_prefix.empty?
+    has_dynamic = dynamics.any? &.try(&.presence)
+    return if !has_literal && !has_dynamic
+
+    io << " class=\""
+    first = true
+    if has_literal
+      io << literal_prefix
+      first = false
+    end
+    dynamics.each do |d|
+      if (value = d.try(&.presence))
+        io << ' ' unless first
+        first = false
+        ::HTML.escape(value, io)
+      end
+    end
+    io << '"'
+  end
+
+  # Iterates a splat hash, emitting each key/value pair as an
+  # attribute. `nil` values are skipped.
+  #
+  # When `skip_class` is true, the `class` key is suppressed -- the
+  # caller has already routed its value through `emit_class`.
+  #
+  def emit_splat_attrs(io : IO, hash, skip_class : Bool) : Nil
+    hash.each do |key, value|
+      next if value.nil?
+      key_s = key.to_s
+      next if skip_class && key_s == "class"
+      emit_attr(io, key_s, value)
+    end
+  end
+end

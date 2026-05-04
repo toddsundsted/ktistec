@@ -75,9 +75,6 @@ h1.ui.header
       | school
       .ui.horizontal.label< MIT
     .item
-      | slang
-      .ui.horizontal.label< MIT
-    .item
       | sqlite3
       .ui.horizontal.label< MIT
     .item

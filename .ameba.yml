@@ -51,8 +51,9 @@ Lint/UselessAssign:
 Lint/SpecFilename:
   Description: Enforces spec filenames to have `_spec` suffix
   IgnoredDirs:
-  - spec/spec_helper
   - spec/fixtures
+  - spec/slang/support
+  - spec/spec_helper
   Severity: Warning
   Enabled: true
 

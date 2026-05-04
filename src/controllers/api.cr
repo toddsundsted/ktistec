@@ -465,16 +465,14 @@ class APIController
     actor = account.actor
 
     unless actor.find_like_for(object)
-      to = [object.attributed_to.iri]
-      cc = [actor.followers].compact
-
       activity = ActivityPub::Activity::Like.new(
         iri: "#{host}/activities/#{id}",
         actor: actor,
         object: object,
         published: Time.utc,
-        to: to,
-        cc: cc,
+        to: [object.attributed_to.iri],
+        cc: [] of String,
+        audience: object.audience,
       )
 
       activity.save
@@ -495,15 +493,13 @@ class APIController
     actor = account.actor
 
     if (like = actor.find_like_for(object))
-      to = [object.attributed_to.iri]
-      cc = [actor.followers].compact
-
       undo = ActivityPub::Activity::Undo.new(
         iri: "#{host}/activities/#{id}",
         actor: actor,
         object: like,
-        to: to,
-        cc: cc,
+        to: like.to || [] of String,
+        cc: like.cc || [] of String,
+        audience: like.audience,
       )
 
       undo.save

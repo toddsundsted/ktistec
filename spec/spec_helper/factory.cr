@@ -178,19 +178,39 @@ end
 def announce_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
   object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
-  activity_factory(ActivityPub::Activity::Announce, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
+  activity_factory(ActivityPub::Activity::Announce, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(announce_addressing(actor, object)).merge(options))
+end
+
+private def announce_addressing(actor, object)
+  to = ["https://www.w3.org/ns/activitystreams#Public"] of String
+  if object.responds_to?(:attributed_to_iri) && (author_iri = object.attributed_to_iri)
+    to << author_iri
+  end
+  cc = [] of String
+  if actor.responds_to?(:followers) && (followers = actor.followers)
+    cc << followers
+  end
+  {to: to, cc: cc}
 end
 
 def like_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
   object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
-  activity_factory(ActivityPub::Activity::Like, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
+  activity_factory(ActivityPub::Activity::Like, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(social_addressing_to(object)).merge(options))
 end
 
 def dislike_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
   object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
-  activity_factory(ActivityPub::Activity::Dislike, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
+  activity_factory(ActivityPub::Activity::Dislike, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(social_addressing_to(object)).merge(options))
+end
+
+private def social_addressing_to(object)
+  to = [] of String
+  if object.responds_to?(:attributed_to_iri) && (author_iri = object.attributed_to_iri)
+    to << author_iri
+  end
+  {to: to}
 end
 
 def create_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)

@@ -1392,6 +1392,32 @@ Spectator.describe APIController do
         post "/api/v1/statuses/999999/favourite", headers: json_bearer_headers(access_token.token)
         expect(response.status_code).to eq(404)
       end
+
+      context "addressing of the activity" do
+        let_create(:actor, named: :other)
+        let_create(:object, named: :favourited, attributed_to: other, audience: ["https://group.example/community"], published: Time.utc, visible: true)
+
+        before_each { post "/api/v1/statuses/#{favourited.id}/favourite", headers: json_bearer_headers(access_token.token) }
+
+        let(like) { ActivityPub::Activity::Like.find(actor_iri: account.actor.iri) }
+
+        it "addresses the object's author" do
+          expect(like.to).to eq([other.iri])
+        end
+
+        it "does not address the actor's followers" do
+          expect(like.cc).not_to contain(account.actor.followers)
+        end
+
+        it "does not address the public collection" do
+          expect(like.to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+          expect(like.cc).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+        end
+
+        it "preserves the object's audience" do
+          expect(like.audience).to eq(["https://group.example/community"])
+        end
+      end
     end
   end
 
@@ -1423,6 +1449,28 @@ Spectator.describe APIController do
         it "returns 404" do
           post "/api/v1/statuses/999999/unfavourite", headers: json_bearer_headers(access_token.token)
           expect(response.status_code).to eq(404)
+        end
+      end
+
+      context "addressing of the activity" do
+        let_create!(:actor, named: :other)
+        let_create!(:object, named: :unfavourited, attributed_to: other, published: Time.utc, visible: true)
+        let_create!(:like, actor: account.actor, object: unfavourited, to: ["https://to"], cc: ["https://cc"], audience: ["https://group.example/community"])
+
+        before_each { post "/api/v1/statuses/#{unfavourited.id}/unfavourite", headers: json_bearer_headers(access_token.token) }
+
+        let(undo) { ActivityPub::Activity::Undo.find(actor_iri: account.actor.iri) }
+
+        it "addresses the like's to" do
+          expect(undo.to).to eq(["https://to"])
+        end
+
+        it "addresses the like's cc" do
+          expect(undo.cc).to eq(["https://cc"])
+        end
+
+        it "addresses the like's audience" do
+          expect(undo.audience).to eq(["https://group.example/community"])
         end
       end
     end

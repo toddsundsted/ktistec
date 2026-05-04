@@ -296,34 +296,28 @@ Spectator.describe OutboxesController do
             .to change { ActivityPub::Activity::Like.count(actor_iri: actor.iri) }.by(1)
         end
 
-        it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=private"
+        it "is never visible even when public is requested" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
-        it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"private"}|
+        it "is never visible even when public is requested" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
-        it "creates a visible activity if public" do
+        it "does not address the public collection even when public is requested" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=public"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+          activity = ActivityPub::Activity.find(actor_iri: actor.iri)
+          expect(activity.to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+          expect(activity.cc).not_to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
-        it "creates a visible activity if public" do
+        it "does not address the public collection even when public is requested" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"public"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
-        end
-
-        it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}&visibility=public"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
-        end
-
-        it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}","visibility":"public"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
+          activity = ActivityPub::Activity.find(actor_iri: actor.iri)
+          expect(activity.to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+          expect(activity.cc).not_to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses (to) the object's actor" do
@@ -336,14 +330,30 @@ Spectator.describe OutboxesController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
-        it "addresses (to) the actor's followers collection" do
+        it "does not address the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+          activity = ActivityPub::Activity.find(actor_iri: actor.iri)
+          expect(activity.to).not_to contain(actor.followers)
+          expect(activity.cc).not_to contain(actor.followers)
         end
 
-        it "addresses (to) the actor's followers collection" do
+        it "does not address the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+          activity = ActivityPub::Activity.find(actor_iri: actor.iri)
+          expect(activity.to).not_to contain(actor.followers)
+          expect(activity.cc).not_to contain(actor.followers)
+        end
+
+        it "preserves the object's audience" do
+          object.assign(audience: ["https://group.example/community"]).save
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).audience).to eq(["https://group.example/community"])
+        end
+
+        it "preserves the object's audience" do
+          object.assign(audience: ["https://group.example/community"]).save
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).audience).to eq(["https://group.example/community"])
         end
 
         it "puts the activity in the actor's outbox" do
@@ -433,34 +443,28 @@ Spectator.describe OutboxesController do
             .to change { ActivityPub::Activity::Dislike.count(actor_iri: actor.iri) }.by(1)
         end
 
-        it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=private"
+        it "is never visible even when public is requested" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=public"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
-        it "does not create a visible activity if not public" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"private"}|
+        it "is never visible even when public is requested" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"public"}|
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_false
         end
 
-        it "creates a visible activity if public" do
+        it "does not address the public collection even when public is requested" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=public"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
+          activity = ActivityPub::Activity.find(actor_iri: actor.iri)
+          expect(activity.to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+          expect(activity.cc).not_to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
-        it "creates a visible activity if public" do
+        it "does not address the public collection even when public is requested" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"public"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).visible).to be_true
-        end
-
-        it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}&visibility=public"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
-        end
-
-        it "addresses (to) the public collection" do
-          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}","visibility":"public"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain("https://www.w3.org/ns/activitystreams#Public")
+          activity = ActivityPub::Activity.find(actor_iri: actor.iri)
+          expect(activity.to).not_to contain("https://www.w3.org/ns/activitystreams#Public")
+          expect(activity.cc).not_to contain("https://www.w3.org/ns/activitystreams#Public")
         end
 
         it "addresses (to) the object's actor" do
@@ -473,14 +477,30 @@ Spectator.describe OutboxesController do
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
-        it "addresses (to) the actor's followers collection" do
+        it "does not address the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+          activity = ActivityPub::Activity.find(actor_iri: actor.iri)
+          expect(activity.to).not_to contain(actor.followers)
+          expect(activity.cc).not_to contain(actor.followers)
         end
 
-        it "addresses (to) the actor's followers collection" do
+        it "does not address the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
-          expect(ActivityPub::Activity.find(actor_iri: actor.iri).to).to contain(actor.followers)
+          activity = ActivityPub::Activity.find(actor_iri: actor.iri)
+          expect(activity.to).not_to contain(actor.followers)
+          expect(activity.cc).not_to contain(actor.followers)
+        end
+
+        it "preserves the object's audience" do
+          object.assign(audience: ["https://group.example/community"]).save
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).audience).to eq(["https://group.example/community"])
+        end
+
+        it "preserves the object's audience" do
+          object.assign(audience: ["https://group.example/community"]).save
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
+          expect(ActivityPub::Activity.find(actor_iri: actor.iri).audience).to eq(["https://group.example/community"])
         end
 
         it "puts the activity in the actor's outbox" do
@@ -1482,14 +1502,28 @@ Spectator.describe OutboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "does not address the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(like.iri)}"
-          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          undo = ActivityPub::Activity::Undo.find(actor_iri: actor.iri)
+          expect(undo.to).not_to contain(actor.followers)
+          expect(undo.cc).not_to contain(actor.followers)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "does not address the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{like.iri}"}|
-          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          undo = ActivityPub::Activity::Undo.find(actor_iri: actor.iri)
+          expect(undo.to).not_to contain(actor.followers)
+          expect(undo.cc).not_to contain(actor.followers)
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(like.iri)}"
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{like.iri}"}|
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
         it "undoes the like" do
@@ -1555,14 +1589,28 @@ Spectator.describe OutboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "does not address the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
-          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          undo = ActivityPub::Activity::Undo.find(actor_iri: actor.iri)
+          expect(undo.to).not_to contain(actor.followers)
+          expect(undo.cc).not_to contain(actor.followers)
         end
 
-        it "addresses (cc) the actor's followers collection" do
+        it "does not address the actor's followers collection" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
-          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).cc).to contain(actor.followers)
+          undo = ActivityPub::Activity::Undo.find(actor_iri: actor.iri)
+          expect(undo.to).not_to contain(actor.followers)
+          expect(undo.cc).not_to contain(actor.followers)
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).to).to contain(other.iri)
+        end
+
+        it "addresses (to) the object's actor" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
+          expect(ActivityPub::Activity::Undo.find(actor_iri: actor.iri).to).to contain(other.iri)
         end
 
         it "undoes the dislike" do

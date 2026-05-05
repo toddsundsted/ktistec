@@ -22,7 +22,7 @@
             a href="#" = actor.display_name
             br: a href="#" = actor.handle
             - if (summary = actor.summary.presence)
-              br: == s summary
+              br: = s summary
             - if (attachments = actor.attachments.presence)
               .ui.divider
               table

@@ -16,7 +16,8 @@ module Ktistec
 
       if @@nonce != nonce
         enhancements = Ktistec::HTML.enhance(description)
-        @@description = Ktistec::Util.sanitize(enhancements.content)
+        # TODO: lift @@description to SafeHTML? in PR5
+        @@description = Ktistec::Util.sanitize(enhancements.content).to_s
         @@nonce = nonce
       end
 

@@ -34,7 +34,7 @@ turbo-frame.ui.segment.poll id="poll-#{question.id}" data-controller="poll" data
               - else
                 input type="radio" name="options" value=option.name data-action="poll#optionSelected"
             span.option-name
-              == s Ktistec::Emoji.emojify(option.name, object_emojis)
+              = s Ktistec::Emoji.emojify(option.name, object_emojis)
           - if show_results
             .poll-option-votes
               - option_count = option.votes_count

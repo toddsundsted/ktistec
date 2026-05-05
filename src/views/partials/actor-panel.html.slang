@@ -22,13 +22,13 @@
               delivery attempts.
     .ui.basic.segment
       - if _account
-        a href=remote_actor_path(actor) == s Ktistec::Emoji.emojify(actor.display_name, _emojis)
+        a href=remote_actor_path(actor) = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
       - else
-        span == s Ktistec::Emoji.emojify(actor.display_name, _emojis)
+        span = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
       br: a href=actor.display_link = actor.handle
       - if (summary = actor.summary.presence)
         .ui.divider
-        == s Ktistec::Emoji.emojify(summary, _emojis)
+        = s Ktistec::Emoji.emojify(summary, _emojis)
       - if (attachments = actor.attachments.presence)
         .ui.divider
         table

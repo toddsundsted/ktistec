@@ -10,9 +10,9 @@
       == actor_icon(actor)
   .extra.content
     - if _account
-      a.ui.header href=remote_actor_path(actor) == s Ktistec::Emoji.emojify(actor.display_name, _emojis)
+      a.ui.header href=remote_actor_path(actor) = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
     - else
-      .ui.header == s Ktistec::Emoji.emojify(actor.display_name, _emojis)
+      .ui.header = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
     a.ui.link href=actor.iri = actor.handle
   - if _account && _account.actor != actor
     .extra.content

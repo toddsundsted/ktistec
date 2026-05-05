@@ -31,6 +31,10 @@ class String
   def ==(other : JSON::Any)
     other.raw == self
   end
+
+  def ==(other : Ktistec::SafeHTML)
+    other.to_s == self
+  end
 end
 
 class Regex

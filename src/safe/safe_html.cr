@@ -21,7 +21,7 @@ module Ktistec
     # Sanitizes the input.
     #
     def self.sanitize(content : String?) : SafeHTML
-      new(::Ktistec::Util.sanitize(content))
+      ::Ktistec::Util.sanitize(content)
     end
 
     # Asserts the input is already safe.
@@ -38,6 +38,10 @@ module Ktistec
 
     def ==(other : String) : Bool
       @value == other
+    end
+
+    def =~(other : Regex)
+      @value =~ other
     end
   end
 end

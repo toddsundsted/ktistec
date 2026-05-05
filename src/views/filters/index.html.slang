@@ -15,7 +15,7 @@ turbo-frame#terms
         - terms.each do |term|
           tr.term id="term-#{term.id}"
             td == wrap_filter_term term.term
-            td == form_button(filter_path(term), method: "DELETE", button_class: "ui dangerous mini iconic button") do
+            td = form_button(filter_path(term), method: "DELETE", button_class: "ui dangerous mini iconic button") do
               i.x.icon
               | Delete
   p
@@ -38,7 +38,7 @@ p
     that contain "elon" followed later by "musk" (like "Elon Musk says..."
     or "why Elon is... Musk's company..."), use "%elon%musk%".
 - term = FilterTerm.new(term: "")
-== form_tag(term, filters_path) do
+= form_tag(term, filters_path) do
   == error_messages(term)
   == input_tag("New Term", term, term)
   == submit_button

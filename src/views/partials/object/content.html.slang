@@ -97,7 +97,7 @@ crystal:
             i.external.arrow.icon
             | Source
       - elsif account && object.blocked?
-        == form_button unblock_object_path(object), button_class: "ui button mini iconic" do
+        = form_button unblock_object_path(object), button_class: "ui button mini iconic" do
           i.times.icon
           | Unblock
         - if object.cached?
@@ -114,7 +114,7 @@ crystal:
           button.ui.mini.iconic.button
             i.edit.icon
             | Edit
-        == form_button object_path(object), method: "DELETE", button_class: "ui mini dangerous iconic button", button_data: {"modal" => "delete", "controller" => "modal-action", "action" => "click->modal-action#show"} do
+        = form_button object_path(object), method: "DELETE", button_class: "ui mini dangerous iconic button", button_data: {"modal" => "delete", "controller" => "modal-action", "action" => "click->modal-action#show"} do
           i.trash.icon
           | Delete
       - elsif account
@@ -130,19 +130,19 @@ crystal:
             i.reply.icon
             = pluralize(c, "Reply")
         - if (c = object.likes_count) > 0 && (like = account.actor.find_like_for(object))
-          == activity_button(outbox_path(account), like.iri, "Undo", button_class: "ui button mini blue iconic") do
+          = activity_button(outbox_path(account), like.iri, "Undo", button_class: "ui button mini blue iconic") do
             i.thumbs.up.icon
             = pluralize(c, "Like")
         - else
-          == activity_button(outbox_path(account), object.iri, "Like", button_class: "ui button mini iconic") do
+          = activity_button(outbox_path(account), object.iri, "Like", button_class: "ui button mini iconic") do
             i.thumbs.up.icon
             = pluralize(c, "Like")
         - if (c = object.announces_count) > 0 && (announce = account.actor.find_announce_for(object))
-          == activity_button(outbox_path(account), announce.iri, "Undo", button_class: "ui button mini blue iconic") do
+          = activity_button(outbox_path(account), announce.iri, "Undo", button_class: "ui button mini blue iconic") do
             i.share.icon
             = pluralize(c, "Share")
         - elsif object.visible
-          == activity_button(outbox_path(account), object.iri, "Announce", button_class: "ui button mini iconic") do
+          = activity_button(outbox_path(account), object.iri, "Announce", button_class: "ui button mini iconic") do
             i.share.icon
             = pluralize(c, "Share")
         - if object.visible
@@ -151,30 +151,30 @@ crystal:
               i.retweet.icon
               | Quote
         - if (bookmark = Relationship::Content::Bookmark.find?(actor: account.actor, object: object))
-          == form_button bookmark_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
+          = form_button bookmark_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
             i.bookmark.icon
             | Bookmark
         - else
-          == form_button bookmark_path(object), button_class: "ui button mini iconic" do
+          = form_button bookmark_path(object), button_class: "ui button mini iconic" do
             i.bookmark.outline.icon
             | Bookmark
         - if author == account.actor && object.visible
           - if (pin =  Relationship::Content::Pin.find?(actor: account.actor, object: object))
-            == form_button pin_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
+            = form_button pin_path(object), method: "DELETE", button_class: "ui button mini blue iconic" do
               i.pin.icon
               | Pin
           - else
-            == form_button pin_path(object), button_class: "ui button mini iconic" do
+            = form_button pin_path(object), button_class: "ui button mini iconic" do
               i.pin.icon
               | Pin
         - if object.translations.first?
-          == form_button clear_translation_object_path(object), button_class: "ui button mini purple iconic" do
+          = form_button clear_translation_object_path(object), button_class: "ui button mini purple iconic" do
             i.paper.plane.icon
             | Clear
         - elsif Ktistec.translator
           - if (source = account.language) && (target = object.language)
             - if source.split("-").first != target.split("-").first
-              == form_button create_translation_object_path(object), button_class: "ui button mini iconic" do
+              = form_button create_translation_object_path(object), button_class: "ui button mini iconic" do
                 i.paper.plane.icon
                 | Translate
         - if object.in_reply_to? && for_thread.try(&.first.attributed_to?) == account.actor
@@ -195,11 +195,11 @@ crystal:
             button.ui.mini.iconic.button
               i.edit.icon
               | Edit
-          == activity_button(outbox_path(account), object.iri, "Delete", button_class: "ui button mini dangerous iconic", button_data: {"modal": "delete", "controller": "modal-action", "action": "click->modal-action#show"}) do
+          = activity_button(outbox_path(account), object.iri, "Delete", button_class: "ui button mini dangerous iconic", button_data: {"modal": "delete", "controller": "modal-action", "action": "click->modal-action#show"}) do
             i.trash.icon
             | Delete
         - elsif announce.nil? && like.nil?
-          == form_button block_object_path(object), button_class: "ui button mini dangerous iconic", button_data: {"modal": "block.object", "controller": "modal-action", "action": "click->modal-action#show"} do
+          = form_button block_object_path(object), button_class: "ui button mini dangerous iconic", button_data: {"modal": "block.object", "controller": "modal-action", "action": "click->modal-action#show"} do
             i.times.icon
             | Block
         - if object.cached?

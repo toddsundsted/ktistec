@@ -30,9 +30,9 @@ turbo-frame#thread_page_thread_controls
     - if env.account?
       .ui.basic.segment
         - if _follow && !_follow.destroyed?
-          == form_button "Unfollow", unfollow_thread_path(thread.first)
+          = form_button "Unfollow", unfollow_thread_path(thread.first)
         - elsif _task && !_task.complete
-          == form_button "Cancel", cancel_fetch_thread_path(thread.first)
+          = form_button "Cancel", cancel_fetch_thread_path(thread.first)
         - else
           form.ui.inline.form method="POST"
             == authenticity_token(env)

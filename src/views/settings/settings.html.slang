@@ -7,7 +7,7 @@
 h1 Account Settings
 p
   | Settings for account <strong>#{actor.username}</strong>.
-== form_tag(account, "/settings/actor", form: "data") do
+= form_tag(account, "/settings/actor", form: "data") do
   == error_messages(account)
   == input_tag("Display Name", actor, name)
   == input_tag("Summary", actor, summary)
@@ -96,7 +96,7 @@ p
 h2 Delete Account!
 p
   | Delete account <strong>#{actor.username}</strong>. This action cannot be undone!
-== form_tag(nil, "/settings/terminate") do
+= form_tag(nil, "/settings/terminate") do
   input.ui.dangerous.button type="submit" value="Delete Account" data-modal="terminate" data-controller="modal-action" data-action="click->modal-action#show"
 .ui.basic.tiny.terminate.modal
   .header
@@ -116,7 +116,7 @@ p
       i.checkmark.icon
       | Yes
 h1 Site Settings
-== form_tag(settings, "/settings/service", form: "data") do
+= form_tag(settings, "/settings/service", form: "data") do
   == error_messages(settings)
   == input_tag("Site Name", settings, site)
   == input_tag("Site Image", settings, image, class: "filepond", type: "file")

@@ -41,7 +41,7 @@ module Ktistec::ViewHelper
         {% end %}
       {% end %}
     ]
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <form #{%form_attrs.join(" ")}>\
     #{%csrf}\
     #{%input}\
@@ -53,6 +53,7 @@ module Ktistec::ViewHelper
     </button>\
     </form>
     HTML
+    )
   end
 
   # General purpose form-powered button.
@@ -102,7 +103,7 @@ module Ktistec::ViewHelper
         {% end %}
       {% end %}
     ]
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <form #{%form_attrs.join(" ")}>\
     #{%csrf}\
     #{%input}\
@@ -111,6 +112,7 @@ module Ktistec::ViewHelper
     </button>\
     </form>
     HTML
+    )
   end
 
   macro authenticity_token(env)
@@ -173,13 +175,14 @@ module Ktistec::ViewHelper
         {% end %}
       {% end %}
     ]
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <form #{%attributes.join(" ")}>\
     #{%csrf}\
     #{%input}\
     #{%block}\
     </form>
     HTML
+    )
   end
 
   macro input_tag(label, model, field, id = nil, class _class = "", type = "text", placeholder = nil, autofocus = nil, data = nil)

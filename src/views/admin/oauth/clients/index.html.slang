@@ -5,7 +5,7 @@ h1.ui.header OAuth Clients
 
 .ui.segment
   h3.ui.header Add New Client
-  == form_tag(new_client, "/admin/oauth/clients", class: "ui small form") do
+  = form_tag(new_client, "/admin/oauth/clients", class: "ui small form") do
     == error_messages(new_client)
     == input_tag("Client Name", new_client, client_name, placeholder: "Client name")
     == input_tag("Redirect URIs", new_client, redirect_uris, placeholder: "Space-separated list of redirect URIs")
@@ -44,5 +44,5 @@ table.ui.table
           - else
             em Never
         td
-          == form_tag(nil, "/admin/oauth/clients/#{client.id}", method: "DELETE") do
+          = form_tag(nil, "/admin/oauth/clients/#{client.id}", method: "DELETE") do
             input.ui.mini.red.button type="submit" value="Delete" data-controller="modal-action" data-action="click->modal-action#show" data-modal="delete-oauth-client" data-modal-client-name=client.client_name

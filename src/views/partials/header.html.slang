@@ -14,7 +14,7 @@ nav.ui.top.fixed.inverted.navigation.menu data-turbo-prefetch="false"
         i.cog.icon
         span.text Admin
       .right.menu
-        == form_tag(nil, sessions_path, method: "DELETE", class: "form") do
+        = form_tag(nil, sessions_path, method: "DELETE", class: "form") do
           .ui.input
             input.link.item type="submit" value="Sign Out"
     - elsif Account.count > 0

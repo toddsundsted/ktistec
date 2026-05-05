@@ -4,6 +4,7 @@ require "xml/node"
 require "json"
 
 require "../../src/framework"
+require "../../src/safe"
 
 # require specific classes for later redefinitions
 
@@ -11,6 +12,12 @@ require "../../src/models/account"
 require "../../src/models/task"
 
 # Helpers for spec matchers
+
+module XML
+  def self.parse_html(safe : Ktistec::SafeHTML, options : XML::HTMLParserOptions = XML::HTMLParserOptions.default)
+    parse_html(safe.to_s, options)
+  end
+end
 
 class String
   def ===(other : HTTP::Request)

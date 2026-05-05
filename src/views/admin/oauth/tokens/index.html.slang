@@ -33,5 +33,5 @@ table.ui.table
         td = token.created_at.to_s("%Y-%m-%d %H:%M")
         td = token.expires_at.to_s("%Y-%m-%d %H:%M")
         td
-          == form_tag(nil, "/admin/oauth/tokens/#{token.id}", method: "DELETE") do
+          = form_tag(nil, "/admin/oauth/tokens/#{token.id}", method: "DELETE") do
             input.ui.mini.red.button type="submit" value="Delete" data-controller="modal-action" data-action="click->modal-action#show" data-modal="delete-oauth-token" data-modal-token-id=token.id

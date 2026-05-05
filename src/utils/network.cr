@@ -1,4 +1,4 @@
-require "web_finger"
+require "../framework/web_finger"
 
 module Ktistec
   # Utilities for network operations.
@@ -9,7 +9,7 @@ module Ktistec
     #
     # Returns the IRI if successful. Raises an error if things go wrong:
     #
-    #   HostMeta::Error, WebFinger::Error - the underlying lookup failed
+    #   Ktistec::HostMeta::Error, Ktistec::WebFinger::Error - the underlying lookup failed
     #
     #   KeyError - a rel="self" link does not exist in the retrieved record
     #
@@ -20,7 +20,7 @@ module Ktistec
       if url.scheme && url.host && url.path
         name
       else
-        WebFinger.query("acct:#{name.lchop('@')}").link("self").href.presence.not_nil!
+        Ktistec::WebFinger.query("acct:#{name.lchop('@')}").link("self").href.presence.not_nil!
       end
     end
   end

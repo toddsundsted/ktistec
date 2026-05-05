@@ -16,10 +16,6 @@ shards:
     git: https://github.com/crystal-loot/exception_page.git
     version: 0.5.0
 
-  host_meta:
-    git: https://github.com/toddsundsted/host_meta.git
-    version: 0.2.4
-
   kemal:
     git: https://github.com/kemalcr/kemal.git
     version: 1.7.3
@@ -51,7 +47,3 @@ shards:
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
     version: 0.22.0
-
-  web_finger:
-    git: https://github.com/toddsundsted/web_finger.git
-    version: 0.2.6

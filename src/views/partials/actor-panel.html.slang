@@ -35,7 +35,7 @@
           - attachments.each do |attachment|
             tr
               th.name = attachment.name
-              td.value == attachment.value_as_html
+              td.value = attachment.value_as_html
   - if _account && _account.actor != actor
     - if (follow_relationship = actor.follows?(_account.actor))
       .ui.basic.segment

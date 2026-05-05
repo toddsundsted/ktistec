@@ -279,7 +279,7 @@ module Ktistec
     # URL (parses with scheme/host/path and passes `safe_url?`).
     # Returns `nil` otherwise.
     #
-    def wrap_link(str, include_scheme = false, length = 30, tag = :a) : String?
+    def wrap_link(str, include_scheme = false, length = 30, tag = :a) : Ktistec::SafeHTML?
       # `URI.parse` raises on some Fediverse URIs (e.g., ATProto's
       # `at://did:plc:.../`). on failure, return nil.
       uri = URI.parse(str) rescue nil
@@ -289,7 +289,7 @@ module Ktistec
         if first.size > length
           first, rest = first[0...length], first[length..-1]
         end
-        String.build do |io|
+        result = String.build do |io|
           if tag == :a
             io << %Q|<a href="#{::HTML.escape(str)}" target="_blank" rel="ugc">|
           else
@@ -306,6 +306,7 @@ module Ktistec
           end
           io << %Q|</#{tag}>|
         end
+        Ktistec::SafeHTML.assert_safe(result)
       end
     end
 

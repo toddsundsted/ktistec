@@ -5,10 +5,10 @@ module Ktistec
   module DescriptionEnhancer
     extend self
 
-    @@description : String? = nil
+    @@description : Ktistec::SafeHTML? = nil
     @@nonce : Int64? = nil
 
-    def enhanced_description
+    def enhanced_description : Ktistec::SafeHTML?
       nonce = Settings.nonce
       description = Ktistec.settings.description.presence
 
@@ -16,8 +16,7 @@ module Ktistec
 
       if @@nonce != nonce
         enhancements = Ktistec::HTML.enhance(description)
-        # TODO: lift @@description to SafeHTML? in PR5
-        @@description = Ktistec::Util.sanitize(enhancements.content).to_s
+        @@description = Ktistec::Util.sanitize(enhancements.content)
         @@nonce = nonce
       end
 

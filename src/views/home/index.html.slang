@@ -7,7 +7,7 @@ section.ui.feed data-controller="icon-load-error"
       .ui.segment.event
         .content data-controller="image-viewer" data-action="click->image-viewer#handleClick"
           .text
-            == description
+            = description
   - objects.each do |object|
     crystal:
       activity = object.activities.first?

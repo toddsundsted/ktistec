@@ -136,9 +136,8 @@ module ActivityPub
       # Renders the attachment value as HTML that is safe to
       # interpolate unescaped.
       #
-      def value_as_html(length : Int32 = 50) : String
-        # TODO: retype to SafeHTML in PR5 once wrap_link returns SafeHTML?
-        Ktistec::Util.wrap_link(value, length: length) || Ktistec::Util.sanitize(value).to_s
+      def value_as_html(length : Int32 = 50) : Ktistec::SafeHTML
+        Ktistec::Util.wrap_link(value, length: length) || Ktistec::Util.sanitize(value)
       end
     end
 

@@ -30,7 +30,13 @@ module Ktistec
       new(string)
     end
 
-    delegate :to_s, :presence, :empty?, :size, to: @value
+    delegate :to_s, :empty?, :size, :includes?, to: @value
+
+    # Returns `self` if the wrapped value has presence, otherwise `nil`.
+    #
+    def presence : SafeHTML?
+      @value.presence ? self : nil
+    end
 
     def ==(other : SafeHTML) : Bool
       @value == other.@value

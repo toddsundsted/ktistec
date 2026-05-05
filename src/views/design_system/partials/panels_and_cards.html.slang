@@ -29,7 +29,7 @@
                 - attachments.each do |attachment|
                   tr
                     th.name = attachment.name
-                    td.value == attachment.value_as_html
+                    td.value = attachment.value_as_html
           .ui.basic.segment
             details
               summary

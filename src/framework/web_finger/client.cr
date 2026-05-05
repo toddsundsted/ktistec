@@ -1,6 +1,5 @@
-require "http/client"
-
 require "../host_meta"
+require "../open"
 
 module Ktistec
   module WebFinger
@@ -52,38 +51,20 @@ module Ktistec
 
         url = template.gsub("{uri}", URI.encode_www_form(account))
 
-        attempts.times do
-          response = HTTP::Client.get(url)
-          case (code = response.status_code)
-          when 200
-            mt = response.mime_type.try(&.media_type)
-            return (
-              if mt =~ /xml/
-                Result.from_xml(response.body)
-              elsif mt =~ /json/
-                Result.from_json(response.body)
-              elsif response.body.starts_with?('{')
-                Result.from_json(response.body)
-              else
-                Result.from_xml(response.body)
-              end
-            )
-          when 300, 301, 302, 303, 307, 308
-            if (tmp = response.headers["Location"]?) && (url = tmp)
-              next
-            else
-              break
-            end
-          when 404
-            raise NotFoundError.new("not found [#{code}]: #{url}")
-          else
-            raise Error.new("error [#{code}]: #{url}")
-          end
+        response = Ktistec::Open.open(url, attempts: attempts)
+        mt = response.mime_type.try(&.media_type)
+        if mt =~ /xml/
+          Result.from_xml(response.body)
+        elsif mt =~ /json/
+          Result.from_json(response.body)
+        elsif response.body.starts_with?('{')
+          Result.from_json(response.body)
+        else
+          Result.from_xml(response.body)
         end
-        raise RedirectionError.new("redirection failed: #{url}")
       rescue err : JSON::ParseException
         raise ResultError.new(err.message)
-      rescue err : IO::Error | OpenSSL::Error | Compress::Deflate::Error | Compress::Gzip::Error
+      rescue err : Ktistec::Open::Error
         raise NotFoundError.new(err.message)
       end
     end

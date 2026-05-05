@@ -21,6 +21,12 @@ Spectator.describe Ktistec::HostMeta::Client do
       end
     end
 
+    it "raises an error if the host resolves to a private address" do
+      expect_raises(Ktistec::HostMeta::NotFoundError, /private address/) do
+        Ktistec::HostMeta::Client.query("loopback.example")
+      end
+    end
+
     it "raises an error if URL doesn't exist" do
       HTTP::Client.cache.set_response(
         "https://example.com/.well-known/host-meta",
@@ -122,6 +128,20 @@ Spectator.describe Ktistec::HostMeta::Client do
       )
       Ktistec::HostMeta::Client.query("example.com")
       expect(HTTP::Client.requests).to have("GET https://elsewhere.com/")
+    end
+
+    it "raises an error if a redirect resolves to a private address" do
+      HTTP::Client.cache.set_response(
+        "https://example.com/.well-known/host-meta",
+        HTTP::Client::Response.new(
+          302,
+          headers: HTTP::Headers{"Location" => "https://loopback.example/host-meta"},
+          body: "",
+        ),
+      )
+      expect_raises(Ktistec::HostMeta::NotFoundError, /private address/) do
+        Ktistec::HostMeta::Client.query("example.com")
+      end
     end
 
     it "requests the well-known host-meta URL" do

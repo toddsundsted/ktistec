@@ -41,6 +41,12 @@ Spectator.describe Ktistec::WebFinger::Client do
       end
     end
 
+    it "raises an error if the host resolves to a private address" do
+      expect_raises(Ktistec::WebFinger::NotFoundError, /private address/) do
+        Ktistec::WebFinger::Client.query("acct:foobar@loopback.example")
+      end
+    end
+
     it "raises an error if account doesn't exist" do
       stub_host_meta("example.com")
       HTTP::Client.cache.set_response(
@@ -215,6 +221,21 @@ Spectator.describe Ktistec::WebFinger::Client do
       )
       Ktistec::WebFinger::Client.query("https://example.com")
       expect(HTTP::Client.requests).to have("GET https://example.com/webfinger?r=https%3A%2F%2Fexample.com")
+    end
+
+    it "raises an error if a redirect resolves to a private address" do
+      stub_host_meta("example.com")
+      HTTP::Client.cache.set_response(
+        "https://example.com/webfinger?r=acct%3Afoobar%40example.com",
+        HTTP::Client::Response.new(
+          302,
+          headers: HTTP::Headers{"Location" => "https://loopback.example/webfinger"},
+          body: "",
+        ),
+      )
+      expect_raises(Ktistec::WebFinger::NotFoundError, /private address/) do
+        Ktistec::WebFinger::Client.query("acct:foobar@example.com")
+      end
     end
   end
 end

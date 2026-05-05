@@ -1,6 +1,7 @@
 require "html"
 require "uri"
 
+require "../../safe/safe_html"
 require "../../utils/avatar"
 
 module Ktistec::ViewHelper
@@ -99,7 +100,7 @@ module Ktistec::ViewHelper
       object ? "object-#{object.type.split("::").last.downcase}" : ""
     end
 
-    def actor_icon(actor, classes = nil, *, include_actor_id = true)
+    def actor_icon(actor, classes = nil, *, include_actor_id = true) : ::Ktistec::SafeHTML
       src = Utils::Avatar.url_for(actor)
       if actor
         if actor.deleted?
@@ -129,7 +130,7 @@ module Ktistec::ViewHelper
       ]
       attrs.push %Q(data-actor-id="#{actor.id}") if actor && actor.id && include_actor_id
       attrs.unshift %Q(class="#{::HTML.escape(classes)}") if classes
-      %Q(<img #{attrs.join(" ")}>)
+      ::Ktistec::SafeHTML.assert_safe(%Q(<img #{attrs.join(" ")}>))
     end
 
     # `(` and `)` are included as defense in depth in case the
@@ -148,7 +149,7 @@ module Ktistec::ViewHelper
       %Q(background-image: url("#{url}");)
     end
 
-    def actor_type(actor)
+    def actor_type(actor) : ::Ktistec::SafeHTML
       icon =
         if actor
           case actor.type.split("::").last
@@ -168,7 +169,7 @@ module Ktistec::ViewHelper
         else
           "user"
         end
-      %Q(<i class="actor-type-overlay #{icon} icon"></i>)
+      ::Ktistec::SafeHTML.assert_safe(%Q(<i class="actor-type-overlay #{icon} icon"></i>))
     end
   end
 end

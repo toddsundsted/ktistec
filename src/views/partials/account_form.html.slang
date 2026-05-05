@@ -1,5 +1,5 @@
 = form_tag(account, form_action) do
-  == error_messages(account)
+  = error_messages(account)
   == input_tag("Username", account, username, autofocus: true)
   == input_tag("Password", account, password, type: "password")
   == input_tag("Display Name", actor, name)

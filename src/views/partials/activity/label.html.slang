@@ -1,2 +1,2 @@
 .label
-  == actor_icon(activity.actor)
+  = actor_icon(activity.actor)

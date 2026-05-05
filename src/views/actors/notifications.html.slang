@@ -19,7 +19,7 @@
             activities = activity.object.activities(inclusion: activity.type)
             emojis = Tag::Emoji.where(subject: activity.actor)
           .label
-            == actor_icon(activity.actor)
+            = actor_icon(activity.actor)
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
@@ -38,7 +38,7 @@
             activities = activity.object.activities(inclusion: activity.type)
             emojis = Tag::Emoji.where(subject: activity.actor)
           .label
-            == actor_icon(activity.actor)
+            = actor_icon(activity.actor)
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
@@ -57,7 +57,7 @@
             activities = activity.object.activities(inclusion: activity.type)
             emojis = Tag::Emoji.where(subject: activity.actor)
           .label
-            == actor_icon(activity.actor)
+            = actor_icon(activity.actor)
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
@@ -78,7 +78,7 @@
             in_reply_to = object.in_reply_to
             emojis = Tag::Emoji.where(subject: attributed_to)
           .label
-            == actor_icon(attributed_to)
+            = actor_icon(attributed_to)
           .content
             .summary
               a> href=remote_actor_path(attributed_to) = s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
@@ -95,7 +95,7 @@
             attributed_to = object.attributed_to
             emojis = Tag::Emoji.where(subject: attributed_to)
           .label
-            == actor_icon(attributed_to)
+            = actor_icon(attributed_to)
           .content
             .summary
               a> href=remote_actor_path(attributed_to) = s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
@@ -111,7 +111,7 @@
             content = object ? object.preview : nil
             attributed_to = object.try(&.attributed_to)
           .label
-            == actor_icon(attributed_to)
+            = actor_icon(attributed_to)
           .content
             .summary
               | There are new posts tagged with
@@ -127,7 +127,7 @@
             content = object ? object.preview : nil
             attributed_to = object.try(&.attributed_to)
           .label
-            == actor_icon(attributed_to)
+            = actor_icon(attributed_to)
           .content
             .summary
               | There are new posts that mention
@@ -141,7 +141,7 @@
             activity = notification.activity
             emojis = Tag::Emoji.where(subject: activity.actor)
           .label
-            == actor_icon(activity.actor)
+            = actor_icon(activity.actor)
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
@@ -166,7 +166,7 @@
             attributed_to = object.attributed_to
             emojis = Tag::Emoji.where(subject: attributed_to)
           .label
-            == actor_icon(attributed_to)
+            = actor_icon(attributed_to)
           .content
             .summary
               - if object.iri == object.thread
@@ -185,7 +185,7 @@
             question = notification.question
             attributed_to = question.attributed_to
           .label
-            == actor_icon(attributed_to)
+            = actor_icon(attributed_to)
           .content
             .summary
               - if actor == attributed_to
@@ -204,7 +204,7 @@
             activity = notification.activity
             emojis = Tag::Emoji.where(subject: activity.actor)
           .label
-            == actor_icon(activity.actor)
+            = actor_icon(activity.actor)
           .content
             .summary
               a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)

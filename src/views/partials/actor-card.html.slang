@@ -7,7 +7,7 @@
   - else
     - style = actor_background_style(actor)
     .content class=(style ? nil : "placeholder") style=style
-      == actor_icon(actor)
+      = actor_icon(actor)
   .extra.content
     - if _account
       a.ui.header href=remote_actor_path(actor) = s Ktistec::Emoji.emojify(actor.display_name, _emojis)

@@ -10,8 +10,8 @@
     - style = actor_background_style(actor)
     .ui.basic.segment class=(style ? nil : "placeholder") style=style
       .actor-icon-container
-        == actor_icon(actor)
-        == actor_type(actor)
+        = actor_icon(actor)
+        = actor_type(actor)
     - if _account && actor.down?
       .ui.attached.tiny.warning.icon.message
         i.cloud.icon

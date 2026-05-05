@@ -231,7 +231,7 @@ crystal:
         - activities.each do |activity|
           - if activity.actor?
             a data-turbo-frame="_top" href=remote_actor_path(activity.actor)
-              == actor_icon(activity.actor, "ui avatar image")
+              = actor_icon(activity.actor, "ui avatar image")
               - case activity
               - when ActivityPub::Activity::Announce
                 i.share.icon

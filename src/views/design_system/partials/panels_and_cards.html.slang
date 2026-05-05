@@ -9,7 +9,7 @@
           - style = actor_background_style(actor)
           .ui.basic.segment class=(style ? nil : "placeholder") style=style
             .actor-icon-container
-              == actor_icon(actor)
+              = actor_icon(actor)
               i.actor-type-overlay.user.icon
           .ui.attached.tiny.warning.icon.message
             i.cloud.icon
@@ -71,7 +71,7 @@
         .ui.fluid.actor.card
           - style = actor_background_style(actor)
           .content class=(style ? nil : "placeholder") style=style
-            == actor_icon(actor)
+            = actor_icon(actor)
           .extra.content
             a.ui.header href="#" = actor.display_name
             a.ui.link href="#" = actor.handle

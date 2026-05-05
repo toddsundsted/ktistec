@@ -5,10 +5,10 @@ module Ktistec
   module DescriptionEnhancer
     extend self
 
-    @@description : String? = nil
+    @@description : Ktistec::SafeHTML? = nil
     @@nonce : Int64? = nil
 
-    def enhanced_description
+    def enhanced_description : Ktistec::SafeHTML?
       nonce = Settings.nonce
       description = Ktistec.settings.description.presence
 

@@ -26,7 +26,7 @@
         i.horizontal.sliders.icon
         .menu
           form data-controller="checkbox-submit" data-turbo-frame="main-timeline" data-turbo-action="replace"
-            == params_to_inputs(env.params.query, exclude: ["filters"])
+            = params_to_inputs(env.params.query, exclude: ["filters"])
             input type="hidden" name="filters" value=""
             .item
               .ui.slider.checkbox

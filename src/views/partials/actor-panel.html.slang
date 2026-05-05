@@ -10,8 +10,8 @@
     - style = actor_background_style(actor)
     .ui.basic.segment class=(style ? nil : "placeholder") style=style
       .actor-icon-container
-        == actor_icon(actor)
-        == actor_type(actor)
+        = actor_icon(actor)
+        = actor_type(actor)
     - if _account && actor.down?
       .ui.attached.tiny.warning.icon.message
         i.cloud.icon
@@ -22,20 +22,20 @@
               delivery attempts.
     .ui.basic.segment
       - if _account
-        a href=remote_actor_path(actor) == s Ktistec::Emoji.emojify(actor.display_name, _emojis)
+        a href=remote_actor_path(actor) = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
       - else
-        span == s Ktistec::Emoji.emojify(actor.display_name, _emojis)
+        span = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
       br: a href=actor.display_link = actor.handle
       - if (summary = actor.summary.presence)
         .ui.divider
-        == s Ktistec::Emoji.emojify(summary, _emojis)
+        = s Ktistec::Emoji.emojify(summary, _emojis)
       - if (attachments = actor.attachments.presence)
         .ui.divider
         table
           - attachments.each do |attachment|
             tr
               th.name = attachment.name
-              td.value == attachment.value_as_html
+              td.value = attachment.value_as_html
   - if _account && _account.actor != actor
     - if (follow_relationship = actor.follows?(_account.actor))
       .ui.basic.segment
@@ -46,8 +46,8 @@
               | #{actor.display_name} wants to follow you
             - if (_follow = follow_relationship.activity?)
               .ui.orange.segment
-                == activity_button "Accept", outbox_path(_account), _follow.iri, button_class: "ui green button"
-                == activity_button "Reject", outbox_path(_account), _follow.iri, button_class: "ui red button"
+                = activity_button "Accept", outbox_path(_account), _follow.iri, button_class: "ui green button"
+                = activity_button "Reject", outbox_path(_account), _follow.iri, button_class: "ui red button"
         - elsif follow_relationship.accepted?
           details
             summary
@@ -55,7 +55,7 @@
               | You accepted #{actor.display_name}'s follow request
             - if (_follow = follow_relationship.activity?)
               .ui.green.segment
-                == activity_button "Reject Instead", outbox_path(_account), _follow.iri, type: "Reject", button_class: "ui red button"
+                = activity_button "Reject Instead", outbox_path(_account), _follow.iri, type: "Reject", button_class: "ui red button"
         - elsif follow_relationship.rejected?
           details
             summary
@@ -63,18 +63,18 @@
               | You rejected #{actor.display_name}'s follow request
             - if (_follow = follow_relationship.activity?)
               .ui.grey.segment
-                == activity_button "Accept Instead", outbox_path(_account), _follow.iri, type: "Accept", button_class: "ui green button"
+                = activity_button "Accept Instead", outbox_path(_account), _follow.iri, type: "Accept", button_class: "ui green button"
     .ui.basic.footer.segment
       - _follow = _account.actor.follows?(actor).try(&.activity?)
       - if _follow
-        == activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"
+        = activity_button "Unfollow", outbox_path(_account), _follow.iri, type: "Undo"
       - elsif !actor.blocked?
-        == activity_button "Follow", outbox_path(_account), actor.iri, button_class: "ui button primary"
+        = activity_button "Follow", outbox_path(_account), actor.iri, button_class: "ui button primary"
       - if actor.blocked?
-        == form_button "Unblock", unblock_actor_path(actor), button_class: "ui button"
+        = form_button "Unblock", unblock_actor_path(actor), button_class: "ui button"
       - elsif !_follow
-        == form_button "Block", block_actor_path(actor), button_class: "ui button dangerous", button_data: {"modal": "block.actor", "controller": "modal-action", "action": "click->modal-action#show"}
-      == form_button "Refresh", refresh_remote_actor_path(actor), form_id: "actor-#{actor.id}-refresh-button", button_class: "ui button"
+        = form_button "Block", block_actor_path(actor), button_class: "ui button dangerous", button_data: {"modal": "block.actor", "controller": "modal-action", "action": "click->modal-action#show"}
+      = form_button "Refresh", refresh_remote_actor_path(actor), form_id: "actor-#{actor.id}-refresh-button", button_class: "ui button"
       .status
         - if _follow && (follow_relationship = _account.actor.follows?(actor))
           - if follow_relationship.pending?
@@ -88,4 +88,4 @@
         | Profile refreshed #{distance_of_time_in_words(actor.updated_at, Time.utc)} ago
   - elsif !_account && actor.local?
     .ui.basic.segment
-      == form_button "Follow", actor_remote_follow_path(actor), method: "GET", button_class: "ui button primary"
+      = form_button "Follow", actor_remote_follow_path(actor), method: "GET", button_class: "ui button primary"

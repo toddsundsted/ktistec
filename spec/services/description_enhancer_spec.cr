@@ -45,12 +45,16 @@ Spectator.describe Ktistec::DescriptionEnhancer do
         Ktistec.settings.assign({"description" => "<p>Cached content</p>"})
       end
 
+      # in the examples below, `SafeHTML` is a struct (value-eq), so
+      # `be` passes even without caching; check the wrapped String's
+      # reference identity.
+
       it "caches the result" do
         first_result = Ktistec::DescriptionEnhancer.enhanced_description
 
         second_result = Ktistec::DescriptionEnhancer.enhanced_description
 
-        expect(second_result).to be(first_result)
+        expect(second_result.not_nil!.to_s).to be(first_result.not_nil!.to_s)
       end
 
       it "recomputes when assigned" do
@@ -67,7 +71,7 @@ Spectator.describe Ktistec::DescriptionEnhancer do
         second_result = Ktistec::DescriptionEnhancer.enhanced_description
         expect(second_result).to eq("<p>Cached content</p>")
 
-        expect(second_result).not_to be(first_result)
+        expect(second_result.not_nil!.to_s).not_to be(first_result.not_nil!.to_s)
       end
     end
   end

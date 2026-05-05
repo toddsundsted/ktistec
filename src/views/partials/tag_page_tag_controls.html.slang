@@ -15,9 +15,9 @@ turbo-frame#tag_page_tag_controls
     - if env.account?
       .ui.basic.segment
         - if _follow && !_follow.destroyed?
-          == form_button "Unfollow", unfollow_hashtag_path(hashtag)
+          = form_button "Unfollow", unfollow_hashtag_path(hashtag)
         - elsif _task && !_task.complete
-          == form_button "Cancel", cancel_fetch_hashtag_path(hashtag)
+          = form_button "Cancel", cancel_fetch_hashtag_path(hashtag)
         - else
           form.ui.inline.form method="POST"
             == authenticity_token(env)

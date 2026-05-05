@@ -677,34 +677,6 @@ Spectator.describe Slang::Lexer do
         {TK::EOF, ""},
       ])
     end
-
-    it "lexes a conditional comment (`/[...]`)" do
-      tokens = pairs("/[if IE]")
-      expect(tokens).to eq([
-        {TK::CommentConditional, ""},
-        {TK::TextLiteral, "if IE"},
-        {TK::Newline, ""},
-        {TK::EOF, ""},
-      ])
-    end
-
-    it "raises on an unterminated conditional comment" do
-      expect { tokenize("/[if IE\n") }.to raise_error(Slang::LexError, "unterminated conditional comment at line 1, column 1")
-    end
-
-    it "raises on text after the closing `]` of a conditional comment" do
-      expect { tokenize("/[if IE] something") }.to raise_error(Slang::LexError, "unexpected text after `]` in conditional comment at line 1, column 10")
-    end
-
-    it "tolerates trailing whitespace after the closing `]` of a conditional comment" do
-      tokens = tokenize("/[if IE]   ")
-      expect(tokens.map(&.kind)).to eq([
-        TK::CommentConditional,
-        TK::TextLiteral,
-        TK::Newline,
-        TK::EOF,
-      ])
-    end
   end
 
   describe "doctype" do

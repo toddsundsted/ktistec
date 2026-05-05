@@ -1,3 +1,5 @@
+require "../../safe/safe_html"
+
 module Ktistec::ViewHelper
   module ClassMethods
     PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
@@ -49,9 +51,9 @@ module Ktistec::ViewHelper
       end
     end
 
-    def wrap_filter_term(str)
+    def wrap_filter_term(str) : ::Ktistec::SafeHTML
       str = ::HTML.escape(str).gsub(/\\?[%_]/) { %Q(<span class="wildcard">#{$0}</span>) }
-      %Q(<span class="ui filter term">#{str}</span>)
+      ::Ktistec::SafeHTML.assert_safe(%Q(<span class="ui filter term">#{str}</span>))
     end
 
     # Returns a tuple of {count, color, tooltip} for actor notifications.

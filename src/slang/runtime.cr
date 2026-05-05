@@ -12,6 +12,17 @@ require "../safe"
 module Slang::Runtime
   extend self
 
+  # HTML attribute names whose values are URLs.
+  #
+  URL_ATTRIBUTE_NAMES = %w[
+    href src action formaction data cite poster manifest
+    xlink:href background longdesc usemap
+  ]
+
+  # Matches event-handler attribute names (`onclick`, `onmouseover`, ...).
+  #
+  EVENT_HANDLER_RE = /\Aon[a-z]+\z/i
+
   # Emits a value to the buffer in HTML data context.
   #
   # `Ktistec::SafeHTML` is emitted raw; any other value has `.to_s`
@@ -44,6 +55,28 @@ module Slang::Runtime
       ::HTML.escape(value.to_s, io)
       io << '"'
     end
+  end
+
+  # Emits a single URL attribute (`href`, `src`, ...).
+  #
+  # `Ktistec::SafeURI` is emitted with HTML-escape applied. `nil` is
+  # silently skipped.
+  #
+  def emit_url_attr(io : IO, name : String, value : ::Ktistec::SafeURI?) : Nil
+    return if value.nil?
+    io << ' ' << name << "=\""
+    ::HTML.escape(value.to_s, io)
+    io << '"'
+  end
+
+  # Temporary fallback to preserve current behavior during the
+  # producer-migration window (Phase 2 PR4-PR7). Delegates to
+  # `emit_attr`. TODO: removed in the Phase 2 closeout PR; once the
+  # producers all return `SafeURI`, no plain-`String` value reaches
+  # this overload, and removing it slams the URL-attribute compile
+  # gate shut.
+  def emit_url_attr(io : IO, name : String, value) : Nil
+    emit_attr(io, name, value)
   end
 
   # Emits a merged `class="..."` attribute combining a literal prefix
@@ -81,7 +114,17 @@ module Slang::Runtime
       next if value.nil?
       key_s = key.to_s
       next if skip_class && key_s == "class"
-      emit_attr(io, key_s, value)
+      if key_s.matches?(EVENT_HANDLER_RE)
+        raise ArgumentError.new("event-handler attribute `#{key_s}` cannot be set via splat")
+      end
+      if URL_ATTRIBUTE_NAMES.includes?(key_s)
+        unless value.is_a?(::Ktistec::SafeURI)
+          raise ArgumentError.new("URL attribute `#{key_s}` requires SafeURI in splat, got #{value.class}")
+        end
+        emit_url_attr(io, key_s, value)
+      else
+        emit_attr(io, key_s, value)
+      end
     end
   end
 end

@@ -1,5 +1,7 @@
 require "html"
 
+require "../safe"
+
 # Runtime helpers used by codegen-emitted templates.
 #
 # The codegen emits direct `<<` writes for the literal-and-static
@@ -9,6 +11,20 @@ require "html"
 #
 module Slang::Runtime
   extend self
+
+  # Emits a value to the buffer in HTML data context.
+  #
+  # `Ktistec::SafeHTML` is emitted raw; any other value has `.to_s`
+  # applied and is HTML-escaped.
+  #
+  def emit(io : IO, value : ::Ktistec::SafeHTML) : Nil
+    io << value.to_s
+  end
+
+  # :ditto:
+  def emit(io : IO, value) : Nil
+    ::HTML.escape(value.to_s, io)
+  end
 
   # Emits a single attribute for an unwrapped `name=expr` source
   # form.

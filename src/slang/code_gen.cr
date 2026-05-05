@@ -289,13 +289,17 @@ module Slang
 
       if node.children.empty?
         if node.escape
-          @output << "::HTML.escape((" << node.expr << ").to_s, " << @buffer_name << ")\n"
+          @output << "::Slang::Runtime.emit(" << @buffer_name << ", (" << node.expr << "))\n"
         else
           @output << '(' << node.expr << ").to_s(" << @buffer_name << ")\n"
         end
       else
         sub = fresh_sub_buffer
-        @output << '(' << node.expr << '\n'
+        if node.escape
+          @output << "::Slang::Runtime.emit(" << @buffer_name << ", (" << node.expr << '\n'
+        else
+          @output << '(' << node.expr << '\n'
+        end
         @output << "String.build do |" << sub << "|\n"
         saved_buffer = @buffer_name
         @buffer_name = sub
@@ -303,7 +307,11 @@ module Slang
         flush_literal
         @buffer_name = saved_buffer
         @output << "end\n"
-        @output << "end).to_s(" << @buffer_name << ")\n"
+        if node.escape
+          @output << "end))\n"
+        else
+          @output << "end).to_s(" << @buffer_name << ")\n"
+        end
       end
 
       emit_literal(" ") if node.ws_right

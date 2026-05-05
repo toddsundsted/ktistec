@@ -933,7 +933,7 @@ Spectator.describe Task::Fetch::Thread do
     end
 
     it "returns the path to the thread page" do
-      expect(subject.path_to).to eq("/remote/objects/#{object.id}/thread")
+      expect(subject.path_to.to_s).to eq("/remote/objects/#{object.id}/thread")
     end
   end
 end

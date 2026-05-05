@@ -8,11 +8,11 @@ Spectator.describe Utils::Paths do
 
   describe ".path_id_from_iri" do
     it "returns the last path segment" do
-      expect(Utils::Paths.path_id_from_iri("https://test.test/objects/abc123")).to eq("abc123")
+      expect((Utils::Paths.path_id_from_iri("https://test.test/objects/abc123")).to_s).to eq("abc123")
     end
 
     it "returns the input" do
-      expect(Utils::Paths.path_id_from_iri("abc123")).to eq("abc123")
+      expect((Utils::Paths.path_id_from_iri("abc123")).to_s).to eq("abc123")
     end
   end
 
@@ -31,42 +31,62 @@ Spectator.describe Utils::Paths do
   describe "back_path" do
     let(env) do
       make_env("GET", "/filters/17").tap do |env|
-        env.request.headers["Referer"] = "/back"
+        env.request.headers["Referer"] = referer
       end
     end
 
-    it "gets the back path" do
-      expect(back_path).to eq("/back")
+    context "with path only" do
+      let(referer) { "/back" }
+
+      it "returns the Referer" do
+        expect((back_path).to_s).to eq("/back")
+      end
+    end
+
+    context "with an unsafe scheme" do
+      let(referer) { "javascript:alert(1)" }
+
+      it "falls back to /" do
+        expect((back_path).to_s).to eq("/")
+      end
+    end
+
+    context "with a relative protocol" do
+      let(referer) { "//evil.example.com/path" }
+
+      it "falls back to /" do
+        expect((back_path).to_s).to eq("/")
+      end
     end
   end
 
   describe "home_path" do
     it "gets the home path" do
-      expect(home_path).to eq("/")
+      expect((home_path).to_s).to eq("/")
     end
   end
 
   describe "sessions_path" do
     it "gets the sessions path" do
-      expect(sessions_path).to eq("/sessions")
+      expect((sessions_path).to_s).to eq("/sessions")
     end
   end
 
   describe "search_path" do
     it "gets the search path" do
-      expect(search_path).to eq("/search")
+      expect((search_path).to_s).to eq("/search")
     end
   end
 
   describe "settings_path" do
     it "gets the settings path" do
-      expect(settings_path).to eq("/settings")
+      expect((settings_path).to_s).to eq("/settings")
     end
   end
 
   describe "filters_path" do
     it "gets the filters path" do
-      expect(filters_path).to eq("/filters")
+      expect((filters_path).to_s).to eq("/filters")
     end
   end
 
@@ -81,30 +101,30 @@ Spectator.describe Utils::Paths do
       let(term) { double(:path_double) }
 
       it "gets the filter path" do
-        expect(filter_path(term)).to eq("/filters/42")
+        expect((filter_path(term)).to_s).to eq("/filters/42")
       end
     end
 
     it "gets the filter path" do
-      expect(filter_path).to eq("/filters/17")
+      expect((filter_path).to_s).to eq("/filters/17")
     end
   end
 
   describe "system_path" do
     it "gets the system path" do
-      expect(system_path).to eq("/system")
+      expect((system_path).to_s).to eq("/system")
     end
   end
 
   describe "metrics_path" do
     it "gets the metrics path" do
-      expect(metrics_path).to eq("/metrics")
+      expect((metrics_path).to_s).to eq("/metrics")
     end
   end
 
   describe "tasks_path" do
     it "gets the tasks path" do
-      expect(tasks_path).to eq("/tasks")
+      expect((tasks_path).to_s).to eq("/tasks")
     end
   end
 
@@ -119,12 +139,12 @@ Spectator.describe Utils::Paths do
       let(activity) { double(:path_double) }
 
       it "gets the remote activity path" do
-        expect(remote_activity_path(activity)).to eq("/remote/activities/42")
+        expect((remote_activity_path(activity)).to_s).to eq("/remote/activities/42")
       end
     end
 
     it "gets the remote activity path" do
-      expect(remote_activity_path).to eq("/remote/activities/17")
+      expect((remote_activity_path).to_s).to eq("/remote/activities/17")
     end
   end
 
@@ -139,12 +159,12 @@ Spectator.describe Utils::Paths do
       let(activity) { double(:path_double) }
 
       it "gets the activity path" do
-        expect(activity_path(activity)).to eq("/activities/xyz")
+        expect((activity_path(activity)).to_s).to eq("/activities/xyz")
       end
     end
 
     it "gets the activity path" do
-      expect(activity_path).to eq("/activities/abc")
+      expect((activity_path).to_s).to eq("/activities/abc")
     end
   end
 
@@ -159,18 +179,18 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the anchor" do
-        expect(anchor(object)).to eq("object-42")
+        expect((anchor(object)).to_s).to eq("object-42")
       end
     end
 
     it "gets the anchor" do
-      expect(anchor).to eq("object-17")
+      expect((anchor).to_s).to eq("object-17")
     end
   end
 
   describe "objects_path" do
     it "gets the objects path" do
-      expect(objects_path).to eq("/objects")
+      expect((objects_path).to_s).to eq("/objects")
     end
   end
 
@@ -185,12 +205,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the remote object path" do
-        expect(remote_object_path(object)).to eq("/remote/objects/42")
+        expect((remote_object_path(object)).to_s).to eq("/remote/objects/42")
       end
     end
 
     it "gets the remote object path" do
-      expect(remote_object_path).to eq("/remote/objects/17")
+      expect((remote_object_path).to_s).to eq("/remote/objects/17")
     end
   end
 
@@ -205,12 +225,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the object path" do
-        expect(object_path(object)).to eq("/objects/xyz")
+        expect((object_path(object)).to_s).to eq("/objects/xyz")
       end
     end
 
     it "gets the object path" do
-      expect(object_path).to eq("/objects/abc")
+      expect((object_path).to_s).to eq("/objects/abc")
     end
   end
 
@@ -225,12 +245,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the remote thread path" do
-        expect(remote_thread_path(object)).to eq("/remote/objects/42/thread#object-42")
+        expect((remote_thread_path(object)).to_s).to eq("/remote/objects/42/thread#object-42")
       end
     end
 
     it "gets the remote thread path" do
-      expect(remote_thread_path).to eq("/remote/objects/17/thread#object-17")
+      expect((remote_thread_path).to_s).to eq("/remote/objects/17/thread#object-17")
     end
   end
 
@@ -245,12 +265,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the thread path" do
-        expect(thread_path(object)).to eq("/objects/xyz/thread#object-42")
+        expect((thread_path(object)).to_s).to eq("/objects/xyz/thread#object-42")
       end
     end
 
     it "gets the thread path" do
-      expect(thread_path).to eq("/objects/abc/thread#object-abc")
+      expect((thread_path).to_s).to eq("/objects/abc/thread#object-abc")
     end
   end
 
@@ -265,12 +285,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the edit object path" do
-        expect(edit_object_path(object)).to eq("/objects/xyz/edit")
+        expect((edit_object_path(object)).to_s).to eq("/objects/xyz/edit")
       end
     end
 
     it "gets the edit object path" do
-      expect(edit_object_path).to eq("/objects/abc/edit")
+      expect((edit_object_path).to_s).to eq("/objects/abc/edit")
     end
   end
 
@@ -285,12 +305,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the reply path" do
-        expect(reply_path(object)).to eq("/remote/objects/42/reply")
+        expect((reply_path(object)).to_s).to eq("/remote/objects/42/reply")
       end
     end
 
     it "gets the reply path" do
-      expect(reply_path).to eq("/remote/objects/17/reply")
+      expect((reply_path).to_s).to eq("/remote/objects/17/reply")
     end
   end
 
@@ -305,12 +325,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the approve path" do
-        expect(approve_path(object)).to eq("/remote/objects/42/approve")
+        expect((approve_path(object)).to_s).to eq("/remote/objects/42/approve")
       end
     end
 
     it "gets the approve path" do
-      expect(approve_path).to eq("/remote/objects/17/approve")
+      expect((approve_path).to_s).to eq("/remote/objects/17/approve")
     end
   end
 
@@ -325,12 +345,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the unapprove path" do
-        expect(unapprove_path(object)).to eq("/remote/objects/42/unapprove")
+        expect((unapprove_path(object)).to_s).to eq("/remote/objects/42/unapprove")
       end
     end
 
     it "gets the unapprove path" do
-      expect(unapprove_path).to eq("/remote/objects/17/unapprove")
+      expect((unapprove_path).to_s).to eq("/remote/objects/17/unapprove")
     end
   end
 
@@ -345,12 +365,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the block object path" do
-        expect(block_object_path(object)).to eq("/remote/objects/42/block")
+        expect((block_object_path(object)).to_s).to eq("/remote/objects/42/block")
       end
     end
 
     it "gets the block object path" do
-      expect(block_object_path).to eq("/remote/objects/17/block")
+      expect((block_object_path).to_s).to eq("/remote/objects/17/block")
     end
   end
 
@@ -365,12 +385,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the unblock object path" do
-        expect(unblock_object_path(object)).to eq("/remote/objects/42/unblock")
+        expect((unblock_object_path(object)).to_s).to eq("/remote/objects/42/unblock")
       end
     end
 
     it "gets the unblock object path" do
-      expect(unblock_object_path).to eq("/remote/objects/17/unblock")
+      expect((unblock_object_path).to_s).to eq("/remote/objects/17/unblock")
     end
   end
 
@@ -385,12 +405,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the object remote reply path" do
-        expect(object_remote_reply_path(object)).to eq("/objects/xyz/remote-reply")
+        expect((object_remote_reply_path(object)).to_s).to eq("/objects/xyz/remote-reply")
       end
     end
 
     it "gets the object remote reply path" do
-      expect(object_remote_reply_path).to eq("/objects/abc/remote-reply")
+      expect((object_remote_reply_path).to_s).to eq("/objects/abc/remote-reply")
     end
   end
 
@@ -405,12 +425,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the object remote like path" do
-        expect(object_remote_like_path(object)).to eq("/objects/xyz/remote-like")
+        expect((object_remote_like_path(object)).to_s).to eq("/objects/xyz/remote-like")
       end
     end
 
     it "gets the object remote like path" do
-      expect(object_remote_like_path).to eq("/objects/abc/remote-like")
+      expect((object_remote_like_path).to_s).to eq("/objects/abc/remote-like")
     end
   end
 
@@ -425,12 +445,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the object remote share path" do
-        expect(object_remote_share_path(object)).to eq("/objects/xyz/remote-share")
+        expect((object_remote_share_path(object)).to_s).to eq("/objects/xyz/remote-share")
       end
     end
 
     it "gets the object remote share path" do
-      expect(object_remote_share_path).to eq("/objects/abc/remote-share")
+      expect((object_remote_share_path).to_s).to eq("/objects/abc/remote-share")
     end
   end
 
@@ -445,12 +465,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the create translation object path" do
-        expect(create_translation_object_path(object)).to eq("/remote/objects/42/translation/create")
+        expect((create_translation_object_path(object)).to_s).to eq("/remote/objects/42/translation/create")
       end
     end
 
     it "gets the create translation object path" do
-      expect(create_translation_object_path).to eq("/remote/objects/17/translation/create")
+      expect((create_translation_object_path).to_s).to eq("/remote/objects/17/translation/create")
     end
   end
 
@@ -465,12 +485,12 @@ Spectator.describe Utils::Paths do
       let(object) { double(:path_double) }
 
       it "gets the clear translation object path" do
-        expect(clear_translation_object_path(object)).to eq("/remote/objects/42/translation/clear")
+        expect((clear_translation_object_path(object)).to_s).to eq("/remote/objects/42/translation/clear")
       end
     end
 
     it "gets the clear translation object path" do
-      expect(clear_translation_object_path).to eq("/remote/objects/17/translation/clear")
+      expect((clear_translation_object_path).to_s).to eq("/remote/objects/17/translation/clear")
     end
   end
 
@@ -485,12 +505,12 @@ Spectator.describe Utils::Paths do
       let(actor) { double(:path_double) }
 
       it "gets the remote actor path" do
-        expect(remote_actor_path(actor)).to eq("/remote/actors/42")
+        expect((remote_actor_path(actor)).to_s).to eq("/remote/actors/42")
       end
     end
 
     it "gets the remote actor path" do
-      expect(remote_actor_path).to eq("/remote/actors/17")
+      expect((remote_actor_path).to_s).to eq("/remote/actors/17")
     end
   end
 
@@ -505,12 +525,12 @@ Spectator.describe Utils::Paths do
       let(actor) { double(:path_double) }
 
       it "gets the actor path" do
-        expect(actor_path(actor)).to eq("/actors/xyz")
+        expect((actor_path(actor)).to_s).to eq("/actors/xyz")
       end
     end
 
     it "gets the actor path" do
-      expect(actor_path).to eq("/actors/abc")
+      expect((actor_path).to_s).to eq("/actors/abc")
     end
   end
 
@@ -525,12 +545,12 @@ Spectator.describe Utils::Paths do
       let(actor) { double(:path_double) }
 
       it "gets the block actor path" do
-        expect(block_actor_path(actor)).to eq("/remote/actors/42/block")
+        expect((block_actor_path(actor)).to_s).to eq("/remote/actors/42/block")
       end
     end
 
     it "gets the block actor path" do
-      expect(block_actor_path).to eq("/remote/actors/17/block")
+      expect((block_actor_path).to_s).to eq("/remote/actors/17/block")
     end
   end
 
@@ -545,12 +565,12 @@ Spectator.describe Utils::Paths do
       let(actor) { double(:path_double) }
 
       it "gets the unblock actor path" do
-        expect(unblock_actor_path(actor)).to eq("/remote/actors/42/unblock")
+        expect((unblock_actor_path(actor)).to_s).to eq("/remote/actors/42/unblock")
       end
     end
 
     it "gets the unblock actor path" do
-      expect(unblock_actor_path).to eq("/remote/actors/17/unblock")
+      expect((unblock_actor_path).to_s).to eq("/remote/actors/17/unblock")
     end
   end
 
@@ -567,12 +587,12 @@ Spectator.describe Utils::Paths do
       let(relationship) { "helping" }
 
       it "gets the actor relationships path" do
-        expect(actor_relationships_path(actor, relationship)).to eq("/actors/xyz/helping")
+        expect((actor_relationships_path(actor, relationship)).to_s).to eq("/actors/xyz/helping")
       end
     end
 
     it "gets the actor relationships path" do
-      expect(actor_relationships_path).to eq("/actors/abc/running")
+      expect((actor_relationships_path).to_s).to eq("/actors/abc/running")
     end
   end
 
@@ -587,12 +607,12 @@ Spectator.describe Utils::Paths do
       let(actor) { double(:path_double) }
 
       it "gets the outbox path" do
-        expect(outbox_path(actor)).to eq("/actors/xyz/outbox")
+        expect((outbox_path(actor)).to_s).to eq("/actors/xyz/outbox")
       end
     end
 
     it "gets the outbox path" do
-      expect(outbox_path).to eq("/actors/abc/outbox")
+      expect((outbox_path).to_s).to eq("/actors/abc/outbox")
     end
   end
 
@@ -607,12 +627,12 @@ Spectator.describe Utils::Paths do
       let(actor) { double(:path_double) }
 
       it "gets the inbox path" do
-        expect(inbox_path(actor)).to eq("/actors/xyz/inbox")
+        expect((inbox_path(actor)).to_s).to eq("/actors/xyz/inbox")
       end
     end
 
     it "gets the inbox path" do
-      expect(inbox_path).to eq("/actors/abc/inbox")
+      expect((inbox_path).to_s).to eq("/actors/abc/inbox")
     end
   end
 
@@ -627,12 +647,12 @@ Spectator.describe Utils::Paths do
       let(actor) { double(:path_double) }
 
       it "gets the actor remote follow path" do
-        expect(actor_remote_follow_path(actor)).to eq("/actors/xyz/remote-follow")
+        expect((actor_remote_follow_path(actor)).to_s).to eq("/actors/xyz/remote-follow")
       end
     end
 
     it "gets the actor remote follow path" do
-      expect(actor_remote_follow_path).to eq("/actors/abc/remote-follow")
+      expect((actor_remote_follow_path).to_s).to eq("/actors/abc/remote-follow")
     end
   end
 
@@ -647,12 +667,12 @@ Spectator.describe Utils::Paths do
       let(hashtag) { "xyz" }
 
       it "gets the hashtag path" do
-        expect(hashtag_path(hashtag)).to eq("/tags/xyz")
+        expect((hashtag_path(hashtag)).to_s).to eq("/tags/xyz")
       end
     end
 
     it "gets the hashtag path" do
-      expect(hashtag_path).to eq("/tags/abc")
+      expect((hashtag_path).to_s).to eq("/tags/abc")
     end
   end
 
@@ -667,18 +687,18 @@ Spectator.describe Utils::Paths do
       let(mention) { "xyz" }
 
       it "gets the mention path" do
-        expect(mention_path(mention)).to eq("/mentions/xyz")
+        expect((mention_path(mention)).to_s).to eq("/mentions/xyz")
       end
     end
 
     it "gets the mentions path" do
-      expect(mention_path).to eq("/mentions/abc")
+      expect((mention_path).to_s).to eq("/mentions/abc")
     end
   end
 
   describe "remote_interaction_path" do
     it "gets the remote interaction path" do
-      expect(remote_interaction_path).to eq("/remote-interaction")
+      expect((remote_interaction_path).to_s).to eq("/remote-interaction")
     end
   end
 end

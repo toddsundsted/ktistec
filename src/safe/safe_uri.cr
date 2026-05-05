@@ -51,5 +51,9 @@ module Ktistec
     def ==(other : String) : Bool
       @value == other
     end
+
+    def =~(other : Regex)
+      @value =~ other
+    end
   end
 end

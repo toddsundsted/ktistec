@@ -15,14 +15,14 @@ module MCP
       resources = [] of JSON::Any
 
       resources << JSON::Any.new({
-        "uri"      => JSON::Any.new(mcp_information_path),
+        "uri"      => JSON::Any.new(mcp_information_path.to_s),
         "mimeType" => JSON::Any.new("application/json"),
         "name"     => JSON::Any.new("Instance Information"),
       })
 
       Account.all.each do |account|
         resources << JSON::Any.new({
-          "uri"      => JSON::Any.new(mcp_user_path(account)),
+          "uri"      => JSON::Any.new(mcp_user_path(account).to_s),
           "mimeType" => JSON::Any.new("application/json"),
           "name"     => JSON::Any.new(account.username),
         })
@@ -86,7 +86,7 @@ module MCP
         text_data = actor_contents(actor)
 
         # splice in the URI of the related actor resource
-        text_data["actor_uri"] = JSON::Any.new(mcp_actor_path(account.actor))
+        text_data["actor_uri"] = JSON::Any.new(mcp_actor_path(account.actor).to_s)
 
         user_data = {
           "uri"      => JSON::Any.new(uri),
@@ -110,7 +110,7 @@ module MCP
             text_data = actor_contents(actor)
 
             actor_data = {
-              "uri"      => JSON::Any.new(mcp_actor_path(actor)),
+              "uri"      => JSON::Any.new(mcp_actor_path(actor).to_s),
               "mimeType" => JSON::Any.new("application/json"),
               "name"     => JSON::Any.new(actor.name || "Actor #{actor.id}"),
               "text"     => JSON::Any.new(text_data.to_json),
@@ -132,7 +132,7 @@ module MCP
             text_data = object_contents(object)
 
             object_data = {
-              "uri"      => JSON::Any.new(mcp_object_path(object)),
+              "uri"      => JSON::Any.new(mcp_object_path(object).to_s),
               "mimeType" => JSON::Any.new("application/json"),
               "name"     => JSON::Any.new(object.name || "Object #{object.id}"),
               "text"     => JSON::Any.new(text_data.to_json),
@@ -144,7 +144,7 @@ module MCP
         JSON::Any.new({
           "contents" => JSON::Any.new(contents),
         })
-      elsif uri == mcp_information_path
+      elsif uri == mcp_information_path.to_s
         text_data = instance_information(account)
 
         information_data = {
@@ -175,7 +175,7 @@ module MCP
 
       # authenticated user information
       contents["authenticated_user"] = JSON::Any.new({
-        "uri"      => JSON::Any.new(mcp_user_path(account)),
+        "uri"      => JSON::Any.new(mcp_user_path(account).to_s),
         "username" => JSON::Any.new(account.username),
         "language" => JSON::Any.new(account.language || ""),
         "timezone" => JSON::Any.new(account.timezone),
@@ -227,7 +227,7 @@ module MCP
     def self.actor_contents(actor : ActivityPub::Actor) : Hash(String, JSON::Any)
       contents = Hash(String, JSON::Any).new
 
-      contents["uri"] = JSON::Any.new(mcp_actor_path(actor))
+      contents["uri"] = JSON::Any.new(mcp_actor_path(actor).to_s)
       contents["external_url"] = JSON::Any.new(actor.iri)
       contents["internal_url"] = JSON::Any.new("#{Ktistec.host}#{remote_actor_path(actor)}")
       if (name = actor.name)
@@ -277,7 +277,7 @@ module MCP
 
       contents = Hash(String, JSON::Any).new
 
-      contents["uri"] = JSON::Any.new(mcp_object_path(object))
+      contents["uri"] = JSON::Any.new(mcp_object_path(object).to_s)
       contents["external_url"] = JSON::Any.new(object.iri)
       contents["internal_url"] = JSON::Any.new("#{Ktistec.host}#{remote_object_path(object)}")
       if name
@@ -299,13 +299,13 @@ module MCP
         contents["published"] = JSON::Any.new(published.to_rfc3339)
       end
       if (attributed_to = object.attributed_to?)
-        contents["attributed_to"] = JSON::Any.new(mcp_actor_path(attributed_to))
+        contents["attributed_to"] = JSON::Any.new(mcp_actor_path(attributed_to).to_s)
       end
       if (in_reply_to = object.in_reply_to?)
-        contents["in_reply_to"] = JSON::Any.new(mcp_object_path(in_reply_to))
+        contents["in_reply_to"] = JSON::Any.new(mcp_object_path(in_reply_to).to_s)
       end
       if (quote = object.quote?)
-        contents["quote"] = JSON::Any.new(mcp_object_path(quote))
+        contents["quote"] = JSON::Any.new(mcp_object_path(quote).to_s)
         contents["quote_status"] = JSON::Any.new(
           if object.attributed_to_iri == quote.attributed_to_iri
             "self_quote"
@@ -339,7 +339,7 @@ module MCP
       if !(likes = activities.select(ActivityPub::Activity::Like)).empty?
         actors_data = likes.reverse.map do |like|
           JSON::Any.new({
-            "uri"      => JSON::Any.new(mcp_actor_path(like.actor)),
+            "uri"      => JSON::Any.new(mcp_actor_path(like.actor).to_s),
             "handle"   => JSON::Any.new(like.actor.handle),
             "liked_at" => JSON::Any.new(like.created_at.to_rfc3339),
           })
@@ -353,7 +353,7 @@ module MCP
       if !(dislikes = activities.select(ActivityPub::Activity::Dislike)).empty?
         actors_data = dislikes.reverse.map do |dislike|
           JSON::Any.new({
-            "uri"         => JSON::Any.new(mcp_actor_path(dislike.actor)),
+            "uri"         => JSON::Any.new(mcp_actor_path(dislike.actor).to_s),
             "handle"      => JSON::Any.new(dislike.actor.handle),
             "disliked_at" => JSON::Any.new(dislike.created_at.to_rfc3339),
           })
@@ -367,7 +367,7 @@ module MCP
       if !(announces = activities.select(ActivityPub::Activity::Announce)).empty?
         actors_data = announces.reverse.map do |announce|
           JSON::Any.new({
-            "uri"          => JSON::Any.new(mcp_actor_path(announce.actor)),
+            "uri"          => JSON::Any.new(mcp_actor_path(announce.actor).to_s),
             "handle"       => JSON::Any.new(announce.actor.handle),
             "announced_at" => JSON::Any.new(announce.created_at.to_rfc3339),
           })
@@ -381,8 +381,8 @@ module MCP
       if !(replies = object.replies(for_actor: nil)).empty? # `for_actor` is a dummy parameter
         objects_data = replies.map do |reply|
           reply_data = {
-            "uri"    => JSON::Any.new(mcp_object_path(reply)),
-            "author" => JSON::Any.new(mcp_actor_path(reply.attributed_to)),
+            "uri"    => JSON::Any.new(mcp_object_path(reply).to_s),
+            "author" => JSON::Any.new(mcp_actor_path(reply.attributed_to).to_s),
           }
           if (published = reply.published)
             reply_data["published"] = JSON::Any.new(published.to_rfc3339)

@@ -21,7 +21,7 @@
         - else
           span.invisible.label
       - env.account.pinned_collections.each do |label, path|
-        a.item href=path = label
+        a.item href=Ktistec::SafeURI.from(path) = label
       a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
         i.horizontal.sliders.icon
         .menu

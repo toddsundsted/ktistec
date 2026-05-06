@@ -38,6 +38,9 @@ module Ktistec
           uri = URI.parse(url)
           host = uri.host.presence
           raise Error.new("URL has no host: #{url}") unless host
+          unless uri.scheme == "http" || uri.scheme == "https"
+            raise Error.new("URL scheme not supported: #{url}")
+          end
           validate_host(host)
           client = HTTP::Client.new(uri)
           client.dns_timeout = 5.seconds

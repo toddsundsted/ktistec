@@ -2463,6 +2463,24 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#display_link" do
+    let_build(:actor, iri: "https://example.com/actor")
+
+    it "wraps the IRI" do
+      expect(actor.display_link).to eq(Ktistec::SafeURI.from("https://example.com/actor"))
+    end
+
+    it "wraps the first url" do
+      actor.urls = ["https://example.com/profile"]
+      expect(actor.display_link).to eq(Ktistec::SafeURI.from("https://example.com/profile"))
+    end
+
+    it "returns nil" do
+      actor.urls = ["javascript:alert(1)"]
+      expect(actor.display_link).to be_nil
+    end
+  end
+
   describe "#followed_actors" do
     let_build(:actor)
     let_build(:actor, named: :other)

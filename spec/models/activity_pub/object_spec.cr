@@ -2238,6 +2238,24 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#display_link" do
+    let_build(:object, iri: "https://example.com/object")
+
+    it "wraps the iri" do
+      expect(object.display_link).to eq(Ktistec::SafeURI.from("https://example.com/object"))
+    end
+
+    it "wraps the first url" do
+      object.urls = ["https://example.com/permalink"]
+      expect(object.display_link).to eq(Ktistec::SafeURI.from("https://example.com/permalink"))
+    end
+
+    it "returns nil" do
+      object.urls = ["javascript:alert(1)"]
+      expect(object.display_link).to be_nil
+    end
+  end
+
   context "canonical path" do
     PATH = "/abc/xyz"
 

@@ -36,11 +36,12 @@ module Ktistec::RSS
           end
         description = object.content || "Post by #{author.name}"
         published_date = object.published || object.created_at
+        next unless (item_url = object.display_link.try(&.to_s))
         rss << %{<item>\n}
         rss << %{<title><![CDATA[#{title}]]></title>\n}
         rss << %{<description><![CDATA[#{description}]]></description>\n}
-        rss << %{<link>#{::HTML.escape(object.display_link)}</link>\n}
-        rss << %{<guid isPermaLink="true">#{::HTML.escape(object.display_link)}</guid>\n}
+        rss << %{<link>#{::HTML.escape(item_url)}</link>\n}
+        rss << %{<guid isPermaLink="true">#{::HTML.escape(item_url)}</guid>\n}
         rss << %{<pubDate>#{published_date.to_rfc2822}</pubDate>\n}
         if (username = author.username)
           host = URI.parse(feed_url).host.not_nil!

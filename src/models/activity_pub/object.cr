@@ -380,8 +380,8 @@ module ActivityPub
       !in_reply_to_iri.nil?
     end
 
-    def display_link
-      urls.try(&.first?) || iri
+    def display_link : Ktistec::SafeURI?
+      Ktistec::SafeURI.from?(urls.try(&.first?) || iri)
     end
 
     def display_date(timezone = nil)

@@ -104,7 +104,7 @@ class ActorsController
     objects = actor.public_posts(**pagination_params(env))
 
     actor_name = actor.display_name
-    actor_url = actor.display_link
+    actor_url = actor.display_link.not_nil!.to_s
 
     env.response.content_type = "application/rss+xml; charset=utf-8"
 

@@ -231,8 +231,8 @@ module ActivityPub
       blocked? ? "[blocked]" : (name.presence || username.presence || iri)
     end
 
-    def display_link
-      urls.try(&.first?) || iri
+    def display_link : Ktistec::SafeURI?
+      Ktistec::SafeURI.from?(urls.try(&.first?) || iri)
     end
 
     def self.match?(account)

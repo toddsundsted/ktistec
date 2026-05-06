@@ -17,8 +17,12 @@ module Ktistec
     #
     def self.resolve(name)
       url = URI.parse(name)
-      if url.scheme && url.host && url.path
-        name
+      if url.scheme && (host = url.host) && (path = url.path)
+        if path =~ /^\/@([a-zA-Z0-9_]+)\/?$/
+          Ktistec::WebFinger.query("acct:#{$1}@#{host}").link("self").href.presence.not_nil!
+        else
+          name
+        end
       else
         Ktistec::WebFinger.query("acct:#{name.lchop('@')}").link("self").href.presence.not_nil!
       end

@@ -284,6 +284,20 @@ Spectator.describe SearchesController do
         end
       end
 
+      context "given a profile-style URL" do
+        it "retrieves and saves an actor" do
+          expect { get "/search?query=https://remote/@foo_bar", HTML_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div/a[contains(text(),'foo_bar')]")).not_to be_empty
+        end
+
+        it "retrieves and saves an actor" do
+          expect { get "/search?query=https://remote/@foo_bar", JSON_HEADERS }.to change { ActivityPub::Actor.count }.by(1)
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
+        end
+      end
+
       context "given a URL to an object" do
         it "retrieves and saves an object" do
           expect { get "/search?query=https://remote/objects/foo_bar", HTML_HEADERS }.to change { ActivityPub::Object.count }.by(1)

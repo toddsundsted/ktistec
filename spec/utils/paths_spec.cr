@@ -701,4 +701,22 @@ Spectator.describe Utils::Paths do
       expect((remote_interaction_path).to_s).to eq("/remote-interaction")
     end
   end
+
+  describe "stream_path" do
+    it "gets the stream path" do
+      expect((stream_path("actors", 42)).to_s).to eq("/stream/actors/42")
+    end
+
+    it "appends additional segments" do
+      expect((stream_path("objects", 42, "thread")).to_s).to eq("/stream/objects/42/thread")
+    end
+
+    it "encodes path-unsafe characters" do
+      expect((stream_path("mentions", "alice@host")).to_s).to eq("/stream/mentions/alice%40host")
+    end
+
+    it "encodes the type segment" do
+      expect((stream_path("a/b", "x")).to_s).to eq("/stream/a%2Fb/x")
+    end
+  end
 end

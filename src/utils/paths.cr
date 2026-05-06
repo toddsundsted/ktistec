@@ -352,4 +352,16 @@ module Utils::Paths
   macro mcp_information_path
     ::Ktistec::SafeURI.assert_safe("ktistec://information")
   end
+
+  macro stream_path(*segments)
+    ::Ktistec::SafeURI.assert_safe(
+      String.build do |%io|
+        %io << "/stream"
+        {% for segment in segments %}
+          %io << '/'
+          ::URI.encode_path_segment(%io, ({{segment}}).to_s)
+        {% end %}
+      end
+    )
+  end
 end

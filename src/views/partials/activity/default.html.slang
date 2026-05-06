@@ -1,4 +1,4 @@
 article.event
   .content
     .meta
-      a href=activity.iri = activity.type
+      a href=Ktistec::SafeURI.from?(activity.iri) = activity.type

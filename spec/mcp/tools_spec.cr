@@ -775,7 +775,7 @@ Spectator.describe MCP::Tools do
           expect(follow_mention_notification["type"]).to eq("follow_mention")
           expect(follow_mention_notification["mention"]).to eq("alice@example.com")
           expect(follow_mention_notification["latest_object_id"].as_i64).to eq(object.id)
-          expect(follow_mention_notification["action_url"]).to eq("#{Ktistec.host}/mentions/alice@example.com")
+          expect(follow_mention_notification["action_url"]).to eq("#{Ktistec.host}/mentions/alice%40example.com")
           created_at = Time.parse_rfc3339(follow_mention_notification["created_at"].as_s)
           expect(created_at).to be_within(1.second).of(notification_follow_mention.created_at)
         end

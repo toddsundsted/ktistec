@@ -33,7 +33,7 @@ class SessionsController
         redirect redirect_path
       else
         env.response.content_type = "application/json"
-        {jwt: jwt, redirect_path: redirect_path}.to_json
+        {jwt: jwt, redirect_path: redirect_path.to_s}.to_json
       end
     else
       forbidden "sessions/new", env: env, message: "invalid username or password", username: username, password: password

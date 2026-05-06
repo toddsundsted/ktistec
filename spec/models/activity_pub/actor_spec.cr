@@ -2463,6 +2463,60 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#display_link" do
+    let_build(:actor, iri: "https://example.com/actor")
+
+    it "wraps the IRI" do
+      expect(actor.display_link).to eq(Ktistec::SafeURI.from("https://example.com/actor"))
+    end
+
+    it "wraps the first url" do
+      actor.urls = ["https://example.com/profile"]
+      expect(actor.display_link).to eq(Ktistec::SafeURI.from("https://example.com/profile"))
+    end
+
+    it "returns nil" do
+      actor.urls = ["javascript:alert(1)"]
+      expect(actor.display_link).to be_nil
+    end
+  end
+
+  describe "#icon_safe" do
+    let_build(:actor)
+
+    it "returns nil" do
+      expect(actor.icon_safe).to be_nil
+    end
+
+    it "wraps the icon in a SafeURI" do
+      actor.icon = "https://example.com/avatar.png"
+      expect(actor.icon_safe).to eq(Ktistec::SafeURI.from("https://example.com/avatar.png"))
+    end
+
+    it "returns nil when the icon has an unsafe scheme" do
+      actor.icon = "javascript:alert(1)"
+      expect(actor.icon_safe).to be_nil
+    end
+  end
+
+  describe "#image_safe" do
+    let_build(:actor)
+
+    it "returns nil" do
+      expect(actor.image_safe).to be_nil
+    end
+
+    it "wraps the image in a SafeURI" do
+      actor.image = "https://example.com/banner.png"
+      expect(actor.image_safe).to eq(Ktistec::SafeURI.from("https://example.com/banner.png"))
+    end
+
+    it "returns nil when the image has an unsafe scheme" do
+      actor.image = "javascript:alert(1)"
+      expect(actor.image_safe).to be_nil
+    end
+  end
+
   describe "#followed_actors" do
     let_build(:actor)
     let_build(:actor, named: :other)

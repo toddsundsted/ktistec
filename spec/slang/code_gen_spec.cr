@@ -139,6 +139,18 @@ Spectator.describe Slang::CodeGen do
     end
   end
 
+  describe "URL attributes" do
+    it "emits a SafeURI value as the attribute" do
+      expect(render_string(%(a href=Ktistec::SafeURI.assert_safe("/x?a=1&b=2")))).to eq(
+        %(<a href="/x?a=1&amp;b=2"></a>),
+      )
+    end
+
+    it "omits the attribute when the value is nil" do
+      expect(render_string("a href=evaluates_to_nil")).to eq(%(<a></a>))
+    end
+  end
+
   describe "Boolean attributes" do
     it "emits the name for true" do
       expect(render_string("input checked=true")).to eq("<input checked>")

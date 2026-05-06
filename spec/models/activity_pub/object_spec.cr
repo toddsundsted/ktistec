@@ -2238,6 +2238,24 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#display_link" do
+    let_build(:object, iri: "https://example.com/object")
+
+    it "wraps the iri" do
+      expect(object.display_link).to eq(Ktistec::SafeURI.from("https://example.com/object"))
+    end
+
+    it "wraps the first url" do
+      object.urls = ["https://example.com/permalink"]
+      expect(object.display_link).to eq(Ktistec::SafeURI.from("https://example.com/permalink"))
+    end
+
+    it "returns nil" do
+      object.urls = ["javascript:alert(1)"]
+      expect(object.display_link).to be_nil
+    end
+  end
+
   context "canonical path" do
     PATH = "/abc/xyz"
 
@@ -2506,6 +2524,18 @@ Spectator.describe ActivityPub::Object::Attachment do
       nil,
       focal_point,
     )
+  end
+
+  describe "#url_safe" do
+    it "wraps the url in a SafeURI" do
+      attachment = ActivityPub::Object::Attachment.new("https://example.com/image.jpg", "image/jpeg")
+      expect(attachment.url_safe).to eq(Ktistec::SafeURI.from("https://example.com/image.jpg"))
+    end
+
+    it "returns nil when the url has an unsafe scheme" do
+      attachment = ActivityPub::Object::Attachment.new("javascript:alert(1)", "text/html")
+      expect(attachment.url_safe).to be_nil
+    end
   end
 
   describe "#has_focal_point?" do

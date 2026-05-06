@@ -18,7 +18,7 @@
           "subject":<%= subject_iri.to_json %>,
         <%- end -%>
         <%- if task.responds_to?(:path_to) -%>
-          "path":<%= task.path_to.to_json %>,
+          "path":<%= task.path_to.to_s.to_json %>,
         <%- end -%>
         <%- if task.is_a?(Task::Fetch::Fetcher) -%>
           "status":<%= fetch_task_status_line(task, detail: true).to_json %>,

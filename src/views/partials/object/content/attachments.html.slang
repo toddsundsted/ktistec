@@ -1,16 +1,16 @@
 - if attachments && (attachment = attachments.shift?)
   - if attachment.image?
-    img.ui.extra.attachment.image src=attachment.url alt=attachment.caption style="object-position: #{attachment.css_object_position}" loading="lazy"
+    img.ui.extra.attachment.image src=attachment.url_safe alt=attachment.caption style="object-position: #{attachment.css_object_position}" loading="lazy"
   - elsif attachment.video?
-    video.ui.extra.attachment.video src=attachment.url controls=true preload="none"
+    video.ui.extra.attachment.video src=attachment.url_safe controls=true preload="none"
   - elsif attachment.audio?
-    audio.ui.extra.attachment.audio src=attachment.url controls=true preload="none"
+    audio.ui.extra.attachment.audio src=attachment.url_safe controls=true preload="none"
   - unless attachments.empty?
     .extra.media
       - attachments.each do |attachment|
         - if attachment.image?
-          img.ui.attachment.image src=attachment.url alt=attachment.caption style="object-position: #{attachment.css_object_position}" loading="lazy"
+          img.ui.attachment.image src=attachment.url_safe alt=attachment.caption style="object-position: #{attachment.css_object_position}" loading="lazy"
         - elsif attachment.video?
-          video.ui.attachment.video src=attachment.url controls=true preload="none"
+          video.ui.attachment.video src=attachment.url_safe controls=true preload="none"
         - elsif attachment.audio?
-          audio.ui.attachment.audio src=attachment.url controls=true preload="none"
+          audio.ui.attachment.audio src=attachment.url_safe controls=true preload="none"

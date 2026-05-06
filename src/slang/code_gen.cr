@@ -253,7 +253,8 @@ module Slang
       end
       flush_literal
       emit_loc(attr.loc)
-      @output << "::Slang::Runtime.emit_attr(" << @buffer_name
+      helper = ::Slang::Runtime::URL_ATTRIBUTE_NAMES.includes?(attr.name) ? "emit_url_attr" : "emit_attr"
+      @output << "::Slang::Runtime." << helper << "(" << @buffer_name
       @output << ", " << attr.name.dump << ", (" << expr << "))\n"
     end
 

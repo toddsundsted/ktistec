@@ -1,6 +1,6 @@
 - query = env.request.query.try { |query| "?#{query}" } || ""
 - if (env.params.query["page"]?.try(&.to_i) || 1) == 1
-  turbo-stream-source src="/stream/actor/homepage#{query}"
+  turbo-stream-source src=Ktistec::SafeURI.from("/stream/actor/homepage#{query}")
 section.ui.feed data-controller="icon-load-error"
   #refresh-posts-message
   - timeline.each do |entry|

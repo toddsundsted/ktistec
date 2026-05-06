@@ -1,3 +1,7 @@
+require "uri"
+
+require "../safe/safe_uri"
+
 # Path helpers
 #
 module Utils::Paths
@@ -7,88 +11,89 @@ module Utils::Paths
   #    requiring the caller include the `Utils::Paths` module.
   # 2) Macro conditionals should be used to sequester code paths that
   #    require `env` from code paths that do not.
+  # 3) All helpers return `::Ktistec::SafeURI`.
 
   def self.path_id_from_iri(iri : String) : String
     (index = iri.rindex('/')) ? iri[(index + 1)..-1] : iri
   end
 
   macro back_path
-    env.request.headers.fetch("Referer", "/")
+    ::Ktistec::SafeURI.from?(env.request.headers.fetch("Referer", "/")) || ::Ktistec::SafeURI.assert_safe("/")
   end
 
   macro home_path
-    "/"
+    ::Ktistec::SafeURI.assert_safe("/")
   end
 
   macro everything_path
-    "/everything"
+    ::Ktistec::SafeURI.assert_safe("/everything")
   end
 
   macro sessions_path
-    "/sessions"
+    ::Ktistec::SafeURI.assert_safe("/sessions")
   end
 
   macro search_path
-    "/search"
+    ::Ktistec::SafeURI.assert_safe("/search")
   end
 
   macro settings_path
-    "/settings"
+    ::Ktistec::SafeURI.assert_safe("/settings")
   end
 
   macro filters_path
-    "/filters"
+    ::Ktistec::SafeURI.assert_safe("/filters")
   end
 
   macro filter_path(filter = nil)
     {% if filter %}
-      "/filters/#{{{filter}}.id}"
+      ::Ktistec::SafeURI.assert_safe("/filters/#{::URI.encode_path_segment({{filter}}.id.to_s)}")
     {% else %}
-      "/filters/#{env.params.url["id"]}"
+      ::Ktistec::SafeURI.assert_safe("/filters/#{::URI.encode_path_segment(env.params.url["id"])}")
     {% end %}
   end
 
   macro system_path
-    "/system"
+    ::Ktistec::SafeURI.assert_safe("/system")
   end
 
   macro metrics_path
-    "/metrics"
+    ::Ktistec::SafeURI.assert_safe("/metrics")
   end
 
   macro tasks_path
-    "/tasks"
+    ::Ktistec::SafeURI.assert_safe("/tasks")
   end
 
   macro admin_path
-    "/admin"
+    ::Ktistec::SafeURI.assert_safe("/admin")
   end
 
   macro admin_accounts_path
-    "/admin/accounts"
+    ::Ktistec::SafeURI.assert_safe("/admin/accounts")
   end
 
   macro admin_oauth_clients_path
-    "/admin/oauth/clients"
+    ::Ktistec::SafeURI.assert_safe("/admin/oauth/clients")
   end
 
   macro admin_oauth_tokens_path
-    "/admin/oauth/tokens"
+    ::Ktistec::SafeURI.assert_safe("/admin/oauth/tokens")
   end
 
   macro remote_activity_path(activity = nil)
     {% if activity %}
-      "/remote/activities/#{{{activity}}.id}"
+      ::Ktistec::SafeURI.assert_safe("/remote/activities/#{::URI.encode_path_segment({{activity}}.id.to_s)}")
     {% else %}
-      "/remote/activities/#{env.params.url["id"]}"
+      ::Ktistec::SafeURI.assert_safe("/remote/activities/#{::URI.encode_path_segment(env.params.url["id"])}")
     {% end %}
   end
 
   macro activity_path(activity = nil)
     {% if activity %}
-      "/activities/#{Utils::Paths.path_id_from_iri({{activity}}.iri)}"
+      ::Ktistec::SafeURI.assert_safe("/activities/#{::URI.encode_path_segment(Utils::Paths.path_id_from_iri({{activity}}.iri))}")
     {% else %}
-      "/activities/#{env.params.url["id"]}"
+      ::Ktistec::SafeURI.assert_safe("/activities/#{::URI.encode_path_segment(env.params.url["id"])}")
     {% end %}
   end
 
@@ -101,166 +106,166 @@ module Utils::Paths
   end
 
   macro objects_path
-    "/objects"
+    ::Ktistec::SafeURI.assert_safe("/objects")
   end
 
   macro remote_object_path(object = nil)
     {% if object %}
-      "/remote/objects/#{{{object}}.id}"
+      ::Ktistec::SafeURI.assert_safe("/remote/objects/#{::URI.encode_path_segment({{object}}.id.to_s)}")
     {% else %}
-      "/remote/objects/#{env.params.url["id"]}"
+      ::Ktistec::SafeURI.assert_safe("/remote/objects/#{::URI.encode_path_segment(env.params.url["id"])}")
     {% end %}
   end
 
   macro object_path(object = nil)
     {% if object %}
-      "/objects/#{Utils::Paths.path_id_from_iri({{object}}.iri)}"
+      ::Ktistec::SafeURI.assert_safe("/objects/#{::URI.encode_path_segment(Utils::Paths.path_id_from_iri({{object}}.iri))}")
     {% else %}
-      "/objects/#{env.params.url["id"]}"
+      ::Ktistec::SafeURI.assert_safe("/objects/#{::URI.encode_path_segment(env.params.url["id"])}")
     {% end %}
   end
 
   macro remote_thread_path(object = nil, anchor = true)
     {% if anchor %}
-      "#{Utils::Paths.remote_object_path({{object}})}/thread##{Utils::Paths.anchor({{object}})}"
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/thread##{Utils::Paths.anchor({{object}})}")
     {% else %}
-      "#{Utils::Paths.remote_object_path({{object}})}/thread"
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/thread")
     {% end %}
   end
 
   macro thread_path(object = nil, anchor = true)
     {% if anchor %}
-      "#{Utils::Paths.object_path({{object}})}/thread##{Utils::Paths.anchor({{object}})}"
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.object_path({{object}})}/thread##{Utils::Paths.anchor({{object}})}")
     {% else %}
-      "#{Utils::Paths.object_path({{object}})}/thread"
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.object_path({{object}})}/thread")
     {% end %}
   end
 
   macro remote_branch_path(object = nil, anchor = true)
     {% if anchor %}
-      "#{Utils::Paths.remote_object_path({{object}})}/branch##{Utils::Paths.anchor({{object}})}"
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/branch##{Utils::Paths.anchor({{object}})}")
     {% else %}
-      "#{Utils::Paths.remote_object_path({{object}})}/branch"
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/branch")
     {% end %}
   end
 
   macro remote_thread_analysis_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/thread/analysis"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/thread/analysis")
   end
 
   macro edit_object_path(object = nil)
-    "#{Utils::Paths.object_path({{object}})}/edit"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.object_path({{object}})}/edit")
   end
 
   macro reply_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/reply"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/reply")
   end
 
   macro quote_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/quote"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/quote")
   end
 
   macro fetch_quote_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/fetch/quote"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/fetch/quote")
   end
 
   macro fetch_quote_authorization_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/fetch/quote-authorization"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/fetch/quote-authorization")
   end
 
   macro bookmark_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/bookmark"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/bookmark")
   end
 
   macro pin_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/pin"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/pin")
   end
 
   macro approve_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/approve"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/approve")
   end
 
   macro unapprove_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/unapprove"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/unapprove")
   end
 
   macro block_object_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/block"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/block")
   end
 
   macro unblock_object_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/unblock"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/unblock")
   end
 
   macro follow_thread_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/follow"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/follow")
   end
 
   macro unfollow_thread_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/unfollow"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/unfollow")
   end
 
   macro start_fetch_thread_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/fetch/start"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/fetch/start")
   end
 
   macro cancel_fetch_thread_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/fetch/cancel"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/fetch/cancel")
   end
 
   macro object_remote_reply_path(object = nil)
-    "#{Utils::Paths.object_path({{object}})}/remote-reply"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.object_path({{object}})}/remote-reply")
   end
 
   macro object_remote_like_path(object = nil)
-    "#{Utils::Paths.object_path({{object}})}/remote-like"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.object_path({{object}})}/remote-like")
   end
 
   macro object_remote_share_path(object = nil)
-    "#{Utils::Paths.object_path({{object}})}/remote-share"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.object_path({{object}})}/remote-share")
   end
 
   macro create_translation_object_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/translation/create"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/translation/create")
   end
 
   macro clear_translation_object_path(object = nil)
-    "#{Utils::Paths.remote_object_path({{object}})}/translation/clear"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/translation/clear")
   end
 
   macro remote_actor_path(actor = nil)
     {% if actor %}
-      "/remote/actors/#{{{actor}}.id}"
+      ::Ktistec::SafeURI.assert_safe("/remote/actors/#{::URI.encode_path_segment({{actor}}.id.to_s)}")
     {% else %}
-      "/remote/actors/#{env.params.url["id"]}"
+      ::Ktistec::SafeURI.assert_safe("/remote/actors/#{::URI.encode_path_segment(env.params.url["id"])}")
     {% end %}
   end
 
   macro actor_path(actor = nil)
     {% if actor %}
-      "/actors/#{Utils::Paths.path_id_from_iri({{actor}}.iri)}"
+      ::Ktistec::SafeURI.assert_safe("/actors/#{::URI.encode_path_segment(Utils::Paths.path_id_from_iri({{actor}}.iri))}")
     {% else %}
-      "/actors/#{env.params.url["username"]}"
+      ::Ktistec::SafeURI.assert_safe("/actors/#{::URI.encode_path_segment(env.params.url["username"])}")
     {% end %}
   end
 
   macro block_actor_path(actor = nil)
-    "#{Utils::Paths.remote_actor_path({{actor}})}/block"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_actor_path({{actor}})}/block")
   end
 
   macro unblock_actor_path(actor = nil)
-    "#{Utils::Paths.remote_actor_path({{actor}})}/unblock"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_actor_path({{actor}})}/unblock")
   end
 
   macro refresh_remote_actor_path(actor = nil)
-    "#{Utils::Paths.remote_actor_path({{actor}})}/refresh"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_actor_path({{actor}})}/refresh")
   end
 
   macro actor_relationships_path(actor = nil, relationship = nil)
     {% if relationship %}
-      "#{Utils::Paths.actor_path({{actor}})}/#{{{relationship}}}"
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/#{::URI.encode_path_segment({{relationship}})}")
     {% else %}
-      "#{Utils::Paths.actor_path({{actor}})}/#{env.params.url["relationship"]}"
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/#{::URI.encode_path_segment(env.params.url["relationship"])}")
     {% end %}
   end
 
@@ -285,66 +290,78 @@ module Utils::Paths
   end
 
   macro actor_remote_follow_path(actor = nil)
-    "#{Utils::Paths.actor_path({{actor}})}/remote-follow"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/remote-follow")
   end
 
   macro hashtag_path(hashtag = nil)
     {% if hashtag %}
-      "/tags/#{{{hashtag}}}"
+      ::Ktistec::SafeURI.assert_safe("/tags/#{::URI.encode_path_segment({{hashtag}})}")
     {% else %}
-      "/tags/#{env.params.url["hashtag"]}"
+      ::Ktistec::SafeURI.assert_safe("/tags/#{::URI.encode_path_segment(env.params.url["hashtag"])}")
     {% end %}
   end
 
   macro follow_hashtag_path(hashtag = nil)
-    "#{Utils::Paths.hashtag_path({{hashtag}})}/follow"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.hashtag_path({{hashtag}})}/follow")
   end
 
   macro unfollow_hashtag_path(hashtag = nil)
-    "#{Utils::Paths.hashtag_path({{hashtag}})}/unfollow"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.hashtag_path({{hashtag}})}/unfollow")
   end
 
   macro start_fetch_hashtag_path(hashtag = nil)
-    "#{Utils::Paths.hashtag_path({{hashtag}})}/fetch/start"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.hashtag_path({{hashtag}})}/fetch/start")
   end
 
   macro cancel_fetch_hashtag_path(hashtag = nil)
-    "#{Utils::Paths.hashtag_path({{hashtag}})}/fetch/cancel"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.hashtag_path({{hashtag}})}/fetch/cancel")
   end
 
   macro mention_path(mention = nil)
     {% if mention %}
-      "/mentions/#{{{mention}}}"
+      ::Ktistec::SafeURI.assert_safe("/mentions/#{::URI.encode_path_segment({{mention}})}")
     {% else %}
-      "/mentions/#{env.params.url["mention"]}"
+      ::Ktistec::SafeURI.assert_safe("/mentions/#{::URI.encode_path_segment(env.params.url["mention"])}")
     {% end %}
   end
 
   macro follow_mention_path(mention = nil)
-    "#{Utils::Paths.mention_path({{mention}})}/follow"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.mention_path({{mention}})}/follow")
   end
 
   macro unfollow_mention_path(mention = nil)
-    "#{Utils::Paths.mention_path({{mention}})}/unfollow"
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.mention_path({{mention}})}/unfollow")
   end
 
   macro remote_interaction_path
-    "/remote-interaction"
+    ::Ktistec::SafeURI.assert_safe("/remote-interaction")
   end
 
   macro mcp_user_path(account)
-    "ktistec://users/#{{{account}}.id}"
+    ::Ktistec::SafeURI.assert_safe("ktistec://users/#{::URI.encode_path_segment({{account}}.id.to_s)}")
   end
 
   macro mcp_actor_path(actor)
-    "ktistec://actors/#{{{actor}}.id}"
+    ::Ktistec::SafeURI.assert_safe("ktistec://actors/#{::URI.encode_path_segment({{actor}}.id.to_s)}")
   end
 
   macro mcp_object_path(object)
-    "ktistec://objects/#{{{object}}.id}"
+    ::Ktistec::SafeURI.assert_safe("ktistec://objects/#{::URI.encode_path_segment({{object}}.id.to_s)}")
   end
 
   macro mcp_information_path
-    "ktistec://information"
+    ::Ktistec::SafeURI.assert_safe("ktistec://information")
+  end
+
+  macro stream_path(*segments)
+    ::Ktistec::SafeURI.assert_safe(
+      String.build do |%io|
+        %io << "/stream"
+        {% for segment in segments %}
+          %io << '/'
+          ::URI.encode_path_segment(%io, ({{segment}}).to_s)
+        {% end %}
+      end
+    )
   end
 end

@@ -13,7 +13,7 @@
       a.ui.header href=remote_actor_path(actor) = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
     - else
       .ui.header = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
-    a.ui.link href=actor.iri = actor.handle
+    a.ui.link href=Ktistec::SafeURI.from?(actor.iri) = actor.handle
   - if _account && _account.actor != actor
     .extra.content
       - if env.request.path =~ /followers$/ && (follow_relationship = actor.follows?(_account.actor)) && follow_relationship.pending? && (_follow = follow_relationship.activity?)

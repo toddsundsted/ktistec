@@ -6,7 +6,7 @@
       section.ui.feed
         .event
           .label
-            img src=actor.icon
+            img src=actor.icon_safe
           .content
             .summary
               a.user> = actor.display_name
@@ -37,8 +37,8 @@
                   | Delete
         .event
           .label
-            img src=actor.icon
-            img src=actor.icon
+            img src=actor.icon_safe
+            img src=actor.icon_safe
           .content
             .summary
               a.user> = actor.display_name
@@ -73,7 +73,7 @@
                 | Source
         .event
           .label
-            img src=actor.icon
+            img src=actor.icon_safe
           .content
             .summary
               a.user> = actor.display_name
@@ -120,7 +120,7 @@
       section.ui.feed
         .detailed.event
           .label
-            img src=actor.icon
+            img src=actor.icon_safe
           .content
             .summary
               a.user> = actor.display_name
@@ -137,7 +137,7 @@
                 a.ui.small.label href="#" #hashtag
             .extra.detail
               a href="#"
-                img.ui.avatar.image src=actor.icon
+                img.ui.avatar.image src=actor.icon_safe
                 i.share.icon
             .meta
               a href="#"
@@ -169,7 +169,7 @@
       section.ui.feed
         .threaded.event.depth-0
           .label
-            img src=actor.icon
+            img src=actor.icon_safe
           .content
             .summary
               a.user> = actor.display_name
@@ -200,7 +200,7 @@
                   | Delete
         .threaded.event.depth-1
           .label
-            img src=actor.icon
+            img src=actor.icon_safe
           .content
             .summary
               a.user> = actor.display_name
@@ -230,7 +230,7 @@
                 | Source
         .threaded.event.depth-2
           .label
-            img src=actor.icon
+            img src=actor.icon_safe
           .content
             .summary
               a.user> = actor.display_name

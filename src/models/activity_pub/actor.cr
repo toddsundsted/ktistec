@@ -235,6 +235,14 @@ module ActivityPub
       Ktistec::SafeURI.from?(urls.try(&.first?) || iri)
     end
 
+    def icon_safe : Ktistec::SafeURI?
+      icon.try { |i| Ktistec::SafeURI.from?(i) }
+    end
+
+    def image_safe : Ktistec::SafeURI?
+      image.try { |i| Ktistec::SafeURI.from?(i) }
+    end
+
     def self.match?(account)
       if account =~ /^@?([^@]+)@([^@]+)$/
         where(username: $1).find do |actor|

@@ -177,6 +177,10 @@ module ActivityPub
       def initialize(@url, @media_type, @caption = nil, @focal_point = nil)
       end
 
+      def url_safe : Ktistec::SafeURI?
+        Ktistec::SafeURI.from?(url)
+      end
+
       def image?
         media_type.in?(%w[image/bmp image/gif image/jpeg image/png image/svg+xml image/x-icon image/apng image/webp])
       end

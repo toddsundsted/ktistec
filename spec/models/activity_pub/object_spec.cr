@@ -2526,6 +2526,18 @@ Spectator.describe ActivityPub::Object::Attachment do
     )
   end
 
+  describe "#url_safe" do
+    it "wraps the url in a SafeURI" do
+      attachment = ActivityPub::Object::Attachment.new("https://example.com/image.jpg", "image/jpeg")
+      expect(attachment.url_safe).to eq(Ktistec::SafeURI.from("https://example.com/image.jpg"))
+    end
+
+    it "returns nil when the url has an unsafe scheme" do
+      attachment = ActivityPub::Object::Attachment.new("javascript:alert(1)", "text/html")
+      expect(attachment.url_safe).to be_nil
+    end
+  end
+
   describe "#has_focal_point?" do
     it "returns false for missing focal point" do
       attachment = create_attachment

@@ -8,6 +8,17 @@ module Ktistec
 
     LANGUAGE_RE = /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*$/
 
+    # XRD document wrapper used by HostMeta and WebFinger. The body is
+    # interpolated into the wrapper (e.g. `XRD_ENV % "<Link .../>"`).
+    XRD_ENV = <<-XRD
+      <?xml version='1.0'?>
+      <XRD
+        xmlns='http://docs.oasis-open.org/ns/xri/xrd-1.0'
+        xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+      %s
+      </XRD>
+      XRD
+
     # Maximum number of posts a user can pin to their profile
     MAX_PINNED_POSTS = 5
 

@@ -65,6 +65,6 @@ class SearchesController
   end
 
   private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |
-                         HostMeta::Error | WebFinger::Error | Ktistec::Open::Error |
+                         Ktistec::HostMeta::Error | Ktistec::WebFinger::Error | Ktistec::Open::Error |
                          NilAssertionError
 end

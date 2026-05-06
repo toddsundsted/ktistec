@@ -2,6 +2,8 @@ require "spectator"
 require "http/request"
 require "socket"
 
+require "../../src/framework/web_finger"
+
 require "./base"
 
 # DNS resolution mock.
@@ -49,7 +51,7 @@ end
 #
 class HTTP::Client
   class Cache
-    @cache = Hash(String, String).new
+    @cache = Hash(String, String | HTTP::Client::Response).new
 
     delegate :[], :[]?, :[]=, :clear, :delete, to: @cache
 
@@ -67,6 +69,10 @@ class HTTP::Client
       else
         raise "Unsupported: #{object}"
       end
+    end
+
+    def set_response(url : String | URI, response : HTTP::Client::Response)
+      self[url.to_s] = response
     end
   end
 
@@ -123,6 +129,12 @@ class HTTP::Client
   def get(path : String, headers : HTTP::Headers? = nil)
     url = URI.new(scheme: "https", host: self.host, path: path)
     @@requests << HTTP::Request.new("GET", url.to_s, headers)
+    case self.host
+    when /socket-addrinfo-error/
+      raise Socket::Addrinfo::Error.from_os_error(nil, nil)
+    when /socket-connect-error/
+      raise Socket::ConnectError.from_os_error(nil, nil)
+    end
     if url.scheme && url.authority && url.path
       case url.path
       when /bad-json/
@@ -170,12 +182,17 @@ class HTTP::Client
           body: $1,
         )
       else
-        if (json = @@cache[url.to_s]?)
-          HTTP::Client::Response.new(
-            200,
-            headers: HTTP::Headers.new,
-            body: json,
-          )
+        if (stub = @@cache[url.to_s]?)
+          case stub
+          in HTTP::Client::Response
+            stub
+          in String
+            HTTP::Client::Response.new(
+              200,
+              headers: HTTP::Headers.new,
+              body: stub,
+            )
+          end
         else
           HTTP::Client::Response.new(404)
         end
@@ -206,12 +223,17 @@ class HTTP::Client
           body: "",
         )
       else
-        if (json = @@cache[url.to_s]?)
-          HTTP::Client::Response.new(
-            200,
-            headers: HTTP::Headers.new,
-            body: json,
-          )
+        if (stub = @@cache[url.to_s]?)
+          case stub
+          in HTTP::Client::Response
+            stub
+          in String
+            HTTP::Client::Response.new(
+              200,
+              headers: HTTP::Headers.new,
+              body: stub,
+            )
+          end
         else
           HTTP::Client::Response.new(404)
         end
@@ -226,56 +248,58 @@ BEFORE_PROCS << -> do
   HTTP::Client.reset
 end
 
-# WebFinger mock.
+# Ktistec::WebFinger mock.
 #
-module WebFinger
-  ACCOUNT_REGEX = %r<
-    ^(acct:)?(?<name>[^@]+)@(?<host>[^@]+)$|
-    ^(?<host>.+)$
-  >mx
+module Ktistec
+  module WebFinger
+    ACCOUNT_REGEX = %r<
+      ^(acct:)?(?<name>[^@]+)@(?<host>[^@]+)$|
+      ^(?<host>.+)$
+    >mx
 
-  def self.query(account)
-    unless account =~ ACCOUNT_REGEX
-      raise WebFinger::NotFoundError.new("Invalid account")
-    end
-    name = $~["name"]?
-    host = $~["host"]
-    if name =~ /no-such-name/
-      raise WebFinger::NotFoundError.new("No such name")
-    elsif host =~ /no-such-host/
-      raise WebFinger::NotFoundError.new("No such host")
-    elsif name
-      WebFinger::Result.from_json(<<-JSON
-        {
-          "links":[
-            {
-              "rel":"self",
-              "href":"https://#{host}/actors/#{name}"
-            },
-            {
-              "rel":"http://ostatus.org/schema/1.0/subscribe",
-              "template":"https://#{host}/authorize-interaction?uri={uri}"
-            }
-          ]
-        }
-        JSON
-      )
-    else
-      WebFinger::Result.from_json(<<-JSON
-        {
-          "links":[
-            {
-              "rel":"self",
-              "href":"https://#{host}"
-            },
-            {
-              "rel":"http://ostatus.org/schema/1.0/subscribe",
-              "template":"https://#{host}/authorize-interaction?uri={uri}"
-            }
-          ]
-        }
-        JSON
-      )
+    def self.query(account)
+      unless account =~ ACCOUNT_REGEX
+        raise Ktistec::WebFinger::NotFoundError.new("Invalid account")
+      end
+      name = $~["name"]?
+      host = $~["host"]
+      if name =~ /no-such-name/
+        raise Ktistec::WebFinger::NotFoundError.new("No such name")
+      elsif host =~ /no-such-host/
+        raise Ktistec::WebFinger::NotFoundError.new("No such host")
+      elsif name
+        Ktistec::WebFinger::Result.from_json(<<-JSON
+          {
+            "links":[
+              {
+                "rel":"self",
+                "href":"https://#{host}/actors/#{name}"
+              },
+              {
+                "rel":"http://ostatus.org/schema/1.0/subscribe",
+                "template":"https://#{host}/authorize-interaction?uri={uri}"
+              }
+            ]
+          }
+          JSON
+        )
+      else
+        Ktistec::WebFinger::Result.from_json(<<-JSON
+          {
+            "links":[
+              {
+                "rel":"self",
+                "href":"https://#{host}"
+              },
+              {
+                "rel":"http://ostatus.org/schema/1.0/subscribe",
+                "template":"https://#{host}/authorize-interaction?uri={uri}"
+              }
+            ]
+          }
+          JSON
+        )
+      end
     end
   end
 end

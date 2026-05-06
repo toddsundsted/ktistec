@@ -52,14 +52,14 @@ class InteractionsController
 
     if domain
       begin
-        location = WebFinger.query(domain).link("http://ostatus.org/schema/1.0/subscribe").template
+        location = Ktistec::WebFinger.query(domain).link("http://ostatus.org/schema/1.0/subscribe").template
         location = location.not_nil!.gsub("{uri}", target)
         if accepts?("text/html")
           redirect location
         else
           {location: location}.to_json
         end
-      rescue ex : HostMeta::Error | WebFinger::Error | NilAssertionError | KeyError
+      rescue ex : Ktistec::HostMeta::Error | Ktistec::WebFinger::Error | NilAssertionError | KeyError
         bad_request "interactions/index", env: env, message: message, error: ex.message, target: target, action: action, domain: domain
       end
     else

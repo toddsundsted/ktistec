@@ -146,12 +146,6 @@ Spectator.describe Slang::CodeGen do
       )
     end
 
-    it "emits a plain String value as the attribute" do
-      expect(render_string(%(- s = "/x?a=1&b=2"\na href=s))).to eq(
-        %(<a href="/x?a=1&amp;b=2"></a>),
-      )
-    end
-
     it "omits the attribute when the value is nil" do
       expect(render_string("a href=evaluates_to_nil")).to eq(%(<a></a>))
     end

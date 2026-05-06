@@ -40,11 +40,6 @@ Spectator.describe Slang::Runtime do
       described_class.emit_url_attr(io, "href", nil.as(Ktistec::SafeURI?))
       expect(io.to_s).to eq("")
     end
-
-    it "HTML-escapes a plain String" do
-      described_class.emit_url_attr(io, "href", "/x?a=1&b=2")
-      expect(io.to_s).to eq(%( href="/x?a=1&amp;b=2"))
-    end
   end
 
   describe ".emit_splat_attrs" do

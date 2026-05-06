@@ -59,7 +59,8 @@ module Slang::Runtime
 
   # Emits a single URL attribute (`href`, `src`, ...).
   #
-  # `Ktistec::SafeURI` is emitted with HTML-escape applied. `nil` is
+  # Only `Ktistec::SafeURI?` is admitted. Plain `String` (or any other
+  # type) at a URL-attribute callsite fails to compile. `nil` is
   # silently skipped.
   #
   def emit_url_attr(io : IO, name : String, value : ::Ktistec::SafeURI?) : Nil
@@ -67,16 +68,6 @@ module Slang::Runtime
     io << ' ' << name << "=\""
     ::HTML.escape(value.to_s, io)
     io << '"'
-  end
-
-  # Temporary fallback to preserve current behavior during the
-  # producer-migration window (Phase 2 PR4-PR7). Delegates to
-  # `emit_attr`. TODO: removed in the Phase 2 closeout PR; once the
-  # producers all return `SafeURI`, no plain-`String` value reaches
-  # this overload, and removing it slams the URL-attribute compile
-  # gate shut.
-  def emit_url_attr(io : IO, name : String, value) : Nil
-    emit_attr(io, name, value)
   end
 
   # Emits a merged `class="..."` attribute combining a literal prefix

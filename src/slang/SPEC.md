@@ -522,14 +522,16 @@ Syntax:
 == EXPR
 ```
 
-`=` evaluates the Crystal expression `EXPR` at runtime, converts to
-string via `.to_s`, HTML-escapes the result (§5.9), and writes to
-the buffer. `==` is identical except no HTML-escape.
+`=` evaluates the Crystal expression `EXPR` at runtime and writes
+the result to the buffer. `Ktistec::SafeHTML` values are emitted
+raw; any other value has `.to_s` applied and is HTML-escaped
+(§5.9). `==` writes the value's `.to_s` raw, no HTML-escape.
 
 ```slang
-= 1 + 2                →  3
-= "<a>"                →  &lt;a&gt;
-== "<a>"               →  <a>
+= 1 + 2                                  →  3
+= "<a>"                                  →  &lt;a&gt;
+= Ktistec::SafeHTML.assert_safe("<a>")   →  <a>
+== "<a>"                                 →  <a>
 ```
 
 If `EXPR` evaluates to `nil`, the buffer receives the empty string
@@ -568,13 +570,9 @@ block body:
   input type="text" name="x"
 ```
 
-The children render to a sub-buffer (`String.build`), which is then
-treated as the block's return value and written to the outer buffer
-**raw** (no HTML-escape) regardless of whether the line opener is `=`
-or `==`. The `=` vs `==` distinction governs only the simple
-(no-children) output case in §5.2; for block helpers, escaping the
-helper's return value would double-escape pre-rendered HTML and is
-never desired in practice.
+The children render to a sub-buffer (`String.build`) which the
+helper receives as its block. The helper's return value is then
+written to the outer buffer following the rules of §5.2.
 
 There is no Slang-level check that `EXPR` actually opens a block.
 If the user writes `= some_method` with no block opener and indents
@@ -823,7 +821,7 @@ that happen to receive raw-content handling for their children.
 
 ### 5.6 Comments
 
-Three forms, distinguished by what follows the `/`:
+Two forms, distinguished by what follows the `/`:
 
 #### 5.6.1 Hidden Comment (`/`)
 
@@ -850,18 +848,6 @@ inside the comment, followed by a single `\n` before the closing
 
 Emits `<!--Note<span>note body</span>\n-->`. The trailing `\n`
 appears only when at least one child is present.
-
-#### 5.6.3 Conditional Comment (`/[expr]`)
-
-```slang
-/[if IE]
-  p Old browser
-```
-
-Emits `<!--[if IE]><p>Old browser</p>\n<![endif]-->`. As with
-visible comments, the `\n` before `<![endif]-->` appears only
-when the comment has children; a childless `/[if IE]` emits
-`<!--[if IE]><![endif]-->`.
 
 ### 5.7 Doctype (`doctype`)
 
@@ -936,7 +922,8 @@ the table above. This applies to:
 - §5.1.5 attribute values (with the boolean special case for
   `true` / `false`).
 - §5.1.6 class values (shorthand, explicit, splat).
-- §5.2 `=` output (but not `==`).
+- §5.2 `=` output for non-`Ktistec::SafeHTML` values (`SafeHTML`
+  values are emitted raw).
 - §5.4 interpolation values (`#{expr}`) inside trailing text and
   any text token whose `escape` flag is true. Source bytes in
   trailing text are **not** escaped -- see §5.4.6 and §5.1.10.

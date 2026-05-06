@@ -2,6 +2,8 @@ require "html"
 require "uri"
 require "xml"
 
+require "../safe/safe_html"
+
 module Ktistec
   module Util
     extend self
@@ -59,9 +61,9 @@ module Ktistec
 
     # Cleans up the content we receive from others.
     #
-    def sanitize(content)
-      return "" if content.nil? || content.empty?
-      String.build do |build|
+    def sanitize(content : String?) : Ktistec::SafeHTML
+      return Ktistec::SafeHTML.assert_safe("") if content.nil? || content.empty?
+      result = String.build do |build|
         sanitize(XML.parse_html("<div>#{content}</div>",
           XML::HTMLParserOptions::RECOVER |
           XML::HTMLParserOptions::NODEFDTD |
@@ -71,6 +73,7 @@ module Ktistec
           XML::HTMLParserOptions::NONET,
         ), build)
       end.gsub(/^<div>|<\/div>$/, "")
+      Ktistec::SafeHTML.assert_safe(result)
     end
 
     private ELEMENTS = [
@@ -276,7 +279,7 @@ module Ktistec
     # URL (parses with scheme/host/path and passes `safe_url?`).
     # Returns `nil` otherwise.
     #
-    def wrap_link(str, include_scheme = false, length = 30, tag = :a) : String?
+    def wrap_link(str, include_scheme = false, length = 30, tag = :a) : Ktistec::SafeHTML?
       # `URI.parse` raises on some Fediverse URIs (e.g., ATProto's
       # `at://did:plc:.../`). on failure, return nil.
       uri = URI.parse(str) rescue nil
@@ -286,7 +289,7 @@ module Ktistec
         if first.size > length
           first, rest = first[0...length], first[length..-1]
         end
-        String.build do |io|
+        result = String.build do |io|
           if tag == :a
             io << %Q|<a href="#{::HTML.escape(str)}" target="_blank" rel="ugc">|
           else
@@ -303,6 +306,7 @@ module Ktistec
           end
           io << %Q|</#{tag}>|
         end
+        Ktistec::SafeHTML.assert_safe(result)
       end
     end
 

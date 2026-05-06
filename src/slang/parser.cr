@@ -73,8 +73,6 @@ module Slang
           nodes << parse_hidden_comment_line
         when TokenKind::CommentVisible
           nodes << parse_visible_comment_line
-        when TokenKind::CommentConditional
-          nodes << parse_conditional_comment_line
         when TokenKind::Doctype
           nodes << parse_doctype_line
         else
@@ -439,26 +437,6 @@ module Slang
         node.parts << consume_text_part
       end
       expect(TokenKind::Newline)
-      if at?(TokenKind::Indent)
-        consume
-        node.children.concat(parse_block)
-        expect(TokenKind::Dedent)
-      end
-      node
-    end
-
-    private def parse_conditional_comment_line : AST::ConditionalComment
-      open = consume # CommentConditional
-      loc = AST::SourceLoc.new(open.line, open.column)
-      unless at?(TokenKind::TextLiteral)
-        raise ParseError.new(
-          "expected condition text after `/[`",
-          @current.line, @current.column,
-        )
-      end
-      condition = consume.value
-      expect(TokenKind::Newline)
-      node = AST::ConditionalComment.new(condition, loc)
       if at?(TokenKind::Indent)
         consume
         node.children.concat(parse_block)

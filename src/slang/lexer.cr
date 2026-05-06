@@ -21,16 +21,15 @@ module Slang
 
     # line openers
     Element
-    Output             # `=`
-    OutputRaw          # `==`
-    Code               # `-`
-    TextBlock          # `|`
-    TextBlockSpace     # `'`
-    RawHtml            # `<...`
-    CommentHidden      # `/`
-    CommentVisible     # `/!`
-    CommentConditional # `/[expr]`
-    Doctype            # `doctype VALUE`
+    Output         # `=`
+    OutputRaw      # `==`
+    Code           # `-`
+    TextBlock      # `|`
+    TextBlockSpace # `'`
+    RawHtml        # `<...`
+    CommentHidden  # `/`
+    CommentVisible # `/!`
+    Doctype        # `doctype VALUE`
 
     # element-line fragments
     TagName
@@ -619,28 +618,6 @@ module Slang
         @pending << Token.new(TokenKind::CommentVisible, line: line, column: column)
         skip_horizontal_ws
         emit_text_with_interpolation(escape: true)
-        return
-      end
-      if !eof? && peek == LBRACK
-        advance # `[`
-        bracket_line = @line
-        bracket_column = @column
-        cond_start = @pos
-        while !eof? && peek != RBRACK && peek != LF && peek != CR
-          advance
-        end
-        if eof? || peek != RBRACK
-          raise LexError.new("unterminated conditional comment", line, column)
-        end
-        cond = String.new(@bytes[cond_start, @pos - cond_start])
-        advance # `]`
-        @pending << Token.new(TokenKind::CommentConditional, line: line, column: column)
-        @pending << Token.new(TokenKind::TextLiteral, value: cond,
-          line: bracket_line, column: bracket_column, escape: false)
-        skip_horizontal_ws
-        if !at_line_end?
-          raise LexError.new("unexpected text after `]` in conditional comment", @line, @column)
-        end
         return
       end
       # hidden comment. consume the rest of the line; emit the

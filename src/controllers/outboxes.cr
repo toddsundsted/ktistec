@@ -54,45 +54,35 @@ class OutboxesController
       unless object_iri && (object = ActivityPub::Object.find?(object_iri))
         bad_request
       end
-      now = Time.utc
-      visible, to, cc = addressing(activity, account.actor)
-      if (attributed_to = object.attributed_to?)
-        to << attributed_to.iri
-      end
-      if object.audience
-        audience = object.audience
+      unless (attributed_to = object.attributed_to?)
+        bad_request
       end
       activity = ActivityPub::Activity::Like.new(
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
-        published: now,
-        visible: visible,
-        to: to.to_a,
-        cc: cc.to_a,
-        audience: audience,
+        published: Time.utc,
+        visible: false,
+        to: [attributed_to.iri],
+        cc: [] of String,
+        audience: object.audience,
       )
     when "Dislike"
       unless object_iri && (object = ActivityPub::Object.find?(object_iri))
         bad_request
       end
-      now = Time.utc
-      visible, to, cc = addressing(activity, account.actor)
-      if (attributed_to = object.attributed_to?)
-        to << attributed_to.iri
-      end
-      if object.audience
-        audience = object.audience
+      unless (attributed_to = object.attributed_to?)
+        bad_request
       end
       activity = ActivityPub::Activity::Dislike.new(
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
-        published: now,
-        visible: visible,
-        to: to.to_a,
-        cc: cc.to_a,
-        audience: audience,
+        published: Time.utc,
+        visible: false,
+        to: [attributed_to.iri],
+        cc: [] of String,
+        audience: object.audience,
       )
     when "Publish"
       unless activity["content"]?
@@ -199,14 +189,14 @@ class OutboxesController
       end
       to = [] of String
       cc = [] of String
+      audience = nil
       case object
       when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
-        if (attributed_to = object.object.attributed_to?)
-          to << attributed_to.iri
-        end
-        if (followers = account.actor.followers)
-          cc << followers
-        end
+        # mirror the addressing of the activity being undone so every
+        # recipient that saw the original also sees the retraction.
+        to.concat(object.to || [] of String)
+        cc.concat(object.cc || [] of String)
+        audience = object.audience
       when ActivityPub::Activity::Follow
         to << object.object.iri
         unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
@@ -221,6 +211,7 @@ class OutboxesController
         object: object,
         to: to,
         cc: cc,
+        audience: audience,
       )
     when "Delete"
       if (iri = object_iri)

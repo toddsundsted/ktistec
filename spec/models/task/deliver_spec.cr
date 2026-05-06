@@ -80,8 +80,13 @@ Spectator.describe Task::Deliver do
       context "that is not cached" do
         before_each { HTTP::Client.actors << recipient }
 
-        it "includes the recipient" do
-          expect(subject.recipients).to contain(recipient.iri)
+        it "does not include the recipient" do
+          expect(subject.recipients).not_to contain(recipient.iri)
+        end
+
+        it "does not dereference the recipient" do
+          subject.recipients
+          expect(HTTP::Client.requests).to be_empty
         end
       end
     end
@@ -133,6 +138,35 @@ Spectator.describe Task::Deliver do
             expect(subject.recipients).not_to contain(local_recipient.iri, remote_recipient.iri)
           end
         end
+      end
+    end
+
+    context "audience addressed to a remote group" do
+      let(group) { remote_recipient }
+
+      before_each { activity.audience = [group.iri] }
+
+      context "that is cached" do
+        before_each { group.save }
+
+        it "includes the group" do
+          expect(subject.recipients).to contain(group.iri)
+        end
+      end
+    end
+
+    context "audience addressed to remote groups" do
+      let(spam_iris) { (1..50).map { |i| "https://attacker.example/actor/#{i}" } }
+
+      before_each { activity.audience = spam_iris }
+
+      it "does not dereference them" do
+        subject.recipients
+        expect(HTTP::Client.requests).to be_empty
+      end
+
+      it "drops them" do
+        expect(subject.recipients).not_to have_elements(spam_iris)
       end
     end
 

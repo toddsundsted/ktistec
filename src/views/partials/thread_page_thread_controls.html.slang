@@ -22,7 +22,7 @@ turbo-frame#thread_page_thread_controls
         p
           - contributors.to_a.sort_by(&.last.-).truncate(0, 18).each do |actor, _|
             a.ui.avatar.image data-turbo-frame="_top" href=remote_actor_path(actor)
-              == actor_icon(actor)
+              = actor_icon(actor)
         - if env.account?
           - if _task && (_status = fetch_task_status_line(_task, thread))
             p.task
@@ -30,9 +30,9 @@ turbo-frame#thread_page_thread_controls
     - if env.account?
       .ui.basic.segment
         - if _follow && !_follow.destroyed?
-          == form_button "Unfollow", unfollow_thread_path(thread.first)
+          = form_button "Unfollow", unfollow_thread_path(thread.first)
         - elsif _task && !_task.complete
-          == form_button "Cancel", cancel_fetch_thread_path(thread.first)
+          = form_button "Cancel", cancel_fetch_thread_path(thread.first)
         - else
           form.ui.inline.form method="POST"
             == authenticity_token(env)

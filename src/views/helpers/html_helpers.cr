@@ -1,3 +1,5 @@
+require "../../safe/safe_html"
+
 module Ktistec::ViewHelper
   # Posts an activity to an outbox.
   #
@@ -41,7 +43,7 @@ module Ktistec::ViewHelper
         {% end %}
       {% end %}
     ]
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <form #{%form_attrs.join(" ")}>\
     #{%csrf}\
     #{%input}\
@@ -53,6 +55,7 @@ module Ktistec::ViewHelper
     </button>\
     </form>
     HTML
+    )
   end
 
   # General purpose form-powered button.
@@ -102,7 +105,7 @@ module Ktistec::ViewHelper
         {% end %}
       {% end %}
     ]
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <form #{%form_attrs.join(" ")}>\
     #{%csrf}\
     #{%input}\
@@ -111,6 +114,7 @@ module Ktistec::ViewHelper
     </button>\
     </form>
     HTML
+    )
   end
 
   macro authenticity_token(env)
@@ -122,9 +126,9 @@ module Ktistec::ViewHelper
       %messages = %errors.transform_keys(&.split(".").last).flat_map do |k, vs|
         vs.map { |v| "#{::HTML.escape(k)} #{::HTML.escape(v)}" }
       end.join(", ")
-      %Q(<div class="ui error message"><div class="header">#{%messages}</div></div>)
+      ::Ktistec::SafeHTML.assert_safe(%Q(<div class="ui error message"><div class="header">#{%messages}</div></div>))
     else
-      ""
+      ::Ktistec::SafeHTML.assert_safe("")
     end
   end
 
@@ -173,13 +177,14 @@ module Ktistec::ViewHelper
         {% end %}
       {% end %}
     ]
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <form #{%attributes.join(" ")}>\
     #{%csrf}\
     #{%input}\
     #{%block}\
     </form>
     HTML
+    )
   end
 
   macro input_tag(label, model, field, id = nil, class _class = "", type = "text", placeholder = nil, autofocus = nil, data = nil)
@@ -343,7 +348,7 @@ module Ktistec::ViewHelper
   end
 
   macro params_to_inputs(params, exclude exclude_ = nil, include include_ = nil)
-    {{params}}.map do |%name, %value|
+    ::Ktistec::SafeHTML.assert_safe({{params}}.map do |%name, %value|
       if (%exclude = {{exclude_}})
         next if %exclude.includes?(%name)
       end
@@ -351,7 +356,7 @@ module Ktistec::ViewHelper
         next unless %include.includes?(%name)
       end
       %Q(<input type="hidden" name="#{::HTML.escape(%name)}" value="#{::HTML.escape(%value)}">)
-    end.join
+    end.join)
   end
 
   NUMBERS_TO_WORDS = {

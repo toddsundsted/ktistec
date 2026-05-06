@@ -206,7 +206,7 @@ module API
       # public fields carry rendered HTML for display
       private def self.build_public_fields(actor : ActivityPub::Actor) : Array(Field)
         (actor.attachments || [] of ActivityPub::Actor::Attachment).map do |attachment|
-          Field.new(name: attachment.name, value: attachment.value_as_html)
+          Field.new(name: attachment.name, value: attachment.value_as_html.to_s)
         end
       end
 

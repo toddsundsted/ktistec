@@ -85,6 +85,10 @@ Spectator.describe Ktistec::Open do
     end
 
     it "fails on errors" do
+      expect { described_class.open(key_pair, "ftp://example.com/foo") }.to raise_error(Ktistec::Open::Error, /scheme not supported/)
+    end
+
+    it "fails on errors" do
       expect { described_class.open(key_pair, "urn:isbn:12345") }.to raise_error(Ktistec::Open::Error, /URL has no host/)
     end
 

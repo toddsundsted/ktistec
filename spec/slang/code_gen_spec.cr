@@ -249,6 +249,18 @@ Spectator.describe Slang::CodeGen do
     it "renders nil as empty string" do
       expect(render_string("= nil")).to eq("")
     end
+
+    context "given a SafeHTML value" do
+      let(safe) { Ktistec::SafeHTML.assert_safe("<a>") }
+
+      it "emits it raw via `=`" do
+        expect(render_string("= safe")).to eq("<a>")
+      end
+
+      it "emits it raw via `==`" do
+        expect(render_string("== safe")).to eq("<a>")
+      end
+    end
   end
 
   describe "Block helpers (== with do)" do
@@ -529,14 +541,6 @@ Spectator.describe Slang::CodeGen do
       expect(render_string(<<-SLANG)).to eq("<!--Note<span>note body</span>\n-->")
         /! Note
           span note body
-        SLANG
-    end
-
-    it "emits a conditional comment" do
-      expected = "<!--[if IE]><p>Old browser</p>\n<![endif]-->"
-      expect(render_string(<<-SLANG)).to eq(expected)
-        /[if IE]
-          p Old browser
         SLANG
     end
   end

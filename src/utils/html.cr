@@ -1,7 +1,8 @@
 require "json"
 require "xml"
 require "libxml_ext"
-require "web_finger"
+
+require "../framework/web_finger"
 
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
@@ -127,8 +128,8 @@ module Ktistec
                   else
                     href =
                       begin
-                        WebFinger.query("acct:#{mention.lchop('@')}").link("self").href.presence
-                      rescue WebFinger::Error
+                        Ktistec::WebFinger.query("acct:#{mention.lchop('@')}").link("self").href.presence
+                      rescue Ktistec::WebFinger::Error
                       end
                     if href
                       node = %Q|<a href="#{href}" class="mention" rel="tag">@#{mention}</a>|

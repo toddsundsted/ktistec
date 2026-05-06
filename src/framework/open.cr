@@ -24,8 +24,10 @@ module Ktistec
 
     # Opens and reads from the specified URL.
     #
-    # Uses `key_pair` to sign the request. Will automatically follow
-    # `attempts` redirects (default 10).
+    # When `key_pair` is supplied, the request is signed; pass `nil`
+    # (or use the no-key-pair overload) for unsigned requests.
+    #
+    # Will automatically follow `attempts` redirects (default 10).
     #
     def open(key_pair, url, headers = HTTP::Headers.new, attempts = 10)
       was = url
@@ -36,15 +38,23 @@ module Ktistec
           uri = URI.parse(url)
           host = uri.host.presence
           raise Error.new("URL has no host: #{url}") unless host
+          unless uri.scheme == "http" || uri.scheme == "https"
+            raise Error.new("URL scheme not supported: #{url}")
+          end
           validate_host(host)
           client = HTTP::Client.new(uri)
           client.dns_timeout = 5.seconds
           client.connect_timeout = 5.seconds
           client.write_timeout = 5.seconds
           client.read_timeout = 5.seconds
-          signed_headers = Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
-          signed_headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
-          response = client.get(uri.request_target, signed_headers)
+          request_headers =
+            if key_pair
+              Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
+            else
+              headers.dup
+            end
+          request_headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
+          response = client.get(uri.request_target, request_headers)
           case response.status_code
           when 200
             return response
@@ -107,6 +117,16 @@ module Ktistec
     end
 
     # :ditto:
+    def open(url : String | URI, headers = HTTP::Headers.new, attempts = 10)
+      open(nil, url, headers, attempts)
+    end
+
+    # :ditto:
+    def open(url : String | URI, headers = HTTP::Headers.new, attempts = 10, &)
+      yield open(nil, url, headers, attempts)
+    end
+
+    # :ditto:
     def open?(key_pair, url, headers = HTTP::Headers.new, attempts = 10)
       open(key_pair, url, headers, attempts)
     rescue ex : Error
@@ -116,6 +136,20 @@ module Ktistec
     # :ditto:
     def open?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, &)
       yield open(key_pair, url, headers, attempts)
+    rescue ex : Error
+      Log.info { "#{self}.open? - #{ex.message}" }
+    end
+
+    # :ditto:
+    def open?(url : String | URI, headers = HTTP::Headers.new, attempts = 10)
+      open(nil, url, headers, attempts)
+    rescue ex : Error
+      Log.info { "#{self}.open? - #{ex.message}" }
+    end
+
+    # :ditto:
+    def open?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, &)
+      yield open(nil, url, headers, attempts)
     rescue ex : Error
       Log.info { "#{self}.open? - #{ex.message}" }
     end

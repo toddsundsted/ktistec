@@ -68,8 +68,9 @@ Spectator.describe Ktistec::SafeHTML do
   end
 
   describe "#presence" do
-    it "returns the wrapped value" do
-      expect(described_class.assert_safe("x").presence).to eq("x")
+    it "returns self when non-blank" do
+      html = described_class.assert_safe("x")
+      expect(html.presence).to eq(html)
     end
 
     it "returns nil when blank" do

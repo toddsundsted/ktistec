@@ -26,7 +26,7 @@ class Task
           # no-op
         elsif recipient == sender.iri
           sender.iri
-        elsif recipient && (actor = ActivityPub::Actor.dereference?(sender, recipient))
+        elsif recipient && (actor = ActivityPub::Actor.find?(recipient))
           actor.iri
         elsif recipient && recipient =~ /^#{sender.iri}\/followers$/
           Relationship::Social::Follow.where(

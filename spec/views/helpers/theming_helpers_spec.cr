@@ -406,7 +406,7 @@ Spectator.describe "helpers" do
       before_each { actor.assign(image: "http://example.com/banner.png").save }
 
       it "wraps the URL" do
-        expect(subject).to eq(%(background-image: url("http://example.com/banner.png");))
+        expect(subject).to eq(%(background-image: url(&quot;http://example.com/banner.png&quot;);))
       end
     end
 
@@ -414,7 +414,7 @@ Spectator.describe "helpers" do
       before_each { actor.assign(image: "https://example.com/banner.png").save }
 
       it "wraps the URL" do
-        expect(subject).to eq(%(background-image: url("https://example.com/banner.png");))
+        expect(subject).to eq(%(background-image: url(&quot;https://example.com/banner.png&quot;);))
       end
     end
 
@@ -457,7 +457,7 @@ Spectator.describe "helpers" do
       before_each { actor.save.assign(image: %[http://x);position:fixed;top:0;background-image:url(http://attacker/x]) }
 
       it "percent-encodes the payload" do
-        expect(subject).to eq(%[background-image: url("http://x%29;position:fixed;top:0;background-image:url%28http://attacker/x");])
+        expect(subject).to eq(%[background-image: url(&quot;http://x%29;position:fixed;top:0;background-image:url%28http://attacker/x&quot;);])
       end
     end
 
@@ -465,7 +465,7 @@ Spectator.describe "helpers" do
       before_each { actor.save.assign(image: %(http://x"onerror=alert(1))) }
 
       it "percent-encodes the double quote" do
-        expect(subject).to eq(%(background-image: url("http://x%22onerror=alert%281%29");))
+        expect(subject).to eq(%(background-image: url(&quot;http://x%22onerror=alert%281%29&quot;);))
       end
     end
 
@@ -473,7 +473,7 @@ Spectator.describe "helpers" do
       before_each { actor.save.assign(image: %(http://x\\foo)) }
 
       it "percent-encodes the backslash" do
-        expect(subject).to eq(%(background-image: url("http://x%5Cfoo");))
+        expect(subject).to eq(%(background-image: url(&quot;http://x%5Cfoo&quot;);))
       end
     end
   end

@@ -1,6 +1,7 @@
 require "html"
 require "uri"
 
+require "../../safe/safe_attr_value"
 require "../../safe/safe_html"
 require "../../utils/avatar"
 
@@ -142,11 +143,11 @@ module Ktistec::ViewHelper
       ')'  => "%29",
     }
 
-    def actor_background_style(actor) : String?
+    def actor_background_style(actor) : ::Ktistec::SafeAttrValue?
       return unless (image = actor.image.try(&.presence))
       return unless Ktistec::Util.safe_url?(image) && Ktistec::Util.url_scheme(image).in?(Ktistec::Util::SAFE_IRI_SCHEMES)
       url = image.gsub(CSS_URL_ENCODINGS)
-      %Q(background-image: url("#{url}");)
+      ::Ktistec::SafeAttrValue.escape(%Q(background-image: url("#{url}");))
     end
 
     def actor_type(actor) : ::Ktistec::SafeHTML

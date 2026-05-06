@@ -493,7 +493,7 @@ Spectator.describe OutboxesController do
 
         it "preserves the object's audience" do
           object.assign(audience: ["https://group.example/community"]).save
-          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
           expect(ActivityPub::Activity.find(actor_iri: actor.iri).audience).to eq(["https://group.example/community"])
         end
 

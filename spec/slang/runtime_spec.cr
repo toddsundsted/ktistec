@@ -78,6 +78,11 @@ Spectator.describe Slang::Runtime do
         expect { described_class.emit_splat_attrs(io, {"src" => 42}, false) }.to \
           raise_error(ArgumentError, /URL attribute `src` requires SafeURI/)
       end
+
+      it "is case-insensitive" do
+        expect { described_class.emit_splat_attrs(io, {"HREF" => "/x"}, false) }.to \
+          raise_error(ArgumentError, /URL attribute `HREF` requires SafeURI/)
+      end
     end
 
     context "event-handler keys" do

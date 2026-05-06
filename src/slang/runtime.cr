@@ -108,7 +108,7 @@ module Slang::Runtime
       if key_s.matches?(EVENT_HANDLER_RE)
         raise ArgumentError.new("event-handler attribute `#{key_s}` cannot be set via splat")
       end
-      if URL_ATTRIBUTE_NAMES.includes?(key_s)
+      if URL_ATTRIBUTE_NAMES.includes?(key_s.downcase)
         unless value.is_a?(::Ktistec::SafeURI)
           raise ArgumentError.new("URL attribute `#{key_s}` requires SafeURI in splat, got #{value.class}")
         end

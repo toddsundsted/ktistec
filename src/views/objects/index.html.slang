@@ -6,8 +6,9 @@
       i.exclamation.icon
       | There is nothing here, yet.
     .ui.text
-      | This page lists your draft posts.
-        You should go to <a href="#{actor_path}">your home page</a> and write something.
+      | This page lists your draft posts. You should go to
+      a<> href=actor_path your home page
+      | and write something.
 - else
   h1 Drafts
   section.ui.feed

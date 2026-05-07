@@ -37,6 +37,19 @@ module Slang::Runtime
     ::HTML.escape(value.to_s, io)
   end
 
+  # Emits a value to the buffer in HTML comment context.
+  #
+  # HTML-escapes (covers `& < > " '`) and breaks any `--` run with a
+  # numeric character reference, preventing early-close of the
+  # surrounding `<!-- ... -->`. No type dispatch: `Ktistec::SafeHTML`
+  # is *not* admitted raw, because its safety claim is HTML-data
+  # context, not comment context (markup containing `--` would break
+  # out).
+  #
+  def emit_comment(io : IO, value) : Nil
+    io << ::HTML.escape(value.to_s).gsub("--", "-&#45;")
+  end
+
   # Emits a single attribute for an unwrapped `name=expr` source
   # form.
   #

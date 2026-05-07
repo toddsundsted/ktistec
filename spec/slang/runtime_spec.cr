@@ -25,6 +25,38 @@ Spectator.describe Slang::Runtime do
     end
   end
 
+  describe ".emit_comment" do
+    it "HTML-escapes a plain String" do
+      described_class.emit_comment(io, %(<script>alert("x")</script>))
+      expect(io.to_s).to eq("&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;")
+    end
+
+    it "HTML-escapes a SafeHTML" do
+      described_class.emit_comment(io, Ktistec::SafeHTML.assert_safe("<em>x</em>"))
+      expect(io.to_s).to eq("&lt;em&gt;x&lt;/em&gt;")
+    end
+
+    it "breaks `--` to prevent comment early-close" do
+      described_class.emit_comment(io, "a -- b")
+      expect(io.to_s).to eq("a -&#45; b")
+    end
+
+    it "breaks consecutive runs of `-`" do
+      described_class.emit_comment(io, "a---b----c")
+      expect(io.to_s).to eq("a-&#45;-b-&#45;-&#45;c")
+    end
+
+    it "leaves `-` alone" do
+      described_class.emit_comment(io, "a-b-c")
+      expect(io.to_s).to eq("a-b-c")
+    end
+
+    it "emits empty string for nil" do
+      described_class.emit_comment(io, nil)
+      expect(io.to_s).to eq("")
+    end
+  end
+
   describe ".emit_attr" do
     it "emits a SafeAttrValue raw" do
       described_class.emit_attr(io, "title", Ktistec::SafeAttrValue.assert_safe(%(He said &quot;hi&quot;)))

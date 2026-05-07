@@ -684,11 +684,19 @@ emits after the control's `end`.
 Text appears in four forms:
 
 1. Trailing text on an element line (§5.1.10).
-2. Text block (`|`) — multi-line verbatim text.
+2. Text block (`|`) — multi-line text.
 3. Text block with trailing space (`'`) — same as `|` but appends a
    single space.
-4. Raw HTML (`<` at start of line) — treated as a TEXT token with
-   HTML-escape disabled.
+4. Raw HTML (`<` at start of line) — embeds literal HTML markup.
+
+In all four forms, **source bytes are emitted verbatim** (the author's
+literal text, including any `<`, `>`, `&`, `"`, `'`, is preserved as
+codegen-time literal output) but **`#{...}` interpolations are
+type-dispatched** through `Slang::Runtime.emit`: `Ktistec::SafeHTML`
+values are emitted raw, all other values have `.to_s` applied and are
+HTML-escaped. The split between "author bytes raw, runtime values
+gated" matches the design's general principle (untrusted-by-default,
+trusted-by-type — see §5.9).
 
 Inline elements (`:`) are structurally elements, not text — see
 §4.3 and §5.1.9.
@@ -730,7 +738,11 @@ Newline rules:
 - Trailing blank lines (between the last content line and the
   block's dedent or EOF) emit nothing.
 
-Text in `|` blocks is **not** HTML-escaped.
+Source bytes in `|` blocks are emitted verbatim. `#{...}`
+interpolations are type-dispatched per §5.4 — `Ktistec::SafeHTML`
+raw, everything else HTML-escaped. To emit pre-sanitized HTML markup
+through a `|` block, the producer returns `Ktistec::SafeHTML` (or the
+caller wraps via `Ktistec::SafeHTML.assert_safe`).
 
 The block's content column is anchored at the column immediately
 after the `|` marker; subsequent lines at column ≥ that anchor
@@ -750,15 +762,19 @@ should not be flush against it.
 
 #### 5.4.4 Raw HTML
 
-A line beginning with `<` is treated as raw HTML text — the entire
-line is emitted as a TEXT token with `escaped=false`:
+A line beginning with `<` is treated as raw HTML text — source bytes
+emitted verbatim, with `#{...}` interpolations type-dispatched per
+§5.4:
 
 ```slang
-<div>verbatim html</div>      →  <div>verbatim html</div>
+<div>verbatim html</div>             →  <div>verbatim html</div>
+<div>Hello, #{user.name}!</div>      →  <div>Hello, &lt;script&gt;!</div>  (when name = "<script>")
 ```
 
 Used inside larger templates that want to drop in pre-formatted HTML
-without nested Slang structure.
+without nested Slang structure. The author's `<`/`>`/`&` bytes are
+preserved (literal markup); only interpolated runtime values flow
+through the type gate.
 
 #### 5.4.5 Whitespace Controls
 
@@ -863,6 +879,16 @@ inside the comment, followed by a single `\n` before the closing
 Emits `<!--Note<span>note body</span>\n-->`. The trailing `\n`
 appears only when at least one child is present.
 
+Source bytes in the comment text are emitted verbatim (codegen-time
+literal — author trusted). `#{...}` interpolations route through
+`Slang::Runtime.emit_comment`, which HTML-escapes (covers
+`& < > " '`) **and** breaks any `--` run with a numeric character
+reference (`-&#45;`) so an interpolated value cannot prematurely
+close the surrounding `<!-- ... -->`. Unlike §5.4 (HTML data
+context), `Ktistec::SafeHTML` is **not** admitted raw inside
+comments — its safety claim is HTML-data context, and SafeHTML
+markup containing `--` would break out of the comment.
+
 ### 5.7 Doctype (`doctype`)
 
 Syntax: `doctype VALUE`
@@ -949,16 +975,24 @@ the table above. This applies to:
 - §5.1.6 class values (shorthand, explicit, splat).
 - §5.2 `=` output for non-`Ktistec::SafeHTML` values (`SafeHTML`
   values are emitted raw).
-- §5.4 interpolation values (`#{expr}`) inside trailing text and
-  any text token whose `escape` flag is true. Source bytes in
-  trailing text are **not** escaped -- see §5.4.6 and §5.1.10.
+- §5.4 interpolation values (`#{expr}`) inside trailing text, `|`/`'`
+  text blocks, raw HTML lines, and visible comments. Source bytes
+  (the author's literal text) are **not** escaped -- see §5.4.6 and
+  §5.1.10. Interpolation routes through `Slang::Runtime.emit`
+  (HTML-data context) for the first three; through
+  `Slang::Runtime.emit_comment` (HTML-escape + `--` dash-break) for
+  visible comments.
 - §5.8 splat keys (no) and values (yes, except `Ktistec::SafeAttrValue`
   values in non-URL slots — emitted raw — and `Ktistec::SafeURI` values
   in URL slots — emitted raw).
 
-The `==` form (§5.2) and `|` text blocks (§5.4.2) bypass escaping
-entirely. The output is whatever bytes the runtime expression /
-verbatim text emits, with no transformation.
+The `==` form (§5.2) bypasses escaping entirely on its top-level
+expression value (block children render through their own per-node
+contracts). Source bytes in any text construct (trailing text, `|`/`'`
+text blocks, raw HTML lines, visible comments) are also unescaped --
+they are author-trusted codegen-time literals. Only the *runtime
+values* threaded through interpolations (`#{...}`) flow through the
+type gate.
 
 ### 5.10 Single Evaluation
 

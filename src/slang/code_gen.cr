@@ -373,10 +373,25 @@ module Slang
           flush_literal
           emit_loc(part.loc)
           if part.escape
-            @output << "::HTML.escape((" << part.expr << ").to_s, " << @buffer_name << ")\n"
+            @output << "::Slang::Runtime.emit(" << @buffer_name << ", (" << part.expr << "))\n"
           else
             @output << '(' << part.expr << ").to_s(" << @buffer_name << ")\n"
           end
+        else
+          raise "Slang::CodeGen: unexpected text part #{part.class}"
+        end
+      end
+    end
+
+    private def emit_comment_parts(parts : Array(AST::TextPart)) : Nil
+      parts.each do |part|
+        case part
+        when AST::Literal
+          emit_literal(part.value)
+        when AST::Interp
+          flush_literal
+          emit_loc(part.loc)
+          @output << "::Slang::Runtime.emit_comment(" << @buffer_name << ", (" << part.expr << "))\n"
         else
           raise "Slang::CodeGen: unexpected text part #{part.class}"
         end
@@ -387,7 +402,7 @@ module Slang
 
     private def emit_visible_comment(node : AST::VisibleComment) : Nil
       emit_literal("<!--")
-      emit_text_parts(node.parts)
+      emit_comment_parts(node.parts)
       unless node.children.empty?
         node.children.each { |c| emit_node(c) }
         emit_literal("\n")

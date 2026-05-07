@@ -397,6 +397,16 @@ Spectator.describe "partials" do
         it "renders a button to block" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
         end
+
+        context "with HTML-special characters" do
+          before_each { actor.assign(name: "<XSS_PAYLOAD_42>").save }
+
+          it "HTML-escapes display_name" do
+            raw = render "./src/views/partials/actor-panel.html.slang"
+            expect(raw).not_to contain("<XSS_PAYLOAD_42>")
+            expect(raw).to contain("&lt;XSS_PAYLOAD_42&gt;")
+          end
+        end
       end
 
       context "having accepted a follow" do

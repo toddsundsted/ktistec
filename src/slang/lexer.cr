@@ -597,7 +597,7 @@ module Slang
         advance
       end
       had_inline = !at_line_end?
-      emit_text_with_interpolation(escape: false)
+      emit_text_with_interpolation(escape: true)
       consume_continuation_lines(opener_content_column: marker_column + 1, raw: false,
         first_emitted: had_inline)
     end
@@ -606,7 +606,7 @@ module Slang
 
     private def scan_raw_html_line(line : Int32, column : Int32) : Nil
       @pending << Token.new(TokenKind::RawHtml, line: line, column: column)
-      emit_text_with_interpolation(escape: false)
+      emit_text_with_interpolation(escape: true)
     end
 
     # ----- Comments -----
@@ -763,7 +763,7 @@ module Slang
             @pending << Token.new(TokenKind::TextLiteral, value: prefix,
               line: @line, column: 1, escape: false)
           end
-          emit_text_with_interpolation(escape: false)
+          emit_text_with_interpolation(escape: true)
         end
         first = false
       end

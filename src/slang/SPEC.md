@@ -954,14 +954,19 @@ when at least one dynamic class source is present.
 
 Splat values:
 
-- **Keys.** Each key is converted to string via `.to_s`. URL keys
-  (the §5.1.5 URL-slot set) require `Ktistec::SafeURI` values;
-  passing anything else raises `ArgumentError`. Event-handler keys
-  (matching `/\Aon[a-z]+\z/i`) are unconditionally rejected — they
-  cannot be set via splat regardless of value, and raise
-  `ArgumentError`. Symbol keys (e.g., `{:href => SafeURI.from?("/x")}`)
-  and string keys (`{"href" => SafeURI.from?("/x")}`) both work.
-  Other adversarial keys are not part of the contract.
+- **Keys.** Each key is converted to string via `.to_s`. The
+  resulting name must match `/\A[a-zA-Z_][a-zA-Z0-9_-]*\z/` (which
+  covers plain identifiers and the `data-*` / `aria-*` forms);
+  anything else raises `ArgumentError`. This blocks smuggled-attribute
+  vectors like `{"foo onclick" => "alert(1)"}`, which would otherwise
+  render as two attributes. Namespaced names containing `:` (e.g.
+  `xlink:href`) are not admitted via splat in v1; use a named
+  attribute. URL keys (the §5.1.5 URL-slot set) additionally require
+  `Ktistec::SafeURI` values; passing anything else raises.
+  Event-handler keys (matching `/\Aon[a-z]+\z/i`) are unconditionally
+  rejected — they cannot be set via splat regardless of value, and
+  raise. Symbol keys (e.g., `{:href => SafeURI.from?("/x")}`) and
+  string keys (`{"href" => SafeURI.from?("/x")}`) both work.
 - **Values.** For URL keys, a `SafeURI` is emitted raw (HTML-escaped
   for attribute-quote safety). For other keys, the same
   type-dispatched policy as named non-URL attributes (§5.1.5)

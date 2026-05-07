@@ -576,10 +576,32 @@ Spectator.describe Slang::Parser do
         expect(node.parts[1].as(AST::Interp).expr).to eq("name")
       end
 
-      it "attaches indented children" do
-        node = parse_one("/! wrapper\n  p inner").as(AST::VisibleComment)
-        expect(node.children.size).to eq(1)
-        expect(node.children.first.as(AST::Element).tag).to eq("p")
+      it "rejects indented children" do
+        expect { parse("/! wrapper\n  p inner") }.to raise_error(
+          Slang::ParseError,
+          /^visible comments \(`\/!`\) cannot have indented children/,
+        )
+      end
+
+      it "rejects an indented `|` text block" do
+        expect { parse("/! wrapper\n  | extra body") }.to raise_error(
+          Slang::ParseError,
+          /^visible comments \(`\/!`\) cannot have indented children/,
+        )
+      end
+
+      it "rejects indented `==` output" do
+        expect { parse(%(/! wrapper\n  == "x")) }.to raise_error(
+          Slang::ParseError,
+          /^visible comments \(`\/!`\) cannot have indented children/,
+        )
+      end
+
+      it "rejects indented `=` output" do
+        expect { parse(%(/! wrapper\n  = SafeHTML.assert_safe("--><script>"))) }.to raise_error(
+          Slang::ParseError,
+          /^visible comments \(`\/!`\) cannot have indented children/,
+        )
       end
     end
 

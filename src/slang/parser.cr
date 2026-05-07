@@ -507,9 +507,11 @@ module Slang
       end
       expect(TokenKind::Newline)
       if at?(TokenKind::Indent)
-        consume
-        node.children.concat(parse_block)
-        expect(TokenKind::Dedent)
+        indent_tok = @current
+        raise ParseError.new(
+          "visible comments (`/!`) cannot have indented children",
+          indent_tok.line, indent_tok.column,
+        )
       end
       node
     end

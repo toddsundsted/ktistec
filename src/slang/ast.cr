@@ -181,12 +181,10 @@ module Slang
 
     class VisibleComment < Node
       getter parts : Array(TextPart)
-      getter children : Array(Node)
 
       def initialize(loc : SourceLoc)
         super(loc)
         @parts = [] of TextPart
-        @children = [] of Node
       end
     end
 

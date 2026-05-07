@@ -405,10 +405,6 @@ module Slang
     private def emit_visible_comment(node : AST::VisibleComment) : Nil
       emit_literal("<!--")
       emit_comment_parts(node.parts)
-      unless node.children.empty?
-        node.children.each { |c| emit_node(c) }
-        emit_literal("\n")
-      end
       emit_literal("-->")
     end
 

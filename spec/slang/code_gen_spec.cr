@@ -551,10 +551,10 @@ Spectator.describe Slang::CodeGen do
       expect(render_string("/! hello world")).to eq("<!--hello world-->")
     end
 
-    it "emits a `\\n` before `-->` for a visible comment with children" do
-      expect(render_string(<<-SLANG)).to eq("<!--Note<span>note body</span>\n-->")
-        /! Note
-          span note body
+    it "emits an interpolated value" do
+      expect(render_string(<<-SLANG)).to eq("<!--note: a -&#45;&gt; b-->")
+        - val = "a --> b"
+        /! note: \#{val}
         SLANG
     end
   end

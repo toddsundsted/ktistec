@@ -35,6 +35,10 @@ class String
   def ==(other : Ktistec::SafeHTML)
     other.to_s == self
   end
+
+  def ==(other : Ktistec::SafeAttrValue)
+    other.to_s == self
+  end
 end
 
 class Regex

@@ -711,7 +711,7 @@ Spectator.describe Task::Fetch::Hashtag do
     end
 
     it "returns the path to the hashtag page" do
-      expect(subject.path_to).to eq("/tags/hashtag")
+      expect(subject.path_to.to_s).to eq("/tags/hashtag")
     end
   end
 end

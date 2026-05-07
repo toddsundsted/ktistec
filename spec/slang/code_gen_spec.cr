@@ -30,17 +30,6 @@ Spectator.describe Slang::CodeGen do
       expect(render_string("br")).to eq("<br>")
     end
 
-    it "emits inline children of a self-closing tag" do
-      expect(render_string(%(br: a href="/x" Click))).to eq(%(<br><a href="/x">Click</a>))
-    end
-
-    it "emits indent children of a self-closing tag" do
-      expect(render_string(<<-SLANG)).to eq("<br><p>after</p>")
-        br
-          p after
-        SLANG
-    end
-
     it "renders nested tags" do
       expect(render_string(<<-SLANG)).to eq("<div><p></p><ul><li></li></ul></div>")
         div
@@ -135,6 +124,35 @@ Spectator.describe Slang::CodeGen do
     it "renders attribute names containing a colon" do
       expect(render_string(%(svg xmlns:xlink="http://www.w3.org/1999/xlink"))).to eq(
         %(<svg xmlns:xlink="http://www.w3.org/1999/xlink"></svg>),
+      )
+    end
+  end
+
+  describe "URL attributes" do
+    it "emits a SafeURI value as the attribute" do
+      expect(render_string(%(a href=Ktistec::SafeURI.assert_safe("/x?a=1&b=2")))).to eq(
+        %(<a href="/x?a=1&amp;b=2"></a>),
+      )
+    end
+
+    it "omits the attribute when the value is nil" do
+      expect(render_string("a href=evaluates_to_nil")).to eq(%(<a></a>))
+    end
+  end
+
+  describe "Event-handler attributes" do
+    # `Slang::Runtime.emit_event_attr` is intentionally undefined.
+    # `button onclick=expr` (any expression form) fails to compile.
+
+    it "emits an author-typed string literal verbatim" do
+      expect(render_string(%(button onclick="alert(1)" Click))).to eq(
+        %(<button onclick="alert(1)">Click</button>),
+      )
+    end
+
+    it "HTML-escapes the literal value" do
+      expect(render_string(%(button onclick="x &amp; y" Click))).to eq(
+        %(<button onclick="x &amp;amp; y">Click</button>),
       )
     end
   end
@@ -484,10 +502,6 @@ Spectator.describe Slang::CodeGen do
     it "treats `: =` as inline output of the parent (no implicit div)" do
       expect(render_string(%(span: = "x"))).to eq("<span>x</span>")
     end
-
-    it "self-closing parent + `: ==` emits the output as a sibling" do
-      expect(render_string(%(br: == "x"))).to eq("<br>x")
-    end
   end
 
   describe "Whitespace controls" do
@@ -537,10 +551,10 @@ Spectator.describe Slang::CodeGen do
       expect(render_string("/! hello world")).to eq("<!--hello world-->")
     end
 
-    it "emits a `\\n` before `-->` for a visible comment with children" do
-      expect(render_string(<<-SLANG)).to eq("<!--Note<span>note body</span>\n-->")
-        /! Note
-          span note body
+    it "emits an interpolated value" do
+      expect(render_string(<<-SLANG)).to eq("<!--note: a -&#45;&gt; b-->")
+        - val = "a --> b"
+        /! note: \#{val}
         SLANG
     end
   end

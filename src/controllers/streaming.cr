@@ -124,7 +124,7 @@ class StreamingController
       not_found
     end
     setup_response(env.response)
-    subscribe "/actor/refresh", mention_path(mention) do |subject, values|
+    subscribe "/actor/refresh", mention_path(mention).to_s do |subject, values|
       values.each do |value|
         case subject
         when "/actor/refresh"
@@ -150,7 +150,7 @@ class StreamingController
       not_found
     end
     setup_response(env.response)
-    subscribe "/actor/refresh", hashtag_path(hashtag) do |subject, values|
+    subscribe "/actor/refresh", hashtag_path(hashtag).to_s do |subject, values|
       values.each do |value|
         case subject
         when "/actor/refresh"
@@ -289,7 +289,7 @@ class StreamingController
 
   get "/stream/everything" do |env|
     setup_response(env.response)
-    subscribe "/actor/refresh", everything_path do |subject, values|
+    subscribe "/actor/refresh", everything_path.to_s do |subject, values|
       values.each do |value|
         case subject
         when "/actor/refresh"
@@ -357,7 +357,7 @@ end
 module ActivityPub
   class Object
     def after_create
-      Ktistec::Topic{Ktistec::ViewHelper.everything_path}.notify_subscribers
+      Ktistec::Topic{Ktistec::ViewHelper.everything_path.to_s}.notify_subscribers
     end
 
     # updates the `subject` based on the `thread` when an object is

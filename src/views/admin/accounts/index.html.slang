@@ -20,4 +20,4 @@ table.ui.table
         td= account.created_at.to_s("%Y-%m-%d %H:%M")
         td
           .ui.small.buttons
-            a.ui.button href="/actors/#{account.actor.username}" Profile
+            a.ui.button href=actor_path(account.actor) Profile

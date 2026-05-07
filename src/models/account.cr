@@ -145,9 +145,9 @@ class Account
   @[Persistent]
   property pinned_collections : Hash(String, String) do
     {
-      "Bookmarks" => Utils::Paths.actor_bookmarks_path(self),
-      "Followers" => Utils::Paths.actor_followers_path(self),
-      "Following" => Utils::Paths.actor_following_path(self),
+      "Bookmarks" => Utils::Paths.actor_bookmarks_path(self).to_s,
+      "Followers" => Utils::Paths.actor_followers_path(self).to_s,
+      "Following" => Utils::Paths.actor_following_path(self).to_s,
     }
   end
   validates(pinned_collections) do

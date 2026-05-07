@@ -82,6 +82,17 @@ Spectator.describe OAuth2Controller do
         expect(response.body).to contain(state)
       end
 
+      context "with HTML-special characters" do
+        before_each { client.assign(client_name: "<XSS_PAYLOAD_42>").save }
+
+        it "HTML-escapes client_name" do
+          get "/oauth/authorize?#{query}", headers: HTML_HEADERS
+          expect(response.status_code).to eq(200)
+          expect(response.body).not_to contain("<XSS_PAYLOAD_42>")
+          expect(response.body).to contain("&lt;XSS_PAYLOAD_42&gt;")
+        end
+      end
+
       context "without a code_challenge" do
         let(query) { super.gsub(/&code_challenge=(.+?)&/, "&") }
 

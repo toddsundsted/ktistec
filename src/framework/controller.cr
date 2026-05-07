@@ -61,7 +61,7 @@ module Ktistec
     # Redirect and end processing.
     #
     macro redirect(url, status_code = 302)
-      env.response.headers.add("Location", {{url}})
+      env.response.headers.add("Location", ({{url}}).to_s)
       env.response.status_code = {{status_code}}
       next
     end
@@ -211,7 +211,7 @@ module Ktistec
     def_response_helper(service_unavailable, "Service Unavailable", 503)
 
     macro created(url, *args, **opts)
-      env.response.headers.add("Location", {{url}})
+      env.response.headers.add("Location", ({{url}}).to_s)
       {% if args.empty? || opts.empty? %}
         _created {{args.splat}}{{opts.double_splat}}
       {% else %}

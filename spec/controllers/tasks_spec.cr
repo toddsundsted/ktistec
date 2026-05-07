@@ -85,7 +85,7 @@ Spectator.describe TasksController do
             end
 
             def path_to
-              "/path"
+              Ktistec::SafeURI.assert_safe("/path")
             end
           end
 

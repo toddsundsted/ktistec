@@ -109,7 +109,7 @@ class Task
       # notify subscribers when the task starts running, because the
       # transition to `running = true` does not trigger a lifecycle
       # callback.
-      Ktistec::Topic{path_to}.notify_subscribers
+      Ktistec::Topic{path_to.to_s}.notify_subscribers
       # look for hashtags that were added by some other means since
       # the last run. handles the regular arrival of objects via
       # ActivityPub.
@@ -141,7 +141,7 @@ class Task
           ContentRules.new.run do
             assert ContentRules::CheckFollowFor.new(source, object)
           end
-          Ktistec::Topic{path_to}.notify_subscribers(object.id.to_s)
+          Ktistec::Topic{path_to.to_s}.notify_subscribers(object.id.to_s)
           count += 1
         end
       rescue ex : TaskWorker::ServerShutdownException
@@ -165,7 +165,7 @@ class Task
     end
 
     def after_save
-      Ktistec::Topic{path_to}.notify_subscribers
+      Ktistec::Topic{path_to.to_s}.notify_subscribers
     end
 
     property been_fetched = Set(String).new

@@ -4,8 +4,10 @@
   - if actor.blocked?
     .ui.basic.blocked.segment
       = actor.display_name
-      br: a href=actor.display_link = actor.handle
-      br: em This actor is blocked!
+      br
+      a href=actor.display_link = actor.handle
+      br
+      em This actor is blocked!
   - else
     - style = actor_background_style(actor)
     .ui.basic.segment class=(style ? nil : "placeholder") style=style
@@ -25,7 +27,8 @@
         a href=remote_actor_path(actor) = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
       - else
         span = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
-      br: a href=actor.display_link = actor.handle
+      br
+      a href=actor.display_link = actor.handle
       - if (summary = actor.summary.presence)
         .ui.divider
         = s Ktistec::Emoji.emojify(summary, _emojis)

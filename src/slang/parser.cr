@@ -86,6 +86,14 @@ module Slang
 
     # ----- Element line -----
 
+    # `<script>` content types that the browser does not execute.
+    #
+    # A `<script>` with one of these `type` values may have Slang
+    # children; any other `<script>` must be bodyless. `<style>` is
+    # always bodyless.
+    #
+    INERT_SCRIPT_TYPES = %w[application/json application/ld+json text/template text/plain]
+
     private def parse_element_line : AST::Node
       open = consume # Element
       loc = AST::SourceLoc.new(open.line, open.column)
@@ -101,7 +109,68 @@ module Slang
         innermost.children.concat(parse_block)
         expect(TokenKind::Dedent)
       end
+      validate_element_canonical_form!(el)
       el
+    end
+
+    # Validates that the element conforms to a canonical form.
+    #
+    #   <script src="...">   (bodyless)         — allowed (loads external JS)
+    #   <script type="...">  (inert + body)     — allowed (chart data / JSON-LD / template scaffold)
+    #   <script>             (other forms)      — banned (use `javascript:` or `script src="..."`)
+    #   <style>                                 — banned (use `css:` or `<link rel="...">`)
+    #   void elements (br, img, hr, ...)        — banned
+    #   everything else                         — accepted
+    #
+    private def validate_element_canonical_form!(el : AST::Element) : Nil
+      tag = el.tag.downcase
+      case tag
+      when "style"
+        raise ParseError.new(
+          "`<style>` elements are banned; use a `css:` block, or `<link rel=\"stylesheet\">` to load an external stylesheet",
+          el.loc.line, el.loc.column,
+        )
+      when "script"
+        if el.children.empty?
+          return if script_has_named_src?(el)
+          raise ParseError.new(
+            "bodyless `<script>` requires a named `src=` attribute; use `script src=\"...\"` to load external JavaScript, or a `javascript:` block",
+            el.loc.line, el.loc.column,
+          )
+        end
+        return if script_inert?(el)
+        raise ParseError.new(
+          "`<script>` with executable type cannot have Slang children or trailing text; use a `javascript:` block, or set `type=` to an inert content type (#{INERT_SCRIPT_TYPES.join(", ")})",
+          el.loc.line, el.loc.column,
+        )
+      else
+        if AST::VOID_ELEMENTS.includes?(tag) && !el.children.empty?
+          raise ParseError.new(
+            "void element `<#{tag}>` cannot have Slang children or trailing text; void elements (`#{AST::VOID_ELEMENTS.join("`, `")}`) are bodyless by definition",
+            el.loc.line, el.loc.column,
+          )
+        end
+      end
+    end
+
+    private def script_has_named_src?(el : AST::Element) : Bool
+      el.attrs.any? { |a| a.name.downcase == "src" }
+    end
+
+    private def script_inert?(el : AST::Element) : Bool
+      type_attr = el.attrs.find { |a| a.name.downcase == "type" }
+      return false unless type_attr
+      value = simple_string_literal(type_attr.value)
+      return false unless value
+      INERT_SCRIPT_TYPES.includes?(value.downcase)
+    end
+
+    private def simple_string_literal(expr : String) : String?
+      return if expr.size < 2
+      return unless expr.starts_with?('"') && expr.ends_with?('"')
+      inner = expr[1..-2]
+      return if inner.includes?('\\') || inner.includes?('"')
+      inner
     end
 
     # builds the bare `Element` from an `Element` opener token and
@@ -438,9 +507,11 @@ module Slang
       end
       expect(TokenKind::Newline)
       if at?(TokenKind::Indent)
-        consume
-        node.children.concat(parse_block)
-        expect(TokenKind::Dedent)
+        indent_tok = @current
+        raise ParseError.new(
+          "visible comments (`/!`) cannot have indented children",
+          indent_tok.line, indent_tok.column,
+        )
       end
       node
     end

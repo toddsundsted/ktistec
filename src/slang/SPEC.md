@@ -370,13 +370,35 @@ expression-internal balance).
 **Attribute value escaping:**
 
 Attribute values are Crystal expressions, not string literals. They
-are evaluated at runtime, converted to string via `.to_s`, and
-HTML-escaped using the canonical escape function (see §5.9). So:
+are evaluated at runtime; what happens next depends on the
+attribute's slot kind and the value's static type:
+
+- **URL slots** — `href`, `src`, `action`, `formaction`, `data`,
+  `cite`, `poster`, `manifest`, `xlink:href`, `background`,
+  `longdesc`, `usemap`. Only `Ktistec::SafeURI` (or `Ktistec::SafeURI?`)
+  is admitted; a plain `String` (or any other type) is a compile
+  error. `nil` is silently skipped (no attribute emitted).
+- **Event-handler slots** — any attribute name matching `/\Aon[a-z]+\z/i`
+  (`onclick`, `onmouseover`, …). Expression-form values (`onclick=expr`
+  for any Crystal expression) are a compile error: there is no
+  admissible runtime type for a JS-execution context. Author-typed
+  string literals (`onclick="alert(1)"`) are unaffected — codegen
+  emits the literal bytes (HTML-escaped) at compile time and never
+  reaches the runtime helper. `SafeJS` is deferred until a real
+  use case appears.
+- **Other slots** — `Ktistec::SafeAttrValue` is emitted raw inside
+  the surrounding `="…"`; any other value (including `String` and
+  `Ktistec::SafeHTML`) is converted to string via `.to_s` and
+  HTML-escaped using the canonical escape function (see §5.9). So:
 
 ```slang
 span attr="Hello & world"     →  <span attr="Hello &amp; world"></span>
 span attr=val                 →  <span attr="<runtime to_s of val, escaped>"></span>
 ```
+
+`SafeHTML` is intentionally not admissible into attribute slots —
+markup like `<em>x</em>` is safe in HTML data but would render as
+visible text in an attribute, so the engine HTML-escapes it instead.
 
 There is no `attr==value` syntax for raw (un-escaped) attribute
 values.
@@ -455,22 +477,24 @@ div.foo class="bar" class=x    →  <div class="foo bar <runtime x>"></div>
 div.foo *attrs                 →  <div class="foo <runtime attrs[\"class\"]>" ...></div>
 ```
 
-#### 5.1.7 Self-Closing Tags
+#### 5.1.7 Void (Self-Closing) Tags
 
-The tags `area`, `base`, `br`, `col`, `embed`, `hr`, `img`, `input`,
-`keygen`, `link`, `menuitem`, `meta`, `param`, `source`, `track`,
-`wbr` emit no closing `</tag>`. Children attached via the inline
-`:` chain or via an indented block are still rendered, immediately
-after the `>` of the self-closing tag (effectively as siblings,
-since the void element opens no scope):
+The void element set per HTML5: `area`, `base`, `br`, `col`,
+`embed`, `hr`, `img`, `input`, `keygen`, `link`, `menuitem`, `meta`,
+`param`, `source`, `track`, `wbr`. These elements emit no closing
+`</tag>` and are bodyless — the parser raises `Slang::ParseError`
+on any inline `:` child, indented block, or trailing text:
 
 ```slang
-br: a href="/x" Click   →  <br><a href="/x">Click</a>
-```
+br                                    # OK
+img src="/x" alt="..."                # OK
+input type="text" name="x"            # OK
 
-This pattern appears in production templates (e.g.,
-`partials/actor-panel.html.slang` uses `br: a href=...` to
-introduce a handle link after a line break).
+br: a href="/x" Click                 # ERROR: void element with child
+br
+  p after                             # ERROR: void element with indented block
+img src="/x" alt text                 # ERROR: void element with trailing text
+```
 
 #### 5.1.8 Whitespace Controls
 
@@ -670,11 +694,16 @@ emits after the control's `end`.
 Text appears in four forms:
 
 1. Trailing text on an element line (§5.1.10).
-2. Text block (`|`) — multi-line verbatim text.
+2. Text block (`|`) — multi-line text.
 3. Text block with trailing space (`'`) — same as `|` but appends a
    single space.
-4. Raw HTML (`<` at start of line) — treated as a TEXT token with
-   HTML-escape disabled.
+4. Raw HTML (`<` at start of line) — embeds literal HTML markup.
+
+In all four forms, source bytes are emitted verbatim (the author's
+literal text, including any `<`, `>`, `&`, `"`, `'`, is preserved as
+codegen-time literal output). `#{...}` interpolations route through
+`Slang::Runtime.emit`: `Ktistec::SafeHTML` values are emitted raw,
+all other values have `.to_s` applied and are HTML-escaped (§5.9).
 
 Inline elements (`:`) are structurally elements, not text — see
 §4.3 and §5.1.9.
@@ -716,7 +745,11 @@ Newline rules:
 - Trailing blank lines (between the last content line and the
   block's dedent or EOF) emit nothing.
 
-Text in `|` blocks is **not** HTML-escaped.
+Source bytes in `|` blocks are emitted verbatim. `#{...}`
+interpolations are type-dispatched per §5.4 — `Ktistec::SafeHTML`
+raw, everything else HTML-escaped. To emit pre-sanitized HTML markup
+through a `|` block, the producer returns `Ktistec::SafeHTML` (or the
+caller wraps via `Ktistec::SafeHTML.assert_safe`).
 
 The block's content column is anchored at the column immediately
 after the `|` marker; subsequent lines at column ≥ that anchor
@@ -736,15 +769,19 @@ should not be flush against it.
 
 #### 5.4.4 Raw HTML
 
-A line beginning with `<` is treated as raw HTML text — the entire
-line is emitted as a TEXT token with `escaped=false`:
+A line beginning with `<` is treated as raw HTML text — source bytes
+emitted verbatim, with `#{...}` interpolations type-dispatched per
+§5.4:
 
 ```slang
-<div>verbatim html</div>      →  <div>verbatim html</div>
+<div>verbatim html</div>             →  <div>verbatim html</div>
+<div>Hello, #{user.name}!</div>      →  <div>Hello, &lt;script&gt;!</div>  (when name = "<script>")
 ```
 
 Used inside larger templates that want to drop in pre-formatted HTML
-without nested Slang structure.
+without nested Slang structure. The author's `<`/`>`/`&` bytes are
+preserved (literal markup); only interpolated runtime values flow
+through the type gate.
 
 #### 5.4.5 Whitespace Controls
 
@@ -806,18 +843,43 @@ followed by two indented lines `var x = 1;` and `console.log(x);`
 emits `<script>var x = 1;\nconsole.log(x);</script>`, not
 `<script>\nvar x = 1;\nconsole.log(x);\n</script>`.
 
-Bare `script` and `style` elements (no colon suffix) also receive
-raw-text treatment for their children:
+**`<style>` and `<script>` element-tag uses are constrained to a
+fixed set of canonical forms.** The parser raises
+`Slang::ParseError` on any other shape.
+
+| Construct | Status |
+|---|---|
+| `<style>` (any form, body or not, attrs or not) | banned |
+| `<script src="...">` (bodyless, any other attrs OK) | allowed |
+| `<script>` bodyless without a named `src=` attr | banned |
+| `<script type="…">` with body, inert `type=` | allowed |
+| `<script>` with body, executable `type=` | banned |
+
+"Inert" `type=` means a literal-string value matching one of
+`application/json`, `application/ld+json`, `text/template`, or
+`text/plain` (case-insensitive). Anything else — including a
+non-literal Crystal expression — is treated as executable.
 
 ```slang
-script
-  console.log("hi")    # children of script element are raw, not parsed as Slang
+script src="/dist/bundle.js"                   # OK: external JS
+
+script type="application/json" data-chart-target="labels"
+  == labels.to_json                            # OK: inert content type
+
+javascript:
+  console.log("hi")                            # OK: rawstuff form
+
+script                                         # ERROR: bodyless without src=
+script type="text/javascript"                  # ERROR: bodyless without src=
+script                                         # ERROR: executable + body
+  console.log("hi")
+style                                          # ERROR: <style> always banned
+style media="print"                            # ERROR: <style> always banned
 ```
 
-The colon-suffixed `javascript:` and `css:` differ from the bare
-forms only in that they emit the `<script>` / `<style>` wrapper
-automatically; bare `script` / `style` are ordinary element lines
-that happen to receive raw-content handling for their children.
+Inline JavaScript and CSS are written through the `javascript:` and
+`css:` rawstuff blocks, which lex content verbatim with no Slang
+interpretation.
 
 ### 5.6 Comments
 
@@ -837,17 +899,23 @@ Emits nothing. Hidden from the rendered output entirely.
 /! This is visible
 ```
 
-Emits `<!--This is visible-->`. Children, if any, are rendered
-inside the comment, followed by a single `\n` before the closing
-`-->`:
+Emits `<!--This is visible-->`. Visible comments are single-line;
+indented children are a parse error.
 
 ```slang
-/! Note
+/! Note            # ERROR: indented child below
   span note body
 ```
 
-Emits `<!--Note<span>note body</span>\n-->`. The trailing `\n`
-appears only when at least one child is present.
+Within the inline body:
+
+- Source bytes are emitted verbatim (codegen-time literal).
+- `#{...}` interpolations route through `Slang::Runtime.emit_comment`,
+  which HTML-escapes (covers `& < > " '`) and replaces any `--` run
+  with `-&#45;`.
+- `Ktistec::SafeHTML` values are not admitted raw inside comments;
+  they go through the same escape-and-dash-break path as any other
+  value.
 
 ### 5.7 Doctype (`doctype`)
 
@@ -886,12 +954,21 @@ when at least one dynamic class source is present.
 
 Splat values:
 
-- **Keys.** Each key is converted to string via `.to_s` and used
-  as the attribute name verbatim (no escaping). Symbol keys (e.g.,
-  `{:href => "/x"}`) and string keys (`{"href" => "/x"}`) both
-  work. Adversarial keys are not part of the contract.
-- **Values.** Each value is converted to string via `.to_s` and
-  HTML-escaped using §5.9 — same rule as for explicit attributes.
+- **Keys.** Each key is converted to string via `.to_s`. URL keys
+  (the §5.1.5 URL-slot set) require `Ktistec::SafeURI` values;
+  passing anything else raises `ArgumentError`. Event-handler keys
+  (matching `/\Aon[a-z]+\z/i`) are unconditionally rejected — they
+  cannot be set via splat regardless of value, and raise
+  `ArgumentError`. Symbol keys (e.g., `{:href => SafeURI.from?("/x")}`)
+  and string keys (`{"href" => SafeURI.from?("/x")}`) both work.
+  Other adversarial keys are not part of the contract.
+- **Values.** For URL keys, a `SafeURI` is emitted raw (HTML-escaped
+  for attribute-quote safety). For other keys, the same
+  type-dispatched policy as named non-URL attributes (§5.1.5)
+  applies: `Ktistec::SafeAttrValue` is emitted raw, anything else
+  stringifies and HTML-escapes. The asymmetry between named and
+  splat is in the URL/event enforcement (compile-time for named,
+  runtime for splat), not in `SafeAttrValue` admission.
 - **Boolean values.** `true` and `false` in splat values are
   treated identically to explicit attributes (§5.1.5):
   `true` emits the bare attribute name, `false` omits the
@@ -919,19 +996,31 @@ Where the spec says "HTML-escaped," it means: convert the value to
 string via Crystal's `.to_s` (which is `""` for `nil`), then apply
 the table above. This applies to:
 
-- §5.1.5 attribute values (with the boolean special case for
-  `true` / `false`).
+- §5.1.5 attribute values for non-URL slots, when the value is not
+  a `Ktistec::SafeAttrValue` (with the boolean special case for
+  `true` / `false`). URL slots have their own type-checked dispatch
+  and never fall through to this path.
 - §5.1.6 class values (shorthand, explicit, splat).
 - §5.2 `=` output for non-`Ktistec::SafeHTML` values (`SafeHTML`
   values are emitted raw).
-- §5.4 interpolation values (`#{expr}`) inside trailing text and
-  any text token whose `escape` flag is true. Source bytes in
-  trailing text are **not** escaped -- see §5.4.6 and §5.1.10.
-- §5.8 splat keys (no) and values (yes).
+- §5.4 interpolation values (`#{expr}`) inside trailing text, `|`/`'`
+  text blocks, raw HTML lines, and visible comments. Source bytes
+  (the author's literal text) are **not** escaped -- see §5.4.6 and
+  §5.1.10. Interpolation routes through `Slang::Runtime.emit`
+  (HTML-data context) for the first three; through
+  `Slang::Runtime.emit_comment` (HTML-escape + `--` dash-break) for
+  visible comments.
+- §5.8 splat keys (no) and values (yes, except `Ktistec::SafeAttrValue`
+  values in non-URL slots — emitted raw — and `Ktistec::SafeURI` values
+  in URL slots — emitted raw).
 
-The `==` form (§5.2) and `|` text blocks (§5.4.2) bypass escaping
-entirely. The output is whatever bytes the runtime expression /
-verbatim text emits, with no transformation.
+The `==` form (§5.2) bypasses escaping entirely on its top-level
+expression value (block children render through their own per-node
+contracts). Source bytes in any text construct (trailing text, `|`/`'`
+text blocks, raw HTML lines, visible comments) are also unescaped --
+they are author-trusted codegen-time literals. Only the *runtime
+values* threaded through interpolations (`#{...}`) flow through the
+type gate.
 
 ### 5.10 Single Evaluation
 

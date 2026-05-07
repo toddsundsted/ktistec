@@ -2,6 +2,11 @@
 #
 module Slang
   module AST
+    VOID_ELEMENTS = %w[
+      area base br col embed hr img input keygen link
+      menuitem meta param source track wbr
+    ]
+
     # 1-based source location
     record SourceLoc, line : Int32, column : Int32
 
@@ -176,12 +181,10 @@ module Slang
 
     class VisibleComment < Node
       getter parts : Array(TextPart)
-      getter children : Array(Node)
 
       def initialize(loc : SourceLoc)
         super(loc)
         @parts = [] of TextPart
-        @children = [] of Node
       end
     end
 

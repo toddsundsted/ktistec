@@ -637,7 +637,7 @@ Spectator.describe Slang::Lexer do
       expect(tokens).to eq([
         {TK::TextBlock, "", true},
         {TK::TextLiteral, "Hello ", false},
-        {TK::InterpExpr, "name", false},
+        {TK::InterpExpr, "name", true},
         {TK::TextLiteral, "!", false},
         {TK::Newline, "", true},
         {TK::EOF, "", true},

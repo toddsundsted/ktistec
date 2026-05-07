@@ -189,7 +189,7 @@ Spectator.describe Task::DistributePollUpdates do
     let_build(:distribute_poll_updates_task, question: question)
 
     it "returns path to the question" do
-      expect(distribute_poll_updates_task.path_to).to eq("/remote/objects/#{question.id}")
+      expect(distribute_poll_updates_task.path_to.to_s).to eq("/remote/objects/#{question.id}")
     end
   end
 end

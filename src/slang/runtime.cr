@@ -23,6 +23,10 @@ module Slang::Runtime
   #
   EVENT_HANDLER_RE = /\Aon[a-z]+\z/i
 
+  # Matches attribute names accepted via splat.
+  #
+  ATTRIBUTE_NAME_RE = /\A[a-zA-Z_][a-zA-Z0-9_-]*\z/
+
   # Emits a value to the buffer in HTML data context.
   #
   # `Ktistec::SafeHTML` is emitted raw; any other value has `.to_s`
@@ -138,6 +142,9 @@ module Slang::Runtime
       next if value.nil?
       key_s = key.to_s
       next if skip_class && key_s == "class"
+      unless key_s.matches?(ATTRIBUTE_NAME_RE)
+        raise ArgumentError.new("invalid splat attribute name `#{key_s}`")
+      end
       if key_s.matches?(EVENT_HANDLER_RE)
         raise ArgumentError.new("event-handler attribute `#{key_s}` cannot be set via splat")
       end

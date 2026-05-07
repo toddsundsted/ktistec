@@ -40,10 +40,22 @@ module Slang::Runtime
   # Emits a single attribute for an unwrapped `name=expr` source
   # form.
   #
-  # - `true`  -> emit ` name`
-  # - `false` -> omit entirely
-  # - else    -> emit ` name="<HTML-escaped value.to_s>"`
+  # - `Ktistec::SafeAttrValue` -> emit ` name="<value.to_s>"` raw
+  # - `true`                   -> emit ` name`
+  # - `false`                  -> omit entirely
+  # - else                     -> emit ` name="<HTML-escaped value.to_s>"`
   #
+  # `Ktistec::SafeHTML` is intentionally *not* admitted raw here:
+  # markup like `<em>x</em>` is safe in HTML data slots but would
+  # render as visible text inside an attribute (the type lattice
+  # treats the two destinations as distinct). It falls through to
+  # the HTML-escape branch below.
+  #
+  def emit_attr(io : IO, name : String, value : ::Ktistec::SafeAttrValue) : Nil
+    io << ' ' << name << "=\"" << value.to_s << '"'
+  end
+
+  # :ditto:
   def emit_attr(io : IO, name : String, value) : Nil
     case value
     when true
@@ -108,7 +120,7 @@ module Slang::Runtime
       if key_s.matches?(EVENT_HANDLER_RE)
         raise ArgumentError.new("event-handler attribute `#{key_s}` cannot be set via splat")
       end
-      if URL_ATTRIBUTE_NAMES.includes?(key_s)
+      if URL_ATTRIBUTE_NAMES.includes?(key_s.downcase)
         unless value.is_a?(::Ktistec::SafeURI)
           raise ArgumentError.new("URL attribute `#{key_s}` requires SafeURI in splat, got #{value.class}")
         end

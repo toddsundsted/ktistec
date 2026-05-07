@@ -25,6 +25,38 @@ Spectator.describe Slang::Runtime do
     end
   end
 
+  describe ".emit_attr" do
+    it "emits a SafeAttrValue raw" do
+      described_class.emit_attr(io, "title", Ktistec::SafeAttrValue.assert_safe(%(He said &quot;hi&quot;)))
+      expect(io.to_s).to eq(%( title="He said &quot;hi&quot;"))
+    end
+
+    it "HTML-escapes a plain String" do
+      described_class.emit_attr(io, "title", %(He said "hi"))
+      expect(io.to_s).to eq(%( title="He said &quot;hi&quot;"))
+    end
+
+    it "HTML-escapes a SafeHTML" do
+      described_class.emit_attr(io, "title", Ktistec::SafeHTML.assert_safe("<em>x</em>"))
+      expect(io.to_s).to eq(%( title="&lt;em&gt;x&lt;/em&gt;"))
+    end
+
+    it "emits name for true" do
+      described_class.emit_attr(io, "checked", true)
+      expect(io.to_s).to eq(" checked")
+    end
+
+    it "omits for false" do
+      described_class.emit_attr(io, "checked", false)
+      expect(io.to_s).to eq("")
+    end
+
+    it "HTML-escapes the result of .to_s on non-string values" do
+      described_class.emit_attr(io, "data-x", [1, "<a>"])
+      expect(io.to_s).to eq(%( data-x="[1, &quot;&lt;a&gt;&quot;]"))
+    end
+  end
+
   describe ".emit_url_attr" do
     it "emits a SafeURI raw" do
       described_class.emit_url_attr(io, "href", Ktistec::SafeURI.assert_safe("/x"))
@@ -77,6 +109,11 @@ Spectator.describe Slang::Runtime do
       it "raises when value is a non-SafeURI type" do
         expect { described_class.emit_splat_attrs(io, {"src" => 42}, false) }.to \
           raise_error(ArgumentError, /URL attribute `src` requires SafeURI/)
+      end
+
+      it "is case-insensitive" do
+        expect { described_class.emit_splat_attrs(io, {"HREF" => "/x"}, false) }.to \
+          raise_error(ArgumentError, /URL attribute `HREF` requires SafeURI/)
       end
     end
 

@@ -370,13 +370,27 @@ expression-internal balance).
 **Attribute value escaping:**
 
 Attribute values are Crystal expressions, not string literals. They
-are evaluated at runtime, converted to string via `.to_s`, and
-HTML-escaped using the canonical escape function (see §5.9). So:
+are evaluated at runtime; what happens next depends on the
+attribute's slot kind and the value's static type:
+
+- **URL slots** — `href`, `src`, `action`, `formaction`, `data`,
+  `cite`, `poster`, `manifest`, `xlink:href`, `background`,
+  `longdesc`, `usemap`. Only `Ktistec::SafeURI` (or `Ktistec::SafeURI?`)
+  is admitted; a plain `String` (or any other type) is a compile
+  error. `nil` is silently skipped (no attribute emitted).
+- **Other slots** — `Ktistec::SafeAttrValue` is emitted raw inside
+  the surrounding `="…"`; any other value (including `String` and
+  `Ktistec::SafeHTML`) is converted to string via `.to_s` and
+  HTML-escaped using the canonical escape function (see §5.9). So:
 
 ```slang
 span attr="Hello & world"     →  <span attr="Hello &amp; world"></span>
 span attr=val                 →  <span attr="<runtime to_s of val, escaped>"></span>
 ```
+
+`SafeHTML` is intentionally not admissible into attribute slots —
+markup like `<em>x</em>` is safe in HTML data but would render as
+visible text in an attribute, so the engine HTML-escapes it instead.
 
 There is no `attr==value` syntax for raw (un-escaped) attribute
 values.
@@ -886,12 +900,21 @@ when at least one dynamic class source is present.
 
 Splat values:
 
-- **Keys.** Each key is converted to string via `.to_s` and used
-  as the attribute name verbatim (no escaping). Symbol keys (e.g.,
-  `{:href => "/x"}`) and string keys (`{"href" => "/x"}`) both
-  work. Adversarial keys are not part of the contract.
-- **Values.** Each value is converted to string via `.to_s` and
-  HTML-escaped using §5.9 — same rule as for explicit attributes.
+- **Keys.** Each key is converted to string via `.to_s`. URL keys
+  (the §5.1.5 URL-slot set) require `Ktistec::SafeURI` values;
+  passing anything else raises `ArgumentError`. Event-handler keys
+  (matching `/\Aon[a-z]+\z/i`) are unconditionally rejected — they
+  cannot be set via splat regardless of value, and raise
+  `ArgumentError`. Symbol keys (e.g., `{:href => SafeURI.from?("/x")}`)
+  and string keys (`{"href" => SafeURI.from?("/x")}`) both work.
+  Other adversarial keys are not part of the contract.
+- **Values.** For URL keys, a `SafeURI` is emitted raw (HTML-escaped
+  for attribute-quote safety). For other keys, the same
+  type-dispatched policy as named non-URL attributes (§5.1.5)
+  applies: `Ktistec::SafeAttrValue` is emitted raw, anything else
+  stringifies and HTML-escapes. The asymmetry between named and
+  splat is in the URL/event enforcement (compile-time for named,
+  runtime for splat), not in `SafeAttrValue` admission.
 - **Boolean values.** `true` and `false` in splat values are
   treated identically to explicit attributes (§5.1.5):
   `true` emits the bare attribute name, `false` omits the
@@ -919,15 +942,19 @@ Where the spec says "HTML-escaped," it means: convert the value to
 string via Crystal's `.to_s` (which is `""` for `nil`), then apply
 the table above. This applies to:
 
-- §5.1.5 attribute values (with the boolean special case for
-  `true` / `false`).
+- §5.1.5 attribute values for non-URL slots, when the value is not
+  a `Ktistec::SafeAttrValue` (with the boolean special case for
+  `true` / `false`). URL slots have their own type-checked dispatch
+  and never fall through to this path.
 - §5.1.6 class values (shorthand, explicit, splat).
 - §5.2 `=` output for non-`Ktistec::SafeHTML` values (`SafeHTML`
   values are emitted raw).
 - §5.4 interpolation values (`#{expr}`) inside trailing text and
   any text token whose `escape` flag is true. Source bytes in
   trailing text are **not** escaped -- see §5.4.6 and §5.1.10.
-- §5.8 splat keys (no) and values (yes).
+- §5.8 splat keys (no) and values (yes, except `Ktistec::SafeAttrValue`
+  values in non-URL slots — emitted raw — and `Ktistec::SafeURI` values
+  in URL slots — emitted raw).
 
 The `==` form (§5.2) and `|` text blocks (§5.4.2) bypass escaping
 entirely. The output is whatever bytes the runtime expression /

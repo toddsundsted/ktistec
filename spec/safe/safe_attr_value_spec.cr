@@ -1,11 +1,11 @@
-require "../../src/safe/safe_html"
+require "../../src/safe/safe_attr_value"
 
 require "../spec_helper/base"
 
-Spectator.describe Ktistec::SafeHTML do
+Spectator.describe Ktistec::SafeAttrValue do
   describe ".escape" do
     it "encodes angle brackets" do
-      expect(described_class.escape("<script>").to_s).to eq("&lt;script&gt;")
+      expect(described_class.escape("<x>").to_s).to eq("&lt;x&gt;")
     end
 
     it "encodes ampersands" do
@@ -28,36 +28,18 @@ Spectator.describe Ktistec::SafeHTML do
       expect(described_class.escape(nil).to_s).to eq("")
     end
 
-    it "returns a SafeHTML" do
-      expect(described_class.escape("x")).to be_a(Ktistec::SafeHTML)
-    end
-  end
-
-  describe ".sanitize" do
-    it "preserves allowed markup" do
-      expect(described_class.sanitize("<em>bold</em>").to_s).to eq("<em>bold</em>")
-    end
-
-    it "strips disallowed tags" do
-      expect(described_class.sanitize("<script>alert(1)</script>").to_s).to eq("")
-    end
-
-    it "returns empty string for nil" do
-      expect(described_class.sanitize(nil).to_s).to eq("")
-    end
-
-    it "returns a SafeHTML" do
-      expect(described_class.sanitize("x")).to be_a(Ktistec::SafeHTML)
+    it "returns a SafeAttrValue" do
+      expect(described_class.escape("x")).to be_a(Ktistec::SafeAttrValue)
     end
   end
 
   describe ".assert_safe" do
     it "wraps the string" do
-      expect(described_class.assert_safe("<em>bold</em>").to_s).to eq("<em>bold</em>")
+      expect(described_class.assert_safe(%(a"b)).to_s).to eq(%(a"b))
     end
 
-    it "returns a SafeHTML" do
-      expect(described_class.assert_safe("x")).to be_a(Ktistec::SafeHTML)
+    it "returns a SafeAttrValue" do
+      expect(described_class.assert_safe("x")).to be_a(Ktistec::SafeAttrValue)
     end
   end
 
@@ -69,8 +51,8 @@ Spectator.describe Ktistec::SafeHTML do
 
   describe "#presence" do
     it "returns self when non-blank" do
-      html = described_class.assert_safe("x")
-      expect(html.presence).to eq(html)
+      v = described_class.assert_safe("x")
+      expect(v.presence).to eq(v)
     end
 
     it "returns nil when blank" do
@@ -95,7 +77,7 @@ Spectator.describe Ktistec::SafeHTML do
   end
 
   describe "#==" do
-    context "comparing two SafeHTML instances" do
+    context "comparing two SafeAttrValue instances" do
       it "is true" do
         expect(described_class.assert_safe("x") == described_class.assert_safe("x")).to be_true
       end
@@ -105,7 +87,7 @@ Spectator.describe Ktistec::SafeHTML do
       end
     end
 
-    context "comparing a SafeHTML to a String" do
+    context "comparing a SafeAttrValue to a String" do
       it "is true" do
         expect(described_class.assert_safe("x") == "x").to be_true
       end

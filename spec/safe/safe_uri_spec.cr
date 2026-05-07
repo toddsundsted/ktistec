@@ -170,28 +170,28 @@ Spectator.describe Ktistec::SafeURI do
   end
 
   describe "#presence" do
-    it "returns self" do
+    it "returns self when non-blank" do
       uri = described_class.assert_safe("/x")
       expect(uri.presence).to eq(uri)
     end
 
-    it "returns nil" do
+    it "returns nil when blank" do
       expect(described_class.assert_safe("").presence).to be_nil
     end
   end
 
   describe "#empty?" do
-    it "is false" do
-      expect(described_class.assert_safe("/x").empty?).to be_false
+    it "is true for empty wrapped value" do
+      expect(described_class.assert_safe("").empty?).to be_true
     end
 
-    it "is true" do
-      expect(described_class.assert_safe("").empty?).to be_true
+    it "is false for non-empty wrapped value" do
+      expect(described_class.assert_safe("/x").empty?).to be_false
     end
   end
 
   describe "#size" do
-    it "returns the size" do
+    it "returns the wrapped value's size" do
       expect(described_class.assert_safe("/abc").size).to eq(4)
     end
   end

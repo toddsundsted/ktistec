@@ -151,6 +151,23 @@ Spectator.describe Slang::CodeGen do
     end
   end
 
+  describe "Event-handler attributes" do
+    # `Slang::Runtime.emit_event_attr` is intentionally undefined.
+    # `button onclick=expr` (any expression form) fails to compile.
+
+    it "emits an author-typed string literal verbatim" do
+      expect(render_string(%(button onclick="alert(1)" Click))).to eq(
+        %(<button onclick="alert(1)">Click</button>),
+      )
+    end
+
+    it "HTML-escapes the literal value" do
+      expect(render_string(%(button onclick="x &amp; y" Click))).to eq(
+        %(<button onclick="x &amp;amp; y">Click</button>),
+      )
+    end
+  end
+
   describe "Boolean attributes" do
     it "emits the name for true" do
       expect(render_string("input checked=true")).to eq("<input checked>")

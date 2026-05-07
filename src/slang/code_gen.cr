@@ -113,12 +113,6 @@ module Slang
       # intentionally empty
     end
 
-    SELF_CLOSING_TAGS = {
-      "area", "base", "br", "col", "embed", "hr", "img", "input",
-      "keygen", "link", "menuitem", "meta", "param", "source",
-      "track", "wbr",
-    }
-
     # ----- Element -----
 
     private def emit_element(node : AST::Element) : Nil
@@ -194,7 +188,7 @@ module Slang
       # self-closing tags.
 
       node.children.each { |c| emit_node(c) }
-      unless SELF_CLOSING_TAGS.includes?(node.tag)
+      unless AST::VOID_ELEMENTS.includes?(node.tag)
         emit_literal("</")
         emit_literal(node.tag)
         emit_literal(">")
@@ -253,7 +247,15 @@ module Slang
       end
       flush_literal
       emit_loc(attr.loc)
-      helper = ::Slang::Runtime::URL_ATTRIBUTE_NAMES.includes?(attr.name.downcase) ? "emit_url_attr" : "emit_attr"
+      name_lower = attr.name.downcase
+      helper =
+        if ::Slang::Runtime::URL_ATTRIBUTE_NAMES.includes?(name_lower)
+          "emit_url_attr"
+        elsif name_lower.matches?(::Slang::Runtime::EVENT_HANDLER_RE)
+          "emit_event_attr"
+        else
+          "emit_attr"
+        end
       @output << "::Slang::Runtime." << helper << "(" << @buffer_name
       @output << ", " << attr.name.dump << ", (" << expr << "))\n"
     end
@@ -403,10 +405,6 @@ module Slang
     private def emit_visible_comment(node : AST::VisibleComment) : Nil
       emit_literal("<!--")
       emit_comment_parts(node.parts)
-      unless node.children.empty?
-        node.children.each { |c| emit_node(c) }
-        emit_literal("\n")
-      end
       emit_literal("-->")
     end
 

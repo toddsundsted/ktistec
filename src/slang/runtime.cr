@@ -82,6 +82,14 @@ module Slang::Runtime
     end
   end
 
+  # event-handler attributes (`onclick=`, `onmouseover=`, ...) admit
+  # no runtime value type. `Slang::Runtime.emit_event_attr` is
+  # intentionally undefined — any expression-form event-handler
+  # attribute (`onclick=expr`) routes to this method name during
+  # codegen and fails to compile with "undefined method
+  # `emit_event_attr`". author-typed string literals like
+  # `onclick="alert(1)"` are unaffected.
+
   # Emits a single URL attribute (`href`, `src`, ...).
   #
   # Only `Ktistec::SafeURI?` is admitted. Plain `String` (or any other

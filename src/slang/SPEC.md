@@ -378,6 +378,14 @@ attribute's slot kind and the value's static type:
   `longdesc`, `usemap`. Only `Ktistec::SafeURI` (or `Ktistec::SafeURI?`)
   is admitted; a plain `String` (or any other type) is a compile
   error. `nil` is silently skipped (no attribute emitted).
+- **Event-handler slots** — any attribute name matching `/\Aon[a-z]+\z/i`
+  (`onclick`, `onmouseover`, …). Expression-form values (`onclick=expr`
+  for any Crystal expression) are a compile error: there is no
+  admissible runtime type for a JS-execution context. Author-typed
+  string literals (`onclick="alert(1)"`) are unaffected — codegen
+  emits the literal bytes (HTML-escaped) at compile time and never
+  reaches the runtime helper. `SafeJS` is deferred until a real
+  use case appears.
 - **Other slots** — `Ktistec::SafeAttrValue` is emitted raw inside
   the surrounding `="…"`; any other value (including `String` and
   `Ktistec::SafeHTML`) is converted to string via `.to_s` and
@@ -469,22 +477,24 @@ div.foo class="bar" class=x    →  <div class="foo bar <runtime x>"></div>
 div.foo *attrs                 →  <div class="foo <runtime attrs[\"class\"]>" ...></div>
 ```
 
-#### 5.1.7 Self-Closing Tags
+#### 5.1.7 Void (Self-Closing) Tags
 
-The tags `area`, `base`, `br`, `col`, `embed`, `hr`, `img`, `input`,
-`keygen`, `link`, `menuitem`, `meta`, `param`, `source`, `track`,
-`wbr` emit no closing `</tag>`. Children attached via the inline
-`:` chain or via an indented block are still rendered, immediately
-after the `>` of the self-closing tag (effectively as siblings,
-since the void element opens no scope):
+The void element set per HTML5: `area`, `base`, `br`, `col`,
+`embed`, `hr`, `img`, `input`, `keygen`, `link`, `menuitem`, `meta`,
+`param`, `source`, `track`, `wbr`. These elements emit no closing
+`</tag>` and are bodyless — the parser raises `Slang::ParseError`
+on any inline `:` child, indented block, or trailing text:
 
 ```slang
-br: a href="/x" Click   →  <br><a href="/x">Click</a>
-```
+br                                    # OK
+img src="/x" alt="..."                # OK
+input type="text" name="x"            # OK
 
-This pattern appears in production templates (e.g.,
-`partials/actor-panel.html.slang` uses `br: a href=...` to
-introduce a handle link after a line break).
+br: a href="/x" Click                 # ERROR: void element with child
+br
+  p after                             # ERROR: void element with indented block
+img src="/x" alt text                 # ERROR: void element with trailing text
+```
 
 #### 5.1.8 Whitespace Controls
 
@@ -689,14 +699,11 @@ Text appears in four forms:
    single space.
 4. Raw HTML (`<` at start of line) — embeds literal HTML markup.
 
-In all four forms, **source bytes are emitted verbatim** (the author's
+In all four forms, source bytes are emitted verbatim (the author's
 literal text, including any `<`, `>`, `&`, `"`, `'`, is preserved as
-codegen-time literal output) but **`#{...}` interpolations are
-type-dispatched** through `Slang::Runtime.emit`: `Ktistec::SafeHTML`
-values are emitted raw, all other values have `.to_s` applied and are
-HTML-escaped. The split between "author bytes raw, runtime values
-gated" matches the design's general principle (untrusted-by-default,
-trusted-by-type — see §5.9).
+codegen-time literal output). `#{...}` interpolations route through
+`Slang::Runtime.emit`: `Ktistec::SafeHTML` values are emitted raw,
+all other values have `.to_s` applied and are HTML-escaped (§5.9).
 
 Inline elements (`:`) are structurally elements, not text — see
 §4.3 and §5.1.9.
@@ -836,18 +843,43 @@ followed by two indented lines `var x = 1;` and `console.log(x);`
 emits `<script>var x = 1;\nconsole.log(x);</script>`, not
 `<script>\nvar x = 1;\nconsole.log(x);\n</script>`.
 
-Bare `script` and `style` elements (no colon suffix) also receive
-raw-text treatment for their children:
+**`<style>` and `<script>` element-tag uses are constrained to a
+fixed set of canonical forms.** The parser raises
+`Slang::ParseError` on any other shape.
+
+| Construct | Status |
+|---|---|
+| `<style>` (any form, body or not, attrs or not) | banned |
+| `<script src="...">` (bodyless, any other attrs OK) | allowed |
+| `<script>` bodyless without a named `src=` attr | banned |
+| `<script type="…">` with body, inert `type=` | allowed |
+| `<script>` with body, executable `type=` | banned |
+
+"Inert" `type=` means a literal-string value matching one of
+`application/json`, `application/ld+json`, `text/template`, or
+`text/plain` (case-insensitive). Anything else — including a
+non-literal Crystal expression — is treated as executable.
 
 ```slang
-script
-  console.log("hi")    # children of script element are raw, not parsed as Slang
+script src="/dist/bundle.js"                   # OK: external JS
+
+script type="application/json" data-chart-target="labels"
+  == labels.to_json                            # OK: inert content type
+
+javascript:
+  console.log("hi")                            # OK: rawstuff form
+
+script                                         # ERROR: bodyless without src=
+script type="text/javascript"                  # ERROR: bodyless without src=
+script                                         # ERROR: executable + body
+  console.log("hi")
+style                                          # ERROR: <style> always banned
+style media="print"                            # ERROR: <style> always banned
 ```
 
-The colon-suffixed `javascript:` and `css:` differ from the bare
-forms only in that they emit the `<script>` / `<style>` wrapper
-automatically; bare `script` / `style` are ordinary element lines
-that happen to receive raw-content handling for their children.
+Inline JavaScript and CSS are written through the `javascript:` and
+`css:` rawstuff blocks, which lex content verbatim with no Slang
+interpretation.
 
 ### 5.6 Comments
 
@@ -867,27 +899,23 @@ Emits nothing. Hidden from the rendered output entirely.
 /! This is visible
 ```
 
-Emits `<!--This is visible-->`. Children, if any, are rendered
-inside the comment, followed by a single `\n` before the closing
-`-->`:
+Emits `<!--This is visible-->`. Visible comments are single-line;
+indented children are a parse error.
 
 ```slang
-/! Note
+/! Note            # ERROR: indented child below
   span note body
 ```
 
-Emits `<!--Note<span>note body</span>\n-->`. The trailing `\n`
-appears only when at least one child is present.
+Within the inline body:
 
-Source bytes in the comment text are emitted verbatim (codegen-time
-literal — author trusted). `#{...}` interpolations route through
-`Slang::Runtime.emit_comment`, which HTML-escapes (covers
-`& < > " '`) **and** breaks any `--` run with a numeric character
-reference (`-&#45;`) so an interpolated value cannot prematurely
-close the surrounding `<!-- ... -->`. Unlike §5.4 (HTML data
-context), `Ktistec::SafeHTML` is **not** admitted raw inside
-comments — its safety claim is HTML-data context, and SafeHTML
-markup containing `--` would break out of the comment.
+- Source bytes are emitted verbatim (codegen-time literal).
+- `#{...}` interpolations route through `Slang::Runtime.emit_comment`,
+  which HTML-escapes (covers `& < > " '`) and replaces any `--` run
+  with `-&#45;`.
+- `Ktistec::SafeHTML` values are not admitted raw inside comments;
+  they go through the same escape-and-dash-break path as any other
+  value.
 
 ### 5.7 Doctype (`doctype`)
 

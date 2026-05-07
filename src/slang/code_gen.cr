@@ -113,12 +113,6 @@ module Slang
       # intentionally empty
     end
 
-    SELF_CLOSING_TAGS = {
-      "area", "base", "br", "col", "embed", "hr", "img", "input",
-      "keygen", "link", "menuitem", "meta", "param", "source",
-      "track", "wbr",
-    }
-
     # ----- Element -----
 
     private def emit_element(node : AST::Element) : Nil
@@ -194,7 +188,7 @@ module Slang
       # self-closing tags.
 
       node.children.each { |c| emit_node(c) }
-      unless SELF_CLOSING_TAGS.includes?(node.tag)
+      unless AST::VOID_ELEMENTS.includes?(node.tag)
         emit_literal("</")
         emit_literal(node.tag)
         emit_literal(">")

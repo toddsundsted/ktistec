@@ -2,6 +2,11 @@
 #
 module Slang
   module AST
+    VOID_ELEMENTS = %w[
+      area base br col embed hr img input keygen link
+      menuitem meta param source track wbr
+    ]
+
     # 1-based source location
     record SourceLoc, line : Int32, column : Int32
 

@@ -20,9 +20,11 @@
                   delivery attempts.
           .ui.basic.segment
             a href="#" = actor.display_name
-            br: a href="#" = actor.handle
+            br
+            a href="#" = actor.handle
             - if (summary = actor.summary.presence)
-              br: = s summary
+              br
+              = s summary
             - if (attachments = actor.attachments.presence)
               .ui.divider
               table
@@ -54,8 +56,10 @@
         .ui.actor.segments
           .ui.basic.blocked.segment
             | [blocked]
-            br: a href="#" [blocked]
-            br: em This actor is blocked!
+            br
+            a href="#" [blocked]
+            br
+            em This actor is blocked!
           .ui.basic.footer.segment
             .ui.inline.form
               button.ui.button Unblock

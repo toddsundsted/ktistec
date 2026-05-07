@@ -308,6 +308,61 @@ Spectator.describe Slang::Parser do
         end
       end
 
+      context "void element children" do
+        it "rejects `img` with trailing text" do
+          expect { parse(%(img src="/x" alt text)) }.to raise_error(
+            Slang::ParseError,
+            /^void element `<img>` cannot have Slang children/,
+          )
+        end
+
+        it "rejects `br` with inline `:` child" do
+          expect { parse(%(br: a href="/x" Click)) }.to raise_error(
+            Slang::ParseError,
+            /^void element `<br>` cannot have Slang children/,
+          )
+        end
+
+        it "rejects `br` with an indent block" do
+          expect { parse("br\n  span hi") }.to raise_error(
+            Slang::ParseError,
+            /^void element `<br>` cannot have Slang children/,
+          )
+        end
+
+        it "rejects `input` with an inline `:` child" do
+          expect { parse(%(input: span hi)) }.to raise_error(
+            Slang::ParseError,
+            /^void element `<input>` cannot have Slang children/,
+          )
+        end
+
+        it "rejects `link` with an indent block" do
+          expect { parse(%(link rel="stylesheet" href="/x.css"\n  span hi)) }.to raise_error(
+            Slang::ParseError,
+            /^void element `<link>` cannot have Slang children/,
+          )
+        end
+
+        it "accepts a bodyless `br`" do
+          el = parse_element("br")
+          expect(el.tag).to eq("br")
+          expect(el.children).to be_empty
+        end
+
+        it "accepts a bodyless `img`" do
+          el = parse_element(%(img src="/x" alt="..."))
+          expect(el.tag).to eq("img")
+          expect(el.children).to be_empty
+        end
+
+        it "accepts a bodyless `input`" do
+          el = parse_element(%(input type="text" name="x"))
+          expect(el.tag).to eq("input")
+          expect(el.children).to be_empty
+        end
+      end
+
       context "inline child" do
         it "nests an inline element as a child" do
           el = parse_element("li: a")

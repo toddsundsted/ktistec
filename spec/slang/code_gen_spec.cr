@@ -30,17 +30,6 @@ Spectator.describe Slang::CodeGen do
       expect(render_string("br")).to eq("<br>")
     end
 
-    it "emits inline children of a self-closing tag" do
-      expect(render_string(%(br: a href="/x" Click))).to eq(%(<br><a href="/x">Click</a>))
-    end
-
-    it "emits indent children of a self-closing tag" do
-      expect(render_string(<<-SLANG)).to eq("<br><p>after</p>")
-        br
-          p after
-        SLANG
-    end
-
     it "renders nested tags" do
       expect(render_string(<<-SLANG)).to eq("<div><p></p><ul><li></li></ul></div>")
         div
@@ -512,10 +501,6 @@ Spectator.describe Slang::CodeGen do
 
     it "treats `: =` as inline output of the parent (no implicit div)" do
       expect(render_string(%(span: = "x"))).to eq("<span>x</span>")
-    end
-
-    it "self-closing parent + `: ==` emits the output as a sibling" do
-      expect(render_string(%(br: == "x"))).to eq("<br>x")
     end
   end
 

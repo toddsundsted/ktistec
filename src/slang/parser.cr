@@ -109,22 +109,22 @@ module Slang
         innermost.children.concat(parse_block)
         expect(TokenKind::Dedent)
       end
-      validate_script_style_bodyless!(el)
+      validate_element_canonical_form!(el)
       el
     end
 
-    # Validates that `<script>` and `<style>` elements conform to a
-    # canonical form.
+    # Validates that the element conforms to a canonical form.
     #
-    #   <script src="...">    (bodyless)      — allowed (loads external JS)
-    #   <script type="...">   (inert + body)  — allowed (chart data / JSON-LD / template scaffold)
-    #   <script>              (other forms)   — banned (use `javascript:` or `script src="..."`)
-    #   <style>                               — banned (use `css:` or `<link rel="...">`)
+    #   <script src="...">   (bodyless)         — allowed (loads external JS)
+    #   <script type="...">  (inert + body)     — allowed (chart data / JSON-LD / template scaffold)
+    #   <script>             (other forms)      — banned (use `javascript:` or `script src="..."`)
+    #   <style>                                 — banned (use `css:` or `<link rel="...">`)
+    #   void elements (br, img, hr, ...)        — banned
+    #   everything else                         — accepted
     #
-    # Anything else is rejected.
-    #
-    private def validate_script_style_bodyless!(el : AST::Element) : Nil
-      case el.tag.downcase
+    private def validate_element_canonical_form!(el : AST::Element) : Nil
+      tag = el.tag.downcase
+      case tag
       when "style"
         raise ParseError.new(
           "`<style>` elements are banned; use a `css:` block, or `<link rel=\"stylesheet\">` to load an external stylesheet",
@@ -143,6 +143,13 @@ module Slang
           "`<script>` with executable type cannot have Slang children or trailing text; use a `javascript:` block, or set `type=` to an inert content type (#{INERT_SCRIPT_TYPES.join(", ")})",
           el.loc.line, el.loc.column,
         )
+      else
+        if AST::VOID_ELEMENTS.includes?(tag) && !el.children.empty?
+          raise ParseError.new(
+            "void element `<#{tag}>` cannot have Slang children or trailing text; void elements (`#{AST::VOID_ELEMENTS.join("`, `")}`) are bodyless by definition",
+            el.loc.line, el.loc.column,
+          )
+        end
       end
     end
 

@@ -170,12 +170,6 @@ Spectator.describe Slang::Parser do
           expect(parts[2].as(AST::Literal).value).to eq("!")
         end
 
-        it "marks trailing text in script as unescaped" do
-          el = parse_element("script var x = 1;")
-          text = el.children.first.as(AST::Text)
-          expect(text.parts.first.as(AST::Literal).escape).to be_false
-        end
-
         it "marks `<`-prefixed trailing text as unescaped" do
           el = parse_element("p <em>raw</em>")
           text = el.children.first.as(AST::Text)
@@ -209,6 +203,108 @@ Spectator.describe Slang::Parser do
           expect(el.children.size).to eq(2)
           expect(el.children[0]).to be_a(AST::Text)
           expect(el.children[1]).to be_a(AST::Element)
+        end
+      end
+
+      context "script children" do
+        it "rejects bare `script` with trailing text" do
+          expect { parse("script var x = 1;") }.to raise_error(
+            Slang::ParseError,
+            /^`<script>` with executable type cannot have Slang children/,
+          )
+        end
+
+        it "rejects bare `script` with an indent block" do
+          expect { parse("script\n  var x = 1;") }.to raise_error(Slang::ParseError, /script/)
+        end
+
+        it "rejects `script` with an inline child" do
+          expect { parse(%(script: span hi)) }.to raise_error(Slang::ParseError, /script/)
+        end
+
+        it "rejects `script type=\"text/javascript\"`" do
+          expect { parse(%(script type="text/javascript"\n  var x = 1;)) }.to raise_error(
+            Slang::ParseError,
+            /script.*executable/,
+          )
+        end
+
+        it "rejects `script type=\"module\"`" do
+          expect { parse(%(script type="module"\n  var x = 1;)) }.to raise_error(
+            Slang::ParseError,
+            /script/,
+          )
+        end
+
+        it "rejects `script` with a Crystal-expression `type`" do
+          expect { parse(%(script type=some_var\n  var x = 1;)) }.to raise_error(
+            Slang::ParseError,
+            /script/,
+          )
+        end
+
+        it "accepts `script type=\"application/json\"` with children" do
+          el = parse_element(%(script type="application/json"\n  == data.to_json))
+          expect(el.tag).to eq("script")
+          expect(el.children.size).to eq(1)
+        end
+
+        it "accepts `script type=\"application/ld+json\"` with children" do
+          el = parse_element(%(script type="application/ld+json"\n  == graph.to_json))
+          expect(el.tag).to eq("script")
+          expect(el.children.size).to eq(1)
+        end
+
+        it "accepts a bare `script src=\"...\"` with no body" do
+          el = parse_element(%(script src="/x.js"))
+          expect(el.tag).to eq("script")
+          expect(el.children).to be_empty
+        end
+
+        it "is case-insensitive on the `type` value" do
+          el = parse_element(%(script type="Application/JSON"\n  == data.to_json))
+          expect(el.tag).to eq("script")
+        end
+
+        it "rejects bodyless `script` without a named `src`" do
+          expect { parse(%(script type="text/javascript")) }.to raise_error(
+            Slang::ParseError,
+            /bodyless .*requires a named `src=`/,
+          )
+        end
+
+        it "rejects bodyless `script`" do
+          expect { parse("script") }.to raise_error(
+            Slang::ParseError,
+            /bodyless .*requires a named `src=`/,
+          )
+        end
+      end
+
+      context "style children" do
+        it "rejects `style` with trailing text" do
+          expect { parse("style h1 { color: red; }") }.to raise_error(
+            Slang::ParseError,
+            /^`<style>` elements are banned/,
+          )
+        end
+
+        it "rejects `style` with an indent block" do
+          expect { parse("style\n  h1 { color: red; }") }.to raise_error(Slang::ParseError, /style/)
+        end
+
+        it "rejects bodyless `style` with attributes" do
+          expect { parse(%(style media="print")) }.to raise_error(
+            Slang::ParseError,
+            /^`<style>` elements are banned/,
+          )
+        end
+
+        it "rejects bodyless `style`" do
+          expect { parse("style") }.to raise_error(
+            Slang::ParseError,
+            /^`<style>` elements are banned/,
+          )
         end
       end
 

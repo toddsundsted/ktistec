@@ -63,6 +63,32 @@ module Ameba
   end
 end
 
+# Built-in rules audited as safe to run on Slang-derived sources.
+
+class Ameba::Rule::Performance::ChainedCallWithNoBang
+  def slang_aware? : Bool
+    true
+  end
+end
+
+class Ameba::Rule::Performance::CompactAfterMap
+  def slang_aware? : Bool
+    true
+  end
+end
+
+class Ameba::Rule::Naming::BlockParameterName
+  def slang_aware? : Bool
+    true
+  end
+end
+
+class Ameba::Rule::Style::VerboseBlock
+  def slang_aware? : Bool
+    true
+  end
+end
+
 module Ameba::Formatter::Util
   def affected_code(issue : ::Ameba::Issue, context_lines = 0, max_length = 120, ellipsis = " ...", prompt = "> ")
     return unless location = issue.location

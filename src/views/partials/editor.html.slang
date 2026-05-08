@@ -40,7 +40,7 @@ crystal:
   actor = env.account.actor
   if (in_reply_to = object.in_reply_to?)
     ancestors = in_reply_to.ancestors
-    mentions = (ancestors.map(&.attributed_to.handle).compact.uniq - [actor.handle]).map { |a| "@#{a} " }.join
+    mentions = (ancestors.compact_map(&.attributed_to.handle).uniq! - [actor.handle]).map { |a| "@#{a} " }.join
     content ||= mentions
   end
   unless (media_type = object.source.try(&.media_type))

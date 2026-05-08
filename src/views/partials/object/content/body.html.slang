@@ -9,7 +9,7 @@ crystal:
   if (attachments = object.attachments.dup)  # don't modify the object
     if html
       urls = XML.parse_html(html).xpath_nodes("//img/@src").map(&.text)
-      attachments.reject! { |a| a.url.in?(urls) }
+      attachments.reject!(&.url.in?(urls))
     end
   end
 == render "src/views/partials/object/content/attachments.html.slang"

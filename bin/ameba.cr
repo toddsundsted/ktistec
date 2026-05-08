@@ -9,5 +9,72 @@ require "../src/ameba/ktistec/no_explicit_return_nil"
 require "../src/ameba/ktistec/no_focused_specs"
 require "../src/ameba/ktistec/no_pending_specs"
 require "../src/ameba/ktistec/trailing_comma_on_stacked"
+require "../src/ameba/ktistec/assert_safe_whitelist"
+
+# Slang templates compile to Crystal at build time. Ameba normally only
+# scans `.cr` files. These monkey-patches bridge that:
+#
+# 1. `Config#sources` is extended to additionally include every .slang
+#    file under `src/views/`, processed through `Slang.process_string`.
+#
+# 2. `Rule::Base#excluded?` is extended so that rules opt in to
+#    running on .slang-derived sources. Only rules that override
+#    `slang_aware?` to return `true` see them.
+#
+# 3. `Formatter::Util#affected_code` is extended so that, when an
+#    issue's location filename ends in `.slang`, the diagnostic
+#    snippet is read from the original .slang file rather than from
+#    the generated-Crystal `Source#code`.
+
+require "../src/slang"
+
+module Ameba
+  class Config
+    SLANG_GLOBS = ["src/views/**/*.slang"]
+
+    def sources
+      base = previous_def
+      SLANG_GLOBS.each do |glob|
+        Dir.glob(glob) do |path|
+          begin
+            slang_code = ::Slang.process_string(File.read(path), path)
+            base << Source.new(slang_code, path)
+          rescue ex
+            STDERR.puts "skipping #{path}: #{ex.class}: #{ex.message}"
+          end
+        end
+      end
+      base
+    end
+  end
+
+  abstract class Rule::Base
+    def excluded?(source)
+      return true if source.path.ends_with?(".slang") && !slang_aware?
+      previous_def
+    end
+
+    # Rules that should run on Slang-derived sources override this to
+    # return `true`. Default `false`.
+    #
+    def slang_aware? : Bool
+      false
+    end
+  end
+end
+
+module Ameba::Formatter::Util
+  def affected_code(issue : ::Ameba::Issue, context_lines = 0, max_length = 120, ellipsis = " ...", prompt = "> ")
+    return unless location = issue.location
+    filename = location.filename.as?(String)
+    code =
+      if filename && filename.ends_with?(".slang") && File.exists?(filename)
+        File.read(filename)
+      else
+        issue.code
+      end
+    affected_code(code, location, issue.end_location, context_lines, max_length, ellipsis, prompt)
+  end
+end
 
 require "ameba/cli"

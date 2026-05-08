@@ -18,7 +18,7 @@ module Ktistec
       new(::HTML.escape(string))
     end
 
-    # Asserts the input is already safe.
+    # Asserts the input is already safe inside an HTML attribute.
     #
     def self.assert_safe(string : String) : SafeAttrValue
       new(string)

@@ -237,15 +237,8 @@ parent. (This differs from line-start, where `.` and `#` imply
 `div` per §5.1.4. Inline-after-`:` does not extend that rule
 to `=` / `==` / `-`.)
 
-For self-closing parents (§5.1.7), the inline construct still
-emits — it appears immediately after the `>` of the void element
-(rendered as a sibling by the browser, since the void element
-opens no scope):
-
-```slang
-br: a href="/x" Click   →  <br><a href="/x">Click</a>
-br: == "x"              →  <br>x
-```
+Void elements (§5.1.7) cannot host an inline `:` child or any
+other child, indented or trailing.
 
 A leading `:` at the start of a line — no preceding element — is a
 lex error.
@@ -789,16 +782,9 @@ Text adjacent to elements with whitespace controls inherits a
 prepend-space (`<`) or append-space (`>`) flag from the element.
 There is no syntax for setting these on standalone text.
 
-#### 5.4.6 Quoted Text
+#### 5.4.6 Source Bytes vs. Interpolation
 
-Text in attribute values is the only place double-quoted strings
-have lexer significance:
-
-```slang
-input value="Hello world"
-```
-
-Source bytes in element trailing text are emitted as literals --
+Source bytes in element trailing text are emitted as literals —
 including `"`, `&`, `<`, `>`, and `'`. Only interpolation values
 (`#{expr}`) are HTML-escaped:
 
@@ -807,6 +793,11 @@ span "Hello"        →  <span>"Hello"</span>
 span hello & world  →  <span>hello & world</span>
 span x<a>y          →  <span>x<a>y</span>
 ```
+
+Double-quoted strings have no lexer significance in trailing text;
+they are author bytes like any other. Quoting is only meaningful
+inside attribute values (e.g. `input value="Hello world"`), where
+the wrapper rules of §5.1.5 apply.
 
 ### 5.5 Rawstuff
 
@@ -909,7 +900,11 @@ indented children are a parse error.
 
 Within the inline body:
 
-- Source bytes are emitted verbatim (codegen-time literal).
+- Source bytes are emitted verbatim (codegen-time literal). Author
+  bytes are author-trust — same model as inline `<button onclick="…">`
+  literals — so a `/!` body containing a literal `--` will land in
+  the rendered comment unchanged. The dash-break is only applied to
+  *runtime values* threaded through interpolation.
 - `#{...}` interpolations route through `Slang::Runtime.emit_comment`,
   which HTML-escapes (covers `& < > " '`) and replaces any `--` run
   with `-&#45;`.
@@ -961,9 +956,10 @@ Splat values:
   vectors like `{"foo onclick" => "alert(1)"}`, which would otherwise
   render as two attributes. Namespaced names containing `:` (e.g.
   `xlink:href`) are not admitted via splat in v1; use a named
-  attribute. URL keys (the §5.1.5 URL-slot set) additionally require
-  `Ktistec::SafeURI` values; passing anything else raises.
-  Event-handler keys (matching `/\Aon[a-z]+\z/i`) are unconditionally
+  attribute. URL keys (the §5.1.5 URL-slot set, matched
+  case-insensitively) additionally require `Ktistec::SafeURI` values;
+  passing anything else raises. Event-handler keys (matching
+  `/\Aon[a-z]+\z/i`, also case-insensitive) are unconditionally
   rejected — they cannot be set via splat regardless of value, and
   raise. Symbol keys (e.g., `{:href => SafeURI.from?("/x")}`) and
   string keys (`{"href" => SafeURI.from?("/x")}`) both work.
@@ -1019,13 +1015,12 @@ the table above. This applies to:
   values in non-URL slots — emitted raw — and `Ktistec::SafeURI` values
   in URL slots — emitted raw).
 
-The `==` form (§5.2) bypasses escaping entirely on its top-level
-expression value (block children render through their own per-node
-contracts). Source bytes in any text construct (trailing text, `|`/`'`
-text blocks, raw HTML lines, visible comments) are also unescaped --
-they are author-trusted codegen-time literals. Only the *runtime
-values* threaded through interpolations (`#{...}`) flow through the
-type gate.
+Author-typed source bytes (literal trailing text, `|`/`'` text-block
+content, raw-HTML lines, visible-comment bodies, attribute literals,
+the `==` operand) never flow through the type gate — they are
+codegen-time literals. Only the *runtime values* threaded through
+expression sites (`= expr`, `#{expr}`, `attr=expr`, `*expr`) are
+type-dispatched.
 
 ### 5.10 Single Evaluation
 

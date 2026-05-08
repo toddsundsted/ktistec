@@ -16,6 +16,9 @@ module Ktistec
     #
     # Returns `nil` if invalid.
     #
+    # Use when the input is *expected to sometimes fail* and graceful
+    # continuation is preferred.
+    #
     def self.from?(string : String) : SafeURI?
       return if string.starts_with?("//")
       return unless ::Ktistec::Util.safe_url?(string)
@@ -25,6 +28,9 @@ module Ktistec
     # Validates and wraps the input.
     #
     # Raises `ArgumentError` if invalid.
+    #
+    # Use when the input is *expected to always succeed* and a failure
+    # indicates a bug worth surfacing.
     #
     def self.from(string : String) : SafeURI
       from?(string) || raise ArgumentError.new("not a safe URI: #{string.inspect}")

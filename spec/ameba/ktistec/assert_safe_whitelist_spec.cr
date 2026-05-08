@@ -36,6 +36,15 @@ Spectator.describe Ameba::Rule::Ktistec::AssertSafeWhitelist do
     expect(source.issues.size).to eq(1)
   end
 
+  it "reports `assert_safe` in an .ecr template" do
+    source = Ameba::Source.new %(
+      Ktistec::SafeHTML.assert_safe(value)
+    ), "src/views/actors/actor.json.ecr"
+
+    rule.test(source)
+    expect(source.issues.size).to eq(1)
+  end
+
   it "allows `assert_safe` in src/utils/paths.cr" do
     source = Ameba::Source.new %(
       Ktistec::SafeURI.assert_safe("/x")
@@ -95,7 +104,7 @@ Spectator.describe Ameba::Rule::Ktistec::AssertSafeWhitelist do
     expect(source.issues).to be_empty
   end
 
-  it "marks itself slang-aware" do
-    expect(rule.slang_aware?).to be_true
+  it "marks itself template-aware" do
+    expect(rule.template_aware?).to be_true
   end
 end

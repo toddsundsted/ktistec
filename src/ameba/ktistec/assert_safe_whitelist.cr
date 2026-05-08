@@ -40,10 +40,10 @@ module Ameba::Rule::Ktistec
       issue_for node, MSG if node.name == "assert_safe"
     end
 
-    # slang-derived sources should be checked too. `assert_safe` does
-    # not belong in a template.
+    # template-derived sources (.slang, .ecr) should be checked too.
+    # `assert_safe` does not belong in a template.
 
-    def slang_aware? : Bool
+    def template_aware? : Bool
       true
     end
 

@@ -219,4 +219,4 @@
                 == … content, 150
         - in Relationship::Content::Notification
           / This can't happen!
-  == paginate(env, notifications)
+  - paginate(env, notifications, content_io)

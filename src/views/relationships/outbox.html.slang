@@ -16,4 +16,4 @@ section.ui.feed data-controller="icon-load-error"
       - Slang.embed("src/views/partials/activity/reject/outbox.html.slang", content_io)
     - else
       - Slang.embed("src/views/partials/activity/default.html.slang", content_io)
-== paginate(env, activities)
+- paginate(env, activities, content_io)

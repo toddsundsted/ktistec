@@ -29,4 +29,4 @@
   section.ui.cards
     - related.each do |actor|
       - Slang.embed("src/views/partials/actor-card.html.slang", content_io)
-  == paginate(env, related)
+  - paginate(env, related, content_io)

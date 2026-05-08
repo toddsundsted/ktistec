@@ -31,13 +31,13 @@ module Ktistec::ViewHelper
       links.join(", ").presence
     end
 
-    def paginate(env, collection)
+    def paginate(env, collection, content_io)
       query = env.params.query
       if collection.cursor_start
-        render "src/views/partials/cursor_paginator.html.slang"
+        Slang.embed "src/views/partials/cursor_paginator.html.slang", content_io
       else
         page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1 # ameba:disable Lint/UselessAssign
-        render "src/views/partials/paginator.html.slang"
+        Slang.embed "src/views/partials/paginator.html.slang", content_io
       end
     end
   end

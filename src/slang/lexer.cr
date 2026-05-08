@@ -749,15 +749,20 @@ module Slang
         relative_indent = col - content_column_min
         prefix = first ? " " * relative_indent : "\n" + " " * relative_indent
         if raw
-          # in rawstuff mode, capture the rest of the line as a
-          # single literal.
+          # in rawstuff mode, emit the prefix (synthetic newline +
+          # indent) and the line's content as separate literals so
+          # the content carries its true source column.
           start = @pos
           while !eof? && peek != LF && peek != CR
             advance
           end
           content = String.new(@bytes[start, @pos - start])
-          @pending << Token.new(TokenKind::TextLiteral, value: prefix + content,
-            line: save_line + 1, column: 1, escape: false)
+          unless prefix.empty?
+            @pending << Token.new(TokenKind::TextLiteral, value: prefix,
+              line: save_line + 1, column: 1, escape: false)
+          end
+          @pending << Token.new(TokenKind::TextLiteral, value: content,
+            line: save_line + 1, column: col, escape: false)
         else
           unless prefix.empty?
             @pending << Token.new(TokenKind::TextLiteral, value: prefix,

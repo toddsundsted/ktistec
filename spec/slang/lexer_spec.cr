@@ -708,7 +708,8 @@ Spectator.describe Slang::Lexer do
         {TK::Element, "", true},
         {TK::TagName, "javascript:", true},
         {TK::TextLiteral, "var x = 1;", false},
-        {TK::TextLiteral, "\nconsole.log(x);", false},
+        {TK::TextLiteral, "\n", false},
+        {TK::TextLiteral, "console.log(x);", false},
         {TK::Newline, "", true},
         {TK::EOF, "", true},
       ])
@@ -732,7 +733,7 @@ Spectator.describe Slang::Lexer do
     it "preserves relative indentation" do
       tokens = tokenize("javascript:\n  var x = 1;\n    var y = 2;")
       lits = tokens.select { |t| t.kind == TK::TextLiteral }
-      expect(lits.map(&.value)).to eq(["var x = 1;", "\n  var y = 2;"])
+      expect(lits.map(&.value)).to eq(["var x = 1;", "\n  ", "var y = 2;"])
     end
   end
 

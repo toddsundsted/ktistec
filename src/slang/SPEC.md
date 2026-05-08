@@ -1080,10 +1080,14 @@ file at the right line and column.
 - If `filename` is empty / nil, neither the push/pop nor any
   per-fragment directive is emitted.
 
-Inside the push/pop, a per-fragment `#<loc:"FILE",L,C>` directive
-appears immediately before every **Crystal-expression site** — every
+Inside the push/pop, every **Crystal-expression site** — every
 place where user-written Crystal source appears in the generated
-output. The sites are:
+output — is bracketed inline by `#<loc:push>#<loc:"FILE",L,C>` …
+user code … `#<loc:pop>` on a single physical line. The directive
+shares its line with the bracketed code so the directive's
+`(L, C)` identifies the user code's first byte.
+
+The bracketed sites are:
 
 - Each attribute-value expression (the right-hand side of
   `name=expr`, §5.1.5).
@@ -1094,6 +1098,7 @@ output. The sites are:
   text, §5.4).
 - Each block-helper body opener (the line that starts a `do`-block
   for an output-with-children, §5.2.2).
+- Each line of a `crystal:` rawstuff body (§5.5).
 
 Per-fragment directives are **not** emitted before pure literal
 byte sequences (tag opens, attribute names, escaped text, raw
@@ -1104,10 +1109,7 @@ source position.
 ```crystal
 #<loc:push>#<loc:"src/views/foo.html.slang",1,1>
 content_io << "<div"
-content_io << " class=\""
-#<loc:"src/views/foo.html.slang",2,11>
-content_io << ::HTML.escape((some_helper(env)).to_s)
-content_io << "\""
+::Slang::Runtime.emit_attr(content_io, "class", (#<loc:push>#<loc:"src/views/foo.html.slang",2,11>some_helper(env)#<loc:pop>))
 content_io << ">"
 #<loc:pop>
 ```

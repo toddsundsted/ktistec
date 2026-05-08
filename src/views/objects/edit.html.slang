@@ -5,5 +5,5 @@ h1 Edit Post
 - if (quote = object.quote?)
   section.ui.feed data-controller="icon-load-error"
     == Ktistec::ViewHelper.object_partial(env, quote, as_context: true)
-== render "src/views/partials/editor.html.slang"
+- Slang.embed("src/views/partials/editor.html.slang", content_io)
 br

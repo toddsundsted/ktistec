@@ -12,7 +12,7 @@ crystal:
       attachments.reject!(&.url.in?(urls))
     end
   end
-== render "src/views/partials/object/content/attachments.html.slang"
+- Slang.embed("src/views/partials/object/content/attachments.html.slang", content_io)
 - if with_detail
   div.extra.text class=(is_deleted && "deleted" || nil)
     = s Ktistec::Emoji.emojify(html, object_emojis)

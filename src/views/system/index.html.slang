@@ -4,7 +4,7 @@ p
   span.blue< = ::Log.default
   | .
 form.ui.form method="POST" action=system_path
-  == authenticity_token(env)
+  = authenticity_token(env)
   - sources.sort.each do |source|
     .field
       h2 = source
@@ -43,5 +43,5 @@ form.ui.form method="POST" action=system_path
           input id="#{source}-fatal" type="radio" name=source value="Fatal" checked=!!severity.try(&.fatal?)
           label for="#{source}-fatal" Fatal
   .field
-    == submit_button
+    = submit_button
 br.transition.hidden

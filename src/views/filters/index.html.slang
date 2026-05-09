@@ -40,5 +40,5 @@ p
 - term = FilterTerm.new(term: "")
 = form_tag(term, filters_path) do
   = error_messages(term)
-  == input_tag("New Term", term, term)
-  == submit_button
+  = input_tag("New Term", term, term)
+  = submit_button

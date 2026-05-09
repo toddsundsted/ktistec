@@ -7,9 +7,9 @@ h1.ui.header OAuth Clients
   h3.ui.header Add New Client
   = form_tag(new_client, "/admin/oauth/clients", class: "ui small form") do
     = error_messages(new_client)
-    == input_tag("Client Name", new_client, client_name, placeholder: "Client name")
-    == input_tag("Redirect URIs", new_client, redirect_uris, placeholder: "Space-separated list of redirect URIs")
-    == submit_button("Create Client")
+    = input_tag("Client Name", new_client, client_name, placeholder: "Client name")
+    = input_tag("Redirect URIs", new_client, redirect_uris, placeholder: "Space-separated list of redirect URIs")
+    = submit_button("Create Client")
 
 table.ui.table
   thead

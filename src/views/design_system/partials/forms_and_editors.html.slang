@@ -111,7 +111,7 @@
     .ui.text.container
       .ui.form
         .field
-          == trix_editor("Description", Ktistec.settings, description)
+          = trix_editor("Description", Ktistec.settings, description)
         .inline.fields
           .ten.wide.field
             label for="visibility" Visibility

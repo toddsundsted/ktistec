@@ -66,14 +66,8 @@ module Ktistec::ViewHelper
     # - `for_actor`: Actor for whom view is being rendered.
     # - `highlight`: Whether or not to highlight this object in the feed.
     #
-    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, as_context = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false)
-      if for_thread
-        render "src/views/partials/thread.html.slang"
-      elsif with_detail
-        render "src/views/partials/detail.html.slang"
-      else
-        render "src/views/partials/object.html.slang"
-      end
+    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, as_context = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false, content_io)
+      Slang.embed "src/views/partials/object/wrapper.html.slang", content_io
     end
 
     def body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)

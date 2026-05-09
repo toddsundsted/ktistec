@@ -13,5 +13,5 @@
   h1 Drafts
   section.ui.feed
     - drafts.each do |object|
-      == object_partial(env, object)
+      - object_partial(env, object, content_io: content_io)
   - paginate(env, drafts, content_io)

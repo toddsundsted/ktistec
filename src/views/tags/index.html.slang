@@ -12,11 +12,11 @@ section.ui.feed data-controller="icon-load-error"
         _highlight = if cutoff_time
           object.created_at > cutoff_time
         end
-      == object_partial(env, object, highlight: _highlight)
+      - object_partial(env, object, highlight: _highlight, content_io: content_io)
     - else
       crystal:
         _activity = object.activities.find! do |activity|
           Relationship::Content::Outbox.find?(activity: activity)
         end
-      == object_partial(env, object, activity: _activity, actor: _activity.actor, author: object.attributed_to)
+      - object_partial(env, object, activity: _activity, actor: _activity.actor, author: object.attributed_to, content_io: content_io)
 - paginate(env, collection, content_io)

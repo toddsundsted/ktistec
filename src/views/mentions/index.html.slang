@@ -7,5 +7,5 @@
 section.ui.feed data-controller="icon-load-error"
   #refresh-posts-message
   - collection.each do |object|
-    == object_partial(env, object)
+    - object_partial(env, object, content_io: content_io)
 - paginate(env, collection, content_io)

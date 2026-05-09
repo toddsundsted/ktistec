@@ -15,13 +15,15 @@ Spectator.describe "object partials" do
   setup_spec
 
   include Ktistec::Controller
+  include Ktistec::ViewHelper::ClassMethods
 
   describe "label.html.slang" do
     let(env) { make_env("GET", "/object") }
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_label_html_slang(env, author, actor))
+        body = String.build { |io| Slang.embed("src/views/partials/object/label.html.slang", io) }
+        XML.parse_html(body)
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -963,7 +965,8 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper.object_partial(env, object, activity: activity, with_detail: with_detail, for_thread: for_thread))
+        body = String.build { |io| Ktistec::ViewHelper.object_partial(env, object, activity: activity, with_detail: with_detail, for_thread: for_thread, content_io: io) }
+        XML.parse_html(body)
       rescue XML::Error
         XML.parse_html("<div/>").document
       end

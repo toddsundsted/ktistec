@@ -8,12 +8,12 @@ def evaluates_to_nil
   nil
 end
 
-def wrap_block(&block : -> String)
-  "[#{block.call}]"
+def wrap_block(&block : -> String) : Ktistec::SafeHTML
+  Ktistec::SafeHTML.assert_safe("[#{block.call}]")
 end
 
-def wrap_block_with_arg(&block : Int32 -> String)
-  "[#{block.call(42)}]"
+def wrap_block_with_arg(&block : Int32 -> String) : Ktistec::SafeHTML
+  Ktistec::SafeHTML.assert_safe("[#{block.call(42)}]")
 end
 
 def evaluates_to_amp
@@ -240,10 +240,6 @@ Spectator.describe Slang::CodeGen do
       expect(render_string(%(= "<a>"))).to eq("&lt;a&gt;")
     end
 
-    it "renders raw output" do
-      expect(render_string(%(== "<a>"))).to eq("<a>")
-    end
-
     it "renders an evaluated expression" do
       expect(render_string("= 1 + 2")).to eq("3")
     end
@@ -256,14 +252,6 @@ Spectator.describe Slang::CodeGen do
       expect(render_string(%(span= "<a>"))).to eq("<span>&lt;a&gt;</span>")
     end
 
-    it "renders inline output with no space before `==` (raw)" do
-      expect(render_string(%(span== "<a>"))).to eq("<span><a></span>")
-    end
-
-    it "renders inline output with no space before `==` after class shorthand" do
-      expect(render_string(%(span.foo== "x"))).to eq(%(<span class="foo">x</span>))
-    end
-
     it "renders nil as empty string" do
       expect(render_string("= nil")).to eq("")
     end
@@ -274,31 +262,27 @@ Spectator.describe Slang::CodeGen do
       it "emits it raw via `=`" do
         expect(render_string("= safe")).to eq("<a>")
       end
-
-      it "emits it raw via `==`" do
-        expect(render_string("== safe")).to eq("<a>")
-      end
     end
   end
 
-  describe "Block helpers (== with do)" do
+  describe "Block helpers (= with do)" do
     it "passes child HTML to a helper block" do
       expect(render_string(<<-SLANG)).to eq("[<p>inner</p>]")
-        == wrap_block do
+        = wrap_block do
           p inner
         SLANG
     end
 
     it "passes child HTML to a helper block that takes an argument" do
       expect(render_string(<<-SLANG)).to eq("[<p>42</p>]")
-        == wrap_block_with_arg do |n|
+        = wrap_block_with_arg do |n|
           p = n
         SLANG
     end
 
     it "renders a helper block attached inline to a parent element" do
       expect(render_string(<<-SLANG)).to eq("<div>[<p>42</p>]</div>")
-        div == wrap_block_with_arg do |n|
+        div = wrap_block_with_arg do |n|
           p = n
         SLANG
     end
@@ -493,10 +477,6 @@ Spectator.describe Slang::CodeGen do
       expect(render_string("li: a: span text")).to eq(
         "<li><a><span>text</span></a></li>",
       )
-    end
-
-    it "treats `: ==` as inline output of the parent (no implicit div)" do
-      expect(render_string(%(span: == "x"))).to eq("<span>x</span>")
     end
 
     it "treats `: =` as inline output of the parent (no implicit div)" do

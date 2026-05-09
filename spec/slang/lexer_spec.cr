@@ -455,22 +455,12 @@ Spectator.describe Slang::Lexer do
     end
   end
 
-  describe "output (`=` and `==`)" do
+  describe "output (`=`)" do
     it "lexes `= EXPR`" do
       tokens = pairs("= 1 + 2")
       expect(tokens).to eq([
         {TK::Output, ""},
         {TK::OutputExpr, "1 + 2"},
-        {TK::Newline, ""},
-        {TK::EOF, ""},
-      ])
-    end
-
-    it "lexes `== EXPR`" do
-      tokens = pairs(%q(== "<a>"))
-      expect(tokens).to eq([
-        {TK::OutputRaw, ""},
-        {TK::OutputExpr, %q("<a>")},
         {TK::Newline, ""},
         {TK::EOF, ""},
       ])
@@ -487,45 +477,11 @@ Spectator.describe Slang::Lexer do
       ])
     end
 
-    it "lexes inline `==` after element" do
-      tokens = pairs(%q(div == "<ah>"))
-      expect(tokens).to eq([
-        {TK::Element, ""}, {TK::TagName, "div"},
-        {TK::OutputRaw, ""},
-        {TK::OutputExpr, %q("<ah>")},
-        {TK::Newline, ""},
-        {TK::EOF, ""},
-      ])
-    end
-
     it "lexes inline `=` directly after a tag name (no leading space)" do
       tokens = pairs(%q(span= name))
       expect(tokens).to eq([
         {TK::Element, ""}, {TK::TagName, "span"},
         {TK::Output, ""},
-        {TK::OutputExpr, "name"},
-        {TK::Newline, ""},
-        {TK::EOF, ""},
-      ])
-    end
-
-    it "lexes inline `==` directly after a tag name (no leading space)" do
-      tokens = pairs(%q(span== name))
-      expect(tokens).to eq([
-        {TK::Element, ""}, {TK::TagName, "span"},
-        {TK::OutputRaw, ""},
-        {TK::OutputExpr, "name"},
-        {TK::Newline, ""},
-        {TK::EOF, ""},
-      ])
-    end
-
-    it "lexes inline `==` directly after class shorthand (no leading space)" do
-      tokens = pairs(%q(span.foo== name))
-      expect(tokens).to eq([
-        {TK::Element, ""}, {TK::TagName, "span"},
-        {TK::ClassName, "foo"},
-        {TK::OutputRaw, ""},
         {TK::OutputExpr, "name"},
         {TK::Newline, ""},
         {TK::EOF, ""},
@@ -541,6 +497,20 @@ Spectator.describe Slang::Lexer do
         {TK::Newline, ""},
         {TK::EOF, ""},
       ])
+    end
+
+    it "rejects line-start `==` with a fix-it message" do
+      expect { pairs(%q(== "<a>")) }.to raise_error(
+        Slang::LexError,
+        /`==` is not supported; use `=` with a `SafeHTML`\/`SafeURI`\/`SafeJSON` value/,
+      )
+    end
+
+    it "rejects inline `==` after an element with a fix-it message" do
+      expect { pairs(%q(span== name)) }.to raise_error(
+        Slang::LexError,
+        /`==` is not supported; use `=` with a `SafeHTML`\/`SafeURI`\/`SafeJSON` value/,
+      )
     end
   end
 

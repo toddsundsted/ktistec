@@ -56,6 +56,13 @@ module Ktistec::ViewHelper
       ::Ktistec::SafeHTML.assert_safe(%Q(<span class="ui filter term">#{str}</span>))
     end
 
+    # Returns the footer.
+    #
+    def footer_html : ::Ktistec::SafeHTML
+      default = "<a href='https://github.com/toddsundsted/ktistec' target='_blank'>Powered by <em>Ktistec</em>.</a>"
+      ::Ktistec::SafeHTML.assert_safe(Ktistec.settings.footer || default)
+    end
+
     # Returns a tuple of {count, color, tooltip} for actor notifications.
     #
     def notification_count_and_color(actor, since : Time?)

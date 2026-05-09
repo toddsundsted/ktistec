@@ -147,16 +147,4 @@ module Ktistec::ViewHelper
   def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor)
     render "src/views/partials/object/content.html.slang"
   end
-
-  def self._view_src_views_partials_object_label_html_slang(env, author, actor)
-    render "src/views/partials/object/label.html.slang"
-  end
-
-  def self._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed = false, error_message = nil, show_quote = true)
-    render "src/views/partials/object/content/quote.html.slang"
-  end
-
-  def self._view_src_views_partials_object_content_poll_html_slang(env, poll, object_emojis, timezone)
-    render "src/views/partials/object/content/poll.html.slang"
-  end
 end

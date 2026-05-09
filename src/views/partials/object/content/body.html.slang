@@ -17,13 +17,21 @@ crystal:
   div.extra.text class=(is_deleted && "deleted" || nil)
     = s Ktistec::Emoji.emojify(html, object_emojis)
   - if object.quote_iri
-    == _view_src_views_partials_object_content_quote_html_slang(env, object, object.quote?, false, nil, show_quote)
+    crystal:
+      quote = object.quote?
+      failed = false
+      error_message = nil
+    - Slang.embed("src/views/partials/object/content/quote.html.slang", content_io)
   - if object.responds_to?(:poll?) && (poll = object.poll?)
-    == _view_src_views_partials_object_content_poll_html_slang(env, poll, object_emojis, timezone)
+    - Slang.embed("src/views/partials/object/content/poll.html.slang", content_io)
 - else
   div.extra.text class=(is_deleted && "deleted" || nil) data-controller="clickable-background" data-clickable-background-href-value=href
     = s Ktistec::Emoji.emojify(html, object_emojis)
   - if object.quote_iri
-    == _view_src_views_partials_object_content_quote_html_slang(env, object, object.quote?, false, nil, show_quote)
+    crystal:
+      quote = object.quote?
+      failed = false
+      error_message = nil
+    - Slang.embed("src/views/partials/object/content/quote.html.slang", content_io)
   - if object.responds_to?(:poll?) && (poll = object.poll?)
-    == _view_src_views_partials_object_content_poll_html_slang(env, poll, object_emojis, timezone)
+    - Slang.embed("src/views/partials/object/content/poll.html.slang", content_io)

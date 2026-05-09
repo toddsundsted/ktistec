@@ -71,8 +71,8 @@
     meta name="twitter:title" content=og_title
     meta name="twitter:description" content=og_description
     meta name="twitter:image" content=og_image
-  == _view_src_views_partials_actor_panel_html_slang(env, actor)
+  - _view_src_views_partials_actor_panel_html_slang(env, actor, content_io)
   - objects = actor.public_posts_with_pins(**pagination_params(env))
   - Slang.embed("src/views/actors/public_posts.html.slang", content_io)
 - else
-  == _view_src_views_partials_actor_panel_html_slang(env, actor)
+  - _view_src_views_partials_actor_panel_html_slang(env, actor, content_io)

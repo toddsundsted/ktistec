@@ -85,7 +85,8 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor))
+        body = String.build { |io| Ktistec::ViewHelper._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, io) }
+        XML.parse_html(body)
       rescue XML::Error
         XML.parse_html("<div/>").document
       end

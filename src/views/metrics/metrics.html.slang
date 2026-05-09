@@ -25,9 +25,9 @@ crystal:
   end
 canvas#charts-1 data-controller="chart"
   script#chart-labels-1 type="application/json" data-chart-target="labels"
-    == labels.to_json
+    = Ktistec::SafeJSON.from(labels)
   script#chart-datasets-1 type="application/json" data-chart-target="datasets"
-    == datasets.to_json
+    = Ktistec::SafeJSON.from(datasets)
 crystal:
   datasets = charts.select(&.name.starts_with?(/heap-|free-|sqlite-/)).map do |chart|
     {
@@ -54,9 +54,9 @@ crystal:
   end
 canvas#charts-2 data-controller="chart"
   script#chart-labels-2 type="application/json" data-chart-target="labels"
-    == labels.to_json
+    = Ktistec::SafeJSON.from(labels)
   script#chart-datasets-2 type="application/json" data-chart-target="datasets"
-    == datasets.to_json
+    = Ktistec::SafeJSON.from(datasets)
 crystal:
   ranges = {
     1.day.ago.to_s("%Y-%m-%d") => "Last 24 Hours",

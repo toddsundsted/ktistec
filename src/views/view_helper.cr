@@ -85,6 +85,22 @@ module Ktistec::ViewHelper
     def thread_page_thread_controls(env, thread, task, follow, content_io)
       Slang.embed "src/views/partials/thread_page_thread_controls.html.slang", content_io
     end
+
+    # The naming below matches the format of automatically generated
+    # view helpers. View helpers for partials are *not* automatically
+    # generated.
+
+    def _view_src_views_partials_actor_panel_html_slang(env, actor, content_io)
+      Slang.embed "src/views/partials/actor-panel.html.slang", content_io
+    end
+
+    def _view_src_views_partials_collection_json_ecr(env, collection)
+      render "src/views/partials/collection.json.ecr"
+    end
+
+    def _view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
+      Slang.embed "src/views/partials/object/content.html.slang", content_io
+    end
   end
 
   extend ClassMethods
@@ -134,17 +150,5 @@ module Ktistec::ViewHelper
 
   def self._layout_src_views_layouts_default_html_ecr(env, title, og_metadata, head, content)
     render "src/views/layouts/default.html.ecr"
-  end
-
-  def self._view_src_views_partials_actor_panel_html_slang(env, actor, content_io)
-    Slang.embed "src/views/partials/actor-panel.html.slang", content_io
-  end
-
-  def self._view_src_views_partials_collection_json_ecr(env, collection)
-    render "src/views/partials/collection.json.ecr"
-  end
-
-  def self._view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
-    Slang.embed "src/views/partials/object/content.html.slang", content_io
   end
 end

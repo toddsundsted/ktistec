@@ -31,7 +31,7 @@
               | .
             - if (content = activity.object.preview)
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification::Like
           crystal:
             activity = notification.activity
@@ -50,7 +50,7 @@
               | .
             - if (content = activity.object.preview)
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification::Dislike
           crystal:
             activity = notification.activity
@@ -69,7 +69,7 @@
               | .
             - if (content = activity.object.preview)
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification::Reply
           crystal:
             object = notification.object
@@ -87,7 +87,7 @@
               | .
             - if content
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification::Mention
           crystal:
             object = notification.object
@@ -103,7 +103,7 @@
               | you.
             - if content
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification::Follow::Hashtag
           crystal:
             name = notification.name
@@ -119,7 +119,7 @@
               | .
             - if content
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification::Follow::Mention
           crystal:
             name = notification.name
@@ -135,7 +135,7 @@
               | .
             - if content
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification::Follow
           crystal:
             activity = notification.activity
@@ -179,7 +179,7 @@
                 | you follow.
             - if content
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification::Poll::Expiry
           crystal:
             question = notification.question
@@ -198,7 +198,7 @@
                 | has ended.
             - if (content = question.preview)
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification::Quote
           crystal:
             activity = notification.activity
@@ -216,7 +216,7 @@
               | .
             - if (content = activity.object.preview)
               .extra.meta.truncated
-                == … content, 150
+                = … content, 150
         - in Relationship::Content::Notification
           / This can't happen!
   - paginate(env, notifications, content_io)

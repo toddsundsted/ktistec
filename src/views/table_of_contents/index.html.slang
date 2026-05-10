@@ -8,5 +8,5 @@
 - else
   h1 Table of Contents
   .ui.list
-    - TableOfContentsController.render_toc_html(tree, "", content_io)
+    - partial TableOfContentsController.render_toc_html(tree, "")
 br.transition.hidden

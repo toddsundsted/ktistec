@@ -6,9 +6,9 @@ crystal:
   nav.ui.secondary.pagination.menu
     - if _prev
       - temp["page"] = (page - 1).to_s
-      a.item href=Ktistec::SafeURI.from("?#{temp}") target="_top"
+      a.item href=Utils::Paths.query_path(temp) target="_top"
         i.angle.double.left.icon
     - if _next
       - temp["page"] = (page + 1).to_s
-      a.item href=Ktistec::SafeURI.from("?#{temp}") target="_top"
+      a.item href=Utils::Paths.query_path(temp) target="_top"
         i.angle.double.right.icon

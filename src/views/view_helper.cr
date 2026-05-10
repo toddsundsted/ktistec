@@ -47,6 +47,37 @@ macro render(content)
   end
 end
 
+# Renders a Slang partial into the surrounding `content_io` scope.
+#
+# Two forms:
+#
+#     - partial "partials/visibility_controls"
+#     - partial paginate(env, objects)
+#
+# String-literal form: resolves `path` against `src/views/` (unless
+# already prefixed with `src/`) and appends `.html.slang` if no such
+# extension is present.
+#
+# Method-call form: appends `content_io: content_io` as a named
+# argument.
+#
+macro partial(arg)
+  {% if arg.is_a?(StringLiteral) %}
+    {% base = arg.starts_with?("src/") ? arg : "src/views/#{arg.id}" %}
+    {% resolved = base.ends_with?(".html.slang") ? base : "#{base.id}.html.slang" %}
+    ::Slang.embed({{resolved}}, content_io)
+  {% elsif arg.is_a?(Call) %}
+    {% rcv = arg.receiver %}
+    {% if !rcv.is_a?(Nop) %}{{rcv}}.{% end %}{{arg.name.id}}(
+      {% for a in arg.args %}{{a}}, {% end %}
+      {% if arg.named_args %}{% for n in arg.named_args %}{{n.name.id}}: {{n.value}}, {% end %}{% end %}
+      content_io: content_io,
+    )
+  {% else %}
+    {% raise "expected a string-literal path or method call" %}
+  {% end %}
+end
+
 module Ktistec::ViewHelper
   include Utils::Paths
 
@@ -67,39 +98,35 @@ module Ktistec::ViewHelper
     # - `highlight`: Whether or not to highlight this object in the feed.
     #
     def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, as_context = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false, content_io)
-      Slang.embed "src/views/partials/object/wrapper.html.slang", content_io
+      partial "partials/object/wrapper"
+    end
+
+    def object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
+      partial "partials/object/content"
     end
 
     def body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)
-      Slang.embed "src/views/partials/object/content/body.html.slang", content_io
+      partial "partials/object/content/body"
     end
 
     def mention_page_mention_banner(env, mention, follow, count, content_io)
-      Slang.embed "src/views/partials/mention_page_mention_banner.html.slang", content_io
+      partial "partials/mention_page_mention_banner"
     end
 
     def tag_page_tag_controls(env, hashtag, task, follow, count, content_io)
-      Slang.embed "src/views/partials/tag_page_tag_controls.html.slang", content_io
+      partial "partials/tag_page_tag_controls"
     end
 
     def thread_page_thread_controls(env, thread, task, follow, content_io)
-      Slang.embed "src/views/partials/thread_page_thread_controls.html.slang", content_io
+      partial "partials/thread_page_thread_controls"
     end
 
-    # The naming below matches the format of automatically generated
-    # view helpers. View helpers for partials are *not* automatically
-    # generated.
-
-    def _view_src_views_partials_actor_panel_html_slang(env, actor, content_io)
-      Slang.embed "src/views/partials/actor-panel.html.slang", content_io
+    def actor_panel_partial(env, actor, content_io)
+      partial "partials/actor-panel"
     end
 
-    def _view_src_views_partials_collection_json_ecr(env, collection)
+    def collection_json_partial(env, collection)
       render "src/views/partials/collection.json.ecr"
-    end
-
-    def _view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
-      Slang.embed "src/views/partials/object/content.html.slang", content_io
     end
   end
 
@@ -144,9 +171,11 @@ module Ktistec::ViewHelper
 
   # View helpers
 
-  # The naming below matches the format of automatically generated
-  # view helpers. View helpers for partials are *not* automatically
-  # generated.
+  # The name below matches the format of automatically generated
+  # layout helpers. It is consumed by the `render(content, layout)`
+  # macro at the top of this file and by `framework/controller.cr`'s
+  # response macros, both of which derive the helper name from the
+  # layout path.
 
   def self._layout_src_views_layouts_default_html_ecr(env, title, og_metadata, head, content)
     render "src/views/layouts/default.html.ecr"

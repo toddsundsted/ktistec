@@ -5,5 +5,5 @@ p Passwords must be at least six characters long, and must consist of at least o
 crystal:
   form_action = "/"
   button_text = "Submit"
-- Slang.embed("src/views/partials/account_form.html.slang", content_io)
+- partial "partials/account_form"
 p.small.text Ktistec Version #{Ktistec::VERSION}

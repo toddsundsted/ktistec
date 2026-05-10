@@ -56,6 +56,26 @@ module Ktistec::ViewHelper
       ::Ktistec::SafeHTML.assert_safe(%Q(<span class="ui filter term">#{str}</span>))
     end
 
+    # Renders `subject.display_name` with the subject's custom emojis
+    # interpolated and the result sanitized.
+    #
+    # Pass `emojis:` to reuse a pre-fetched emoji set.
+    #
+    def emoji_name(subject, *, emojis = nil) : ::Ktistec::SafeHTML
+      emojis ||= ::Tag::Emoji.where(subject: subject)
+      ::Ktistec::Util.sanitize(::Ktistec::Emoji.emojify(subject.display_name, emojis))
+    end
+
+    # Renders arbitrary text or HTML with the subject's custom emojis
+    # interpolated and the result sanitized.
+    #
+    # Pass `emojis:` to reuse a pre-fetched emoji set.
+    #
+    def emoji_html(content, subject, *, emojis = nil) : ::Ktistec::SafeHTML
+      emojis ||= ::Tag::Emoji.where(subject: subject)
+      ::Ktistec::Util.sanitize(::Ktistec::Emoji.emojify(content, emojis))
+    end
+
     # Returns the footer.
     #
     def footer_html : ::Ktistec::SafeHTML

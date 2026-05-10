@@ -11,7 +11,7 @@ crystal:
     - if for_thread && (parent = object.in_reply_to?)
       crystal:
         parent_in_thread = for_thread.try { |thread| thread.any? { |reply| reply.id == parent.id } }
-        parent_href = parent_in_thread ? Ktistec::SafeURI.from("##{anchor(parent)}") : remote_thread_path(parent)
+        parent_href = parent_in_thread ? Utils::Paths.fragment_path(anchor(parent)) : remote_thread_path(parent)
         parent_text = parent.attributed_to?.try(&.handle)
       a.in-reply-to.float-right data-turbo-frame="_top" href=parent_href title=parent_text
         i.arrow.up.icon
@@ -26,11 +26,11 @@ crystal:
           i.pin.icon
       - if account
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)
+          a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = emoji_name(actor, emojis: actor_emojis)
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = s Ktistec::Emoji.emojify(author.display_name, author_emojis)
+          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = emoji_name(author, emojis: author_emojis)
         - else
-          a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = s Ktistec::Emoji.emojify(author.display_name, author_emojis)
+          a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = emoji_name(author, emojis: author_emojis)
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
         - case visibility(author, object)
@@ -40,11 +40,11 @@ crystal:
           i.at.icon<
       - else
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)
+          a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = emoji_name(actor, emojis: actor_emojis)
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link = s Ktistec::Emoji.emojify(author.display_name, author_emojis)
+          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link = emoji_name(author, emojis: author_emojis)
         - else
-          a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = s Ktistec::Emoji.emojify(author.display_name, author_emojis)
+          a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = emoji_name(author, emojis: author_emojis)
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - unless is_blocked
@@ -61,9 +61,9 @@ crystal:
           - if object.sensitive
             i.red.eye.slash.icon
           = t summary
-        - body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)
+        - partial body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
     - else
-      - body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)
+      - partial body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
     - if with_detail && !as_context && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq!

@@ -145,17 +145,19 @@ module Ktistec
     #
     # Both pre-filter unsafe characters, but with different
     # strictness. `safe_url?` rejects C0 controls (U+0000-U+001F),
-    # DEL (U+007F), and ASCII space anywhere -- WHATWG URL parsing
-    # strips these before scheme parsing. `safe_iri?` (and
-    # `absolute_uri?`) additionally reject `"`, `'`, `\`, `<`, `>`.
-    # RFC 3986 excludes `"`, `\`, `<`, and `>` from URI characters
-    # entirely; `'` is a sub-delim per the RFC but rejected here as
-    # a stricter project-level safety policy (no Fediverse-emitted
-    # IRI carries it in production data). Rejecting these at the
-    # validator prevents an IRI with one of these characters from
-    # reaching a raw template interpolation.
+    # DEL (U+007F), ASCII space, and `\` anywhere -- WHATWG URL
+    # parsing strips C0/space before scheme parsing and normalizes
+    # `\` to `/` in special-scheme contexts (so `\\host/path` would
+    # resolve as protocol-relative). `safe_iri?` (and `absolute_uri?`)
+    # additionally reject `"`, `'`, `<`, `>`. RFC 3986 excludes `"`,
+    # `\`, `<`, and `>` from URI characters entirely; `'` is a
+    # sub-delim per the RFC but rejected here as a stricter
+    # project-level safety policy (no Fediverse-emitted IRI carries
+    # it in production data). Rejecting these at the validator
+    # prevents an IRI with one of these characters from reaching a
+    # raw template interpolation.
 
-    private UNSAFE_URL_CHARS = /[\x00-\x20\x7f]/
+    private UNSAFE_URL_CHARS = /[\x00-\x20\x7f\\]/
 
     private UNSAFE_IRI_CHARS = /[\x00-\x20\x7f"'\\<>]/
 

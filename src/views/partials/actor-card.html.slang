@@ -1,5 +1,4 @@
 - _account = env.account?
-- _emojis = Tag::Emoji.where(subject: actor)
 .ui.fluid.actor.card
   - if actor.blocked?
     .blocked.content
@@ -10,9 +9,9 @@
       = actor_icon(actor)
   .extra.content
     - if _account
-      a.ui.header href=remote_actor_path(actor) = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
+      a.ui.header href=remote_actor_path(actor) = emoji_name(actor)
     - else
-      .ui.header = s Ktistec::Emoji.emojify(actor.display_name, _emojis)
+      .ui.header = emoji_name(actor)
     a.ui.link href=Ktistec::SafeURI.from?(actor.iri) = actor.handle
   - if _account && _account.actor != actor
     .extra.content

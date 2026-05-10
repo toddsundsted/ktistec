@@ -132,6 +132,16 @@ Spectator.describe Ktistec::SafeURI do
       it "rejects //host" do
         expect(described_class.from?("//example.com")).to be_nil
       end
+
+      it "rejects backslash-prefixed protocol-relative references" do
+        expect(described_class.from?("\\\\evil.com/path")).to be_nil
+        expect(described_class.from?("\\\\evil.com")).to be_nil
+      end
+
+      it "rejects mixed-slash protocol-relative references" do
+        expect(described_class.from?("/\\evil.com/path")).to be_nil
+        expect(described_class.from?("\\/evil.com/path")).to be_nil
+      end
     end
 
     it "returns a SafeURI" do

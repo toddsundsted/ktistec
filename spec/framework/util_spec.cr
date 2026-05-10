@@ -293,6 +293,12 @@ Spectator.describe Ktistec::Util do
       expect(described_class.safe_url?("https://example.com/\x00/path")).to be_false
     end
 
+    it "rejects backslash anywhere in the URL" do
+      expect(described_class.safe_url?("\\\\evil.com/path")).to be_false
+      expect(described_class.safe_url?("/\\evil.com/path")).to be_false
+      expect(described_class.safe_url?("https://example.com\\path")).to be_false
+    end
+
     it "accepts URLs containing a single quote" do
       expect(described_class.safe_url?("https://example.com/'foo")).to be_true
     end

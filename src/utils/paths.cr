@@ -17,12 +17,76 @@ module Utils::Paths
     (index = iri.rindex('/')) ? iri[(index + 1)..-1] : iri
   end
 
+  # Returns a `SafeURI` for the `Referer` header, suitable as a
+  # `redirect` target.
+  #
+  def self.back_path_for(env : ::HTTP::Server::Context) : ::Ktistec::SafeURI
+    referer = env.request.headers["Referer"]?
+    fallback = ::Ktistec::SafeURI.assert_safe("/")
+    return fallback if referer.nil? || referer.empty?
+    return fallback unless ::Ktistec::Util.safe_url?(referer)
+    return fallback if referer.starts_with?("//")
+    if ::Ktistec::Util.url_scheme(referer)
+      # absolute -- accept only if same-origin
+      begin
+        uri = ::URI.parse(referer)
+        server = ::URI.parse(::Ktistec.host)
+      rescue ::URI::Error
+        return fallback
+      end
+      return fallback unless uri.scheme == server.scheme && uri.host == server.host && uri.port == server.port
+      path = ::String.build do |io|
+        io << (uri.path.presence || "/")
+        if (q = uri.query.presence)
+          io << '?' << q
+        end
+        if (f = uri.fragment.presence)
+          io << '#' << f
+        end
+      end
+      ::Ktistec::SafeURI.assert_safe(path)
+    else
+      # relative reference (path-absolute, query-only, fragment-only)
+      ::Ktistec::SafeURI.assert_safe(referer)
+    end
+  end
+
   macro back_path
-    ::Ktistec::SafeURI.from?(env.request.headers.fetch("Referer", "/")) || ::Ktistec::SafeURI.assert_safe("/")
+    ::Utils::Paths.back_path_for(env)
   end
 
   macro home_path
     ::Ktistec::SafeURI.assert_safe("/")
+  end
+
+  # The empty string -- a relative reference resolving to the current
+  # page URL. Used as a fallback href on links whose click is
+  # intercepted by the client (e.g., Turbo `data-turbo-action` links).
+  #
+  macro current_page_path
+    ::Ktistec::SafeURI.assert_safe("")
+  end
+
+  # A query-only relative reference (`?#{query}`). Resolves against
+  # the current page URL.
+  #
+  macro query_path(query)
+    ::Ktistec::SafeURI.assert_safe("?#{{{query}}}")
+  end
+
+  # A fragment-only relative reference (`#{{name}}`). Resolves
+  # against the current page URL.
+  #
+  macro fragment_path(name)
+    ::Ktistec::SafeURI.assert_safe("##{{{name}}}")
+  end
+
+  # Lifts a path validated by `Account#pinned_collections` into a
+  # `SafeURI`. The model setter normalizes and allowlist-validates
+  # each entry against a small set of route shapes.
+  #
+  macro pinned_collection_path(path)
+    ::Ktistec::SafeURI.assert_safe({{path}})
   end
 
   macro everything_path
@@ -225,6 +289,14 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.object_path({{object}})}/remote-share")
   end
 
+  macro poll_vote_path(question = nil)
+    {% if question %}
+      ::Ktistec::SafeURI.assert_safe("/polls/#{::URI.encode_path_segment({{question}}.id.to_s)}/vote")
+    {% else %}
+      ::Ktistec::SafeURI.assert_safe("/polls/#{::URI.encode_path_segment(env.params.url["id"])}/vote")
+    {% end %}
+  end
+
   macro create_translation_object_path(object = nil)
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/translation/create")
   end
@@ -293,6 +365,10 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/remote-follow")
   end
 
+  macro actor_feed_path(actor = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feed.rss")
+  end
+
   macro hashtag_path(hashtag = nil)
     {% if hashtag %}
       ::Ktistec::SafeURI.assert_safe("/tags/#{::URI.encode_path_segment({{hashtag}})}")
@@ -353,13 +429,18 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("ktistec://information")
   end
 
-  macro stream_path(*segments)
+  macro stream_path(*segments, query = nil)
     ::Ktistec::SafeURI.assert_safe(
       String.build do |%io|
         %io << "/stream"
         {% for segment in segments %}
           %io << '/'
           ::URI.encode_path_segment(%io, ({{segment}}).to_s)
+        {% end %}
+        {% if query %}
+          if (%q = ({{query}})) && !%q.empty?
+            %io << '?' << %q
+          end
         {% end %}
       end
     )

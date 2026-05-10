@@ -472,8 +472,8 @@ Spectator.describe "helpers" do
     context "given a payload with a backslash" do
       before_each { actor.save.assign(image: %(http://x\\foo)) }
 
-      it "percent-encodes the backslash" do
-        expect(subject).to eq(%(background-image: url(&quot;http://x%5Cfoo&quot;);))
+      it "drops the URL" do
+        expect(subject).to be_nil
       end
     end
   end

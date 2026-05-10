@@ -21,7 +21,7 @@
         - else
           span.invisible.label
       - env.account.pinned_collections.each do |label, path|
-        a.item href=Ktistec::SafeURI.from(path) = label
+        a.item href=Utils::Paths.pinned_collection_path(path) = label
       a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
         i.horizontal.sliders.icon
         .menu
@@ -52,7 +52,7 @@
     - Slang.embed("src/views/actors/timeline.html.slang", content_io)
 - elsif !actor.blocked?
   - content_for "head" do
-    link rel="alternate" type="application/rss+xml" title="#{actor.display_name}: RSS Feed" href=Ktistec::SafeURI.from("#{Utils::Paths.actor_path(actor)}/feed.rss")
+    link rel="alternate" type="application/rss+xml" title="#{actor.display_name}: RSS Feed" href=Utils::Paths.actor_feed_path(actor)
   - content_for "og_metadata" do
     crystal:
       og_title = actor.display_name.presence

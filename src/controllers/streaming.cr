@@ -43,7 +43,7 @@ class StreamingController
 
   # Renders action to replace the refresh posts message.
   #
-  def self.replace_refresh_posts_message(io, id = false, path = "")
+  def self.replace_refresh_posts_message(io, id = false, path = Utils::Paths.current_page_path)
     body = render "src/views/partials/refresh-posts.html.slang"
     stream_replace(io, target: "refresh-posts-message", body: body, id: id)
   end

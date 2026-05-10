@@ -1773,7 +1773,7 @@ Spectator.describe OutboxesController do
 
           it "redirects back" do
             post "/actors/#{actor.username}/outbox", HTML_HEADERS.merge!({"Referer" => "https://test.test/the/previous/page"}), "type=Delete&object=#{URI.encode_www_form(object.iri)}"
-            expect(response.headers["Location"]).to eq("https://test.test/the/previous/page")
+            expect(response.headers["Location"]).to eq("/the/previous/page")
           end
 
           it "returns 204 when successful" do

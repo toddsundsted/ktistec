@@ -103,24 +103,24 @@ Spectator.describe Ktistec::SafeURI do
     end
 
     context "relative references" do
-      it "accepts path-absolute" do
-        expect(described_class.from?("/relative/path")).not_to be_nil
+      it "rejects path-absolute" do
+        expect(described_class.from?("/relative/path")).to be_nil
       end
 
-      it "accepts path-relative" do
-        expect(described_class.from?("foo/bar")).not_to be_nil
+      it "rejects path-relative" do
+        expect(described_class.from?("foo/bar")).to be_nil
       end
 
-      it "accepts query-only" do
-        expect(described_class.from?("?key=value")).not_to be_nil
+      it "rejects query-only" do
+        expect(described_class.from?("?key=value")).to be_nil
       end
 
-      it "accepts fragment-only" do
-        expect(described_class.from?("#section")).not_to be_nil
+      it "rejects fragment-only" do
+        expect(described_class.from?("#section")).to be_nil
       end
 
-      it "accepts empty" do
-        expect(described_class.from?("")).not_to be_nil
+      it "rejects empty" do
+        expect(described_class.from?("")).to be_nil
       end
     end
 
@@ -145,21 +145,25 @@ Spectator.describe Ktistec::SafeURI do
     end
 
     it "returns a SafeURI" do
-      expect(described_class.from?("/x")).to be_a(Ktistec::SafeURI)
+      expect(described_class.from?("https://example.com/")).to be_a(Ktistec::SafeURI)
     end
   end
 
   describe ".from" do
-    it "wraps a valid URI" do
-      expect(described_class.from("/x").to_s).to eq("/x")
+    it "wraps a valid absolute URI" do
+      expect(described_class.from("https://example.com/").to_s).to eq("https://example.com/")
     end
 
     it "raises on invalid URI" do
       expect { described_class.from("javascript:alert(1)") }.to raise_error(ArgumentError, /not a safe URI/)
     end
 
+    it "raises on relative URI" do
+      expect { described_class.from("/relative/path") }.to raise_error(ArgumentError, /not a safe URI/)
+    end
+
     it "returns a SafeURI" do
-      expect(described_class.from("/x")).to be_a(Ktistec::SafeURI)
+      expect(described_class.from("https://example.com/")).to be_a(Ktistec::SafeURI)
     end
   end
 

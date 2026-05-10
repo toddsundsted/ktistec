@@ -977,8 +977,8 @@ Splat values:
   passing anything else raises. Event-handler keys (matching
   `/\Aon[a-z]+\z/i`, also case-insensitive) are unconditionally
   rejected — they cannot be set via splat regardless of value, and
-  raise. Symbol keys (e.g., `{:href => SafeURI.from?("/x")}`) and
-  string keys (`{"href" => SafeURI.from?("/x")}`) both work.
+  raise. Symbol keys (e.g., `{:href => SafeURI.from?("https://example.com/")}`) and
+  string keys (`{"href" => SafeURI.from?("https://example.com/")}`) both work.
 - **Values.** For URL keys, a `SafeURI` is emitted raw (HTML-escaped
   for attribute-quote safety). For other keys, the same
   type-dispatched policy as named non-URL attributes (§5.1.5)

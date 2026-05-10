@@ -11,7 +11,7 @@ crystal:
     - if for_thread && (parent = object.in_reply_to?)
       crystal:
         parent_in_thread = for_thread.try { |thread| thread.any? { |reply| reply.id == parent.id } }
-        parent_href = parent_in_thread ? Ktistec::SafeURI.from("##{anchor(parent)}") : remote_thread_path(parent)
+        parent_href = parent_in_thread ? Utils::Paths.fragment_path(anchor(parent)) : remote_thread_path(parent)
         parent_text = parent.attributed_to?.try(&.handle)
       a.in-reply-to.float-right data-turbo-frame="_top" href=parent_href title=parent_text
         i.arrow.up.icon

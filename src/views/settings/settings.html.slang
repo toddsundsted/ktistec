@@ -3,17 +3,17 @@
   script src="/dist/settings.bundle.js"
 - content_for "title" do
   | Settings
-== _view_src_views_partials_actor_panel_html_slang(env, actor)
+- _view_src_views_partials_actor_panel_html_slang(env, actor, content_io)
 h1 Account Settings
 p
   | Settings for account <strong>#{actor.username}</strong>.
 = form_tag(account, "/settings/actor", form: "data") do
   = error_messages(account)
-  == input_tag("Display Name", actor, name)
-  == input_tag("Summary", actor, summary)
-  == input_tag("Language", account, language, data: {"controller" => "default-language", "placeholder-only" => true})
-  == input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone", "placeholder-only" => true})
-  == input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
+  = input_tag("Display Name", actor, name)
+  = input_tag("Summary", actor, summary)
+  = input_tag("Language", account, language, data: {"controller" => "default-language", "placeholder-only" => true})
+  = input_tag("Timezone", account, timezone, data: {"controller" => "local-timezone", "placeholder-only" => true})
+  = input_tag("Password", account, password, type: "password", placeholder: "Leave blank to leave unchanged")
   .ui.fields
     .field
       .ui.checkbox
@@ -59,8 +59,8 @@ p
         input type="text" name="attachment_#{i}_name" value=attachment.name
       .field
         input type="text" name="attachment_#{i}_value" value=attachment.value
-  == input_tag("Background Image", actor, image, class: "filepond", type: "file")
-  == input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
+  = input_tag("Background Image", actor, image, class: "filepond", type: "file")
+  = input_tag("Profile Image", actor, icon, class: "filepond", type: "file")
   crystal:
     pinned_array = account.pinned_collections.to_a
     if pinned_array.size < Account::PINNED_COLLECTION_LIMIT
@@ -92,7 +92,7 @@ p
         input type="text" name="pinned_#{i}_label" value=pinned_item[0]
       .field class=pinned_collections_error
         input type="text" name="pinned_#{i}_path" value=pinned_item[1]
-  == submit_button("Update")
+  = submit_button("Update")
 h2 Delete Account!
 p
   | Delete account <strong>#{actor.username}</strong>. This action cannot be undone!
@@ -118,10 +118,10 @@ p
 h1 Site Settings
 = form_tag(settings, "/settings/service", form: "data") do
   = error_messages(settings)
-  == input_tag("Site Name", settings, site)
-  == input_tag("Site Image", settings, image, class: "filepond", type: "file")
-  == trix_editor("Description", settings, description)
-  == input_tag("Footer", settings, footer)
+  = input_tag("Site Name", settings, site)
+  = input_tag("Site Image", settings, image, class: "filepond", type: "file")
+  = trix_editor("Description", settings, description)
+  = input_tag("Footer", settings, footer)
   crystal:
     can_deepl = ENV["DEEPL_API_KEY"]?
     can_libretranslate = ENV["LIBRETRANSLATE_API_KEY"]?
@@ -161,5 +161,5 @@ h1 Site Settings
         <code>DEEPL_API_KEY</code> or <code>LIBRETRANSLATE_API_KEY</code>,
         depending on the service) and restart the server. Configuration
         options will replace this text.
-  == submit_button("Update")
+  = submit_button("Update")
 br.transition.hidden

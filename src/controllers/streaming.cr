@@ -134,7 +134,7 @@ class StreamingController
         else
           follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
           count = Tag::Mention.all_objects_count(mention)
-          body = mention_page_mention_banner(env, mention, follow, count)
+          body = String.build { |io| mention_page_mention_banner(env, mention, follow, count, io) }
           stream_replace(env.response, target: "mention_page_mention_banner", body: body)
           unless value.blank?
             replace_refresh_posts_message(env.response)
@@ -161,7 +161,7 @@ class StreamingController
           task = Task::Fetch::Hashtag.find?(source: env.account.actor, name: hashtag)
           follow = Relationship::Content::Follow::Hashtag.find?(actor: env.account.actor, name: hashtag)
           count = Tag::Hashtag.all_objects_count(hashtag)
-          body = tag_page_tag_controls(env, hashtag, task, follow, count)
+          body = String.build { |io| tag_page_tag_controls(env, hashtag, task, follow, count, io) }
           stream_replace(env.response, target: "tag_page_tag_controls", body: body)
           unless value.blank?
             replace_refresh_posts_message(env.response)
@@ -206,7 +206,7 @@ class StreamingController
           thread = object.thread(for_actor: env.account.actor)
           task = Task::Fetch::Thread.find?(source: env.account.actor, thread: thread.first.thread)
           follow = Relationship::Content::Follow::Thread.find?(actor: env.account.actor, thread: thread.first.thread)
-          body = thread_page_thread_controls(env, thread, task, follow)
+          body = String.build { |io| thread_page_thread_controls(env, thread, task, follow, io) }
           stream_replace(env.response, target: "thread_page_thread_controls", body: body)
           unless value.blank?
             replace_refresh_posts_message(env.response)

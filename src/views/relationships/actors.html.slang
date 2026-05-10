@@ -28,5 +28,5 @@
   h1= title
   section.ui.cards
     - related.each do |actor|
-      == render "src/views/partials/actor-card.html.slang"
-  == paginate(env, related)
+      - Slang.embed("src/views/partials/actor-card.html.slang", content_io)
+  - paginate(env, related, content_io)

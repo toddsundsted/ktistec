@@ -22,7 +22,6 @@ module Slang
     # line openers
     Element
     Output         # `=`
-    OutputRaw      # `==`
     Code           # `-`
     TextBlock      # `|`
     TextBlockSpace # `'`
@@ -440,14 +439,14 @@ module Slang
     private def scan_inline_output : Nil
       line = @line
       column = @column
-      escape = true
       advance # first `=`
       if !eof? && peek == EQ
-        advance
-        escape = false
+        raise LexError.new(
+          "`==` is not supported; use `=` with a `SafeHTML`/`SafeURI`/`SafeJSON` value",
+          @line, @column,
+        )
       end
-      kind = escape ? TokenKind::Output : TokenKind::OutputRaw
-      @pending << Token.new(kind, line: line, column: column)
+      @pending << Token.new(TokenKind::Output, line: line, column: column)
       scan_output_tail
     end
 
@@ -540,14 +539,14 @@ module Slang
     # ----- Output / code lines -----
 
     private def scan_output_line(line : Int32, column : Int32) : Nil
-      escape = true
       advance # first `=`
       if !eof? && peek == EQ
-        advance
-        escape = false
+        raise LexError.new(
+          "`==` is not supported; use `=` with a `SafeHTML`/`SafeURI`/`SafeJSON` value",
+          @line, @column,
+        )
       end
-      kind = escape ? TokenKind::Output : TokenKind::OutputRaw
-      @pending << Token.new(kind, line: line, column: column)
+      @pending << Token.new(TokenKind::Output, line: line, column: column)
       scan_output_tail
     end
 
@@ -749,15 +748,20 @@ module Slang
         relative_indent = col - content_column_min
         prefix = first ? " " * relative_indent : "\n" + " " * relative_indent
         if raw
-          # in rawstuff mode, capture the rest of the line as a
-          # single literal.
+          # in rawstuff mode, emit the prefix (synthetic newline +
+          # indent) and the line's content as separate literals so
+          # the content carries its true source column.
           start = @pos
           while !eof? && peek != LF && peek != CR
             advance
           end
           content = String.new(@bytes[start, @pos - start])
-          @pending << Token.new(TokenKind::TextLiteral, value: prefix + content,
-            line: save_line + 1, column: 1, escape: false)
+          unless prefix.empty?
+            @pending << Token.new(TokenKind::TextLiteral, value: prefix,
+              line: save_line + 1, column: 1, escape: false)
+          end
+          @pending << Token.new(TokenKind::TextLiteral, value: content,
+            line: save_line + 1, column: col, escape: false)
         else
           unless prefix.empty?
             @pending << Token.new(TokenKind::TextLiteral, value: prefix,

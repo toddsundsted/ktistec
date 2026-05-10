@@ -118,7 +118,7 @@ module Ktistec::ViewHelper
   end
 
   macro authenticity_token(env)
-    %Q(<input type="hidden" name="authenticity_token" value="#{{{env}}.session.csrf_token}">)
+    ::Ktistec::SafeHTML.assert_safe(%Q(<input type="hidden" name="authenticity_token" value="#{{{env}}.session.csrf_token}">))
   end
 
   macro error_messages(model)
@@ -201,31 +201,32 @@ module Ktistec::ViewHelper
       %value = nil
     {% end %}
     %attributes = [
-      %Q(class="#{{{_class}}}"),
-      %Q(type="#{{{type}}}"),
+      %Q(class="#{::HTML.escape({{_class}})}"),
+      %Q(type="#{::HTML.escape({{type}})}"),
       %Q(name="#{%name}"),
       %Q(value="#{%value}"),
       {% if id %}
-        %Q(id="#{{{id}}}"),
+        %Q(id="#{::HTML.escape({{id}})}"),
       {% end %}
       {% if placeholder %}
-        %Q(placeholder="#{{{placeholder}}}"),
+        %Q(placeholder="#{::HTML.escape({{placeholder}})}"),
       {% end %}
       {% if autofocus %}
         %Q(autofocus),
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{key.id}}="#{::HTML.escape({{value}}.to_s)}"),
         {% end %}
       {% end %}
     ]
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <div class="#{%classes}">\
-    <label>#{{{label}}}</label>\
+    <label>#{::HTML.escape({{label}})}</label>\
     <input #{%attributes.join(" ")}>\
     </div>
     HTML
+    )
   end
 
   macro textarea_tag(label, model, field, id = nil, class _class = "", rows = 4, placeholder = nil, autofocus = nil, data = nil)
@@ -242,30 +243,31 @@ module Ktistec::ViewHelper
       %value = nil
     {% end %}
     %attributes = [
-      %Q(class="#{{{_class}}}"),
+      %Q(class="#{::HTML.escape({{_class}})}"),
       %Q(name="#{%name}"),
       %Q(rows="#{{{rows}}}"),
       {% if id %}
-        %Q(id="#{{{id}}}"),
+        %Q(id="#{::HTML.escape({{id}})}"),
       {% end %}
       {% if placeholder %}
-        %Q(placeholder="#{{{placeholder}}}"),
+        %Q(placeholder="#{::HTML.escape({{placeholder}})}"),
       {% end %}
       {% if autofocus %}
         %Q(autofocus),
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{key.id}}="#{::HTML.escape({{value}}.to_s)}"),
         {% end %}
       {% end %}
     ]
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <div class="#{%classes}">\
-    <label>#{{{label}}}</label>\
+    <label>#{::HTML.escape({{label}})}</label>\
     <textarea #{%attributes.join(" ")}>#{%value}</textarea>\
     </div>
     HTML
+    )
   end
 
   macro select_tag(label, model, field, options, selected = nil, id = nil, class _class = "ui selection dropdown", data = nil)
@@ -282,30 +284,31 @@ module Ktistec::ViewHelper
       %selected = {{selected}}
     {% end %}
     %attributes = [
-      %Q(class="#{{{_class}}}"),
+      %Q(class="#{::HTML.escape({{_class}})}"),
       %Q(name="#{%name}"),
       {% if id %}
-        %Q(id="#{{{id}}}"),
+        %Q(id="#{::HTML.escape({{id}})}"),
       {% end %}
       {% if data %}
         {% for key, value in data %}
-          %Q(data-{{key.id}}="#{{{value}}}"),
+          %Q(data-{{key.id}}="#{::HTML.escape({{value}}.to_s)}"),
         {% end %}
       {% end %}
     ]
     %options = {{options}}.map do |key, value|
       if %selected && %selected.to_s == key.to_s
-        %Q(<option value="#{key}" selected>#{value}</option>)
+        %Q(<option value="#{::HTML.escape(key.to_s)}" selected>#{::HTML.escape(value.to_s)}</option>)
       else
-        %Q(<option value="#{key}">#{value}</option>)
+        %Q(<option value="#{::HTML.escape(key.to_s)}">#{::HTML.escape(value.to_s)}</option>)
       end
     end
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <div class="#{%classes}">\
-    <label>#{{{label}}}</label>\
+    <label>#{::HTML.escape({{label}})}</label>\
     <select #{%attributes.join(" ")}>#{%options.join("")}</select>\
     </div>
     HTML
+    )
   end
 
   macro trix_editor(label, model, field, id = nil, class _class = "")
@@ -324,27 +327,28 @@ module Ktistec::ViewHelper
     %id = {{id}} || "#{%name}-#{Time.utc.to_unix_ms}"
     %trix_editor_attributes = [
       %Q(data-controller="editor--trix"),
-      %Q(input="#{%id}"),
+      %Q(input="#{::HTML.escape(%id)}"),
       {% if _class %}
-        %Q(class="#{{{_class}}}"),
+        %Q(class="#{::HTML.escape({{_class}})}"),
       {% end %}
     ]
     %textarea_attributes = [
-      %Q(id="#{%id}"),
+      %Q(id="#{::HTML.escape(%id)}"),
       %Q(name="#{%name}"),
       %Q(rows="4"),
     ]
-    <<-HTML
+    ::Ktistec::SafeHTML.assert_safe(<<-HTML
     <div class="#{%classes}" data-turbo-permanent>\
-    <label>#{{{label}}}</label>\
+    <label>#{::HTML.escape({{label}})}</label>\
     <trix-editor #{%trix_editor_attributes.join(" ")}></trix-editor>\
     <textarea #{%textarea_attributes.join(" ")}>#{%value}</textarea>\
     </div>
     HTML
+    )
   end
 
   macro submit_button(value = "Submit", class _class = "ui primary button")
-    %Q(<input class="#{{{_class}}}" type="submit" value="#{{{value}}}">)
+    ::Ktistec::SafeHTML.assert_safe(%Q(<input class="#{::HTML.escape({{_class}})}" type="submit" value="#{::HTML.escape({{value}})}">))
   end
 
   macro params_to_inputs(params, exclude exclude_ = nil, include include_ = nil)

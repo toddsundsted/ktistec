@@ -69,14 +69,20 @@ module Slang
       @literal = String::Builder.new
     end
 
-    # Emits a `#<loc:"FILE",L,C>` directive on its own line. No-op if
-    # filename is nil/empty.
+    # Brackets a span of generated Crystal with `#<loc:push>#<loc:"FILE",L,C>`
+    # on the open and `#<loc:pop>` on the close, all inline with the
+    # bracketed bytes. The yielded block emits the user-authored
+    # source whose AST node should attribute back to (FILE,L,C).
     #
-    private def emit_loc(loc : AST::SourceLoc) : Nil
-      return unless (filename = @filename)
-      @output << "#<loc:"
-      @output << filename.dump
-      @output << ',' << loc.line << ',' << loc.column << ">\n"
+    private def with_loc(loc : AST::SourceLoc, &) : Nil
+      if (filename = @filename)
+        @output << "#<loc:push>#<loc:" << filename.dump
+        @output << ',' << loc.line << ',' << loc.column << '>'
+        yield
+        @output << "#<loc:pop>"
+      else
+        yield
+      end
     end
 
     # Allocate a fresh deterministic sub-buffer name. Counter resets
@@ -127,8 +133,9 @@ module Slang
         @sub_count += 1
         temp = "__slang_splat_#{@sub_count}__"
         flush_literal
-        emit_loc(splat.loc)
-        @output << temp << " = (" << splat.expr << ")\n"
+        @output << temp << " = ("
+        with_loc(splat.loc) { @output << splat.expr }
+        @output << ")\n"
         splat_temps << temp
       end
 
@@ -217,9 +224,9 @@ module Slang
       @output << "::Slang::Runtime.emit_class(" << @buffer_name
       @output << ", " << node.classes.join(' ').dump
       class_attrs.each do |attr|
-        @output << ", "
-        emit_loc(attr.loc)
-        @output << '(' << attr.value << ").to_s.presence"
+        @output << ", ("
+        with_loc(attr.loc) { @output << attr.value }
+        @output << ").to_s.presence"
       end
       splat_temps.each do |temp|
         @output << ", " << temp << "[\"class\"]?.try(&.to_s).try(&.presence)"
@@ -246,7 +253,6 @@ module Slang
         return
       end
       flush_literal
-      emit_loc(attr.loc)
       name_lower = attr.name.downcase
       helper =
         if ::Slang::Runtime::URL_ATTRIBUTE_NAMES.includes?(name_lower)
@@ -257,7 +263,9 @@ module Slang
           "emit_attr"
         end
       @output << "::Slang::Runtime." << helper << "(" << @buffer_name
-      @output << ", " << attr.name.dump << ", (" << expr << "))\n"
+      @output << ", " << attr.name.dump << ", ("
+      with_loc(attr.loc) { @output << expr }
+      @output << "))\n"
     end
 
     # Returns the inner string if `expr` is a simple double-quoted
@@ -282,27 +290,22 @@ module Slang
       inner
     end
 
-    # ----- Output (= and ==) -----
+    # ----- Output (=) -----
 
     private def emit_output(node : AST::Output) : Nil
       emit_literal(" ") if node.ws_left
 
       flush_literal
-      emit_loc(node.loc)
 
       if node.children.empty?
-        if node.escape
-          @output << "::Slang::Runtime.emit(" << @buffer_name << ", (" << node.expr << "))\n"
-        else
-          @output << '(' << node.expr << ").to_s(" << @buffer_name << ")\n"
-        end
+        @output << "::Slang::Runtime.emit(" << @buffer_name << ", ("
+        with_loc(node.loc) { @output << node.expr }
+        @output << "))\n"
       else
         sub = fresh_sub_buffer
-        if node.escape
-          @output << "::Slang::Runtime.emit(" << @buffer_name << ", (" << node.expr << '\n'
-        else
-          @output << '(' << node.expr << '\n'
-        end
+        @output << "::Slang::Runtime.emit(" << @buffer_name << ", ("
+        with_loc(node.loc) { @output << node.expr }
+        @output << '\n'
         @output << "String.build do |" << sub << "|\n"
         saved_buffer = @buffer_name
         @buffer_name = sub
@@ -310,11 +313,7 @@ module Slang
         flush_literal
         @buffer_name = saved_buffer
         @output << "end\n"
-        if node.escape
-          @output << "end))\n"
-        else
-          @output << "end).to_s(" << @buffer_name << ")\n"
-        end
+        @output << "end))\n"
       end
 
       emit_literal(" ") if node.ws_right
@@ -324,15 +323,15 @@ module Slang
 
     private def emit_code(node : AST::Code) : Nil
       flush_literal
-      emit_loc(node.loc)
-      @output << node.expr << '\n'
+      with_loc(node.loc) { @output << node.expr }
+      @output << '\n'
 
       node.children.each { |c| emit_node(c) }
       flush_literal
 
       node.branches.each do |branch|
-        emit_loc(branch.loc)
-        @output << branch.expr << '\n'
+        with_loc(branch.loc) { @output << branch.expr }
+        @output << '\n'
         branch.children.each { |c| emit_node(c) }
         flush_literal
       end
@@ -373,11 +372,14 @@ module Slang
           end
         when AST::Interp
           flush_literal
-          emit_loc(part.loc)
           if part.escape
-            @output << "::Slang::Runtime.emit(" << @buffer_name << ", (" << part.expr << "))\n"
+            @output << "::Slang::Runtime.emit(" << @buffer_name << ", ("
+            with_loc(part.loc) { @output << part.expr }
+            @output << "))\n"
           else
-            @output << '(' << part.expr << ").to_s(" << @buffer_name << ")\n"
+            @output << '('
+            with_loc(part.loc) { @output << part.expr }
+            @output << ").to_s(" << @buffer_name << ")\n"
           end
         else
           raise "Slang::CodeGen: unexpected text part #{part.class}"
@@ -392,8 +394,9 @@ module Slang
           emit_literal(part.value)
         when AST::Interp
           flush_literal
-          emit_loc(part.loc)
-          @output << "::Slang::Runtime.emit_comment(" << @buffer_name << ", (" << part.expr << "))\n"
+          @output << "::Slang::Runtime.emit_comment(" << @buffer_name << ", ("
+          with_loc(part.loc) { @output << part.expr }
+          @output << "))\n"
         else
           raise "Slang::CodeGen: unexpected text part #{part.class}"
         end
@@ -432,17 +435,16 @@ module Slang
         emit_literal("</style>")
       in AST::RawstuffFlavor::Crystal
         flush_literal
-        emit_loc(node.loc)
         node.parts.each do |part|
           case part
           when AST::Literal
-            @output << part.value
+            with_loc(part.loc) { @output << part.value }
           when AST::Interp
             # rawstuff Crystal bodies are verbatim source; the lexer
             # does not recognize `#{...}` interpolation inside them,
             # so this branch is unreachable in practice. guard
             # defensively.
-            @output << "\#{" << part.expr << '}'
+            with_loc(part.loc) { @output << "\#{" << part.expr << '}' }
           else
             raise "Slang::CodeGen: unexpected text part #{part.class}"
           end

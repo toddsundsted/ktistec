@@ -18,7 +18,7 @@
         <strong>#{client.client_name}</strong> and granted access to
         this service.
   form.ui.form method="POST" data-turbo="false"
-    == authenticity_token(env)
+    = authenticity_token(env)
     input type="hidden" name="state" value=state
     input type="hidden" name="client_id" value=client.client_id
     input type="hidden" name="redirect_uri" value=redirect_uri

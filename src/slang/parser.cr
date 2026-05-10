@@ -48,7 +48,7 @@ module Slang
           return nodes
         when TokenKind::Element
           nodes << parse_element_line
-        when TokenKind::Output, TokenKind::OutputRaw
+        when TokenKind::Output
           nodes << parse_output_line
         when TokenKind::Code
           code = parse_code_line
@@ -236,7 +236,7 @@ module Slang
         when TokenKind::InlineColon
           consume
           return parse_inline_child(el)
-        when TokenKind::Output, TokenKind::OutputRaw
+        when TokenKind::Output
           output = parse_inline_output
           el.children << output
           return output
@@ -269,7 +269,7 @@ module Slang
         innermost = parse_element_fragments(inner)
         el.children << inner
         innermost
-      when TokenKind::Output, TokenKind::OutputRaw
+      when TokenKind::Output
         output = parse_inline_output
         el.children << output
         output
@@ -331,13 +331,11 @@ module Slang
 
     # ----- Inline output / code (used as element children) -----
 
-    # parses inline output: Output|OutputRaw + WsLeft/WsRight* +
-    # OutputExpr?. does not consume `Newline`; the outer line takes
-    # care of that.
+    # parses inline output: Output + WsLeft/WsRight* + OutputExpr?.
+    # does not consume `Newline`; the outer line takes care of that.
 
     private def parse_inline_output : AST::Output
-      open = consume # Output | OutputRaw
-      escape = open.kind == TokenKind::Output
+      open = consume # Output
       ws_left = false
       ws_right = false
       loop do
@@ -360,7 +358,7 @@ module Slang
         expr = ""
         loc = AST::SourceLoc.new(open.line, open.column)
       end
-      output = AST::Output.new(expr, escape, loc)
+      output = AST::Output.new(expr, loc)
       output.ws_left = ws_left
       output.ws_right = ws_right
       output

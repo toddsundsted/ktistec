@@ -244,13 +244,13 @@ Spectator.describe Slang::Parser do
         end
 
         it "accepts `script type=\"application/json\"` with children" do
-          el = parse_element(%(script type="application/json"\n  == data.to_json))
+          el = parse_element(%(script type="application/json"\n  = Ktistec::SafeJSON.from(data)))
           expect(el.tag).to eq("script")
           expect(el.children.size).to eq(1)
         end
 
         it "accepts `script type=\"application/ld+json\"` with children" do
-          el = parse_element(%(script type="application/ld+json"\n  == graph.to_json))
+          el = parse_element(%(script type="application/ld+json"\n  = Ktistec::SafeJSON.from(graph)))
           expect(el.tag).to eq("script")
           expect(el.children.size).to eq(1)
         end
@@ -262,7 +262,7 @@ Spectator.describe Slang::Parser do
         end
 
         it "is case-insensitive on the `type` value" do
-          el = parse_element(%(script type="Application/JSON"\n  == data.to_json))
+          el = parse_element(%(script type="Application/JSON"\n  = Ktistec::SafeJSON.from(data)))
           expect(el.tag).to eq("script")
         end
 
@@ -408,14 +408,6 @@ Spectator.describe Slang::Parser do
           el = parse_element("span = name")
           output = el.children.first.as(AST::Output)
           expect(output.expr).to eq("name")
-          expect(output.escape).to be_true
-        end
-
-        it "captures `==` as a raw child" do
-          el = parse_element("span == raw_html")
-          output = el.children.first.as(AST::Output)
-          expect(output.expr).to eq("raw_html")
-          expect(output.escape).to be_false
         end
 
         it "captures whitespace controls" do
@@ -460,13 +452,6 @@ Spectator.describe Slang::Parser do
       it "parses `= expr` as an Output node" do
         node = parse_one("= name").as(AST::Output)
         expect(node.expr).to eq("name")
-        expect(node.escape).to be_true
-      end
-
-      it "parses `== expr` as a raw Output node" do
-        node = parse_one("== raw_html").as(AST::Output)
-        expect(node.expr).to eq("raw_html")
-        expect(node.escape).to be_false
       end
 
       it "captures whitespace controls" do
@@ -585,13 +570,6 @@ Spectator.describe Slang::Parser do
 
       it "rejects an indented `|` text block" do
         expect { parse("/! wrapper\n  | extra body") }.to raise_error(
-          Slang::ParseError,
-          /^visible comments \(`\/!`\) cannot have indented children/,
-        )
-      end
-
-      it "rejects indented `==` output" do
-        expect { parse(%(/! wrapper\n  == "x")) }.to raise_error(
           Slang::ParseError,
           /^visible comments \(`\/!`\) cannot have indented children/,
         )

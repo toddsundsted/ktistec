@@ -9,6 +9,11 @@ Spectator.describe Slang::Runtime do
       expect(io.to_s).to eq("<em>bold</em>")
     end
 
+    it "emits SafeJSON raw" do
+      described_class.emit(io, Ktistec::SafeJSON.from(["a", 1]))
+      expect(io.to_s).to eq(%(["a",1]))
+    end
+
     it "HTML-escapes a plain String" do
       described_class.emit(io, "<em>bold</em>")
       expect(io.to_s).to eq("&lt;em&gt;bold&lt;/em&gt;")
@@ -158,6 +163,48 @@ Spectator.describe Slang::Runtime do
       it "is case-insensitive" do
         expect { described_class.emit_splat_attrs(io, {"OnClick" => "x"}, false) }.to \
           raise_error(ArgumentError, /event-handler attribute `OnClick`/)
+      end
+    end
+
+    context "key validation" do
+      it "raises on a key with whitespace" do
+        expect { described_class.emit_splat_attrs(io, {"foo onclick" => "alert(1)"}, false) }.to \
+          raise_error(ArgumentError, /invalid splat attribute name `foo onclick`/)
+      end
+
+      it "raises on a key containing `=`" do
+        expect { described_class.emit_splat_attrs(io, {"foo=bar" => "x"}, false) }.to \
+          raise_error(ArgumentError, /invalid splat attribute name `foo=bar`/)
+      end
+
+      it "raises on a key containing `:`" do
+        expect { described_class.emit_splat_attrs(io, {"xlink:href" => "/x"}, false) }.to \
+          raise_error(ArgumentError, /invalid splat attribute name `xlink:href`/)
+      end
+
+      it "raises on a key starting with a digit" do
+        expect { described_class.emit_splat_attrs(io, {"1foo" => "x"}, false) }.to \
+          raise_error(ArgumentError, /invalid splat attribute name `1foo`/)
+      end
+
+      it "raises on the empty string" do
+        expect { described_class.emit_splat_attrs(io, {"" => "x"}, false) }.to \
+          raise_error(ArgumentError, /invalid splat attribute name/)
+      end
+
+      it "accepts `data-*` keys" do
+        described_class.emit_splat_attrs(io, {"data-object-id" => "42"}, false)
+        expect(io.to_s).to eq(%( data-object-id="42"))
+      end
+
+      it "accepts `aria-*` keys" do
+        described_class.emit_splat_attrs(io, {"aria-label" => "x"}, false)
+        expect(io.to_s).to eq(%( aria-label="x"))
+      end
+
+      it "accepts a Symbol key" do
+        described_class.emit_splat_attrs(io, {:title => "x"}, false)
+        expect(io.to_s).to eq(%( title="x"))
       end
     end
   end

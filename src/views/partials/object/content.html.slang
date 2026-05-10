@@ -60,15 +60,15 @@ crystal:
         summary
           - if object.sensitive
             i.red.eye.slash.icon
-          == t summary
-        == body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
+          = t summary
+        - body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)
     - else
-      == body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
+      - body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)
     - if with_detail && !as_context && account
       crystal:
-        hashtags = object.hashtags.map(&.name.downcase).uniq
-        mentions = object.mentions.map(&.name.downcase).uniq
-        no_duplicate_handles = (mentions.map(&.split("@").first).uniq.size == mentions.size)
+        hashtags = object.hashtags.map(&.name.downcase).uniq!
+        mentions = object.mentions.map(&.name.downcase).uniq!
+        no_duplicate_handles = (mentions.map(&.split("@").first).uniq!.size == mentions.size)
       - unless hashtags.empty? && mentions.empty?
         .extra.detail
           .ui.labels

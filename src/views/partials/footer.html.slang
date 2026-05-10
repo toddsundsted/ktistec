@@ -1,5 +1,4 @@
 nav.ui.bottom.forced.inverted.menu
   .ui.text.container
-    - default = "<a href='https://github.com/toddsundsted/ktistec' target='_blank'>Powered by <em>Ktistec</em>.</a>"
-    span.link.item== Ktistec.settings.footer || default
+    span.link.item= footer_html
   a.invisible href="/license" rel="jslicense" License Information

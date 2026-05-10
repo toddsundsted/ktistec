@@ -211,6 +211,14 @@ Spectator.describe API::V1::Serializers::Account do
         it "returns note" do
           expect(source.note).to eq("A bio")
         end
+
+        context "containing HTML entities" do
+          before_each { actor.assign(summary: "<p>AT&amp;T &mdash; 5 &lt; 10</p>").save }
+
+          it "decodes entities" do
+            expect(source.note).to eq("AT&T — 5 < 10")
+          end
+        end
       end
     end
 

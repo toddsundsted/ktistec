@@ -12,5 +12,5 @@ section.ui.feed data-controller="icon-load-error"
       end
       _actor = activity ? activity.actor : object.attributed_to
       _author = object.attributed_to
-    == object_partial(env, object, activity: activity, actor: _actor, author: _author)
-== paginate(env, timeline)
+    - object_partial(env, object, activity: activity, actor: _actor, author: _author, content_io: content_io)
+- paginate(env, timeline, content_io)

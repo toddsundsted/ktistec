@@ -20,7 +20,7 @@ turbo-frame#tag_page_tag_controls
           = form_button "Cancel", cancel_fetch_hashtag_path(hashtag)
         - else
           form.ui.inline.form method="POST"
-            == authenticity_token(env)
+            = authenticity_token(env)
             .ui.buttons
               button.ui.primary.button type="submit" formaction=follow_hashtag_path(hashtag) Follow
               button.ui.button type="submit" formaction=start_fetch_hashtag_path(hashtag) Fetch Once

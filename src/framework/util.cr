@@ -55,7 +55,7 @@ module Ktistec
       elsif html.element? || html.document?
         html.children.each { |child| render_as_text(child, build) }
       elsif html.text?
-        html.to_s(build)
+        build << html.content
       end
     end
 

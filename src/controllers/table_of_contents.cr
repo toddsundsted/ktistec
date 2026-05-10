@@ -34,7 +34,7 @@ class TableOfContentsController
     tree
   end
 
-  def self.render_toc_html(io : IO, tree : Hash(String, PathTreeNode), prefix : String)
+  def self.render_toc_html(tree : Hash(String, PathTreeNode), prefix : String, io : IO)
     tree.each do |segment, node|
       io << %Q|<div class="item">|
       if (entry = node.entry) && (display_path = entry.canonical_path)
@@ -44,7 +44,7 @@ class TableOfContentsController
       end
       unless node.children.empty?
         io << %Q|<div class="list">|
-        render_toc_html(io, node.children, "#{prefix}/#{segment}")
+        render_toc_html(node.children, "#{prefix}/#{segment}", io)
         io << %Q|</div>|
       end
       io << %Q|</div>|
@@ -53,7 +53,7 @@ class TableOfContentsController
 
   def self.render_toc_html(tree : Hash(String, PathTreeNode), prefix : String = "") : String
     String.build do |io|
-      render_toc_html(io, tree, prefix)
+      render_toc_html(tree, prefix, io)
     end
   end
 

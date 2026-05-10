@@ -18,7 +18,8 @@ Spectator.describe "helpers" do
 
     subject do
       begin
-        XML.parse_html(self.class.paginate(env, collection), PARSER_OPTIONS).document
+        body = String.build { |io| self.class.paginate(env, collection, io) }
+        XML.parse_html(body, PARSER_OPTIONS).document
       rescue XML::Error
         XML.parse_html("<div/>", PARSER_OPTIONS).document
       end

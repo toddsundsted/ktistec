@@ -2,8 +2,10 @@
 
 Behavioral specification for Slang as used in Ktistec. Describes
 the input grammar, HTML output semantics, and macro contract.
-Lexer, parser, and codegen internals are implementation details
-and not part of the contract.
+The compiler's internal stages — how the source is tokenized,
+parsed, and translated to Crystal — are not part of the contract;
+this document specifies what well-formed templates render to, not
+how the translation is performed.
 
 ### Terminology
 
@@ -14,9 +16,10 @@ and not part of the contract.
 - **inline tag** / **inline element** — an element introduced by `:`
   on the same line as another element. Structurally an element, not
   a text node.
-- **rawstuff block** — the colon-suffixed special tags
-  (`javascript:`, `css:`, `crystal:`) plus the bare `script` and
-  `style` elements. Children are not parsed as Slang.
+- **rawstuff block** — one of the colon-suffixed special tags
+  `javascript:`, `css:`, `crystal:`. Children are not parsed as
+  Slang; they are taken verbatim as JavaScript, CSS, or Crystal
+  source respectively (§5.5).
 - **void element** — an HTML tag from a fixed list (§5.1.7) that
   emits no closing tag. Slang emits these as `<tag>` (HTML style),
   not `<tag/>` (XHTML style).
@@ -57,17 +60,13 @@ Compile-time macro. Parameters:
 
 Effect: the file at `filename` is read, parsed, and translated to
 Crystal source code which is inlined at the macro call site. The
-inlined code references a local binding named `io_name` and emits
-HTML by appending strings to it.
+inlined code references a local binding named `io_name` and writes
+the rendered HTML to it.
 
 The local binding must be in scope at the call site and must be an
-`IO`. The generated code uses three sink operations: `io << literal`
-(string append), `::HTML.escape(s, io)` (escaping write), and
-`(expr).to_s(io)` (stringification write). All three require `IO`.
-In Ktistec, `io_name` is always `content_io`, a local `IO::Memory`
-(in the layout-aware render path) or a `String::Builder` (which
-extends `IO`) yielded from a `String.build` block (layout-less
-render path).
+`IO` (or a value that responds like one — anything that accepts
+`<<` for string append and that the canonical HTML-escape function
+of §5.9 can write to).
 
 The template sees all locals in scope at the call site by Crystal's
 ordinary lexical scoping rules. There is no separate "context" or
@@ -99,8 +98,9 @@ the output (see §6).
    generated buffer. See §6 for the directive contract.
 
 The `io_name` + `<<` calling convention is part of the public API
-surface (§2.1). Internal sink mechanics — `String.build` boundaries,
-sub-buffer naming, etc. — are not.
+surface (§2.1). Anything beyond it — buffer materialization,
+sub-buffer mechanics for capturing block-helper output (§5.2.2),
+naming of generated locals — is not.
 
 ---
 
@@ -149,11 +149,10 @@ followed by one of `#`, `=`, or `-`, write `\\\#`, `\\\=`, or
 `\\\-` respectively.
 
 Backslash sequences not in this list (`\n`, `\t`, `\"`, etc.) are
-not interpreted by slang: the backslash is emitted literally to
-the rendered output. (Implementation note: the bytes pass through
-the generated Crystal string literal in a form that round-trips
-to the original source bytes, so source `\n` renders as the
-two-character sequence `\n`, not a newline.)
+not interpreted by Slang: the backslash and the following byte
+are both emitted to the rendered output as literal source bytes.
+Source `\n` (backslash + the letter `n`) renders as the
+two-character sequence `\n`, not a newline.
 
 ### 3.6 String Interpolation
 
@@ -164,13 +163,13 @@ may contain string literals (`"..."`, `'...'`) and percent-literals
 inside `#{...}`.
 
 After an interpolation closes (the `}` of `#{...}`), a literal `=`
-immediately following triggers output-mode lexing (the `=` rebinds
-as Crystal output of the same element); a literal `-` triggers
-code-mode lexing (the `-` rebinds as a Crystal statement, which
-emits nothing). Write `\=` / `\-` to insert a literal `=` / `-`
-after interpolation. The transition fires only in element trailing
-text, and only when the trigger byte is immediately adjacent to the
-closing `}` — intervening whitespace suppresses it.
+immediately following is read as an inline output (`= EXPR`,
+§5.2) attached to the same element, not as a literal `=`; a
+literal `-` is read as an inline code statement (§5.3). Write
+`\=` / `\-` (§3.5) to insert a literal `=` / `-` after
+interpolation. The transition fires only in element trailing
+text, and only when the trigger byte is immediately adjacent to
+the closing `}` — intervening whitespace suppresses it.
 
 ---
 
@@ -225,27 +224,19 @@ final inline element on the same line.
 After `:`, the inline construct may be:
 
 - An element (with optional shorthand, attributes, splat, etc.).
-- An output (`= EXPR` or `== EXPR`) — emits the value as inline
-  content of the parent (`span: == "x"` -> `<span>x</span>`).
+- An output (`= EXPR`) — emits the value as inline content of
+  the parent (`span: = "x"` -> `<span>x</span>`).
 - A code statement (`- STMT`) — embeds Crystal code at this
   position; emits no output of its own.
 
 There is no implicit-`div` fallback when the next token is not an
-element. `: ==` and `: =` and `: -` introduce output / output /
-code respectively, attached as the next inline child of the
-parent. (This differs from line-start, where `.` and `#` imply
-`div` per §5.1.4. Inline-after-`:` does not extend that rule
-to `=` / `==` / `-`.)
+element. `: =` and `: -` introduce output and code respectively,
+attached as the next inline child of the parent. (This differs
+from line-start, where `.` and `#` imply `div` per §5.1.4.
+Inline-after-`:` does not extend that rule to `=` / `-`.)
 
-For self-closing parents (§5.1.7), the inline construct still
-emits — it appears immediately after the `>` of the void element
-(rendered as a sibling by the browser, since the void element
-opens no scope):
-
-```slang
-br: a href="/x" Click   →  <br><a href="/x">Click</a>
-br: == "x"              →  <br>x
-```
+Void elements (§5.1.7) cannot host an inline `:` child or any
+other child, indented or trailing.
 
 A leading `:` at the start of a line — no preceding element — is a
 lex error.
@@ -382,10 +373,9 @@ attribute's slot kind and the value's static type:
   (`onclick`, `onmouseover`, …). Expression-form values (`onclick=expr`
   for any Crystal expression) are a compile error: there is no
   admissible runtime type for a JS-execution context. Author-typed
-  string literals (`onclick="alert(1)"`) are unaffected — codegen
-  emits the literal bytes (HTML-escaped) at compile time and never
-  reaches the runtime helper. `SafeJS` is deferred until a real
-  use case appears.
+  string literals (`onclick="alert(1)"`) are unaffected — the
+  literal bytes are emitted (HTML-escaped) at compile time and
+  carry no runtime value through the type gate.
 - **Other slots** — `Ktistec::SafeAttrValue` is emitted raw inside
   the surrounding `="…"`; any other value (including `String` and
   `Ktistec::SafeHTML`) is converted to string via `.to_s` and
@@ -400,8 +390,9 @@ span attr=val                 →  <span attr="<runtime to_s of val, escaped>"><
 markup like `<em>x</em>` is safe in HTML data but would render as
 visible text in an attribute, so the engine HTML-escapes it instead.
 
-There is no `attr==value` syntax for raw (un-escaped) attribute
-values.
+There is no raw (un-escaped) attribute value syntax. Producers
+that need to emit pre-encoded bytes into attribute slots return
+a `Ktistec::SafeAttrValue` (or `SafeURI` for URL slots).
 
 **Attribute names:** `[A-Za-z0-9_-]` plus `:` (for namespaces like
 `xmlns:xlink`). Other characters in attribute-name position are
@@ -537,25 +528,27 @@ Source bytes in trailing text pass through verbatim — `"`, `&`, `<`,
 Interpolation values (`#{expr}`) are HTML-escaped per §5.9. See §5.4
 for the text node contract and §5.4.4 for the raw HTML pass-through.
 
-### 5.2 Output (`=` and `==`)
+### 5.2 Output (`=`)
 
 Syntax:
 
 ```
 = EXPR
-== EXPR
 ```
 
 `=` evaluates the Crystal expression `EXPR` at runtime and writes
-the result to the buffer. `Ktistec::SafeHTML` values are emitted
-raw; any other value has `.to_s` applied and is HTML-escaped
-(§5.9). `==` writes the value's `.to_s` raw, no HTML-escape.
+the result to the buffer under the HTML-data-context dispatch of
+§5.9:
+
+- `Ktistec::SafeHTML` → emitted raw.
+- `Ktistec::SafeJSON` → emitted raw.
+- Any other value → `.to_s` applied and HTML-escaped (§5.9).
 
 ```slang
-= 1 + 2                                  →  3
-= "<a>"                                  →  &lt;a&gt;
-= Ktistec::SafeHTML.assert_safe("<a>")   →  <a>
-== "<a>"                                 →  <a>
+= 1 + 2                                       →  3
+= "<a>"                                       →  &lt;a&gt;
+= Ktistec::SafeHTML.assert_safe("<a>")        →  <a>
+= Ktistec::SafeJSON.from(["x"])               →  ["x"]
 ```
 
 If `EXPR` evaluates to `nil`, the buffer receives the empty string
@@ -563,25 +556,36 @@ If `EXPR` evaluates to `nil`, the buffer receives the empty string
 path.
 
 Output may follow an element or stand alone. When attached to an
-element, the leading whitespace before `=` / `==` is optional --
-`tag.class==EXPR` and `tag== EXPR` (no space) are equivalent to
-`tag.class == EXPR` (production templates use the no-space form,
-e.g. `span.link.item== Ktistec.settings.footer`). The element's
-shorthand sequence ends as soon as the lexer encounters `=` / `==`
-even without an intervening whitespace.
+element, the leading whitespace before `=` is optional —
+`tag.class=EXPR` and `tag= EXPR` (no space) are equivalent to
+`tag.class = EXPR` (production templates use the no-space form,
+e.g. `span.link.item= footer_html`). The element's shorthand
+sequence ends as soon as the lexer encounters `=` even without
+an intervening whitespace.
 
 ```slang
 span = name                  →  <span><runtime escaped name></span>
-span== name                  →  <span><runtime raw name></span>
 = some_helper                →  <runtime escaped some_helper>
+```
+
+There is no raw-emit syntax. The "trust this value" channel is the
+type lattice (`Ktistec::SafeHTML`, `Ktistec::SafeURI`,
+`Ktistec::SafeAttrValue`, `Ktistec::SafeJSON`); a producer that
+asserts the safety of its output returns one of these types and
+the corresponding slot dispatches accordingly.
+
+`==` is not a Slang construct. Lexing it raises `Slang::LexError`
+with the message:
+
+```
+`==` is not supported; use `=` with a `SafeHTML`/`SafeURI`/`SafeJSON` value
 ```
 
 #### 5.2.1 Whitespace Controls
 
-`=<` (equivalently `==<`) prepends a space to the value's output.
-`=>` (equivalently `==>`) appends a space. The space is emitted as
-a separate write to the buffer, not folded into the value's escape
-or stringification.
+`=<` prepends a space to the value's output. `=>` appends a space.
+The space is emitted as a separate write to the buffer, not folded
+into the value's escape or stringification.
 
 #### 5.2.2 Output with Children (Block Helpers)
 
@@ -594,9 +598,12 @@ block body:
   input type="text" name="x"
 ```
 
-The children render to a sub-buffer (`String.build`) which the
-helper receives as its block. The helper's return value is then
-written to the outer buffer following the rules of §5.2.
+The children render into a fresh buffer that the helper receives
+as its block argument; the helper's return value is then written
+to the outer buffer following the dispatch rules of §5.2 (and
+§5.9 for the underlying type policy). The fresh-buffer mechanism
+is not part of the public contract — only the helper-receives-a-block
+shape and the dispatch on its return value are.
 
 There is no Slang-level check that `EXPR` actually opens a block.
 If the user writes `= some_method` with no block opener and indents
@@ -604,16 +611,14 @@ children below, the generated Crystal will fail to compile, with
 the error attributed to the `.slang` file via the source-location
 directives in §6.
 
-Sub-buffer names are deterministic: identical input produces
-identical generated Crystal across runs.
-
 ### 5.3 Control (`-` lines)
 
 Syntax: `- CRYSTAL_STATEMENT`
 
 A `-` line embeds Crystal source. Indented children form its body
-(if the statement opens a block). The codegen emits the Crystal
-verbatim, then renders children, then emits `end` if needed.
+(if the statement opens a block). The Crystal text is passed through
+verbatim, the children render in place, and `end` is appended after
+the body when the structural rules of §5.3.3 require it.
 
 ```slang
 - if x > 0
@@ -700,10 +705,11 @@ Text appears in four forms:
 4. Raw HTML (`<` at start of line) — embeds literal HTML markup.
 
 In all four forms, source bytes are emitted verbatim (the author's
-literal text, including any `<`, `>`, `&`, `"`, `'`, is preserved as
-codegen-time literal output). `#{...}` interpolations route through
-`Slang::Runtime.emit`: `Ktistec::SafeHTML` values are emitted raw,
-all other values have `.to_s` applied and are HTML-escaped (§5.9).
+literal text, including any `<`, `>`, `&`, `"`, `'`, is preserved
+as compile-time literal output). `#{...}` interpolations are
+type-dispatched under §5.9's HTML-data context: `Ktistec::SafeHTML`
+and `Ktistec::SafeJSON` values are emitted raw, all other values
+have `.to_s` applied and are HTML-escaped.
 
 Inline elements (`:`) are structurally elements, not text — see
 §4.3 and §5.1.9.
@@ -789,16 +795,9 @@ Text adjacent to elements with whitespace controls inherits a
 prepend-space (`<`) or append-space (`>`) flag from the element.
 There is no syntax for setting these on standalone text.
 
-#### 5.4.6 Quoted Text
+#### 5.4.6 Source Bytes vs. Interpolation
 
-Text in attribute values is the only place double-quoted strings
-have lexer significance:
-
-```slang
-input value="Hello world"
-```
-
-Source bytes in element trailing text are emitted as literals --
+Source bytes in element trailing text are emitted as literals —
 including `"`, `&`, `<`, `>`, and `'`. Only interpolation values
 (`#{expr}`) are HTML-escaped:
 
@@ -807,6 +806,11 @@ span "Hello"        →  <span>"Hello"</span>
 span hello & world  →  <span>hello & world</span>
 span x<a>y          →  <span>x<a>y</span>
 ```
+
+Double-quoted strings have no lexer significance in trailing text;
+they are author bytes like any other. Quoting is only meaningful
+inside attribute values (e.g. `input value="Hello world"`), where
+the wrapper rules of §5.1.5 apply.
 
 ### 5.5 Rawstuff
 
@@ -864,7 +868,7 @@ non-literal Crystal expression — is treated as executable.
 script src="/dist/bundle.js"                   # OK: external JS
 
 script type="application/json" data-chart-target="labels"
-  == labels.to_json                            # OK: inert content type
+  = Ktistec::SafeJSON.from(labels)             # OK: inert content type
 
 javascript:
   console.log("hi")                            # OK: rawstuff form
@@ -909,13 +913,20 @@ indented children are a parse error.
 
 Within the inline body:
 
-- Source bytes are emitted verbatim (codegen-time literal).
-- `#{...}` interpolations route through `Slang::Runtime.emit_comment`,
-  which HTML-escapes (covers `& < > " '`) and replaces any `--` run
-  with `-&#45;`.
-- `Ktistec::SafeHTML` values are not admitted raw inside comments;
-  they go through the same escape-and-dash-break path as any other
-  value.
+- Source bytes are emitted verbatim (compile-time literal). Author
+  bytes are author-trust — same model as inline `<button onclick="…">`
+  literals — so a `/!` body containing a literal `--` will land in
+  the rendered comment unchanged. The dash-break described below
+  applies only to *runtime values* threaded through interpolation.
+- `#{...}` interpolations go through the comment-context dispatch
+  of §5.9: the value's `.to_s` is HTML-escaped (covers `& < > " '`),
+  then any `--` run in the result is replaced with `-&#45;`. This
+  prevents an interpolated value from prematurely closing the
+  comment (`-->`) or producing a `<!--…--…-->` shape that some
+  HTML parsers interpret as nested.
+- `Ktistec::SafeHTML` and `Ktistec::SafeJSON` values are not
+  admitted raw inside comments; they go through the same
+  escape-and-dash-break path as any other value.
 
 ### 5.7 Doctype (`doctype`)
 
@@ -949,19 +960,25 @@ span.foo *attrs        →  <span class="foo bar" id="baz"></span>
 
 When all class sources are literal — shorthand only, no `class=expr`,
 no splat with a dynamic `class` key — the merged value is emitted as
-a single literal string. Class-merging runtime code is generated only
-when at least one dynamic class source is present.
+a single literal string. Class merging only requires runtime work
+when at least one source is dynamic.
 
 Splat values:
 
-- **Keys.** Each key is converted to string via `.to_s`. URL keys
-  (the §5.1.5 URL-slot set) require `Ktistec::SafeURI` values;
-  passing anything else raises `ArgumentError`. Event-handler keys
-  (matching `/\Aon[a-z]+\z/i`) are unconditionally rejected — they
-  cannot be set via splat regardless of value, and raise
-  `ArgumentError`. Symbol keys (e.g., `{:href => SafeURI.from?("/x")}`)
-  and string keys (`{"href" => SafeURI.from?("/x")}`) both work.
-  Other adversarial keys are not part of the contract.
+- **Keys.** Each key is converted to string via `.to_s`. The
+  resulting name must match `/\A[a-zA-Z_][a-zA-Z0-9_-]*\z/` (which
+  covers plain identifiers and the `data-*` / `aria-*` forms);
+  anything else raises `ArgumentError`. This blocks smuggled-attribute
+  vectors like `{"foo onclick" => "alert(1)"}`, which would otherwise
+  render as two attributes. Namespaced names containing `:` (e.g.
+  `xlink:href`) are not admitted via splat; use a named attribute
+  for those. URL keys (the §5.1.5 URL-slot set, matched
+  case-insensitively) additionally require `Ktistec::SafeURI` values;
+  passing anything else raises. Event-handler keys (matching
+  `/\Aon[a-z]+\z/i`, also case-insensitive) are unconditionally
+  rejected — they cannot be set via splat regardless of value, and
+  raise. Symbol keys (e.g., `{:href => SafeURI.from?("/x")}`) and
+  string keys (`{"href" => SafeURI.from?("/x")}`) both work.
 - **Values.** For URL keys, a `SafeURI` is emitted raw (HTML-escaped
   for attribute-quote safety). For other keys, the same
   type-dispatched policy as named non-URL attributes (§5.1.5)
@@ -976,7 +993,9 @@ Splat values:
 - **`nil` values.** Treated as "skip this attribute" (no name, no
   `name=""` emission).
 
-### 5.9 HTML Escaping
+### 5.9 HTML Escaping and Type Dispatch
+
+#### 5.9.1 The canonical escape function
 
 The canonical escape function is **Crystal stdlib `HTML.escape`**.
 It maps:
@@ -990,54 +1009,118 @@ It maps:
 | `'`   | `&#39;` |
 
 All other characters pass through unchanged (UTF-8 preserved).
-Text content and attribute values use the same function.
 
 Where the spec says "HTML-escaped," it means: convert the value to
 string via Crystal's `.to_s` (which is `""` for `nil`), then apply
-the table above. This applies to:
+the table above.
 
-- §5.1.5 attribute values for non-URL slots, when the value is not
-  a `Ktistec::SafeAttrValue` (with the boolean special case for
-  `true` / `false`). URL slots have their own type-checked dispatch
-  and never fall through to this path.
-- §5.1.6 class values (shorthand, explicit, splat).
-- §5.2 `=` output for non-`Ktistec::SafeHTML` values (`SafeHTML`
-  values are emitted raw).
-- §5.4 interpolation values (`#{expr}`) inside trailing text, `|`/`'`
-  text blocks, raw HTML lines, and visible comments. Source bytes
-  (the author's literal text) are **not** escaped -- see §5.4.6 and
-  §5.1.10. Interpolation routes through `Slang::Runtime.emit`
-  (HTML-data context) for the first three; through
-  `Slang::Runtime.emit_comment` (HTML-escape + `--` dash-break) for
-  visible comments.
-- §5.8 splat keys (no) and values (yes, except `Ktistec::SafeAttrValue`
-  values in non-URL slots — emitted raw — and `Ktistec::SafeURI` values
-  in URL slots — emitted raw).
+#### 5.9.2 Type lattice
 
-The `==` form (§5.2) bypasses escaping entirely on its top-level
-expression value (block children render through their own per-node
-contracts). Source bytes in any text construct (trailing text, `|`/`'`
-text blocks, raw HTML lines, visible comments) are also unescaped --
-they are author-trusted codegen-time literals. Only the *runtime
-values* threaded through interpolations (`#{...}`) flow through the
-type gate.
+Slang's runtime-value contracts are carried by four wrapper types
+defined in Ktistec:
+
+| Type                     | Semantic                                                      |
+|--------------------------|---------------------------------------------------------------|
+| `Ktistec::SafeHTML`      | Bytes are safe to emit raw into HTML-data context.            |
+| `Ktistec::SafeAttrValue` | Bytes are safe to emit raw inside `="…"` (non-URL attribute). |
+| `Ktistec::SafeURI`       | Bytes are a safe URL — scheme allowlisted, no boundary chars. |
+| `Ktistec::SafeJSON`      | Bytes are safe to emit raw into an HTML-data or inert-script context. |
+
+These types are wrappers, not subclasses of `String`. Their
+construction is the producer-side trust boundary; the engine's
+job is to admit them only at slots compatible with their declared
+semantic.
+
+#### 5.9.3 Per-context dispatch
+
+Every site at which a runtime value reaches an output slot follows
+one of the dispatch policies below. Source bytes (literal trailing
+text, `|`/`'` text-block content, raw-HTML lines, visible-comment
+bodies, attribute literals, the bodies of `javascript:` / `css:` /
+`crystal:` rawstuff blocks) are **not** subject to dispatch; they
+are compile-time literals that pass through verbatim. Only
+*runtime values* threaded through expression sites (`= expr`,
+`#{expr}`, `attr=expr`, `*expr`) are type-dispatched.
+
+**HTML-data context** — used by §5.2 `= expr`; by §5.4 interpolation
+inside element trailing text, `|`/`'` text blocks, and `<…` raw HTML
+lines:
+
+| Value type               | Emitted as                  |
+|--------------------------|-----------------------------|
+| `Ktistec::SafeHTML`      | raw                         |
+| `Ktistec::SafeJSON`      | raw                         |
+| anything else            | `.to_s` then HTML-escaped   |
+
+**Comment context** — used by §5.6.2 `#{...}` interpolation inside
+`/!` comment bodies:
+
+| Value type               | Emitted as                                                       |
+|--------------------------|------------------------------------------------------------------|
+| any                      | `.to_s`, HTML-escaped, then any `--` run replaced with `-&#45;`  |
+
+`SafeHTML` and `SafeJSON` are not admitted raw in comment
+context; the dash-break invariant must hold for every byte the
+engine writes between `<!--` and `-->`.
+
+**Attribute context (non-URL, non-event-handler slot)** — used by
+§5.1.5 `attr=expr` for ordinary attribute names; by §5.1.6 dynamic
+class values; by §5.8 splat values whose key is neither a URL slot
+nor an event-handler slot:
+
+| Value type               | Emitted as                                                                |
+|--------------------------|---------------------------------------------------------------------------|
+| `true` / `false`         | bare-name attribute / attribute omitted, respectively (named slots only)  |
+| `nil` (named slot)       | empty attribute value (`name=""`); but **not** for splat (skipped)        |
+| `Ktistec::SafeAttrValue` | raw inside the surrounding `="…"`                                         |
+| anything else            | `.to_s` then HTML-escaped                                                 |
+
+`SafeHTML` is **not** admissible as an attribute value: markup
+like `<em>x</em>` would break the `="…"` boundary, so it falls
+through to the general escape path.
+
+**URL-attribute context** — used by §5.1.5 `attr=expr` for URL
+slots; by §5.8 splat values whose key matches a URL slot
+(case-insensitive):
+
+| Value type               | Emitted as                          |
+|--------------------------|-------------------------------------|
+| `Ktistec::SafeURI`       | `.to_s` then HTML-escaped (for `="…"` boundary safety) |
+| `nil` (named slot)       | attribute omitted                   |
+| anything else (named)    | **compile error**                   |
+| anything else (splat)    | **runtime `ArgumentError`**         |
+
+The named-vs-splat asymmetry — compile-error vs. runtime — is
+inherent: the splat's keys are not visible to the compiler.
+
+**Event-handler context** — used by §5.1.5 `attr=expr` for
+attribute names matching `/\Aon[a-z]+\z/i`; by §5.8 splat values
+whose key matches the same pattern:
+
+| Value type               | Emitted as                          |
+|--------------------------|-------------------------------------|
+| any (named slot)         | **compile error**                   |
+| any (splat)              | **runtime `ArgumentError`**         |
+
+There is no admissible runtime type for a JS-execution context.
+Author-typed string literals (`onclick="alert(1)"`) are unaffected
+— literals never flow through this dispatch.
 
 ### 5.10 Single Evaluation
 
 Every Crystal expression that appears in a `.slang` source file
 evaluates **exactly once per render**, regardless of how many
-fragment sites the codegen visits when emitting that construct.
-This is a hard correctness contract, not a quality-of-implementation
-note. User expressions may have side effects (counters, logging,
-non-idempotent method calls) or be expensive; both cases require
-single evaluation to behave correctly.
+output fragments the construct produces. This is a hard
+correctness contract: user expressions may have side effects
+(counters, logging, non-idempotent method calls) or be expensive,
+and both cases require single evaluation to behave correctly.
 
 This applies to every site where a Crystal expression appears in
 the source:
 
 - §5.1.5 attribute values (`name=expr`).
 - §5.1.6 class sources from `class=expr` and from splat.
-- §5.2 output (`= expr`, `== expr`).
+- §5.2 output (`= expr`).
 - §5.3 control lines (`- stmt`).
 - §5.4 string interpolation (`#{expr}`) inside text content.
 - §5.8 splat (`*expr`) — the splat expression itself evaluates
@@ -1053,9 +1136,10 @@ once. A template that includes `class=some_method
 class=some_method` (the same expression in two attributes) evaluates
 `some_method` twice — once per source occurrence.
 
-Inspect-then-emit constructs route the user expression through a
-helper-call argument so Crystal evaluates it once before the call
-and the helper inspects the captured result.
+This contract holds even at sites that both inspect a value (e.g.
+a presence check that decides whether to emit anything) and then
+emit it: the inspection and the emission see the same single
+evaluation.
 
 ---
 
@@ -1075,20 +1159,25 @@ file at the right line and column.
 - If `filename` is empty / nil, neither the push/pop nor any
   per-fragment directive is emitted.
 
-Inside the push/pop, a per-fragment `#<loc:"FILE",L,C>` directive
-appears immediately before every **Crystal-expression site** — every
+Inside the push/pop, every **Crystal-expression site** — every
 place where user-written Crystal source appears in the generated
-output. The sites are:
+output — is bracketed inline by `#<loc:push>#<loc:"FILE",L,C>` …
+user code … `#<loc:pop>` on a single physical line. The directive
+shares its line with the bracketed code so the directive's
+`(L, C)` identifies the user code's first byte.
+
+The bracketed sites are:
 
 - Each attribute-value expression (the right-hand side of
   `name=expr`, §5.1.5).
 - Each splat expression (the operand of `*expr`, §5.8).
-- Each output expression (the operand of `=` / `==`, §5.2).
+- Each output expression (the operand of `=`, §5.2).
 - Each code line (the body of a `-` line, §5.3).
 - Each interpolation expression (the body of `#{expr}` inside
   text, §5.4).
 - Each block-helper body opener (the line that starts a `do`-block
   for an output-with-children, §5.2.2).
+- Each line of a `crystal:` rawstuff body (§5.5).
 
 Per-fragment directives are **not** emitted before pure literal
 byte sequences (tag opens, attribute names, escaped text, raw
@@ -1096,16 +1185,22 @@ HTML), because literals cannot generate Crystal compile errors.
 The line and column in each directive are taken from the original
 source position.
 
+For example, given a template at `src/views/foo.html.slang` whose
+line 2, column 11 is a Crystal expression `some_helper(env)`, the
+generated Crystal looks like:
+
 ```crystal
 #<loc:push>#<loc:"src/views/foo.html.slang",1,1>
-content_io << "<div"
-content_io << " class=\""
-#<loc:"src/views/foo.html.slang",2,11>
-content_io << ::HTML.escape((some_helper(env)).to_s)
-content_io << "\""
-content_io << ">"
+io_name << "<div"
+… emit_attr_call_with(io_name, "class", (#<loc:push>#<loc:"src/views/foo.html.slang",2,11>some_helper(env)#<loc:pop>)) …
+io_name << ">"
 #<loc:pop>
 ```
+
+The user expression `some_helper(env)` is bracketed inline by
+`#<loc:push>#<loc:"FILE",2,11>` and `#<loc:pop>` so a Crystal
+compile error inside it points at line 2, column 11 of the
+template, not at the surrounding generated code.
 
 Without these directives, compile errors in user expressions
 point at the generated Crystal source string, which is

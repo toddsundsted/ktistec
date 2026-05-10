@@ -60,10 +60,10 @@ crystal:
         summary
           - if object.sensitive
             i.red.eye.slash.icon
-          == t summary
-        == body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
+          = t summary
+        - body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)
     - else
-      == body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
+      - body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)
     - if with_detail && !as_context && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq!

@@ -1,5 +1,5 @@
 article.event
-  == render "src/views/partials/activity/label.html.slang"
+  - Slang.embed("src/views/partials/activity/label.html.slang", content_io)
   .content
     .summary
       ' You followed

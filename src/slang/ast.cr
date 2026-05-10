@@ -103,11 +103,10 @@ module Slang
 
     class Output < IndentHost
       getter expr : String
-      getter escape : Bool
       property ws_left : Bool
       property ws_right : Bool
 
-      def initialize(@expr : String, @escape : Bool, loc : SourceLoc)
+      def initialize(@expr : String, loc : SourceLoc)
         super(loc)
         @ws_left = false
         @ws_right = false

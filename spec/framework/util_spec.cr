@@ -29,9 +29,19 @@ Spectator.describe Ktistec::Util do
       expect(described_class.render_as_text(content)).to eq("some text")
     end
 
-    it "leaves escaped content alone" do
+    it "decodes HTML entities to plain text" do
       content = "&lt;foo&gt;"
-      expect(described_class.render_as_text(content)).to eq("&lt;foo&gt;")
+      expect(described_class.render_as_text(content)).to eq("<foo>")
+    end
+
+    it "decodes entities in mixed content" do
+      content = "<p>A&amp;T &mdash; Q&amp;A</p>"
+      expect(described_class.render_as_text(content)).to eq("A&T — Q&A\n")
+    end
+
+    it "decodes entities inside child elements" do
+      content = "<p>tag <code>&lt;script&gt;</code> injection</p>"
+      expect(described_class.render_as_text(content)).to eq("tag <script> injection\n")
     end
   end
 

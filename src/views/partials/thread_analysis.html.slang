@@ -42,11 +42,11 @@ turbo-frame#thread_analysis
       p: strong Thread Timeline (#{analysis.object_count} posts over #{duration_hours} hours)
       canvas data-controller="chart" style="max-height: 150px; margin: 10px 0;" role="img" aria-label="Activity histogram showing #{total_posts} posts over time"
         script type="application/json" data-chart-target="labels"
-          == labels.to_json
+          = Ktistec::SafeJSON.from(labels)
         script type="application/json" data-chart-target="datasets"
-          == datasets.to_json
+          = Ktistec::SafeJSON.from(datasets)
         script type="application/json" data-chart-target="options"
-          == options.to_json
+          = Ktistec::SafeJSON.from(options)
 
   - unless notable_branches.empty?
     .branches style="margin-top: 15px;" role="region" aria-label="Thread notable branches"

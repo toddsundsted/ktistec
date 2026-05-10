@@ -35,7 +35,7 @@ turbo-frame#thread_page_thread_controls
           = form_button "Cancel", cancel_fetch_thread_path(thread.first)
         - else
           form.ui.inline.form method="POST"
-            == authenticity_token(env)
+            = authenticity_token(env)
             .ui.buttons
               button.ui.primary.button type="submit" formaction=follow_thread_path(thread.first) Follow
               button.ui.button type="submit" formaction=start_fetch_thread_path(thread.first) Fetch Once

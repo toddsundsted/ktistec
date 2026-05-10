@@ -202,6 +202,27 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".footer_html" do
+    it "returns SafeHTML" do
+      expect(self.class.footer_html).to be_a(::Ktistec::SafeHTML)
+    end
+
+    it "returns the default 'Powered by Ktistec' footer" do
+      Ktistec.settings.assign({"footer" => nil}).save
+      expect(self.class.footer_html.to_s).to match(/Powered by <em>Ktistec<\/em>/)
+    end
+
+    it "returns the configured footer" do
+      Ktistec.settings.assign({"footer" => "<em>my footer</em>"}).save
+      expect(self.class.footer_html.to_s).to eq("<em>my footer</em>")
+    end
+
+    it "returns the configured footer" do
+      Ktistec.settings.assign({"footer" => ""}).save
+      expect(self.class.footer_html.to_s).to eq("")
+    end
+  end
+
   describe ".normalize_params" do
     context "given URI::Params" do
       it "converts single values to strings" do

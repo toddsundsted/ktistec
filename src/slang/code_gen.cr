@@ -290,7 +290,7 @@ module Slang
       inner
     end
 
-    # ----- Output (= and ==) -----
+    # ----- Output (=) -----
 
     private def emit_output(node : AST::Output) : Nil
       emit_literal(" ") if node.ws_left
@@ -298,26 +298,14 @@ module Slang
       flush_literal
 
       if node.children.empty?
-        if node.escape
-          @output << "::Slang::Runtime.emit(" << @buffer_name << ", ("
-          with_loc(node.loc) { @output << node.expr }
-          @output << "))\n"
-        else
-          @output << '('
-          with_loc(node.loc) { @output << node.expr }
-          @output << ").to_s(" << @buffer_name << ")\n"
-        end
+        @output << "::Slang::Runtime.emit(" << @buffer_name << ", ("
+        with_loc(node.loc) { @output << node.expr }
+        @output << "))\n"
       else
         sub = fresh_sub_buffer
-        if node.escape
-          @output << "::Slang::Runtime.emit(" << @buffer_name << ", ("
-          with_loc(node.loc) { @output << node.expr }
-          @output << '\n'
-        else
-          @output << '('
-          with_loc(node.loc) { @output << node.expr }
-          @output << '\n'
-        end
+        @output << "::Slang::Runtime.emit(" << @buffer_name << ", ("
+        with_loc(node.loc) { @output << node.expr }
+        @output << '\n'
         @output << "String.build do |" << sub << "|\n"
         saved_buffer = @buffer_name
         @buffer_name = sub
@@ -325,11 +313,7 @@ module Slang
         flush_literal
         @buffer_name = saved_buffer
         @output << "end\n"
-        if node.escape
-          @output << "end))\n"
-        else
-          @output << "end).to_s(" << @buffer_name << ")\n"
-        end
+        @output << "end))\n"
       end
 
       emit_literal(" ") if node.ws_right

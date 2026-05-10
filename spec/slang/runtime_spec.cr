@@ -9,6 +9,11 @@ Spectator.describe Slang::Runtime do
       expect(io.to_s).to eq("<em>bold</em>")
     end
 
+    it "emits SafeJSON raw" do
+      described_class.emit(io, Ktistec::SafeJSON.from(["a", 1]))
+      expect(io.to_s).to eq(%(["a",1]))
+    end
+
     it "HTML-escapes a plain String" do
       described_class.emit(io, "<em>bold</em>")
       expect(io.to_s).to eq("&lt;em&gt;bold&lt;/em&gt;")

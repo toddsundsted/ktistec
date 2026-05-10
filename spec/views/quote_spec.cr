@@ -11,7 +11,12 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
   subject do
     begin
-      XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_quote_html_slang(env, object, quote, failed, error_message))
+      quote = self.quote                 # ameba:disable Lint/UselessAssign
+      failed = self.failed               # ameba:disable Lint/UselessAssign
+      error_message = self.error_message # ameba:disable Lint/UselessAssign
+      show_quote = self.show_quote       # ameba:disable Lint/UselessAssign
+      body = String.build { |content_io| Slang.embed("src/views/partials/object/content/quote.html.slang", content_io) }
+      XML.parse_html(body)
     rescue XML::Error
       XML.parse_html("<div/>").document
     end
@@ -25,6 +30,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
   let(quote) { nil }
   let(failed) { false }
   let(error_message) { nil }
+  let(show_quote) { true }
 
   let(env) { make_env("GET", "/objects") }
 

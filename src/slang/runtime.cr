@@ -29,10 +29,15 @@ module Slang::Runtime
 
   # Emits a value to the buffer in HTML data context.
   #
-  # `Ktistec::SafeHTML` is emitted raw; any other value has `.to_s`
-  # applied and is HTML-escaped.
+  # `Ktistec::SafeHTML` is emitted raw; `Ktistec::SafeJSON` is emitted
+  # raw; any other value has `.to_s` applied and is HTML-escaped.
   #
   def emit(io : IO, value : ::Ktistec::SafeHTML) : Nil
+    io << value.to_s
+  end
+
+  # :ditto:
+  def emit(io : IO, value : ::Ktistec::SafeJSON) : Nil
     io << value.to_s
   end
 

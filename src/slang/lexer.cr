@@ -22,7 +22,6 @@ module Slang
     # line openers
     Element
     Output         # `=`
-    OutputRaw      # `==`
     Code           # `-`
     TextBlock      # `|`
     TextBlockSpace # `'`
@@ -440,14 +439,14 @@ module Slang
     private def scan_inline_output : Nil
       line = @line
       column = @column
-      escape = true
       advance # first `=`
       if !eof? && peek == EQ
-        advance
-        escape = false
+        raise LexError.new(
+          "`==` is not supported; use `=` with a `SafeHTML`/`SafeURI`/`SafeJSON` value",
+          @line, @column,
+        )
       end
-      kind = escape ? TokenKind::Output : TokenKind::OutputRaw
-      @pending << Token.new(kind, line: line, column: column)
+      @pending << Token.new(TokenKind::Output, line: line, column: column)
       scan_output_tail
     end
 
@@ -540,14 +539,14 @@ module Slang
     # ----- Output / code lines -----
 
     private def scan_output_line(line : Int32, column : Int32) : Nil
-      escape = true
       advance # first `=`
       if !eof? && peek == EQ
-        advance
-        escape = false
+        raise LexError.new(
+          "`==` is not supported; use `=` with a `SafeHTML`/`SafeURI`/`SafeJSON` value",
+          @line, @column,
+        )
       end
-      kind = escape ? TokenKind::Output : TokenKind::OutputRaw
-      @pending << Token.new(kind, line: line, column: column)
+      @pending << Token.new(TokenKind::Output, line: line, column: column)
       scan_output_tail
     end
 

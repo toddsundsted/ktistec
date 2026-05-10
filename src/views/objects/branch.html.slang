@@ -26,4 +26,4 @@
         | Thread
 section.ui.feed data-controller="icon-load-error"
   - thread.each do |object|
-    == object_partial(env, object, for_thread: thread)
+    - object_partial(env, object, for_thread: thread, content_io: content_io)

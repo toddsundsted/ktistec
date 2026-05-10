@@ -24,7 +24,7 @@ module Ktistec
       ::Ktistec::Util.sanitize(content)
     end
 
-    # Asserts the input is already safe.
+    # Asserts the input is already safe HTML markup.
     #
     def self.assert_safe(string : String) : SafeHTML
       new(string)

@@ -11,5 +11,5 @@ p
   turbo-stream-source src="/stream/everything"
 section.ui.feed data-controller="icon-load-error"
   - collection.each do |object|
-    == object_partial(env, object)
-== paginate(env, collection)
+    - object_partial(env, object, content_io: content_io)
+- paginate(env, collection, content_io)

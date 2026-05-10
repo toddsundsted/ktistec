@@ -37,7 +37,7 @@
                 input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->checkbox-submit#change" checked=filters.includes?("no-replies")
                 label for="timeline-no-replies" Don't include replies
   - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
-  == render "src/views/partials/editor.html.slang"
+  - Slang.embed("src/views/partials/editor.html.slang", content_io)
   crystal:
     if filters.includes?("no-shares") && filters.includes?("no-replies")
       timeline = actor.timeline(**pagination_params(env), inclusion: [Relationship::Content::Timeline::Create], exclude_replies: true)
@@ -49,7 +49,7 @@
       timeline = actor.timeline(**pagination_params(env))
     end
   turbo-frame#main-timeline
-    == render "src/views/actors/timeline.html.slang"
+    - Slang.embed("src/views/actors/timeline.html.slang", content_io)
 - elsif !actor.blocked?
   - content_for "head" do
     link rel="alternate" type="application/rss+xml" title="#{actor.display_name}: RSS Feed" href=Ktistec::SafeURI.from("#{Utils::Paths.actor_path(actor)}/feed.rss")
@@ -71,8 +71,8 @@
     meta name="twitter:title" content=og_title
     meta name="twitter:description" content=og_description
     meta name="twitter:image" content=og_image
-  == _view_src_views_partials_actor_panel_html_slang(env, actor)
+  - _view_src_views_partials_actor_panel_html_slang(env, actor, content_io)
   - objects = actor.public_posts_with_pins(**pagination_params(env))
-  == render "src/views/actors/public_posts.html.slang"
+  - Slang.embed("src/views/actors/public_posts.html.slang", content_io)
 - else
-  == _view_src_views_partials_actor_panel_html_slang(env, actor)
+  - _view_src_views_partials_actor_panel_html_slang(env, actor, content_io)

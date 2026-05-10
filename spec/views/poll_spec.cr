@@ -11,7 +11,8 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
 
   subject do
     begin
-      XML.parse_html(Ktistec::ViewHelper._view_src_views_partials_object_content_poll_html_slang(env, poll, object_emojis, timezone))
+      body = String.build { |io| Slang.embed("src/views/partials/object/content/poll.html.slang", io) }
+      XML.parse_html(body)
     rescue XML::Error
       XML.parse_html("<div/>").document
     end

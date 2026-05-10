@@ -24,7 +24,7 @@ turbo-frame#terms
       filter is created—they do not retroactively filter posts already
       in your inbox. If you remove a filter, posts that were blocked
       while it was active will not appear in your timeline.
-- paginate(env, terms, content_io)
+- partial paginate(env, terms)
 h3.ui.dividing.header Add Content Filter Term
 p
   | By default, filter terms match the <em>entire content</em> of a

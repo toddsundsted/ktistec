@@ -37,7 +37,7 @@
                 input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->checkbox-submit#change" checked=filters.includes?("no-replies")
                 label for="timeline-no-replies" Don't include replies
   - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
-  - Slang.embed("src/views/partials/editor.html.slang", content_io)
+  - partial "partials/editor"
   crystal:
     if filters.includes?("no-shares") && filters.includes?("no-replies")
       timeline = actor.timeline(**pagination_params(env), inclusion: [Relationship::Content::Timeline::Create], exclude_replies: true)
@@ -49,7 +49,7 @@
       timeline = actor.timeline(**pagination_params(env))
     end
   turbo-frame#main-timeline
-    - Slang.embed("src/views/actors/timeline.html.slang", content_io)
+    - partial "actors/timeline"
 - elsif !actor.blocked?
   - content_for "head" do
     link rel="alternate" type="application/rss+xml" title="#{actor.display_name}: RSS Feed" href=Utils::Paths.actor_feed_path(actor)
@@ -71,8 +71,8 @@
     meta name="twitter:title" content=og_title
     meta name="twitter:description" content=og_description
     meta name="twitter:image" content=og_image
-  - actor_panel_partial(env, actor, content_io)
+  - partial actor_panel_partial(env, actor)
   - objects = actor.public_posts_with_pins(**pagination_params(env))
-  - Slang.embed("src/views/actors/public_posts.html.slang", content_io)
+  - partial "actors/public_posts"
 - else
-  - actor_panel_partial(env, actor, content_io)
+  - partial actor_panel_partial(env, actor)

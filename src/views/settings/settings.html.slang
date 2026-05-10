@@ -3,7 +3,7 @@
   script src="/dist/settings.bundle.js"
 - content_for "title" do
   | Settings
-- actor_panel_partial(env, actor, content_io)
+- partial actor_panel_partial(env, actor)
 h1 Account Settings
 p
   | Settings for account <strong>#{actor.username}</strong>.

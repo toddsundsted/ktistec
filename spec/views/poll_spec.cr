@@ -31,6 +31,8 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
 
   let(env) { make_env("GET", "/") }
 
+  let(object) { poll.question }
+
   let(object_emojis) { [] of Tag::Emoji }
 
   let(timezone) { Time::Location.local }

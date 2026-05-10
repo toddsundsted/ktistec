@@ -26,11 +26,11 @@ crystal:
           i.pin.icon
       - if account
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)
+          a.user> data-turbo-frame="_top" title=actor.handle href=remote_actor_path(actor) = emoji_name(actor, emojis: actor_emojis)
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = s Ktistec::Emoji.emojify(author.display_name, author_emojis)
+          a.user< data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = emoji_name(author, emojis: author_emojis)
         - else
-          a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = s Ktistec::Emoji.emojify(author.display_name, author_emojis)
+          a.user> data-turbo-frame="_top" title=author.handle href=remote_actor_path(author) = emoji_name(author, emojis: author_emojis)
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=remote_object_path(object) = object.short_date(timezone)
         - case visibility(author, object)
@@ -40,11 +40,11 @@ crystal:
           i.at.icon<
       - else
         - if author != actor
-          a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = s Ktistec::Emoji.emojify(actor.display_name, actor_emojis)
+          a.user> data-turbo-frame="_top" title=actor.handle href=actor.display_link = emoji_name(actor, emojis: actor_emojis)
           | shared a #{type} by
-          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link = s Ktistec::Emoji.emojify(author.display_name, author_emojis)
+          a.user< data-turbo-frame="_top" title=author.handle href=author.display_link = emoji_name(author, emojis: author_emojis)
         - else
-          a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = s Ktistec::Emoji.emojify(author.display_name, author_emojis)
+          a.user> data-turbo-frame="_top" title=author.handle href=author.display_link = emoji_name(author, emojis: author_emojis)
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - unless is_blocked

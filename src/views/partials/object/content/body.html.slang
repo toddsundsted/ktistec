@@ -15,7 +15,7 @@ crystal:
 - partial "partials/object/content/attachments"
 - if with_detail
   div.extra.text class=(is_deleted && "deleted" || nil)
-    = s Ktistec::Emoji.emojify(html, object_emojis)
+    = emoji_html(html, object, emojis: object_emojis)
   - if object.quote_iri
     crystal:
       quote = object.quote?
@@ -26,7 +26,7 @@ crystal:
     - partial "partials/object/content/poll"
 - else
   div.extra.text class=(is_deleted && "deleted" || nil) data-controller="clickable-background" data-clickable-background-href-value=href
-    = s Ktistec::Emoji.emojify(html, object_emojis)
+    = emoji_html(html, object, emojis: object_emojis)
   - if object.quote_iri
     crystal:
       quote = object.quote?

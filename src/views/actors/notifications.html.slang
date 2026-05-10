@@ -22,7 +22,7 @@
             = actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
+              a> href=remote_actor_path(activity.actor) = emoji_name(activity.actor, emojis: emojis)
               - if activities.size > 1
                 | and #{pluralize(activities.size - 1, "other")} shared
               - else
@@ -41,7 +41,7 @@
             = actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
+              a> href=remote_actor_path(activity.actor) = emoji_name(activity.actor, emojis: emojis)
               - if activities.size > 1
                 | and #{pluralize(activities.size - 1, "other")} liked
               - else
@@ -60,7 +60,7 @@
             = actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
+              a> href=remote_actor_path(activity.actor) = emoji_name(activity.actor, emojis: emojis)
               - if activities.size > 1
                 | and #{pluralize(activities.size - 1, "other")} disliked
               - else
@@ -81,7 +81,7 @@
             = actor_icon(attributed_to)
           .content
             .summary
-              a> href=remote_actor_path(attributed_to) = s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
+              a> href=remote_actor_path(attributed_to) = emoji_name(attributed_to, emojis: emojis)
               a> href=remote_object_path(object) replied to
               a< href=remote_object_path(in_reply_to) your post
               | .
@@ -98,7 +98,7 @@
             = actor_icon(attributed_to)
           .content
             .summary
-              a> href=remote_actor_path(attributed_to) = s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
+              a> href=remote_actor_path(attributed_to) = emoji_name(attributed_to, emojis: emojis)
               a> href=remote_object_path(object) mentioned
               | you.
             - if content
@@ -144,7 +144,7 @@
             = actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
+              a> href=remote_actor_path(activity.actor) = emoji_name(activity.actor, emojis: emojis)
               | followed you.
             - unless (response = activity.accepted_or_rejected?)
               .extra.text
@@ -174,7 +174,7 @@
                 a<> href=remote_thread_path(object) a thread
                 | you follow.
               - else
-                a> href=remote_actor_path(attributed_to) = s Ktistec::Emoji.emojify(attributed_to.display_name, emojis)
+                a> href=remote_actor_path(attributed_to) = emoji_name(attributed_to, emojis: emojis)
                 a> href=remote_object_path(object) replied to a thread
                 | you follow.
             - if content
@@ -207,7 +207,7 @@
             = actor_icon(activity.actor)
           .content
             .summary
-              a> href=remote_actor_path(activity.actor) = s Ktistec::Emoji.emojify(activity.actor.display_name, emojis)
+              a> href=remote_actor_path(activity.actor) = emoji_name(activity.actor, emojis: emojis)
               - if (instrument = activity.instrument?)
                 a href=remote_object_path(instrument) quoted
               - else

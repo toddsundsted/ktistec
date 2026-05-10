@@ -70,6 +70,10 @@ module Ktistec::ViewHelper
       Slang.embed "src/views/partials/object/wrapper.html.slang", content_io
     end
 
+    def object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
+      Slang.embed "src/views/partials/object/content.html.slang", content_io
+    end
+
     def body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)
       Slang.embed "src/views/partials/object/content/body.html.slang", content_io
     end
@@ -86,20 +90,12 @@ module Ktistec::ViewHelper
       Slang.embed "src/views/partials/thread_page_thread_controls.html.slang", content_io
     end
 
-    # The naming below matches the format of automatically generated
-    # view helpers. View helpers for partials are *not* automatically
-    # generated.
-
-    def _view_src_views_partials_actor_panel_html_slang(env, actor, content_io)
+    def actor_panel_partial(env, actor, content_io)
       Slang.embed "src/views/partials/actor-panel.html.slang", content_io
     end
 
-    def _view_src_views_partials_collection_json_ecr(env, collection)
+    def collection_json_partial(env, collection)
       render "src/views/partials/collection.json.ecr"
-    end
-
-    def _view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
-      Slang.embed "src/views/partials/object/content.html.slang", content_io
     end
   end
 
@@ -144,9 +140,11 @@ module Ktistec::ViewHelper
 
   # View helpers
 
-  # The naming below matches the format of automatically generated
-  # view helpers. View helpers for partials are *not* automatically
-  # generated.
+  # The name below matches the format of automatically generated
+  # layout helpers. It is consumed by the `render(content, layout)`
+  # macro at the top of this file and by `framework/controller.cr`'s
+  # response macros, both of which derive the helper name from the
+  # layout path.
 
   def self._layout_src_views_layouts_default_html_ecr(env, title, og_metadata, head, content)
     render "src/views/layouts/default.html.ecr"

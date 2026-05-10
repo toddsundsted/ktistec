@@ -8,7 +8,7 @@
     ].compact.flatten.join(" ")
   turbo-frame.threaded.event id=anchor(object) class=classes
     - Slang.embed("src/views/partials/object/label.html.slang", content_io)
-    - _view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
+    - object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
 - elsif with_detail
   crystal:
     classes = [
@@ -18,7 +18,7 @@
     ].compact.flatten.join(" ")
   turbo-frame.detailed.event id=anchor(object) class=classes
     - Slang.embed("src/views/partials/object/label.html.slang", content_io)
-    - _view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
+    - object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
 - else
   crystal:
     viewing_actor = env.account?.try(&.actor)
@@ -38,4 +38,4 @@
     attrs = object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
   turbo-frame.event id=anchor(object) class=classes *attrs
     - Slang.embed("src/views/partials/object/label.html.slang", content_io)
-    - _view_src_views_partials_object_content_html_slang(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
+    - object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)

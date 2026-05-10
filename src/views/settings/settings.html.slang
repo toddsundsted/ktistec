@@ -3,7 +3,7 @@
   script src="/dist/settings.bundle.js"
 - content_for "title" do
   | Settings
-- _view_src_views_partials_actor_panel_html_slang(env, actor, content_io)
+- actor_panel_partial(env, actor, content_io)
 h1 Account Settings
 p
   | Settings for account <strong>#{actor.username}</strong>.

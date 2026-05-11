@@ -183,6 +183,16 @@ Spectator.describe Ktistec::SafeURI do
     end
   end
 
+  describe "#to_json" do
+    it "encodes the wrapped value" do
+      expect(described_class.assert_safe("https://example.com/a").to_json).to eq(%("https://example.com/a"))
+    end
+
+    it "JSON-escapes the wrapped value" do
+      expect(described_class.assert_safe(%(/a"b)).to_json).to eq(%("/a\\"b"))
+    end
+  end
+
   describe "#presence" do
     it "returns self when non-blank" do
       uri = described_class.assert_safe("/x")

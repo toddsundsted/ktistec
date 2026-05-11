@@ -67,6 +67,16 @@ Spectator.describe Ktistec::SafeHTML do
     end
   end
 
+  describe "#to_json" do
+    it "encodes the wrapped value" do
+      expect(described_class.assert_safe(%(<p>hi</p>)).to_json).to eq(%("<p>hi</p>"))
+    end
+
+    it "JSON-escapes the wrapped value" do
+      expect(described_class.assert_safe(%(a"b\\c)).to_json).to eq(%("a\\"b\\\\c"))
+    end
+  end
+
   describe "#presence" do
     it "returns self when non-blank" do
       html = described_class.assert_safe("x")

@@ -14,6 +14,7 @@ module Ameba::Rule::Ktistec
       enabled true
       severity :warning
       whitelist [
+        "src/utils/avatar.cr",
         "src/utils/paths.cr",
         "src/framework/util.cr",
         "src/views/helpers/*.cr",

@@ -191,6 +191,109 @@ Spectator.describe API::V1::Serializers::Status do
       end
     end
 
+    context "with adversarial content" do
+      before_each do
+        object.assign(
+          content: %(<p>hi <script>alert(1)</script></p>),
+          summary: %(hi <script>alert(2)</script>),
+        ).save
+      end
+
+      it "strips script tags from content" do
+        expect(subject.content).not_to match(/<script/i)
+        expect(subject.content).to eq("<p>hi </p>")
+      end
+
+      it "strips script tags from spoiler_text" do
+        expect(subject.spoiler_text).not_to match(/<script/i)
+        expect(subject.spoiler_text).to eq("hi ")
+      end
+    end
+
+    # the model's `before_validate` already scrubs unsafe URLs at
+    # save time, so every current persist path neutralizes these
+    # payloads before they reach storage and this is strictly
+    # defense in depth.
+
+    context "with adversarial urls" do
+      before_each do
+        object.assign(
+          urls: ["javascript:alert(1)"],
+          attachments: [
+            ActivityPub::Object::Attachment.new(
+              url: "javascript:alert(2)",
+              media_type: "image/png",
+              caption: "bad",
+            ),
+          ],
+        )
+      end
+
+      it "drops javascript: url" do
+        expect(subject.url).to be_nil
+      end
+
+      it "drops javascript: attachment url" do
+        expect(subject.media_attachments.first.url).to be_nil
+      end
+    end
+
+    context "with data: scheme urls" do
+      before_each do
+        object.assign(
+          urls: ["data:text/html,<script>alert(1)</script>"],
+          attachments: [
+            ActivityPub::Object::Attachment.new(
+              url: "data:text/html,<script>alert(2)</script>",
+              media_type: "image/png",
+              caption: "bad",
+            ),
+          ],
+        )
+      end
+
+      it "drops data: url" do
+        expect(subject.url).to be_nil
+      end
+
+      it "drops data: attachment url" do
+        expect(subject.media_attachments.first.url).to be_nil
+      end
+    end
+
+    context "with protocol-relative urls" do
+      before_each do
+        object.assign(
+          urls: ["//evil.example/x"],
+          attachments: [
+            ActivityPub::Object::Attachment.new(
+              url: "//evil.example/y",
+              media_type: "image/png",
+              caption: "bad",
+            ),
+          ],
+        )
+      end
+
+      it "drops protocol-relative url" do
+        expect(subject.url).to be_nil
+      end
+
+      it "drops protocol-relative attachment url" do
+        expect(subject.media_attachments.first.url).to be_nil
+      end
+    end
+
+    context "with whitespace-obfuscated javascript: url" do
+      before_each do
+        object.assign(urls: ["\tJaVaScRiPt:alert(1)"])
+      end
+
+      it "drops obfuscated scheme" do
+        expect(subject.url).to be_nil
+      end
+    end
+
     PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
     context "visibility" do

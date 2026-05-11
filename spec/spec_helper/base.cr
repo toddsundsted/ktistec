@@ -39,6 +39,10 @@ class String
   def ==(other : Ktistec::SafeAttrValue)
     other.to_s == self
   end
+
+  def ==(other : Ktistec::SafeURI)
+    other.to_s == self
+  end
 end
 
 class Regex
@@ -52,6 +56,18 @@ class Regex
 
   def ==(other : JSON::Any)
     !!(other.raw =~ self)
+  end
+
+  def ==(other : Ktistec::SafeHTML)
+    !!(other.to_s =~ self)
+  end
+
+  def ==(other : Ktistec::SafeAttrValue)
+    !!(other.to_s =~ self)
+  end
+
+  def ==(other : Ktistec::SafeURI)
+    !!(other.to_s =~ self)
   end
 end
 

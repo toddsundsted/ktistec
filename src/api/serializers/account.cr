@@ -3,6 +3,8 @@ require "json"
 require "../../models/account"
 require "../../models/activity_pub/actor"
 require "../../models/relationship/social/follow"
+require "../../safe/safe_html"
+require "../../safe/safe_uri"
 require "../../utils/avatar"
 
 module API
@@ -17,14 +19,16 @@ module API
       property id : String
       property username : String
       property acct : String
-      property url : String
-      property uri : String
+      property url : Ktistec::SafeURI
+      property uri : Ktistec::SafeURI
       property display_name : String
-      property note : String
-      property avatar : String
-      property avatar_static : String
-      property header : String
-      property header_static : String
+      property note : Ktistec::SafeHTML
+      property avatar : Ktistec::SafeURI
+      property avatar_static : Ktistec::SafeURI
+      @[JSON::Field(emit_null: true)]
+      property header : Ktistec::SafeURI?
+      @[JSON::Field(emit_null: true)]
+      property header_static : Ktistec::SafeURI?
       property locked : Bool
       property fields : Array(Field)
       property emojis : Array(JSON::Any)
@@ -45,13 +49,13 @@ module API
         include JSON::Serializable
 
         property name : String
-        property value : String
+        property value : Ktistec::SafeHTML
         @[JSON::Field(emit_null: true)]
         property verified_at : String?
 
         def initialize(
           @name : String,
-          @value : String,
+          @value : Ktistec::SafeHTML,
           @verified_at : String? = nil,
         )
         end
@@ -59,6 +63,24 @@ module API
 
       struct Source
         include JSON::Serializable
+
+        # Carries the raw value.
+        #
+        struct Field
+          include JSON::Serializable
+
+          property name : String
+          property value : String
+          @[JSON::Field(emit_null: true)]
+          property verified_at : String?
+
+          def initialize(
+            @name : String,
+            @value : String,
+            @verified_at : String? = nil,
+          )
+          end
+        end
 
         property attribution_domains : Array(String)
         property note : String
@@ -88,14 +110,14 @@ module API
         @id : String,
         @username : String,
         @acct : String,
-        @url : String,
-        @uri : String,
+        @url : Ktistec::SafeURI,
+        @uri : Ktistec::SafeURI,
         @display_name : String,
-        @note : String,
-        @avatar : String,
-        @avatar_static : String,
-        @header : String,
-        @header_static : String,
+        @note : Ktistec::SafeHTML,
+        @avatar : Ktistec::SafeURI,
+        @avatar_static : Ktistec::SafeURI,
+        @header : Ktistec::SafeURI?,
+        @header_static : Ktistec::SafeURI?,
         @locked : Bool,
         @fields : Array(Field),
         @emojis : Array(JSON::Any),
@@ -135,16 +157,16 @@ module API
           end
 
         avatar = Utils::Avatar.url_for(actor)
-        header = actor.image || ""
+        header = actor.image_safe
 
         Account.new(
           id: actor.id.to_s,
           username: account.username,
           acct: (actor.local? ? actor.username : actor.handle) || "",
-          url: actor.urls.try(&.first?) || actor.iri,
-          uri: actor.iri,
+          url: actor.display_link || Ktistec::SafeURI.from(actor.iri),
+          uri: Ktistec::SafeURI.from(actor.iri),
           display_name: actor.name || "",
-          note: actor.summary || "",
+          note: Ktistec::SafeHTML.sanitize(actor.summary),
           avatar: avatar,
           avatar_static: avatar,
           header: header,
@@ -173,16 +195,16 @@ module API
         fields = build_public_fields(actor)
 
         avatar = Utils::Avatar.url_for(actor)
-        header = actor.image || ""
+        header = actor.image_safe
 
         Account.new(
           id: actor.id.to_s,
           username: actor.username || "",
           acct: (actor.local? ? actor.username : actor.handle) || "",
-          url: actor.urls.try(&.first?) || actor.iri,
-          uri: actor.iri,
+          url: actor.display_link || Ktistec::SafeURI.from(actor.iri),
+          uri: Ktistec::SafeURI.from(actor.iri),
           display_name: actor.name || "",
-          note: actor.summary || "",
+          note: Ktistec::SafeHTML.sanitize(actor.summary),
           avatar: avatar,
           avatar_static: avatar,
           header: header,
@@ -206,14 +228,14 @@ module API
       # public fields carry rendered HTML for display
       private def self.build_public_fields(actor : ActivityPub::Actor) : Array(Field)
         (actor.attachments || [] of ActivityPub::Actor::Attachment).map do |attachment|
-          Field.new(name: attachment.name, value: attachment.value_as_html.to_s)
+          Field.new(name: attachment.name, value: attachment.value_as_html)
         end
       end
 
       # source fields carry the raw values
-      private def self.build_source_fields(actor : ActivityPub::Actor) : Array(Field)
+      private def self.build_source_fields(actor : ActivityPub::Actor) : Array(Source::Field)
         (actor.attachments || [] of ActivityPub::Actor::Attachment).map do |attachment|
-          Field.new(name: attachment.name, value: attachment.value)
+          Source::Field.new(name: attachment.name, value: attachment.value)
         end
       end
 

@@ -108,11 +108,63 @@ Spectator.describe Ktistec::RSS do
         end
       end
 
+      context "with ]]> in object name" do
+        before_each do
+          object.assign(name: %{Title]]><injected/><![CDATA[trailing})
+        end
+
+        it "produces well-formed XML" do
+          expect(subject.xpath_nodes("/rss/channel/item").size).to eq(1)
+        end
+
+        it "does not allow XML injection" do
+          expect(subject.xpath_nodes("//injected")).to be_empty
+        end
+      end
+
       context "with HTML in object content" do
         before_each { object.assign(content: %{<p>Content with <strong>HTML</strong> & "quotes" & ampersands</p>}) }
 
         it "handles content with HTML" do
-          expect(subject.xpath_nodes("/rss/channel/item/description/text()")).to contain_exactly(%{<p>Content with <strong>HTML</strong> & "quotes" & ampersands</p>})
+          expect(subject.xpath_nodes("/rss/channel/item/description/text()")).to contain_exactly(%{<p>Content with <strong>HTML</strong> &amp; "quotes" &amp; ampersands</p>})
+        end
+      end
+
+      context "with ]]> in object content" do
+        before_each do
+          object.assign(content: %{normal content]]><injected/><![CDATA[trailing})
+        end
+
+        it "produces well-formed XML" do
+          expect(subject.xpath_nodes("/rss/channel/item").size).to eq(1)
+        end
+
+        it "does not allow XML injection" do
+          expect(subject.xpath_nodes("//injected")).to be_empty
+        end
+      end
+
+      context "with <script> in object content" do
+        before_each do
+          object.assign(content: %{<p>Real<script>alert(1)</script> content</p>})
+        end
+
+        it "sanitizes the script tag out of the description" do
+          description = subject.xpath_nodes("/rss/channel/item/description/text()").join(&.content)
+          expect(description).to match(/Real content/)
+          expect(description).not_to match(/<script>/)
+        end
+      end
+
+      context "with javascript: URL in object content" do
+        before_each do
+          object.assign(content: %{<a href="javascript:alert(1)">click</a>})
+        end
+
+        it "sanitizes the javascript: href out of the description" do
+          description_text = subject.xpath_nodes("/rss/channel/item/description/text()").join(&.content)
+          expect(description_text).not_to match(/javascript:/)
+          expect(description_text).to match(/click/)
         end
       end
 
@@ -130,6 +182,29 @@ Spectator.describe Ktistec::RSS do
 
         it "escapes author username" do
           expect(subject.xpath_nodes("/rss/channel/item/author/text()")).to contain_exactly(%{user&name@test.test})
+        end
+      end
+
+      context "with HTML in author username" do
+        before_each { actor.assign(username: %{<script>alert(1)</script>evil}) }
+
+        it "strips HTML" do
+          author_text = subject.xpath_nodes("/rss/channel/item/author/text()").join(&.content)
+          expect(author_text).not_to match(/<script>/)
+          expect(author_text).to eq("evil@test.test")
+        end
+      end
+
+      context "with HTML in author name and no object name or content" do
+        before_each do
+          actor.assign(name: %{<script>alert(1)</script>Evil Actor})
+          object.assign(name: nil, content: nil)
+        end
+
+        it "strips HTML from the title fallback" do
+          title = subject.xpath_nodes("/rss/channel/item/title/text()").join(&.content)
+          expect(title).not_to match(/<script>/)
+          expect(title).to eq("Post by Evil Actor")
         end
       end
     end

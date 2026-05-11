@@ -61,11 +61,11 @@ Spectator.describe API::V1::Serializers::Account do
     end
 
     it "returns header" do
-      expect(subject.header).to eq("")
+      expect(subject.header).to be_nil
     end
 
     it "returns header_static" do
-      expect(subject.header_static).to eq("")
+      expect(subject.header_static).to be_nil
     end
 
     it "returns locked" do
@@ -219,6 +219,17 @@ Spectator.describe API::V1::Serializers::Account do
             expect(source.note).to eq("AT&T — 5 < 10")
           end
         end
+      end
+    end
+
+    context "with adversarial summary" do
+      before_each do
+        actor.assign(summary: %(<p>bio <script>alert(1)</script></p>)).save
+      end
+
+      it "strips script tags from note" do
+        expect(subject.note).not_to match(/<script/i)
+        expect(subject.note).to eq("<p>bio </p>")
       end
     end
 
@@ -396,11 +407,11 @@ Spectator.describe API::V1::Serializers::Account do
     end
 
     it "returns header" do
-      expect(subject.header).to eq("")
+      expect(subject.header).to be_nil
     end
 
     it "returns header_static" do
-      expect(subject.header_static).to eq("")
+      expect(subject.header_static).to be_nil
     end
 
     it "returns locked as false" do
@@ -517,6 +528,51 @@ Spectator.describe API::V1::Serializers::Account do
       end
     end
 
+    # the model's `before_validate` already scrubs unsafe URLs at
+    # save time, so every current persist path neutralizes these
+    # payloads before they reach storage and this is strictly
+    # defense in depth.
+
+    context "with adversarial urls" do
+      before_each { actor.assign(urls: ["javascript:alert(1)"]) }
+
+      it "falls back to iri" do
+        expect(subject.url).to eq(actor.iri)
+      end
+    end
+
+    context "with protocol-relative urls" do
+      before_each { actor.assign(urls: ["//evil.example/x"]) }
+
+      it "falls back to iri" do
+        expect(subject.url).to eq(actor.iri)
+      end
+    end
+
+    context "with adversarial icon" do
+      before_each { actor.assign(icon: "javascript:alert(1)") }
+
+      it "falls back to color avatar" do
+        expect(subject.avatar).to match(/\/images\/avatars\/color-\d+\.png/)
+      end
+
+      it "falls back to color avatar" do
+        expect(subject.avatar_static).to match(/\/images\/avatars\/color-\d+\.png/)
+      end
+    end
+
+    context "with adversarial image" do
+      before_each { actor.assign(image: "javascript:alert(1)") }
+
+      it "returns nil" do
+        expect(subject.header).to be_nil
+      end
+
+      it "returns nil" do
+        expect(subject.header_static).to be_nil
+      end
+    end
+
     context "with followers" do
       let_create(:actor, named: :follower, local: true)
 
@@ -597,8 +653,8 @@ Spectator.describe API::V1::Serializers::Account do
       expect(json["note"]).to eq("")
       expect(json["avatar"].as_s).to match(/\/images\/avatars\/color-\d+\.png/)
       expect(json["avatar_static"].as_s).to match(/\/images\/avatars\/color-\d+\.png/)
-      expect(json["header"]).to eq("")
-      expect(json["header_static"]).to eq("")
+      expect(json["header"]).to eq(nil)
+      expect(json["header_static"]).to eq(nil)
       expect(json["locked"]).to eq(!account.auto_approve_followers)
       expect(json["fields"].as_a).to be_empty
       expect(json["emojis"].as_a).to be_empty

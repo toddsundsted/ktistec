@@ -134,7 +134,7 @@ module API
             )
           end
 
-        avatar = Utils::Avatar.url_for(actor)
+        avatar = Utils::Avatar.url_for(actor).to_s
         header = actor.image || ""
 
         Account.new(
@@ -172,7 +172,7 @@ module API
       def self.from_actor(actor : ActivityPub::Actor) : Account
         fields = build_public_fields(actor)
 
-        avatar = Utils::Avatar.url_for(actor)
+        avatar = Utils::Avatar.url_for(actor).to_s
         header = actor.image || ""
 
         Account.new(

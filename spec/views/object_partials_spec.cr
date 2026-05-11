@@ -29,7 +29,7 @@ Spectator.describe "object partials" do
       end
     end
 
-    let_build(:actor, icon: random_string)
+    let_build(:actor, icon: "https://test.test/icons/#{random_string}.png")
 
     context "the actor is the author" do
       let(author) { actor }
@@ -56,7 +56,7 @@ Spectator.describe "object partials" do
     end
 
     context "the actor is not the author" do
-      let_build(:actor, named: author, icon: random_string)
+      let_build(:actor, named: author, icon: "https://test.test/icons/#{random_string}.png")
 
       it "renders two profile icons" do
         expect(subject.xpath_nodes("//img/@src")).to contain_exactly(actor.icon, author.icon)

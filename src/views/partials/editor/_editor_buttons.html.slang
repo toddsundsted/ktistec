@@ -25,7 +25,7 @@
         editor_params.add("editor", editor_name)
         editor_params.add("editor", "poll") if poll_active
         editor_params.add("editor", "optional") if optional_active
-      a class=button_classes.join(" ") href=Ktistec::SafeURI.from("?#{editor_params}") = editor_name == "rich-text" ? "Rich Text" : "Markdown"
+      a class=button_classes.join(" ") href=Utils::Paths.query_path(editor_params) = editor_name == "rich-text" ? "Rich Text" : "Markdown"
     - if supported_editors.includes?("optional")
       crystal:
         button_classes = ["ui", "mini", "compact", "toggle", "button"]
@@ -36,7 +36,7 @@
         editor_params.add("editor", current_source)
         editor_params.add("editor", "poll") if poll_active
         editor_params.add("editor", "optional") unless optional_active
-      a class=button_classes.join(" ") href=Ktistec::SafeURI.from("?#{editor_params}") Optional
+      a class=button_classes.join(" ") href=Utils::Paths.query_path(editor_params) Optional
     - if supported_editors.includes?("poll") && !in_reply_to
       crystal:
         button_classes = ["ui", "mini", "compact", "toggle", "button"]
@@ -47,4 +47,4 @@
         editor_params.add("editor", current_source)
         editor_params.add("editor", "poll") unless poll_active
         editor_params.add("editor", "optional") if optional_active
-      a class=button_classes.join(" ") href=Ktistec::SafeURI.from("?#{editor_params}") Include Poll
+      a class=button_classes.join(" ") href=Utils::Paths.query_path(editor_params) Include Poll

@@ -12,26 +12,26 @@ crystal:
       attachments.reject!(&.url.in?(urls))
     end
   end
-- Slang.embed("src/views/partials/object/content/attachments.html.slang", content_io)
+- partial "partials/object/content/attachments"
 - if with_detail
   div.extra.text class=(is_deleted && "deleted" || nil)
-    = s Ktistec::Emoji.emojify(html, object_emojis)
+    = emoji_html(html, object, emojis: object_emojis)
   - if object.quote_iri
     crystal:
       quote = object.quote?
       failed = false
       error_message = nil
-    - Slang.embed("src/views/partials/object/content/quote.html.slang", content_io)
+    - partial "partials/object/content/quote"
   - if object.responds_to?(:poll?) && (poll = object.poll?)
-    - Slang.embed("src/views/partials/object/content/poll.html.slang", content_io)
+    - partial "partials/object/content/poll"
 - else
   div.extra.text class=(is_deleted && "deleted" || nil) data-controller="clickable-background" data-clickable-background-href-value=href
-    = s Ktistec::Emoji.emojify(html, object_emojis)
+    = emoji_html(html, object, emojis: object_emojis)
   - if object.quote_iri
     crystal:
       quote = object.quote?
       failed = false
       error_message = nil
-    - Slang.embed("src/views/partials/object/content/quote.html.slang", content_io)
+    - partial "partials/object/content/quote"
   - if object.responds_to?(:poll?) && (poll = object.poll?)
-    - Slang.embed("src/views/partials/object/content/poll.html.slang", content_io)
+    - partial "partials/object/content/poll"

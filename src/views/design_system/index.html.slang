@@ -2,7 +2,7 @@
   | Design System
 h1 Ktistec Design System
 p This page showcases all UI components for theme development and testing.
-- Slang.embed("src/views/design_system/partials/navigation.html.slang", content_io)
-- Slang.embed("src/views/design_system/partials/core_content.html.slang", content_io)
-- Slang.embed("src/views/design_system/partials/panels_and_cards.html.slang", content_io)
-- Slang.embed("src/views/design_system/partials/forms_and_editors.html.slang", content_io)
+- partial "design_system/partials/navigation"
+- partial "design_system/partials/core_content"
+- partial "design_system/partials/panels_and_cards"
+- partial "design_system/partials/forms_and_editors"

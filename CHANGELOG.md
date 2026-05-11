@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.3.8]
+### Added
+- String safety framework with typed "safe" strings.
+- New Slang template engine with compile-time safety checks.
+- Vendored `WebFinger` and `HostMeta` clients.
+
+### Fixed
+- Prevent delivery to unknown IRIs.
+- Narrow Like/Dislike addressing to the liked object's author.
+
 ## [v3.3.7]
 ### Added
 - Sliding token expiration for OAuth2 access tokens.
@@ -758,6 +768,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.3.8]: https://github.com/toddsundsted/ktistec/compare/a9c7c0ba...7f7de3d5
 [v3.3.7]: https://github.com/toddsundsted/ktistec/compare/0de33ac0...408900a5
 [v3.3.6]: https://github.com/toddsundsted/ktistec/compare/99046b6d...3b5cf8dc
 [v3.3.5]: https://github.com/toddsundsted/ktistec/compare/5e87aae6...6f54cac5

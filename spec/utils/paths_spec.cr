@@ -43,6 +43,62 @@ Spectator.describe Utils::Paths do
       end
     end
 
+    context "with query only" do
+      let(referer) { "?key=value" }
+
+      it "returns the Referer" do
+        expect((back_path).to_s).to eq("?key=value")
+      end
+    end
+
+    context "with fragment only" do
+      let(referer) { "#section" }
+
+      it "returns the Referer" do
+        expect((back_path).to_s).to eq("#section")
+      end
+    end
+
+    context "with same-origin absolute URL" do
+      let(referer) { "https://test.test/back?q=1#anchor" }
+
+      it "returns the path + query + fragment" do
+        expect((back_path).to_s).to eq("/back?q=1#anchor")
+      end
+    end
+
+    context "with same-origin absolute URL" do
+      let(referer) { "https://test.test" }
+
+      it "returns /" do
+        expect((back_path).to_s).to eq("/")
+      end
+    end
+
+    context "with cross-origin absolute URL" do
+      let(referer) { "https://evil.example.com/path" }
+
+      it "falls back to /" do
+        expect((back_path).to_s).to eq("/")
+      end
+    end
+
+    context "with same-host but different port" do
+      let(referer) { "https://test.test:3000/path" }
+
+      it "falls back to /" do
+        expect((back_path).to_s).to eq("/")
+      end
+    end
+
+    context "with same-host but different scheme" do
+      let(referer) { "http://test.test/path" }
+
+      it "falls back to /" do
+        expect((back_path).to_s).to eq("/")
+      end
+    end
+
     context "with an unsafe scheme" do
       let(referer) { "javascript:alert(1)" }
 
@@ -53,6 +109,24 @@ Spectator.describe Utils::Paths do
 
     context "with a relative protocol" do
       let(referer) { "//evil.example.com/path" }
+
+      it "falls back to /" do
+        expect((back_path).to_s).to eq("/")
+      end
+    end
+
+    context "with a backslash protocol-relative URL" do
+      let(referer) { "\\\\evil.example.com/path" }
+
+      it "falls back to /" do
+        expect((back_path).to_s).to eq("/")
+      end
+    end
+
+    context "with a missing Referer header" do
+      let(env) do
+        make_env("GET", "/filters/17")
+      end
 
       it "falls back to /" do
         expect((back_path).to_s).to eq("/")

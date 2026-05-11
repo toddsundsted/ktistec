@@ -1,6 +1,6 @@
 article.event
   - _actor = activity.object.actor
-  - Slang.embed("src/views/partials/activity/label.html.slang", content_io)
+  - partial "partials/activity/label"
   .content
     .summary
       ' You rejected a follow request from

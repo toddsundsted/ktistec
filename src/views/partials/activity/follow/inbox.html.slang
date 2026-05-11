@@ -1,7 +1,7 @@
 article.event
   - _actor = activity.actor
   - _object = activity.object
-  - Slang.embed("src/views/partials/activity/label.html.slang", content_io)
+  - partial "partials/activity/label"
   .content
     .summary
       ' You received a follow request from

@@ -1,5 +1,5 @@
 article.event
-  - Slang.embed("src/views/partials/activity/label.html.slang", content_io)
+  - partial "partials/activity/label"
   .content
     .summary
       ' You followed

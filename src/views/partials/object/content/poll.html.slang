@@ -15,7 +15,7 @@ crystal:
   is_disabled = show_results = is_expired || has_voted || is_anonymous || (is_author && !is_draft)
   votes_count = tallies[:options].sum(&.votes_count)
 turbo-frame.ui.segment.poll id="poll-#{question.id}" data-controller="poll" data-poll-id=question.id data-turbo-permanent=true
-  form.poll-vote-form method="post" action=Ktistec::SafeURI.from("/polls/#{question.id}/vote") data-poll-target="voteForm"
+  form.poll-vote-form method="post" action=Utils::Paths.poll_vote_path(question) data-poll-target="voteForm"
     = authenticity_token(env)
     - options_classes = [has_voted ? "voted" : nil, is_disabled ? "disabled" : nil].compact.join(" ")
     .poll-options class=options_classes
@@ -34,7 +34,7 @@ turbo-frame.ui.segment.poll id="poll-#{question.id}" data-controller="poll" data
               - else
                 input type="radio" name="options" value=option.name data-action="poll#optionSelected"
             span.option-name
-              = s Ktistec::Emoji.emojify(option.name, object_emojis)
+              = emoji_html(option.name, object, emojis: object_emojis)
           - if show_results
             .poll-option-votes
               - option_count = option.votes_count

@@ -34,26 +34,26 @@ class TableOfContentsController
     tree
   end
 
-  def self.render_toc_html(tree : Hash(String, PathTreeNode), prefix : String, io : IO)
+  def self.render_toc_html(tree : Hash(String, PathTreeNode), prefix : String, content_io : IO)
     tree.each do |segment, node|
-      io << %Q|<div class="item">|
+      content_io << %Q|<div class="item">|
       if (entry = node.entry) && (display_path = entry.canonical_path)
-        io << %Q|<a href="#{::HTML.escape(display_path)}">#{::HTML.escape(segment)}</a>|
+        content_io << %Q|<a href="#{::HTML.escape(display_path)}">#{::HTML.escape(segment)}</a>|
       else
-        io << ::HTML.escape(segment)
+        content_io << ::HTML.escape(segment)
       end
       unless node.children.empty?
-        io << %Q|<div class="list">|
-        render_toc_html(node.children, "#{prefix}/#{segment}", io)
-        io << %Q|</div>|
+        content_io << %Q|<div class="list">|
+        render_toc_html(node.children, "#{prefix}/#{segment}", content_io)
+        content_io << %Q|</div>|
       end
-      io << %Q|</div>|
+      content_io << %Q|</div>|
     end
   end
 
   def self.render_toc_html(tree : Hash(String, PathTreeNode), prefix : String = "") : String
-    String.build do |io|
-      render_toc_html(tree, prefix, io)
+    String.build do |content_io|
+      render_toc_html(tree, prefix, content_io)
     end
   end
 

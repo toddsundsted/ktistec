@@ -1,6 +1,6 @@
 article.event
   - _actor = activity.actor
-  - Slang.embed("src/views/partials/activity/label.html.slang", content_io)
+  - partial "partials/activity/label"
   .content
     .summary
       a> href=_actor.display_link = _actor.display_name

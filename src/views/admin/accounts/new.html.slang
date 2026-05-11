@@ -7,5 +7,5 @@ p Passwords must be at least six characters long, and must consist of at least o
 crystal:
   form_action = "/admin/accounts"
   button_text = "Create Account"
-- Slang.embed("src/views/partials/account_form.html.slang", content_io)
+- partial "partials/account_form"
 a.ui.button href="/admin/accounts" Back to Accounts

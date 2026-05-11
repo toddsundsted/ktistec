@@ -13,5 +13,5 @@
   h1 Featured
   section.ui.feed data-controller="icon-load-error"
     - objects.each do |object|
-      - object_partial(env, object, content_io: content_io)
-  - paginate(env, objects, content_io)
+      - partial object_partial(env, object)
+  - partial paginate(env, objects)

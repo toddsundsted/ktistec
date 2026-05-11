@@ -34,10 +34,10 @@ module Ktistec::ViewHelper
     def paginate(env, collection, content_io)
       query = env.params.query
       if collection.cursor_start
-        Slang.embed "src/views/partials/cursor_paginator.html.slang", content_io
+        partial "partials/cursor_paginator"
       else
         page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1 # ameba:disable Lint/UselessAssign
-        Slang.embed "src/views/partials/paginator.html.slang", content_io
+        partial "partials/paginator"
       end
     end
   end

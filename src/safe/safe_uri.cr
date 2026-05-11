@@ -4,15 +4,18 @@ module Ktistec
   # A `String` wrapper marking a URL safe to emit raw into a URL
   # attribute slot (`href`, `src`, `action`, ...).
   #
-  # Admits either an absolute URL with an allowed display scheme
-  # (http, https, mailto, ...) or a path-only / query-only /
-  # fragment-only relative reference.
+  # `from?` and `from` validate input and admit only absolute URLs
+  # with an allowlisted display scheme (http, https, mailto, tel,
+  # ...).
   #
   struct SafeURI
     def initialize(@value : String)
     end
 
     # Validates and wraps the input.
+    #
+    # Admits an absolute URL with an allowlisted display scheme
+    # (http, https, mailto, tel, ...). Rejects relative references.
     #
     # Returns `nil` if invalid.
     #
@@ -22,10 +25,14 @@ module Ktistec
     def self.from?(string : String) : SafeURI?
       return if string.starts_with?("//")
       return unless ::Ktistec::Util.safe_url?(string)
+      return unless ::Ktistec::Util.url_scheme(string)
       new(string)
     end
 
     # Validates and wraps the input.
+    #
+    # Same admission rules as `from?` (absolute URL, allowlisted
+    # display scheme).
     #
     # Raises `ArgumentError` if invalid.
     #

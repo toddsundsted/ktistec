@@ -1,4 +1,4 @@
-require "../framework/web_finger"
+require "./web_finger"
 
 module Ktistec
   # Utilities for network operations.

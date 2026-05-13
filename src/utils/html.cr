@@ -2,7 +2,7 @@ require "json"
 require "xml"
 require "libxml_ext"
 
-require "../framework/web_finger"
+require "./web_finger"
 
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"

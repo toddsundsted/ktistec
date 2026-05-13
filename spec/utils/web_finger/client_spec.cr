@@ -1,13 +1,13 @@
 require "spectator"
 
-require "../../../src/framework/web_finger"
+require "../../../src/utils/web_finger"
 
 require "../../spec_helper/base"
 require "../../spec_helper/network"
 
 # Stubs the host-meta lookup. returns a non-standard webfinger
 # template so tests don't accidentally exercise the fall-back template
-# defined in `src/framework/web_finger/client.cr`.
+# defined in `src/utils/web_finger/client.cr`.
 private def stub_host_meta(host)
   body = <<-XML
     <?xml version="1.0"?>

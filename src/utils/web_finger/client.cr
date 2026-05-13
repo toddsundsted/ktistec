@@ -1,5 +1,5 @@
 require "../host_meta"
-require "../open"
+require "../../framework/open"
 
 module Ktistec
   module WebFinger

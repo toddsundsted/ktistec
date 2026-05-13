@@ -1,4 +1,4 @@
-require "../open"
+require "../../framework/open"
 
 module Ktistec
   module HostMeta

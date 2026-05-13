@@ -2,7 +2,7 @@ require "spectator"
 require "http/request"
 require "socket"
 
-require "../../src/framework/web_finger"
+require "../../src/utils/web_finger"
 
 require "./base"
 

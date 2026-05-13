@@ -58,6 +58,7 @@ module Ktistec
     #
     def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10)
       was = url
+      error_class = Error # default error class
       message = "Failed"
       attempts.times do
         start = Time.instant
@@ -96,6 +97,7 @@ module Ktistec
             message = "Access denied [#{response.status_code}]"
             break
           when 404, 410
+            error_class = NotFoundError
             message = "Does not exist [#{response.status_code}]"
             break
           when 500
@@ -135,7 +137,7 @@ module Ktistec
         else
           "#{message}: #{was}"
         end
-      raise Error.new(message)
+      raise error_class.new(message)
     end
 
     # :ditto:
@@ -182,6 +184,11 @@ module Ktistec
     end
 
     class Error < Exception
+    end
+
+    # Raised when the response status is 404 or 410.
+    #
+    class NotFoundError < Error
     end
   end
 end

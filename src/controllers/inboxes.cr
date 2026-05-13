@@ -227,12 +227,13 @@ class InboxesController
           end
         elsif activity.is_a?(ActivityPub::Activity::Delete)
           Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
-          headers = Ktistec::Signature.sign(account.actor, object_iri, method: :get)
-          headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-          headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
-          response = HTTP::Client.get(object_iri, headers)
-          if response.status_code.in?([404, 410])
+          begin
+            headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
+            Ktistec::Network.get(account.actor, object_iri, headers)
+          rescue Ktistec::Network::NotFoundError
             verified = true
+          rescue Ktistec::Network::Error
+            # other errors — leave unverified
           end
         end
       end

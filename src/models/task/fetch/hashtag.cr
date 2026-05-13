@@ -199,7 +199,7 @@ class Task
               elsif (uri = URI.parse(node.href)).path =~ %r|^/tags/([^/]+)$|
                 url = uri.resolve("/api/v1/timelines/tag/#{$1}").to_s
                 headers = HTTP::Headers{"Accept" => "application/json"}
-                Ktistec::Open.open?(source, url, headers) do |response|
+                Ktistec::Network.get?(source, url, headers) do |response|
                   Log.trace { "fetch_one [#{id}] - iri: #{url}" }
                   Array(JSON::Any).from_json(response.body).reduce([] of String) do |items, item|
                     if (item = item.as_h?) && (item = item.dig?("uri")) && (item = item.as_s?)

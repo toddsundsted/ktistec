@@ -1,7 +1,7 @@
 require "uri"
 
 require "../../../framework/model"
-require "../../../framework/open"
+require "../../../utils/network"
 require "../../../framework/util"
 require "../../../ktistec/constants"
 require "../../activity_pub"
@@ -92,7 +92,7 @@ module Ktistec
               instance = nil
             else
               headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-              Ktistec::Open.open?(key_pair, iri, headers) do |response|
+              Ktistec::Network.get?(key_pair, iri, headers) do |response|
                 instance = self.from_json_ld(response.body, **options)
                 if instance && !instance.iri_matches?(iri)
                   Log.warn { "#{self}.dereference? - #{iri} - IRI mismatch: requested #{iri}, got #{instance.iri}" }
@@ -129,7 +129,7 @@ module Ktistec
                             {{name}}_ = self.{{name}}?
                           else
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-                            Ktistec::Open.open?(key_pair, {{foreign_key}}, headers) do |response|
+                            Ktistec::Network.get?(key_pair, {{foreign_key}}, headers) do |response|
                               {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
                               if {{name}}_ && !{{name}}_.iri_matches?({{foreign_key}})
                                 Log.warn { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - IRI mismatch: requested #{{{foreign_key}}}, got #{{{name}}_.iri}" }

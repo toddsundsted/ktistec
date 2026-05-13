@@ -79,7 +79,7 @@ class InteractionsController
         ActivityPub::Object.find(uri)
       else
         headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-        Ktistec::Open.open?(env.account.actor, uri, headers) do |response|
+        Ktistec::Network.get?(env.account.actor, uri, headers) do |response|
           ActivityPub.from_json_ld(response.body, include_key: true)
         end
       end

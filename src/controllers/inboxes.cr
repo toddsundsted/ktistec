@@ -1,6 +1,6 @@
 require "../framework/controller"
 require "../framework/json_ld"
-require "../framework/open"
+require "../utils/network"
 require "../framework/signature"
 require "../ktistec/constants"
 require "../models/activity_pub/activity/**"
@@ -81,7 +81,7 @@ class InboxesController
     else
       # cases 2 & 3: path URI
       accept = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-      response = Ktistec::Open.open?(account.actor, key_id, accept)
+      response = Ktistec::Network.get?(account.actor, key_id, accept)
       unless response
         Log.warn { "[#{request_id}] failed to fetch key for #{key_id}" }
         return

@@ -1,5 +1,5 @@
 require "../framework/controller"
-require "../framework/open"
+require "../utils/network"
 require "../ktistec/constants"
 
 class ProxyController
@@ -10,7 +10,7 @@ class ProxyController
       bad_request "Missing 'id'"
     end
     headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-    Ktistec::Open.open(env.account.actor, id, headers) do |response|
+    Ktistec::Network.get(env.account.actor, id, headers) do |response|
       env.response.content_type = response.content_type || "application/ld+json"
       response.body
     end

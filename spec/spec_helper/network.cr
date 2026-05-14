@@ -16,10 +16,22 @@ require "./base"
 #   "link-local"  -> 169.254.0.1 (link-local)
 #   "unspecified" -> 0.0.0.0     (unspecified)
 #
-# Hostnames matching "socket-addrinfo-error" raise the error directly.
+# The "multi-answer-mixed" hostname resolves to a public address
+# followed by a private one.
+#
+# Hostnames matching "socket-addrinfo-error" raise an error.
 #
 struct Socket::Addrinfo
   def self.resolve(domain : String, service, family : Family? = nil, type : Type = nil, protocol : Protocol = Protocol::IP, timeout = nil) : Array(Addrinfo)
+    # implementation note: `previous_def` calls the real stdlib
+    # resolver, which delegates to `getaddrinfo(3)`. POSIX specifies
+    # that when the node string parses as a numeric IP address, no DNS
+    # lookup is performed--the call is a local string-to-Addrinfo
+    # conversion.
+    if domain =~ /multi-answer-mixed/
+      return previous_def("93.184.216.34", service, family, type, protocol, timeout) +
+        previous_def("10.0.0.1", service, family, type, protocol, timeout)
+    end
     ip = case domain
          when /socket-addrinfo-error/
            raise Socket::Addrinfo::Error.from_os_error(nil, nil)

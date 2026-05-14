@@ -258,17 +258,64 @@ module Ktistec
       end
     end
 
-    # Resolves the hostname and checks every resulting IP address
-    # against private and otherwise-restricted ranges.
+    DNS_TIMEOUT     = 5.seconds
+    CONNECT_TIMEOUT = 5.seconds
+    READ_TIMEOUT    = 5.seconds
+    WRITE_TIMEOUT   = 5.seconds
+
+    # Resolves `host` on `port` with a DNS timeout, validates every
+    # returned address against the SSRF policy, and returns the first
+    # validated `Addrinfo`.
     #
-    private def validate_host(host : String)
-      addrinfos = Socket::Addrinfo.resolve(host, 443, type: Socket::Type::STREAM)
+    private def resolve_and_validate(host : String, port : Int32) : Socket::Addrinfo
+      addrinfos = Socket::Addrinfo.tcp(host, port, timeout: DNS_TIMEOUT)
       raise Error.new("No addresses found: #{host}") if addrinfos.empty?
       addrinfos.each do |addrinfo|
         unless safe_for_untrusted_outbound_http?(addrinfo.ip_address)
           raise Error.new("Request to private address denied: #{host}")
         end
       end
+      addrinfos.first
+    end
+
+    # Opens a TCP socket to the specified `Addrinfo` and, for HTTPS,
+    # wraps it in a TLS layer using the URL hostname for SNI and
+    # peer-certificate verification.
+    #
+    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo) : IO
+      tcp = TCPSocket.new(addrinfo.family)
+      begin
+        tcp.connect(addrinfo, timeout: CONNECT_TIMEOUT)
+      rescue ex
+        tcp.close
+        raise ex
+      end
+      tcp.read_timeout = READ_TIMEOUT
+      tcp.write_timeout = WRITE_TIMEOUT
+      tcp.sync = false
+      if uri.scheme == "https"
+        begin
+          OpenSSL::SSL::Socket::Client.new(
+            tcp,
+            context: OpenSSL::SSL::Context::Client.new,
+            sync_close: true,
+            hostname: uri.host.not_nil!,
+          )
+        rescue ex
+          tcp.close
+          raise ex
+        end
+      else
+        tcp
+      end
+    end
+
+    private def make_client(uri : URI) : HTTP::Client
+      host = uri.host.not_nil!
+      port = uri.port || (uri.scheme == "https" ? 443 : 80)
+      addrinfo = resolve_and_validate(host, port)
+      io = open_socket(uri, addrinfo)
+      HTTP::Client.new(io: io, host: host, port: port)
     end
 
     # Fetches the specified URL via HTTP GET.
@@ -284,6 +331,7 @@ module Ktistec
       message = "Failed"
       attempts.times do
         start = Time.instant
+        client = nil
         begin
           uri = URI.parse(url)
           host = uri.host.presence
@@ -291,12 +339,7 @@ module Ktistec
           unless uri.scheme == "http" || uri.scheme == "https"
             raise Error.new("URL scheme not supported: #{url}")
           end
-          validate_host(host)
-          client = HTTP::Client.new(uri)
-          client.dns_timeout = 5.seconds
-          client.connect_timeout = 5.seconds
-          client.write_timeout = 5.seconds
-          client.read_timeout = 5.seconds
+          client = make_client(uri)
           request_headers =
             if key_pair
               Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
@@ -304,6 +347,12 @@ module Ktistec
               headers.dup
             end
           request_headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
+          # set Host explicitly to match what Signature.sign covered
+          # (`url.authority`). the IO-bound HTTP::Client constructor used
+          # by `make_client` does not carry TLS state, so its default
+          # Host header would append `:443` on HTTPS default-port URLs
+          # and break signature verification at the receiver.
+          request_headers["Host"] = uri.authority.not_nil!
           response = client.get(uri.request_target, request_headers)
           case response.status_code
           when 200

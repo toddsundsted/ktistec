@@ -133,6 +133,11 @@ class HTTP::Client
     @port = uri.port || 80
   end
 
+  def initialize(io : IO, host : String = "", port : Int32 = 80)
+    @host = host
+    @port = port
+  end
+
   def self.get(url : String | URI, headers : HTTP::Headers? = nil)
     url = URI.parse(url) if url.is_a?(String)
     new(url).get(url.request_target, headers)
@@ -258,6 +263,29 @@ end
 
 BEFORE_PROCS << -> do
   HTTP::Client.reset
+  Ktistec::Network.reset_last_addrinfo
+end
+
+# test override: records the passed `Addrinfo` so specs can verify it
+# matches what the resolver produced.
+#
+module Ktistec
+  module Network
+    @@last_addrinfo : Socket::Addrinfo? = nil
+
+    def self.last_addrinfo
+      @@last_addrinfo
+    end
+
+    def self.reset_last_addrinfo
+      @@last_addrinfo = nil
+    end
+
+    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo) : IO
+      @@last_addrinfo = addrinfo
+      IO::Memory.new
+    end
+  end
 end
 
 # Ktistec::WebFinger mock.

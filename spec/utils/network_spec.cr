@@ -173,6 +173,41 @@ Spectator.describe Ktistec::Network do
     end
   end
 
+  describe "Host header" do
+    it "matches the signed authority on default-port HTTPS" do
+      described_class.get(key_pair, "https://external/specified-page")
+      expect(HTTP::Client.requests.last.headers["Host"]?).to eq("external")
+    end
+
+    it "matches the signed authority on non-default-port HTTPS" do
+      described_class.get(key_pair, "https://external:8443/specified-page")
+      expect(HTTP::Client.requests.last.headers["Host"]?).to eq("external:8443")
+    end
+
+    it "matches the signed authority on default-port HTTP" do
+      described_class.get(key_pair, "http://external/specified-page")
+      expect(HTTP::Client.requests.last.headers["Host"]?).to eq("external")
+    end
+  end
+
+  describe "DNS pinning" do
+    # the IP passed to the socket layer must be the IP the resolver
+    # produced -- there must be no second DNS lookup between
+    # validation and use.
+
+    it "passes the resolved Addrinfo to the socket layer" do
+      described_class.get(key_pair, "https://external/specified-page")
+      expect(described_class.last_addrinfo.try(&.ip_address.address)).to eq("93.184.216.34")
+      expect(HTTP::Client.requests.size).to eq(1)
+    end
+
+    it "re-resolves and re-pins on each redirect hop" do
+      described_class.get(key_pair, "https://external/redirected-page-absolute")
+      expect(described_class.last_addrinfo.try(&.ip_address.address)).to eq("93.184.216.34")
+      expect(HTTP::Client.requests.size).to eq(2)
+    end
+  end
+
   describe ".safe_for_untrusted_outbound_http?" do
     # the "accepts public" blocks check boundaries just outside each
     # registered range.

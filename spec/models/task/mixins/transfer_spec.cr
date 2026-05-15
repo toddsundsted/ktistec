@@ -115,7 +115,7 @@ Spectator.describe Task::Transfer do
 
       it "stores the failure reason" do
         subject.transfer(activity, from: transferer, to: [local_recipient.iri])
-        expect(subject.failures).to have(/OpenSSL::Error: .* #{local_recipient.inbox}/)
+        expect(subject.failures).to have(/Secure connection failure: #{local_recipient.inbox}/)
       end
 
       it "does not mark the recipient as down" do
@@ -137,12 +137,44 @@ Spectator.describe Task::Transfer do
 
       it "stores the failure reason" do
         subject.transfer(activity, from: transferer, to: [local_recipient.iri])
-        expect(subject.failures).to have(/IO::Error: .* #{local_recipient.inbox}/)
+        expect(subject.failures).to have(/I\/O error: #{local_recipient.inbox}/)
       end
 
       it "does not mark the recipient as down" do
         expect { subject.transfer(activity, from: transferer, to: [local_recipient.iri]) }
           .not_to change { local_recipient.down? }
+      end
+    end
+
+    context "given a recipient with a private-address inbox" do
+      before_each do
+        remote_recipient.assign(inbox: "https://loopback.example/actor/inbox").save
+      end
+
+      it "does not post to the inbox" do
+        subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.inbox}")
+      end
+
+      it "records a failure" do
+        subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(subject.failures).to have(/Request to private address denied/)
+      end
+    end
+
+    context "given a recipient with a private-address shared inbox" do
+      before_each do
+        remote_recipient.assign(shared_inbox: "https://loopback.example/shared/inbox").save
+      end
+
+      it "does not post to the shared inbox" do
+        subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(HTTP::Client.requests).not_to have("POST #{remote_recipient.shared_inbox}")
+      end
+
+      it "falls back to the inbox" do
+        subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(HTTP::Client.requests).to have("POST #{remote_recipient.inbox}")
       end
     end
 

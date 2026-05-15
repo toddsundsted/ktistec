@@ -1,5 +1,5 @@
-require "../../../framework/signature"
 require "../../../ktistec/constants"
+require "../../../utils/network"
 
 class Task
   module Transfer
@@ -92,29 +92,19 @@ class Task
       while (entry = work_queue.shift?)
         inbox, inbox_recipients = entry
         body = activity.to_json_ld
-        headers = Ktistec::Signature.sign(transferer, inbox, body, Ktistec::Constants::CONTENT_TYPE_HEADER)
-        headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
         success = false
         message = ""
         begin
-          uri = URI.parse(inbox)
-          client = HTTP::Client.new(uri)
-          client.dns_timeout = 5.seconds
-          client.connect_timeout = 10.seconds
-          client.write_timeout = 10.seconds
-          client.read_timeout = 10.seconds
-          response = client.post(uri.request_target, headers, body)
+          response = Ktistec::Network.post(transferer, inbox, body, Ktistec::Constants::CONTENT_TYPE_HEADER)
           if response.success?
             success = true
           else
             message = "failed to deliver to #{inbox}: [#{response.status_code}] #{response.body}"
             Log.debug { sanitize_log_message(message) }
           end
-        rescue ex : OpenSSL::Error | IO::Error
-          message = "#{ex.class}: #{ex.message}: #{inbox}"
+        rescue ex : Ktistec::Network::Error
+          message = "#{ex.message}"
           Log.debug { message }
-        ensure
-          client.try(&.close)
         end
         # fall back to personal inboxes
         unless success

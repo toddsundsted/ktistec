@@ -318,6 +318,10 @@ module Ktistec
       HTTP::Client.new(io: io, host: host, port: port)
     end
 
+    MAX_GET_RESPONSE_BYTES = 1_048_576
+
+    MAX_DISCOVERY_RESPONSE_BYTES = 65_536
+
     # Fetches the specified URL via HTTP GET.
     #
     # When `key_pair` is supplied, the request is signed; pass `nil`
@@ -325,7 +329,12 @@ module Ktistec
     #
     # Will automatically follow `attempts` redirects (default 10).
     #
-    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10)
+    # The response body is capped at `max_bytes`; responses whose
+    # `Content-Length` exceeds the cap are rejected before any body
+    # bytes are read, and streamed bodies are aborted if they grow
+    # past the cap.
+    #
+    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
       was = url
       error_class = Error # default error class
       message = "Failed"
@@ -353,26 +362,41 @@ module Ktistec
           # Host header would append `:443` on HTTPS default-port URLs
           # and break signature verification at the receiver.
           request_headers["Host"] = uri.authority.not_nil!
-          response = client.get(uri.request_target, request_headers)
-          case response.status_code
+          status_code = 0
+          response_headers = HTTP::Headers.new
+          body_capped = ""
+          client.get(uri.request_target, request_headers) do |response|
+            status_code = response.status_code
+            response_headers = response.headers
+            if status_code == 200
+              if (cl = response_headers["Content-Length"]?) && (n = cl.to_i?) && n > max_bytes
+                raise Error.new("Response body too large [Content-Length=#{n} > #{max_bytes}]: #{url}")
+              end
+              if (io = response.body_io?)
+                body_capped = read_strict_capped(io, max_bytes, url)
+              end
+            end
+          end
+          case status_code
           when 200
-            return response
+            status = HTTP::Status.new(status_code)
+            return HTTP::Client::Response.new(status, body: body_capped, headers: response_headers)
           when 301, 302, 303, 307, 308
-            if (tmp = response.headers["Location"]?) && (url = uri.resolve(tmp).to_s)
+            if (tmp = response_headers["Location"]?) && (url = uri.resolve(tmp).to_s)
               next
             else
-              message = "Could not redirect [#{response.status_code}] [#{tmp}]"
+              message = "Could not redirect [#{status_code}] [#{tmp}]"
               break
             end
           when 401, 403
-            message = "Access denied [#{response.status_code}]"
+            message = "Access denied [#{status_code}]"
             break
           when 404, 410
             error_class = NotFoundError
-            message = "Does not exist [#{response.status_code}]"
+            message = "Does not exist [#{status_code}]"
             break
           when 500
-            message = "Server error [#{response.status_code}]"
+            message = "Server error [#{status_code}]"
             break
           else
             break
@@ -411,45 +435,57 @@ module Ktistec
       raise error_class.new(message)
     end
 
-    # :ditto:
-    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, &)
-      yield get(key_pair, url, headers, attempts)
+    # Reads up to `max` bytes from `io` into a String. Raises if `io`
+    # has more bytes available past the limit.
+    #
+    private def read_strict_capped(io : IO, max : Int32, url) : String
+      buf = IO::Memory.new
+      bytes = IO.copy(io, buf, max + 1)
+      if bytes > max
+        raise Error.new("Response body too large [>#{max} bytes]: #{url}")
+      end
+      buf.to_s
     end
 
     # :ditto:
-    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10)
-      get(nil, url, headers, attempts)
+    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
+      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes)
     end
 
     # :ditto:
-    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, &)
-      yield get(nil, url, headers, attempts)
+    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
+      get(nil, url, headers, attempts, max_bytes: max_bytes)
     end
 
     # :ditto:
-    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10)
-      get(key_pair, url, headers, attempts)
+    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
+      yield get(nil, url, headers, attempts, max_bytes: max_bytes)
+    end
+
+    # :ditto:
+    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
+      get(key_pair, url, headers, attempts, max_bytes: max_bytes)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
     # :ditto:
-    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, &)
-      yield get(key_pair, url, headers, attempts)
+    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
+      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
     # :ditto:
-    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10)
-      get(nil, url, headers, attempts)
+    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
+      get(nil, url, headers, attempts, max_bytes: max_bytes)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
     # :ditto:
-    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, &)
-      yield get(nil, url, headers, attempts)
+    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
+      yield get(nil, url, headers, attempts, max_bytes: max_bytes)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end

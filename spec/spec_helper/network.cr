@@ -219,6 +219,26 @@ class HTTP::Client
     end
   end
 
+  def get(path : String, headers : HTTP::Headers? = nil, &)
+    response = get(path, headers)
+    # mimic streaming form: yield a response with body_io populated
+    # instead of body, matching what Crystal's real HTTP::Client does.
+    # statuses that disallow a body (e.g. 204) get yielded as-is, since
+    # HTTP::Client::Response refuses to be constructed with body_io on
+    # those statuses.
+    streaming =
+      if HTTP::Client::Response.mandatory_body?(response.status)
+        HTTP::Client::Response.new(
+          response.status_code,
+          headers: response.headers,
+          body_io: IO::Memory.new(response.body),
+        )
+      else
+        response
+      end
+    yield streaming
+  end
+
   def self.post(url : String | URI, headers : HTTP::Headers, body : String)
     url = URI.parse(url) if url.is_a?(String)
     new(url).post(url.request_target, headers, body)

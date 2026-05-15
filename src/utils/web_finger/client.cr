@@ -51,7 +51,7 @@ module Ktistec
 
         url = template.gsub("{uri}", URI.encode_www_form(account))
 
-        response = Ktistec::Network.get(url, attempts: attempts)
+        response = Ktistec::Network.get(url, attempts: attempts, max_bytes: Ktistec::Network::MAX_DISCOVERY_RESPONSE_BYTES)
         mt = response.mime_type.try(&.media_type)
         if mt =~ /xml/
           Result.from_xml(response.body)

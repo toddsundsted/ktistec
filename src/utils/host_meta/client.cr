@@ -26,7 +26,7 @@ module Ktistec
       # returns `Ktistec::HostMeta::Result`.
       #
       def self.query(host, attempts = 10)
-        response = Ktistec::Network.get("https://#{host}/.well-known/host-meta", attempts: attempts)
+        response = Ktistec::Network.get("https://#{host}/.well-known/host-meta", attempts: attempts, max_bytes: Ktistec::Network::MAX_DISCOVERY_RESPONSE_BYTES)
         mt = response.mime_type.try(&.media_type)
         if mt =~ /xml/
           Result.from_xml(response.body)

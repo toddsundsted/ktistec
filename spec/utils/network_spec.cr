@@ -165,6 +165,52 @@ Spectator.describe Ktistec::Network do
         expect(HTTP::Client.requests).to have("GET #{mock2.iri}")
       end
     end
+
+    context "given a response larger than the cap" do
+      before_each do
+        headers = HTTP::Headers{"Content-Length" => (Ktistec::Network::MAX_GET_RESPONSE_BYTES + 1).to_s}
+        HTTP::Client.cache.set_response("https://external/oversize", HTTP::Client::Response.new(200, body: "", headers: headers))
+      end
+
+      it "rejects the response" do
+        expect { described_class.get(key_pair, "https://external/oversize") }.to raise_error(Ktistec::Network::Error, /Response body too large/)
+      end
+    end
+
+    context "given a response body larger than the cap" do
+      before_each do
+        body = "x" * (Ktistec::Network::MAX_GET_RESPONSE_BYTES + 1)
+        HTTP::Client.cache.set_response("https://external/oversize", HTTP::Client::Response.new(200, body: body))
+      end
+
+      it "rejects the response" do
+        expect { described_class.get(key_pair, "https://external/oversize") }.to raise_error(Ktistec::Network::Error, /Response body too large/)
+      end
+    end
+
+    context "given a response body larger than the override" do
+      before_each do
+        body = "x" * (1024 + 1)
+        HTTP::Client.cache.set_response("https://external/oversize", HTTP::Client::Response.new(200, body: body))
+      end
+
+      it "rejects the response" do
+        expect { described_class.get(key_pair, "https://external/oversize", max_bytes: 1024) }.to raise_error(Ktistec::Network::Error, /Response body too large/)
+      end
+    end
+
+    context "given a response body smaller than the override" do
+      let(body) { "x" * 1024 }
+
+      before_each do
+        HTTP::Client.cache.set_response("https://external/", HTTP::Client::Response.new(200, body: body))
+      end
+
+      it "accepts the response" do
+        response = described_class.get(key_pair, "https://external/", max_bytes: 1024)
+        expect(response.body).to eq(body)
+      end
+    end
   end
 
   describe ".get?" do
@@ -280,12 +326,12 @@ Spectator.describe Ktistec::Network do
 
     context "given a large response body" do
       before_each do
-        body = "x" * (Ktistec::Network::MAX_POST_RESPONSE_BYTES + 1000)
-        HTTP::Client.cache.set_response("https://external/oversize-post", HTTP::Client::Response.new(200, body: body))
+        body = "x" * (Ktistec::Network::MAX_POST_RESPONSE_BYTES + 1)
+        HTTP::Client.cache.set_response("https://external/oversize", HTTP::Client::Response.new(200, body: body))
       end
 
       it "limits the bytes read" do
-        response = described_class.post(key_pair, "https://external/oversize-post", body, content_type)
+        response = described_class.post(key_pair, "https://external/oversize", body, content_type)
         expect(response.body.bytesize).to eq(Ktistec::Network::MAX_POST_RESPONSE_BYTES)
       end
     end

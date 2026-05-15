@@ -11,6 +11,8 @@ class InboxesController
 
   Log = ::Log.for("inbox")
 
+  MAX_INBOX_REQUEST_BYTES = 1_048_576
+
   skip_auth ["/actors/:username/inbox"], POST
 
   # Lightweight `KeyPair` for path-based `keyId` resolution.
@@ -121,7 +123,20 @@ class InboxesController
     unless (account = get_account(env))
       not_found
     end
-    unless (body = env.request.body.try(&.gets_to_end).presence)
+
+    if (content_length = env.request.content_length) && content_length > MAX_INBOX_REQUEST_BYTES
+      payload_too_large
+    end
+
+    body = nil
+    if (io = env.request.body)
+      buf = IO::Memory.new
+      copied = IO.copy(io, buf, MAX_INBOX_REQUEST_BYTES + 1)
+      payload_too_large if copied > MAX_INBOX_REQUEST_BYTES
+      body = buf.to_s
+    end
+
+    unless (body = body.presence)
       bad_request("Body Is Blank")
     end
 

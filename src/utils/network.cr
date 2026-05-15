@@ -454,6 +454,78 @@ module Ktistec
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
+    MAX_POST_RESPONSE_BYTES = 4096
+
+    # Sends a HTTP POST to the specified URL.
+    #
+    # Signs the request internally with `key_pair`.
+    #
+    # The returned response carries up to `MAX_POST_RESPONSE_BYTES` of
+    # the response body.
+    #
+    # Does not follow redirects.
+    #
+    def post(key_pair, url : String, body : String, content_type : String, headers = HTTP::Headers.new) : HTTP::Client::Response
+      start = Time.instant
+      client = nil
+      begin
+        uri = URI.parse(url)
+        host = uri.host.presence
+        raise Error.new("URL has no host: #{url}") unless host
+        unless uri.scheme == "http" || uri.scheme == "https"
+          raise Error.new("URL scheme not supported: #{url}")
+        end
+        client = make_client(uri)
+        request_headers = Ktistec::Signature.sign(key_pair, url, body, content_type).merge!(headers)
+        request_headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
+        # set Host explicitly to match what Signature.sign covered
+        # (`url.authority`). See `.get` above.
+        status_code = 0
+        request_headers["Host"] = uri.authority.not_nil!
+        response_headers = HTTP::Headers.new
+        snippet = ""
+        client.post(uri.request_target, request_headers, body) do |response|
+          status_code = response.status_code
+          response_headers = response.headers
+          # body_io is absent on no-body statuses (e.g., 204, 304).
+          if (io = response.body_io?)
+            snippet = read_capped(io, MAX_POST_RESPONSE_BYTES)
+          end
+        end
+        status = HTTP::Status.new(status_code)
+        if HTTP::Client::Response.mandatory_body?(status)
+          HTTP::Client::Response.new(status, body: snippet, headers: response_headers)
+        else
+          HTTP::Client::Response.new(status, headers: response_headers)
+        end
+      rescue URI::Error
+        raise Error.new("Invalid URI: #{url}")
+      rescue Socket::Addrinfo::Error
+        raise Error.new("Hostname lookup failure: #{url}")
+      rescue Socket::ConnectError
+        raise Error.new("Connection failure: #{url}")
+      rescue OpenSSL::Error
+        raise Error.new("Secure connection failure: #{url}")
+      rescue IO::TimeoutError # subclass of IO::Error
+        raise Error.new("Timeout [#{(Time.instant - start).to_i}s]: #{url}")
+      rescue IO::Error
+        raise Error.new("I/O error: #{url}")
+      rescue Compress::Deflate::Error | Compress::Gzip::Error
+        raise Error.new("Encoding error: #{url}")
+      ensure
+        client.try(&.close)
+      end
+    end
+
+    # Reads up to `max` bytes from `io` into a new String, leaving any
+    # remaining bytes unread.
+    #
+    private def read_capped(io : IO, max : Int32) : String
+      buf = IO::Memory.new
+      IO.copy(io, buf, max)
+      buf.to_s
+    end
+
     class Error < Exception
     end
 

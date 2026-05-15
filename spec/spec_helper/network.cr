@@ -229,6 +229,10 @@ class HTTP::Client
     @@requests << HTTP::Request.new("POST", url.to_s, headers, body)
     if url.scheme && url.authority && url.path
       case url.path
+      when /socket-addrinfo-error/
+        raise Socket::Addrinfo::Error.from_os_error(nil, nil)
+      when /socket-connect-error/
+        raise Socket::ConnectError.from_os_error(nil, nil)
       when /openssl-error/
         raise OpenSSL::Error.new
       when /io-error/
@@ -258,6 +262,26 @@ class HTTP::Client
     else
       HTTP::Client::Response.new(500)
     end
+  end
+
+  def post(path : String, headers : HTTP::Headers, body : String, &)
+    response = post(path, headers, body)
+    # mimic streaming form: yield a response with body_io populated
+    # instead of body, matching what Crystal's real HTTP::Client does.
+    # statuses that disallow a body (e.g. 204) get yielded as-is, since
+    # HTTP::Client::Response refuses to be constructed with body_io on
+    # those statuses.
+    streaming =
+      if HTTP::Client::Response.mandatory_body?(response.status)
+        HTTP::Client::Response.new(
+          response.status_code,
+          headers: response.headers,
+          body_io: IO::Memory.new(response.body),
+        )
+      else
+        response
+      end
+    yield streaming
   end
 end
 

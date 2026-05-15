@@ -208,6 +208,122 @@ Spectator.describe Ktistec::Network do
     end
   end
 
+  describe ".post" do
+    let(content_type) { "application/activity+json" }
+    let(body) { "test" }
+
+    it "sends the POST" do
+      response = described_class.post(key_pair, "https://external/actor/inbox", body, content_type)
+      expect(HTTP::Client.requests).to have("POST https://external/actor/inbox")
+      expect(response.status_code).to eq(200)
+    end
+
+    it "sets the User-Agent" do
+      described_class.post(key_pair, "https://external/actor/inbox", body, content_type)
+      expect(HTTP::Client.requests.last.headers["User-Agent"]).to match(/^ktistec\//)
+    end
+
+    it "signs the request" do
+      described_class.post(key_pair, "https://external/actor/inbox", body, content_type)
+      headers = HTTP::Client.requests.last.headers
+      expect(headers["Signature"]?).to match(/keyId="https:\/\/key_pair#main-key"/)
+      expect(headers["Digest"]?).to match(/^SHA-256=/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://external:abacab/", body, content_type) }.to raise_error(Ktistec::Network::Error, /Invalid URI/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://external/socket-addrinfo-error", body, content_type) }.to raise_error(Ktistec::Network::Error, /Hostname lookup failure/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://external/socket-connect-error", body, content_type) }.to raise_error(Ktistec::Network::Error, /Connection failure/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://external/openssl-error", body, content_type) }.to raise_error(Ktistec::Network::Error, /Secure connection failure/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://external/io-error", body, content_type) }.to raise_error(Ktistec::Network::Error, /I\/O error/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://loopback.example/path", body, content_type) }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://private-ip.example/path", body, content_type) }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://link-local.example/path", body, content_type) }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://unspecified.example/path", body, content_type) }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://multi-answer-mixed.example/path", body, content_type) }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "ftp://example.com/foo", body, content_type) }.to raise_error(Ktistec::Network::Error, /scheme not supported/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "urn:isbn:12345", body, content_type) }.to raise_error(Ktistec::Network::Error, /URL has no host/)
+    end
+
+    context "given a large response body" do
+      before_each do
+        body = "x" * (Ktistec::Network::MAX_POST_RESPONSE_BYTES + 1000)
+        HTTP::Client.cache.set_response("https://external/oversize-post", HTTP::Client::Response.new(200, body: body))
+      end
+
+      it "limits the bytes read" do
+        response = described_class.post(key_pair, "https://external/oversize-post", body, content_type)
+        expect(response.body.bytesize).to eq(Ktistec::Network::MAX_POST_RESPONSE_BYTES)
+      end
+    end
+
+    context "given a response with no body" do
+      before_each do
+        HTTP::Client.cache.set_response("https://external/no-content", HTTP::Client::Response.new(204, headers: HTTP::Headers.new))
+      end
+
+      it "returns a no content response" do
+        response = described_class.post(key_pair, "https://external/no-content", body, content_type)
+        expect(response.status_code).to eq(204)
+      end
+    end
+
+    it "does not POST when the host is rejected" do
+      expect { described_class.post(key_pair, "https://loopback.example/actor/inbox", body, content_type) }.to raise_error(Ktistec::Network::Error)
+      expect(HTTP::Client.requests).to be_empty
+    end
+
+    # see "Host header" describe block above for the rationale.
+
+    it "matches the signed authority on default-port HTTPS" do
+      described_class.post(key_pair, "https://external/actor/inbox", body, content_type)
+      expect(HTTP::Client.requests.last.headers["Host"]?).to eq("external")
+    end
+
+    it "matches the signed authority on non-default-port HTTPS" do
+      described_class.post(key_pair, "https://external:8443/actor/inbox", body, content_type)
+      expect(HTTP::Client.requests.last.headers["Host"]?).to eq("external:8443")
+    end
+
+    it "matches the signed authority on default-port HTTP" do
+      described_class.post(key_pair, "http://external/actor/inbox", body, content_type)
+      expect(HTTP::Client.requests.last.headers["Host"]?).to eq("external")
+    end
+  end
+
   describe ".safe_for_untrusted_outbound_http?" do
     # the "accepts public" blocks check boundaries just outside each
     # registered range.

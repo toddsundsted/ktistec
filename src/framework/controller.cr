@@ -229,6 +229,28 @@ module Ktistec
       {% end %}
     end
 
+    # Caps the size of the inbound request body and replaces
+    # `env.request.body` with a buffered, rewound `IO` containing the
+    # bytes that were read.
+    #
+    # Halts with 413 if the declared `Content-Length` exceeds `max`,
+    # or if the body streams past `max` bytes.
+    #
+    # Must be invoked at the top of a route block.
+    #
+    macro cap_request_body(env, max)
+      if (%content_length = {{env}}.request.content_length) && %content_length > {{max}}
+        payload_too_large
+      end
+      if (%io = {{env}}.request.body)
+        %buf = IO::Memory.new
+        %copied = IO.copy(%io, %buf, {{max}} + 1)
+        payload_too_large if %copied > {{max}}
+        {{env}}.request.body = %buf
+        %buf.rewind
+      end
+    end
+
     # Don't authenticate specified handlers.
     #
     # Use at the beginning of a controller.

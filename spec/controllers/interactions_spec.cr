@@ -163,6 +163,18 @@ Spectator.describe InteractionsController do
       expect(response.status_code).to eq(400)
     end
 
+    OVERSIZE_BODY = "a" * (InteractionsController::MAX_REQUEST_BYTES + 1)
+
+    it "returns 413 when the body exceeds the cap" do
+      post "/remote-interaction", HTML_HEADERS, OVERSIZE_BODY
+      expect(response.status_code).to eq(413)
+    end
+
+    it "returns 413 when the body exceeds the cap" do
+      post "/remote-interaction", JSON_HEADERS, OVERSIZE_BODY
+      expect(response.status_code).to eq(413)
+    end
+
     it "renders an error if domain is missing" do
       post "/remote-interaction", HTML_HEADERS, "action=follow&target=#{URI.encode_path(actor.iri)}"
       expect(XML.parse_html(response.body).xpath_nodes("//form/div[contains(@class,'error message')]/p").first).to match(/The domain must not be blank/)

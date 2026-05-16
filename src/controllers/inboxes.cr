@@ -124,19 +124,9 @@ class InboxesController
       not_found
     end
 
-    if (content_length = env.request.content_length) && content_length > MAX_INBOX_REQUEST_BYTES
-      payload_too_large
-    end
+    cap_request_body env, MAX_INBOX_REQUEST_BYTES
 
-    body = nil
-    if (io = env.request.body)
-      buf = IO::Memory.new
-      copied = IO.copy(io, buf, MAX_INBOX_REQUEST_BYTES + 1)
-      payload_too_large if copied > MAX_INBOX_REQUEST_BYTES
-      body = buf.to_s
-    end
-
-    unless (body = body.presence)
+    unless (body = env.request.body.try(&.gets_to_end).presence)
       bad_request("Body Is Blank")
     end
 

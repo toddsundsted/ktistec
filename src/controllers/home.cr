@@ -9,6 +9,8 @@ class HomeController
 
   PERSON = ActivityPub::Actor::Person.to_s
 
+  MAX_REQUEST_BYTES = 4_096
+
   skip_auth ["/"], GET, POST
   skip_auth ["/feed.rss"], GET
   skip_auth ["/robots.txt"], GET
@@ -61,6 +63,8 @@ class HomeController
   end
 
   post "/" do |env|
+    cap_request_body env, MAX_REQUEST_BYTES
+
     if !Ktistec.settings.host.presence || !Ktistec.settings.site.presence
       settings = Ktistec.settings.assign(step_1_params(env))
 

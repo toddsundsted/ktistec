@@ -191,5 +191,14 @@ Spectator.describe MCPController do
         expect(response.status_code).to eq(400)
       end
     end
+
+    context "with oversized body" do
+      let(json) { "a" * (MCPController::MAX_REQUEST_BYTES + 1) }
+
+      it "returns 413" do
+        post "/mcp", authenticated_headers, json
+        expect(response.status_code).to eq(413)
+      end
+    end
   end
 end

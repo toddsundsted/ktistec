@@ -1,4 +1,5 @@
 require "../../src/controllers/api"
+require "../../src/controllers/oauth2"
 require "../../src/models/oauth2/provider/client"
 
 require "../spec_helper/controller"
@@ -280,6 +281,15 @@ Spectator.describe APIController do
       it "returns 400" do
         post "/api/v1/apps", headers: JSON_HEADERS, body: body
         expect(response.status_code).to eq(400)
+      end
+    end
+
+    context "with oversized body" do
+      let(body) { "a" * (OAuth2Controller::MAX_REQUEST_BYTES + 1) }
+
+      it "returns 413" do
+        post "/api/v1/apps", headers: JSON_HEADERS, body: body
+        expect(response.status_code).to eq(413)
       end
     end
   end
@@ -698,6 +708,12 @@ Spectator.describe APIController do
           expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: form }
             .to change { actor.reload!.image }.from(nil)
         end
+      end
+
+      it "returns 413 when the body exceeds the cap" do
+        body = "a" * (APIController::MAX_PROFILE_REQUEST_BYTES + 1)
+        patch "/api/v1/accounts/update_credentials", headers: headers, body: body
+        expect(response.status_code).to eq(413)
       end
     end
   end
@@ -1363,6 +1379,12 @@ Spectator.describe APIController do
         post "/api/v1/statuses", headers: json_bearer_headers(access_token.token), body: {"status" => ""}.to_json
         expect(response.status_code).to eq(422)
       end
+
+      it "returns 413 when the body exceeds the cap" do
+        body = "a" * (APIController::MAX_STATUS_REQUEST_BYTES + 1)
+        post "/api/v1/statuses", headers: json_bearer_headers(access_token.token), body: body
+        expect(response.status_code).to eq(413)
+      end
     end
   end
 
@@ -1785,6 +1807,12 @@ Spectator.describe APIController do
       it "returns 422" do
         post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: {"choices" => [99]}.to_json
         expect(response.status_code).to eq(422)
+      end
+
+      it "returns 413 when the body exceeds the cap" do
+        body = "a" * (APIController::MAX_VOTE_REQUEST_BYTES + 1)
+        post "/api/v1/polls/#{poll.id}/votes", headers: json_bearer_headers(access_token.token), body: body
+        expect(response.status_code).to eq(413)
       end
 
       context "with form-encoded body" do

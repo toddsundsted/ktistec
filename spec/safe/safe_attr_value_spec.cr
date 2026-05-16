@@ -49,6 +49,16 @@ Spectator.describe Ktistec::SafeAttrValue do
     end
   end
 
+  describe "#to_json" do
+    it "encodes the wrapped value" do
+      expect(described_class.assert_safe("hello world").to_json).to eq(%("hello world"))
+    end
+
+    it "JSON-escapes the wrapped value" do
+      expect(described_class.assert_safe(%(a"b\\c)).to_json).to eq(%("a\\"b\\\\c"))
+    end
+  end
+
   describe "#presence" do
     it "returns self when non-blank" do
       v = described_class.assert_safe("x")

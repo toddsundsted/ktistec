@@ -1,6 +1,6 @@
 require "../framework/controller"
 require "../framework/json_ld"
-require "../framework/open"
+require "../utils/network"
 require "../framework/signature"
 require "../ktistec/constants"
 require "../models/activity_pub/activity/**"
@@ -10,6 +10,8 @@ class InboxesController
   include Ktistec::Controller
 
   Log = ::Log.for("inbox")
+
+  MAX_INBOX_REQUEST_BYTES = 1_048_576
 
   skip_auth ["/actors/:username/inbox"], POST
 
@@ -81,7 +83,7 @@ class InboxesController
     else
       # cases 2 & 3: path URI
       accept = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-      response = Ktistec::Open.open?(account.actor, key_id, accept)
+      response = Ktistec::Network.get?(account.actor, key_id, accept)
       unless response
         Log.warn { "[#{request_id}] failed to fetch key for #{key_id}" }
         return
@@ -121,6 +123,9 @@ class InboxesController
     unless (account = get_account(env))
       not_found
     end
+
+    cap_request_body env, MAX_INBOX_REQUEST_BYTES
+
     unless (body = env.request.body.try(&.gets_to_end).presence)
       bad_request("Body Is Blank")
     end
@@ -227,12 +232,13 @@ class InboxesController
           end
         elsif activity.is_a?(ActivityPub::Activity::Delete)
           Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
-          headers = Ktistec::Signature.sign(account.actor, object_iri, method: :get)
-          headers["Accept"] = Ktistec::Constants::ACCEPT_HEADER
-          headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
-          response = HTTP::Client.get(object_iri, headers)
-          if response.status_code.in?([404, 410])
+          begin
+            headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
+            Ktistec::Network.get(account.actor, object_iri, headers)
+          rescue Ktistec::Network::NotFoundError
             verified = true
+          rescue Ktistec::Network::Error
+            # other errors — leave unverified
           end
         end
       end

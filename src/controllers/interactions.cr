@@ -4,6 +4,8 @@ require "../utils/network"
 class InteractionsController
   include Ktistec::Controller
 
+  MAX_REQUEST_BYTES = 4_096
+
   skip_auth ["/objects/:id/remote-:action"], GET
   skip_auth ["/actors/:username/remote-follow"], GET
   skip_auth ["/remote-interaction"], POST
@@ -34,6 +36,8 @@ class InteractionsController
   end
 
   post "/remote-interaction" do |env|
+    cap_request_body env, MAX_REQUEST_BYTES
+
     if (params = (env.params.body.presence || env.params.json.presence))
       if (param = params["domain"]?) && param.is_a?(String)
         domain = param.lstrip('@').presence
@@ -79,7 +83,7 @@ class InteractionsController
         ActivityPub::Object.find(uri)
       else
         headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-        Ktistec::Open.open?(env.account.actor, uri, headers) do |response|
+        Ktistec::Network.get?(env.account.actor, uri, headers) do |response|
           ActivityPub.from_json_ld(response.body, include_key: true)
         end
       end

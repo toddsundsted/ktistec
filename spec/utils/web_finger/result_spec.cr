@@ -1,6 +1,6 @@
 require "spectator"
 
-require "../../../src/framework/web_finger"
+require "../../../src/utils/web_finger"
 require "../../../src/ktistec/constants"
 
 Spectator.describe Ktistec::WebFinger::Result do

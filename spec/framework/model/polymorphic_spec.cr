@@ -221,14 +221,14 @@ Spectator.describe Ktistec::Model::Polymorphic do
   end
 
   describe "when changing type" do
-    it "allows changing from from base class to concrete subtype" do
+    it "allows changing from base class to concrete subtype" do
       instance = PolymorphicModel.new.save
       instance.assign(type: "Subclass1")
       expect(instance.valid?).to be_true
       expect { instance.save }.not_to raise_error
     end
 
-    it "allows changing from from alias to alias" do
+    it "allows changing from alias to alias" do
       instance = PolymorphicModel.new(type: "Alias1").save
       instance.assign(type: "Alias2")
       expect(instance.valid?).to be_true

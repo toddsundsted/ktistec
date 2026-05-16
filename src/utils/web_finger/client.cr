@@ -1,5 +1,5 @@
 require "../host_meta"
-require "../open"
+require "../network"
 
 module Ktistec
   module WebFinger
@@ -51,7 +51,7 @@ module Ktistec
 
         url = template.gsub("{uri}", URI.encode_www_form(account))
 
-        response = Ktistec::Open.open(url, attempts: attempts)
+        response = Ktistec::Network.get(url, attempts: attempts, max_bytes: Ktistec::Network::MAX_DISCOVERY_RESPONSE_BYTES)
         mt = response.mime_type.try(&.media_type)
         if mt =~ /xml/
           Result.from_xml(response.body)
@@ -64,7 +64,7 @@ module Ktistec
         end
       rescue err : JSON::ParseException
         raise ResultError.new(err.message)
-      rescue err : Ktistec::Open::Error
+      rescue err : Ktistec::Network::Error
         raise NotFoundError.new(err.message)
       end
     end

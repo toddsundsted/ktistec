@@ -40,8 +40,8 @@ error 404 do
 end
 
 {% for method in %w(get post put head delete patch options) %}
-  def {{method.id}}(path, headers : HTTP::Headers? = nil, body : String? = nil)
-    request = HTTP::Request.new("{{method.id}}".upcase, path, headers, body )
+  def {{method.id}}(path, headers : HTTP::Headers? = nil, body : String | IO | Nil = nil)
+    request = HTTP::Request.new("{{method.id}}".upcase, path, headers, body)
     Global.response = process_request request
   end
 {% end %}

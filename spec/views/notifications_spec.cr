@@ -187,7 +187,7 @@ Spectator.describe "notifications partial" do
       end
     end
 
-    context "given a thread thread notification for the root" do
+    context "given a thread notification for the root" do
       let_build(:object)
       let_create!(:notification_follow_thread, owner: actor, object: object)
 

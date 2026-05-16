@@ -24,7 +24,7 @@ module Ktistec
       new(string)
     end
 
-    delegate :to_s, :empty?, :size, :includes?, to: @value
+    delegate :to_s, :to_json, :empty?, :size, :includes?, to: @value
 
     # Returns `self` if the wrapped value has presence, otherwise `nil`.
     #

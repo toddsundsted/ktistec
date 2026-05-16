@@ -32,6 +32,20 @@ Spectator.describe SessionsController do
   end
 
   describe "POST /sessions" do
+    OVERSIZE_BODY = "a" * (SessionsController::MAX_REQUEST_BYTES + 1)
+
+    it "returns 413 when the body exceeds the cap" do
+      post "/sessions", HTML_HEADERS, OVERSIZE_BODY
+      expect(response.status_code).to eq(413)
+      expect(XML.parse_html(response.body).xpath_nodes("/html//title").first).to match(/Payload Too Large/)
+    end
+
+    it "returns 413 when the body exceeds the cap" do
+      post "/sessions", JSON_HEADERS, OVERSIZE_BODY
+      expect(response.status_code).to eq(413)
+      expect(JSON.parse(response.body)["msg"]).to eq("payload too large")
+    end
+
     it "redirects if params are missing" do
       post "/sessions", HTML_HEADERS
       expect(response.status_code).to eq(302)
@@ -58,7 +72,7 @@ Spectator.describe SessionsController do
       expect(JSON.parse(response.body).as_h.keys).to have("errors", "username", "password")
     end
 
-    it "sets cookie and redirects " do
+    it "sets cookie and redirects" do
       body = "username=#{username}&password=#{password}"
       post "/sessions", HTML_HEADERS, body
       expect(response.status_code).to eq(302)

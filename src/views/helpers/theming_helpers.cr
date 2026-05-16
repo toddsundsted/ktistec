@@ -116,16 +116,8 @@ module Ktistec::ViewHelper
       else
         alt = "User"
       end
-      begin
-        uri = URI.parse(src) if Ktistec::Util.safe_url?(src)
-        unless uri && (uri.scheme.nil? || uri.scheme.in?(%w[http https]))
-          src = "/images/avatars/fallback.png"
-        end
-      rescue URI::Error
-        src = "/images/avatars/fallback.png"
-      end
       attrs = [
-        %Q(src="#{::HTML.escape(src)}"),
+        %Q(src="#{::HTML.escape(src.to_s)}"),
         %Q(alt="#{::HTML.escape(alt)}"),
         %Q(loading="lazy"),
       ]

@@ -7,6 +7,8 @@ require "../../models/activity_pub/actor"
 require "../../models/poll"
 require "../../models/quote_decision"
 require "../../models/relationship/content/bookmark"
+require "../../safe/safe_html"
+require "../../safe/safe_uri"
 require "../../views/view_helper"
 require "./account"
 
@@ -20,13 +22,13 @@ module API
       include JSON::Serializable
 
       property id : String
-      property uri : String
+      property uri : Ktistec::SafeURI
       property created_at : String
       property account : Account
-      property content : String
+      property content : Ktistec::SafeHTML
       property visibility : String
       property sensitive : Bool
-      property spoiler_text : String
+      property spoiler_text : Ktistec::SafeHTML
       property media_attachments : Array(MediaAttachment)
       property mentions : Array(Mention)
       property tags : Array(Tag)
@@ -36,7 +38,7 @@ module API
       property quotes_count : Int64
       property replies_count : Int64
       @[JSON::Field(emit_null: true)]
-      property url : String?
+      property url : Ktistec::SafeURI?
       @[JSON::Field(emit_null: true)]
       property in_reply_to_id : String?
       @[JSON::Field(emit_null: true)]
@@ -68,8 +70,10 @@ module API
 
         property id : String
         property type : String
-        property url : String
-        property preview_url : String
+        @[JSON::Field(emit_null: true)]
+        property url : Ktistec::SafeURI?
+        @[JSON::Field(emit_null: true)]
+        property preview_url : Ktistec::SafeURI?
         @[JSON::Field(emit_null: true)]
         property remote_url : String?
         @[JSON::Field(emit_null: true)]
@@ -102,8 +106,8 @@ module API
         def initialize(
           @id : String,
           @type : String,
-          @url : String,
-          @preview_url : String,
+          @url : Ktistec::SafeURI?,
+          @preview_url : Ktistec::SafeURI?,
           @remote_url : String?,
           @meta : Meta?,
           @description : String?,
@@ -230,13 +234,13 @@ module API
 
       def initialize(
         @id : String,
-        @uri : String,
+        @uri : Ktistec::SafeURI,
         @created_at : String,
         @account : Account,
-        @content : String,
+        @content : Ktistec::SafeHTML,
         @visibility : String,
         @sensitive : Bool,
-        @spoiler_text : String,
+        @spoiler_text : Ktistec::SafeHTML,
         @media_attachments : Array(MediaAttachment),
         @mentions : Array(Mention),
         @tags : Array(Tag),
@@ -245,7 +249,7 @@ module API
         @favourites_count : Int64,
         @quotes_count : Int64,
         @replies_count : Int64,
-        @url : String?,
+        @url : Ktistec::SafeURI?,
         @in_reply_to_id : String?,
         @in_reply_to_account_id : String?,
         @reblog : Status?,
@@ -294,13 +298,13 @@ module API
 
         Status.new(
           id: object.id.to_s,
-          uri: object.iri,
+          uri: Ktistec::SafeURI.from(object.iri),
           created_at: object.published.not_nil!.to_rfc3339,
           account: account,
-          content: object.content || "",
+          content: Ktistec::SafeHTML.sanitize(object.content),
           visibility: visibility,
           sensitive: object.sensitive,
-          spoiler_text: object.summary || "",
+          spoiler_text: Ktistec::SafeHTML.sanitize(object.summary),
           media_attachments: media_attachments,
           mentions: [] of Mention,
           tags: [] of Tag,
@@ -309,7 +313,7 @@ module API
           favourites_count: object.likes_count,
           quotes_count: 0,
           replies_count: object.replies_count,
-          url: object.urls.try(&.first?),
+          url: object.urls.try(&.first?).try { |u| Ktistec::SafeURI.from?(u) },
           in_reply_to_id: in_reply_to_id,
           in_reply_to_account_id: in_reply_to_account_id,
           reblog: nil,
@@ -343,13 +347,13 @@ module API
 
         Status.new(
           id: announce.id.to_s,
-          uri: announce.iri,
+          uri: Ktistec::SafeURI.from(announce.iri),
           created_at: (announce.published || announce.object.published).not_nil!.to_rfc3339,
           account: account,
-          content: "",
+          content: Ktistec::SafeHTML.sanitize(nil),
           visibility: visibility,
           sensitive: false,
-          spoiler_text: "",
+          spoiler_text: Ktistec::SafeHTML.sanitize(nil),
           media_attachments: [] of MediaAttachment,
           mentions: [] of Mention,
           tags: [] of Tag,
@@ -398,11 +402,12 @@ module API
           if (fp = attachment.focal_point)
             meta = MediaAttachment::Meta.new(focus: MediaAttachment::Meta::Focus.new(x: fp[0], y: fp[1]))
           end
+          url = attachment.url_safe
           MediaAttachment.new(
             id: "#{object.id}_#{index}",
             type: media_type,
-            url: attachment.url,
-            preview_url: attachment.url,
+            url: url,
+            preview_url: url,
             remote_url: nil,
             meta: meta,
             description: attachment.caption,

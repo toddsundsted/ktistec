@@ -43,6 +43,20 @@ Spectator.describe InboxesController do
       expect(response.status_code).to eq(400)
     end
 
+    it "returns 413 when Content-Length exceeds the cap" do
+      body = "a" * (InboxesController::MAX_INBOX_REQUEST_BYTES + 1)
+      post "/actors/#{actor.username}/inbox", headers, body
+      expect(JSON.parse(response.body)["msg"]).to eq("payload too large")
+      expect(response.status_code).to eq(413)
+    end
+
+    it "returns 413 when the body size exceeds the cap" do
+      body = IO::Memory.new("a" * (InboxesController::MAX_INBOX_REQUEST_BYTES + 1))
+      post "/actors/#{actor.username}/inbox", headers, body
+      expect(JSON.parse(response.body)["msg"]).to eq("payload too large")
+      expect(response.status_code).to eq(413)
+    end
+
     it "returns 400 if activity can't be verified" do
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")

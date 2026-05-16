@@ -2,6 +2,8 @@ require "html"
 require "uri"
 require "xml"
 
+require "../framework/util"
+
 module Ktistec::RSS
   # Generates an RSS feed from an array of objects.
   #
@@ -10,10 +12,10 @@ module Ktistec::RSS
       rss << %{<?xml version="1.0" encoding="UTF-8"?>\n}
       rss << %{<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n}
       rss << %{<channel>\n}
-      rss << %{<title><![CDATA[#{feed_title}]]></title>\n}
-      rss << %{<description><![CDATA[#{description}]]></description>\n}
+      rss << %{<title>#{::HTML.escape(feed_title)}</title>\n}
+      rss << %{<description>#{::HTML.escape(description)}</description>\n}
       rss << %{<generator>Ktistec</generator>\n}
-      rss << %{<language>#{language}</language>\n} if language
+      rss << %{<language>#{::HTML.escape(language)}</language>\n} if language
       rss << %{<link>#{::HTML.escape(feed_url)}</link>\n}
       rss << %{<atom:link href="#{::HTML.escape(feed_url)}/feed.rss" rel="self" type="application/rss+xml" />\n}
       rss << %{<lastBuildDate>#{Time.utc.to_rfc2822}</lastBuildDate>\n}
@@ -32,18 +34,24 @@ module Ktistec::RSS
             ).xpath_string("string()")
             stripped.size > 50 ? "#{stripped[0...50]}…" : stripped
           else
-            "Post by #{author.name}"
+            Ktistec::Util.render_as_text("Post by #{author.name}").strip
           end
-        description = object.content || "Post by #{author.name}"
+        description =
+          if (raw_content = object.content.presence)
+            Ktistec::Util.sanitize(raw_content).to_s
+          else
+            Ktistec::Util.render_as_text("Post by #{author.name}").strip
+          end
         published_date = object.published || object.created_at
         next unless (item_url = object.display_link.try(&.to_s))
         rss << %{<item>\n}
-        rss << %{<title><![CDATA[#{title}]]></title>\n}
-        rss << %{<description><![CDATA[#{description}]]></description>\n}
+        rss << %{<title>#{::HTML.escape(title)}</title>\n}
+        rss << %{<description>#{::HTML.escape(description)}</description>\n}
         rss << %{<link>#{::HTML.escape(item_url)}</link>\n}
         rss << %{<guid isPermaLink="true">#{::HTML.escape(item_url)}</guid>\n}
         rss << %{<pubDate>#{published_date.to_rfc2822}</pubDate>\n}
         if (username = author.username)
+          username = Ktistec::Util.render_as_text(username).strip
           host = URI.parse(feed_url).host.not_nil!
           rss << %{<author>#{::HTML.escape(username)}@#{::HTML.escape(host)}</author>\n}
         end

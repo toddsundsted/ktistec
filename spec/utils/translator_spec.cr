@@ -33,6 +33,20 @@ Spectator.describe Ktistec::Translator::DeepLTranslator do
     expect(HTTP::Client.requests).to have("GET https://api.deepl.com/v2/languages?type=target")
   end
 
+  context "given a body larger than the cap" do
+    before_each do
+      body = "[" + "0," * Ktistec::Translator::MAX_LANGUAGES_RESPONSE_BYTES + "0]"
+      HTTP::Client.cache.set_response(
+        DEEPL_API.resolve("/v2/languages?type=source").to_s,
+        HTTP::Client::Response.new(200, body: body),
+      )
+    end
+
+    it "rejects the response" do
+      expect { described_class.new(DEEPL_API, "") }.to raise_error(Ktistec::Translator::Error, /Response body too large/)
+    end
+  end
+
   describe "#translate" do
     subject { described_class.new(DEEPL_API, "") }
 
@@ -78,6 +92,17 @@ Spectator.describe Ktistec::Translator::DeepLTranslator do
       subject.translate("essence", nil, nil, "fr", "en-GB")
       expect(last_request_body["target_lang"]).to eq("EN-GB")
     end
+
+    context "given a body larger than the cap" do
+      before_each do
+        body = "x" * (Ktistec::Translator::MAX_TRANSLATE_RESPONSE_BYTES + 1)
+        HTTP::Client.cache.set_response(DEEPL_API.to_s, HTTP::Client::Response.new(200, body: body))
+      end
+
+      it "rejects the response" do
+        expect { subject.translate("name", nil, nil, "en", "fr") }.to raise_error(Ktistec::Translator::Error, /Response body too large/)
+      end
+    end
   end
 end
 
@@ -104,6 +129,20 @@ Spectator.describe Ktistec::Translator::LibreTranslateTranslator do
   it "requests supported languages" do
     described_class.new(LIBRETRANSLATE_API, "")
     expect(HTTP::Client.requests).to have("GET https://libretranslate.com/languages")
+  end
+
+  context "given a body larger than the cap" do
+    before_each do
+      body = "[" + "0," * Ktistec::Translator::MAX_LANGUAGES_RESPONSE_BYTES + "0]"
+      HTTP::Client.cache.set_response(
+        LIBRETRANSLATE_API.resolve("/languages").to_s,
+        HTTP::Client::Response.new(200, body: body),
+      )
+    end
+
+    it "rejects the response" do
+      expect { described_class.new(LIBRETRANSLATE_API, "") }.to raise_error(Ktistec::Translator::Error, /Response body too large/)
+    end
   end
 
   describe "#translate" do
@@ -144,6 +183,17 @@ Spectator.describe Ktistec::Translator::LibreTranslateTranslator do
       HTTP::Client.cache.set(LIBRETRANSLATE_API, {"translatedText" => ["toto"]})
       subject.translate("foobar", nil, nil, "en", "fr-CA")
       expect(last_request_body["target"]).to eq("fr")
+    end
+
+    context "given a body larger than the cap" do
+      before_each do
+        body = "x" * (Ktistec::Translator::MAX_TRANSLATE_RESPONSE_BYTES + 1)
+        HTTP::Client.cache.set_response(LIBRETRANSLATE_API.to_s, HTTP::Client::Response.new(200, body: body))
+      end
+
+      it "rejects the response" do
+        expect { subject.translate("name", nil, nil, "en", "fr") }.to raise_error(Ktistec::Translator::Error, /Response body too large/)
+      end
     end
   end
 end

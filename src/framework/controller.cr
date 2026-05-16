@@ -205,6 +205,7 @@ module Ktistec
     def_response_helper(not_found, "Not Found", 404)
     def_response_helper(_method_not_allowed, "Method Not Allowed", 405) # requires a list of allowed methods
     def_response_helper(conflict, "Conflict", 409)
+    def_response_helper(payload_too_large, "Payload Too Large", 413)
     def_response_helper(unprocessable_entity, "Unprocessable Entity", 422)
     def_response_helper(server_error, "Server Error", 500)
     def_response_helper(bad_gateway, "Bad Gateway", 502)
@@ -226,6 +227,28 @@ module Ktistec
       {% else %}
         _method_not_allowed {{args.splat}}, {{opts.double_splat}}
       {% end %}
+    end
+
+    # Caps the size of the inbound request body and replaces
+    # `env.request.body` with a buffered, rewound `IO` containing the
+    # bytes that were read.
+    #
+    # Halts with 413 if the declared `Content-Length` exceeds `max`,
+    # or if the body streams past `max` bytes.
+    #
+    # Must be invoked at the top of a route block.
+    #
+    macro cap_request_body(env, max)
+      if (%content_length = {{env}}.request.content_length) && %content_length > {{max}}
+        payload_too_large
+      end
+      if (%io = {{env}}.request.body)
+        %buf = IO::Memory.new
+        %copied = IO.copy(%io, %buf, {{max}} + 1)
+        payload_too_large if %copied > {{max}}
+        {{env}}.request.body = %buf
+        %buf.rewind
+      end
     end
 
     # Don't authenticate specified handlers.

@@ -3,6 +3,8 @@ require "../framework/controller"
 class SessionsController
   include Ktistec::Controller
 
+  MAX_REQUEST_BYTES = 4_096
+
   skip_auth ["/sessions"], GET, POST
 
   get "/sessions" do |env|
@@ -10,6 +12,8 @@ class SessionsController
   end
 
   post "/sessions" do |env|
+    cap_request_body env, MAX_REQUEST_BYTES
+
     username, password = params(env)
 
     if (account = account?(username, password))

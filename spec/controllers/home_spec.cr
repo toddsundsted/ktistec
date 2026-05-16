@@ -92,6 +92,20 @@ Spectator.describe HomeController do
         expect(response.status_code).to eq(302)
         expect(response.headers.to_a).to have({"Location", ["/"]})
       end
+
+      it "returns 413 when the body exceeds the cap" do
+        body = "a" * (HomeController::MAX_REQUEST_BYTES + 1)
+        post "/", HTML_HEADERS, body
+        expect(response.status_code).to eq(413)
+        expect(XML.parse_html(response.body).xpath_nodes("//div//h1").first).to eq("Payload Too Large")
+      end
+
+      it "returns 413 when the body exceeds the cap" do
+        body = "a" * (HomeController::MAX_REQUEST_BYTES + 1)
+        post "/", JSON_HEADERS, body
+        expect(response.status_code).to eq(413)
+        expect(JSON.parse(response.body)["msg"]).to eq("payload too large")
+      end
     end
   end
 

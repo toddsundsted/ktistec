@@ -60,6 +60,12 @@ Spectator.describe OAuth2Controller do
       post "/oauth/register", headers: JSON_HEADERS, body: "{\"client_name\": \"Test Client\", "
       expect(response.status_code).to eq(400)
     end
+
+    it "rejects requests that exceed the body size cap" do
+      body = "a" * (OAuth2Controller::MAX_REQUEST_BYTES + 1)
+      post "/oauth/register", headers: JSON_HEADERS, body: body
+      expect(response.status_code).to eq(413)
+    end
   end
 
   describe "GET /oauth/authorize" do
@@ -483,6 +489,12 @@ Spectator.describe OAuth2Controller do
         post "/oauth/token", headers: JSON_HEADERS, body: "{invalid json"
         expect(response.status_code).to eq(400)
       end
+    end
+
+    it "returns an error when the request body exceeds the size cap" do
+      body = "a" * (OAuth2Controller::MAX_REQUEST_BYTES + 1)
+      post "/oauth/token", headers: JSON_HEADERS, body: body
+      expect(response.status_code).to eq(413)
     end
   end
 end

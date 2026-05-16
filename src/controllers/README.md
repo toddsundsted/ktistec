@@ -9,6 +9,7 @@ developers.
 - [Overview](#overview)
 - [Authentication Framework](#authentication-framework)
 - [Authorization Pattern](#authorization-pattern)
+- [Request Body Limits](#request-body-limits)
 - [Implementation Guide](#implementation-guide)
 - [Examples](#examples)
 - [Testing Authorization](#testing-authorization)
@@ -54,8 +55,14 @@ class MyController
 end
 ```
 
-**Important:** `skip_auth` only bypasses authentication. You may still
-need authorization logic if the route accesses resources.
+**Important:** `skip_auth` only bypasses the framework's auth handler;
+it does not mean the route runs without authentication or
+authorization. Some routes use `skip_auth` precisely to install their
+own auth check in the handler (e.g., `MCPController` does a
+bearer-token check at `POST /mcp`), and any route that touches
+resources still needs its own authorization logic. When auditing or
+modifying routes, read each handler rather than treating `skip_auth`
+as a signal for what protection is in place.
 
 ## Authorization Pattern
 
@@ -99,6 +106,103 @@ Authorization methods follow the `get_<resource>` naming pattern:
 **Routes MUST:**
 - Return `not_found` (typically) or other appropriate status on
   authorization failure
+
+## Request Body Limits
+
+Routes that read a request body should cap its size. Unbounded body
+reads on public or unauthenticated endpoints are a DoS surface: a
+caller can stream arbitrarily many bytes (including via chunked
+encoding, which makes `Content-Length` alone insufficient) and force
+the server to buffer them.
+
+### The `cap_request_body` Macro
+
+`Ktistec::Controller` provides a macro for this:
+
+```crystal
+class MyController
+  include Ktistec::Controller
+
+  MAX_REQUEST_BYTES = 16_384
+
+  post "/my/route" do |env|
+    cap_request_body env, MAX_REQUEST_BYTES
+
+    body = env.request.body.not_nil!
+    # ... parse body ...
+  end
+end
+```
+
+The macro does two things:
+
+1. **Content-Length pre-check**: rejects with `413 Payload Too Large`
+   if the declared `Content-Length` exceeds the cap, before reading
+   any body bytes.
+2. **Bounded read**: copies the body into an `IO::Memory` with a
+   limit, halts with 413 if the copy overflows, and reassigns
+   `env.request.body` to the rewound buffer so downstream parsers
+   (`env.params.body`, `env.params.json`) see a capped buffer. Without
+   this reassignment, Kemal's parsers would call `gets_to_end` and
+   bypass the cap entirely on chunked bodies.
+
+### Per-Route Constants
+
+Each route declares its own cap as a named constant on the controller:
+
+```crystal
+class OAuth2Controller
+  MAX_REQUEST_BYTES = 16_384
+end
+
+class APIController
+  MAX_STATUS_REQUEST_BYTES = 65_536
+  MAX_VOTE_REQUEST_BYTES   =  4_096
+end
+```
+
+This keeps the cap value visible at audit time and lets specs
+reference it directly (`MyController::MAX_REQUEST_BYTES + 1`).
+
+### Ordering With Authentication
+
+Where the cap sits relative to the auth check determines what
+unauthenticated callers see:
+
+- **`skip_auth` routes** (no framework auth): place the cap **first**.
+  The framework auth never ran, so the cap is the only thing bounding
+  the read.
+- **Routes with custom in-handler auth** (e.g., a bearer-token check,
+  or an `env.account?` gate): place the cap **after** the auth check.
+  Unauthenticated callers then see `401 Unauthorized` rather than
+  `413 Payload Too Large`. The Content-Length pre-read still bounds
+  the worst case in either ordering — the body read itself doesn't
+  start until both checks pass.
+
+### Gotcha: Nested Blocks
+
+`cap_request_body` is a macro (not a method) because `halt` expands to
+`next`, which must land at the route-block scope to unwind the
+handler. Never call it from inside a nested block — `next` will exit
+only the nested block, leaving the handler to continue running with
+a closed response.
+
+### Testing
+
+Add at minimum one wire-up spec per route that asserts a `413`
+response when the body exceeds the cap:
+
+```crystal
+it "returns 413 when the body exceeds the cap" do
+  body = "a" * (MyController::MAX_REQUEST_BYTES + 1)
+  post "/my/route", HTML_HEADERS, body
+  expect(response.status_code).to eq(413)
+end
+```
+
+For routes with custom auth, also assert that unauthenticated callers
+see 401 (not 413) when sending an oversize body, which verifies the
+cap is placed after the auth check.
 
 ## Implementation Guide
 
@@ -302,6 +406,13 @@ end
 - Return resource if authorized, `nil` otherwise
 - Use in routes: `unless (resource = get_resource(...)); not_found; end`
 - Test both directly and via integration tests
+
+**Request body limits** (controller-level):
+- Cap any route that reads a body with `cap_request_body env, MAX`
+- Declare the cap as a per-route `MAX_*_REQUEST_BYTES` constant
+- Place the cap before the body read; for routes with custom auth,
+  place it after the auth check so unauthenticated callers see 401
+- Add a 413 wire-up spec per capped route
 
 For examples, refer to:
 - Framework code: `src/framework/auth.cr`, `src/framework/ext/context.cr`

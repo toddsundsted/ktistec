@@ -5,6 +5,72 @@ module Ktistec
   # Base class for translators.
   #
   abstract class Translator
+    MAX_LANGUAGES_RESPONSE_BYTES =    65_536
+    MAX_TRANSLATE_RESPONSE_BYTES = 1_048_576
+
+    REQUEST_TIMEOUT = 30.seconds
+
+    class Error < Exception
+    end
+
+    # Performs an HTTP GET against `uri`, returning the response body.
+    #
+    # The connection is bounded by `REQUEST_TIMEOUT`. The body is
+    # capped at `max_bytes`: responses whose `Content-Length` exceeds
+    # the cap are rejected.
+    #
+    private def bounded_get(uri : URI, headers : HTTP::Headers, *, max_bytes : Int32) : String
+      result = ""
+      client = make_client(uri)
+      client.get(uri.request_target, headers) do |response|
+        result = read_response(response, uri, max_bytes)
+      end
+      result
+    ensure
+      client.try(&.close)
+    end
+
+    # Performs an HTTP POST against `uri`, returning the response body.
+    #
+    # The connection is bounded by `REQUEST_TIMEOUT`. The body is
+    # capped at `max_bytes`: responses whose `Content-Length` exceeds
+    # the cap are rejected.
+    #
+    private def bounded_post(uri : URI, headers : HTTP::Headers, body : String, *, max_bytes : Int32) : String
+      result = ""
+      client = make_client(uri)
+      client.post(uri.request_target, headers, body) do |response|
+        result = read_response(response, uri, max_bytes)
+      end
+      result
+    ensure
+      client.try(&.close)
+    end
+
+    private def make_client(uri : URI) : HTTP::Client
+      client = HTTP::Client.new(uri)
+      client.connect_timeout = REQUEST_TIMEOUT
+      client.read_timeout = REQUEST_TIMEOUT
+      client.write_timeout = REQUEST_TIMEOUT
+      client
+    end
+
+    private def read_response(response, uri : URI, max_bytes : Int32) : String
+      if (content_length = response.headers["Content-Length"]?) && (n = content_length.to_i?) && n > max_bytes
+        raise Error.new("Response body too large [Content-Length=#{n} > #{max_bytes}]: #{uri}")
+      end
+      if (io = response.body_io?)
+        buf = IO::Memory.new
+        bytes = IO.copy(io, buf, max_bytes + 1)
+        if bytes > max_bytes
+          raise Error.new("Response body too large [>#{max_bytes} bytes]: #{uri}")
+        end
+        buf.to_s
+      else
+        ""
+      end
+    end
+
     abstract def translate(name : String?, summary : String?, content : String?, source : String, target : String) : {name: String?, summary: String?, content: String?}
 
     # Client for DeepL translation.
@@ -25,12 +91,12 @@ module Ktistec
           "Accept"        => "application/json",
           "Authorization" => "DeepL-Auth-Key #{@api_key}",
         }
-        response = HTTP::Client.get(@api_uri.resolve("/v2/languages?type=source"), headers: headers)
-        JSON.parse(response.body).as_a.each do |language|
+        body = bounded_get(@api_uri.resolve("/v2/languages?type=source"), headers, max_bytes: MAX_LANGUAGES_RESPONSE_BYTES)
+        JSON.parse(body).as_a.each do |language|
           @source_languages << language["language"].as_s.upcase
         end
-        response = HTTP::Client.get(@api_uri.resolve("/v2/languages?type=target"), headers: headers)
-        JSON.parse(response.body).as_a.each do |language|
+        body = bounded_get(@api_uri.resolve("/v2/languages?type=target"), headers, max_bytes: MAX_LANGUAGES_RESPONSE_BYTES)
+        JSON.parse(body).as_a.each do |language|
           @target_languages << language["language"].as_s.upcase
         end
       end
@@ -47,8 +113,7 @@ module Ktistec
         add_source(body, source)
         add_target(body, target)
         Log.debug { body }
-        response = HTTP::Client.post(@api_uri.resolve("/v2/translate"), headers: headers, body: body.to_json)
-        body = JSON.parse(response.body)
+        body = JSON.parse(bounded_post(@api_uri.resolve("/v2/translate"), headers, body.to_json, max_bytes: MAX_TRANSLATE_RESPONSE_BYTES))
         Log.debug { body }
         texts = body["translations"].as_a.map(&.dig("text"))
         {
@@ -92,8 +157,8 @@ module Ktistec
         headers = HTTP::Headers{
           "Content-Type" => "application/json",
         }
-        response = HTTP::Client.get(@api_uri.resolve("/languages"), headers: headers)
-        JSON.parse(response.body).as_a.each do |language|
+        body = bounded_get(@api_uri.resolve("/languages"), headers, max_bytes: MAX_LANGUAGES_RESPONSE_BYTES)
+        JSON.parse(body).as_a.each do |language|
           @source_languages.add language["code"].as_s.downcase
           @target_languages.concat language["targets"].as_a.map(&.as_s.downcase)
         end
@@ -111,8 +176,7 @@ module Ktistec
         add_source(body, source)
         add_target(body, target)
         Log.debug { body.reject("api_key") }
-        response = HTTP::Client.post(@api_uri.resolve("/translate"), headers: headers, body: body.to_json)
-        body = JSON.parse(response.body)
+        body = JSON.parse(bounded_post(@api_uri.resolve("/translate"), headers, body.to_json, max_bytes: MAX_TRANSLATE_RESPONSE_BYTES))
         Log.debug { body }
         texts = body["translatedText"].as_a
         {

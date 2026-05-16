@@ -1,6 +1,6 @@
 require "spectator"
 
-require "../../../src/framework/host_meta"
+require "../../../src/utils/host_meta"
 require "../../../src/ktistec/constants"
 
 Spectator.describe Ktistec::HostMeta::Result do

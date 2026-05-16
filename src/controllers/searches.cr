@@ -1,5 +1,4 @@
 require "../framework/controller"
-require "../framework/open"
 require "../ktistec/constants"
 require "../utils/network"
 
@@ -34,7 +33,7 @@ class SearchesController
             ActivityPub::Object.find(url)
           else
             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-            Ktistec::Open.open(env.account.actor, url, headers) do |response|
+            Ktistec::Network.get(env.account.actor, url, headers) do |response|
               ActivityPub.from_json_ld(response.body, include_key: true)
             end
           end
@@ -65,6 +64,6 @@ class SearchesController
   end
 
   private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |
-                         Ktistec::HostMeta::Error | Ktistec::WebFinger::Error | Ktistec::Open::Error |
+                         Ktistec::HostMeta::Error | Ktistec::WebFinger::Error | Ktistec::Network::Error |
                          NilAssertionError
 end

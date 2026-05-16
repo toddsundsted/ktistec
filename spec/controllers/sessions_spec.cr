@@ -72,7 +72,7 @@ Spectator.describe SessionsController do
       expect(JSON.parse(response.body).as_h.keys).to have("errors", "username", "password")
     end
 
-    it "sets cookie and redirects " do
+    it "sets cookie and redirects" do
       body = "username=#{username}&password=#{password}"
       post "/sessions", HTML_HEADERS, body
       expect(response.status_code).to eq(302)

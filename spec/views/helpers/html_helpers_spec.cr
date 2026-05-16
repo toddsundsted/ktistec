@@ -122,7 +122,7 @@ Spectator.describe "helpers" do
       expect(subject.xpath_nodes("/form/@method")).to contain_exactly("PUT")
     end
 
-    it "specifies the form id " do
+    it "specifies the form id" do
       expect(subject.xpath_nodes("/form/@id")).to contain_exactly("woof")
     end
 

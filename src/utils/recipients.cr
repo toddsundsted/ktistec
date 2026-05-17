@@ -10,15 +10,22 @@ module Ktistec
   # processors.
   #
   module Recipients
+    record Partition,
+      local : Array({ActivityPub::Actor, Account}),
+      remote : Array(String)
+
     # Expands an outbound activity's recipient fields into a sorted,
     # deduplicated list of actor IRIs reachable from this server.
     #
+    # The sender is never included in the output -- actors don't
+    # deliver to themselves.
+    #
     def self.for_deliver(activity : ActivityPub::Activity, sender : ActivityPub::Actor) : Array(String)
-      [activity.to, activity.cc, activity.audience, sender.iri].flatten.flat_map do |recipient|
-        if recipient == Ktistec::Constants::PUBLIC
+      [activity.to, activity.cc, activity.audience].flatten.flat_map do |recipient|
+        if recipient == sender.iri
           # no-op
-        elsif recipient == sender.iri
-          sender.iri
+        elsif recipient == Ktistec::Constants::PUBLIC
+          # no-op
         elsif recipient && (actor = ActivityPub::Actor.find?(recipient))
           actor.iri
         elsif recipient && recipient =~ /^#{sender.iri}\/followers$/
@@ -70,6 +77,26 @@ module Ktistec
           end
         end
       end.compact.sort!.uniq!
+    end
+
+    # Splits IRIs into local recipients (paired with their `Account`)
+    # and remote recipients.
+    #
+    # IRIs that don't resolve to a local actor with an account fall
+    # through to the remote bucket.
+    #
+    def self.partition(iris : Enumerable(String)) : Partition
+      local = [] of {ActivityPub::Actor, Account}
+      remote = [] of String
+      iris.each do |iri|
+        actor = ActivityPub::Actor.find?(iri)
+        if actor && actor.local? && (account = Account.find?(iri: actor.iri))
+          local << {actor, account}
+        else
+          remote << iri
+        end
+      end
+      Partition.new(local, remote)
     end
   end
 end

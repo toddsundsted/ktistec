@@ -24,7 +24,9 @@ class Task
 
       property deliver_to : Array(String)?
 
-      def initialize(@deliver_to = [] of String)
+      property recipients : Array(String)?
+
+      def initialize(@deliver_to = [] of String, @recipients = nil)
       end
     end
 
@@ -35,6 +37,9 @@ class Task
     @[Assignable]
     @deliver_to : Array(String)?
 
+    @[Assignable]
+    @recipients : Array(String)?
+
     def deliver_to
       state.deliver_to
     end
@@ -44,7 +49,12 @@ class Task
     end
 
     def recipients
-      Ktistec::Recipients.for_receive(activity, receiver, deliver_to)
+      # fallback for in-flight tasks enqueued before the processor began
+      state.recipients || Ktistec::Recipients.for_receive(activity, receiver, deliver_to)
+    end
+
+    def recipients=(@recipients : Array(String)?)
+      state.recipients = recipients
     end
 
     def perform

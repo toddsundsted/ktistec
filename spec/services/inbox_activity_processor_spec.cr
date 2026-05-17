@@ -469,5 +469,43 @@ Spectator.describe InboxActivityProcessor do
         end
       end
     end
+
+    context "recipient partitioning" do
+      let(local) { register.actor }
+      let_create(:actor, named: :follower)
+      let(followers) { ["#{account.actor.iri}/followers"] }
+      let_create!(:object, named: :origin, attributed_to: account.actor, to: followers)
+      let_create!(:object, named: :reply, attributed_to: other, in_reply_to: origin, to: followers)
+      let_create(:create, named: :activity, actor: other, object: reply, to: followers)
+
+      before_each do
+        do_follow(local, account.actor)
+        do_follow(follower, account.actor)
+      end
+
+      it "adds an inbox item to the local recipient's inbox" do
+        expect { InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Inbox.find?(owner: local, activity: activity) }
+      end
+
+      it "passes remote recipients to the receive task" do
+        InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask)
+        expect(MockReceiveTask.last_recipients).to eq([follower.iri])
+      end
+
+      it "schedules the receive task" do
+        InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask)
+        expect(MockReceiveTask.schedule_called_count).to eq(1)
+      end
+
+      context "given an existing inbox item for the local recipient" do
+        before_each { put_in_inbox(local, activity) }
+
+        it "does not add a duplicate inbox item" do
+          expect { InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask) }
+            .not_to change { Relationship::Content::Inbox.count(owner: local, activity: activity) }
+        end
+      end
+    end
   end
 end

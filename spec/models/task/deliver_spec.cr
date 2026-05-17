@@ -39,14 +39,39 @@ Spectator.describe Task::Deliver do
   let_build(:actor, named: :local_recipient, username: "local", local: true)
   let_build(:actor, named: :remote_recipient, username: "remote")
 
-  describe "#perform" do
-    subject do
-      described_class.new(
-        sender: sender,
-        activity: activity,
-      )
+  subject do
+    described_class.new(
+      sender: sender,
+      activity: activity,
+    )
+  end
+
+  describe "#recipients" do
+    context "when state.recipients is set" do
+      before_each { subject.state.recipients = ["https://example/recipient"] }
+
+      it "returns the state value without consulting the helper" do
+        expect(subject.recipients).to eq(["https://example/recipient"])
+      end
     end
 
+    context "when state.recipients is nil" do
+      before_each { activity.to = [remote_recipient.save.iri] }
+
+      it "falls back to the helper method" do
+        expect(subject.recipients).to eq([remote_recipient.iri])
+      end
+    end
+  end
+
+  describe "#recipients=" do
+    it "stores the value in state" do
+      subject.recipients = ["https://example/recipient"]
+      expect(subject.state.recipients).to eq(["https://example/recipient"])
+    end
+  end
+
+  describe "#perform" do
     context "when the object has been deleted" do
       let_build(:delete, named: :activity, actor_iri: sender.iri, object_iri: "https://deleted", to: [local_recipient.iri, remote_recipient.iri])
 

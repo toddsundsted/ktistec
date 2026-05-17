@@ -36,14 +36,14 @@ Spectator.describe Task::Receive do
     end
   end
 
-  describe "#deliver_to" do
-    subject do
-      described_class.new(
-        receiver: receiver,
-        activity: activity,
-      )
-    end
+  subject do
+    described_class.new(
+      receiver: receiver,
+      activity: activity,
+    )
+  end
 
+  describe "#deliver_to" do
     it "retrieves the deliver to value from the state" do
       subject.state = Task::Receive::State.new([] of String)
       expect(subject.deliver_to).to be_a(Array(String))
@@ -56,27 +56,38 @@ Spectator.describe Task::Receive do
   end
 
   describe "#deliver_to=" do
-    subject do
-      described_class.new(
-        receiver: receiver,
-        activity: activity,
-      )
-    end
-
     it "stores the deliver to value in the state" do
       subject.deliver_to = ["https://recipient"]
       expect(subject.state.deliver_to).to eq(["https://recipient"])
     end
   end
 
-  describe "#perform" do
-    subject do
-      described_class.new(
-        receiver: receiver,
-        activity: activity,
-      )
+  describe "#recipients" do
+    context "when state.recipients is set" do
+      before_each { subject.state.recipients = ["https://example/recipient"] }
+
+      it "returns the state value without consulting the helper" do
+        expect(subject.recipients).to eq(["https://example/recipient"])
+      end
     end
 
+    context "when state.recipients is nil" do
+      before_each { activity.to = [receiver.iri] }
+
+      it "falls back to the helper method" do
+        expect(subject.recipients).to eq([receiver.iri])
+      end
+    end
+  end
+
+  describe "#recipients=" do
+    it "stores the value in state" do
+      subject.recipients = ["https://example/recipient"]
+      expect(subject.state.recipients).to eq(["https://example/recipient"])
+    end
+  end
+
+  describe "#perform" do
     context "when the object has already been deleted" do
       let_build(:delete, named: :activity, actor_iri: receiver.iri, object_iri: "https://deleted", to: [receiver.iri])
 

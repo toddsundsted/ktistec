@@ -22,8 +22,9 @@ Spectator.describe Ktistec::Recipients do
   describe ".for_deliver" do
     subject { described_class.for_deliver(activity, sender) }
 
-    it "includes the sender by default" do
-      expect(subject).to contain(sender.iri)
+    it "excludes the sender" do
+      activity.to = [sender.iri]
+      expect(subject).not_to contain(sender.iri)
     end
 
     context "addressed to a local recipient" do
@@ -403,6 +404,79 @@ Spectator.describe Ktistec::Recipients do
 
       it "treats them like to/cc recipients" do
         expect(subject).to contain(receiver.iri)
+      end
+    end
+  end
+
+  describe ".partition" do
+    subject { described_class.partition(iris) }
+
+    context "given a local actor's IRI" do
+      let(iris) { [sender.iri] }
+
+      it "pairs the actor with its account" do
+        expect(subject.local).to eq([{sender, account}])
+      end
+
+      it "leaves the remote list empty" do
+        expect(subject.remote).to be_empty
+      end
+    end
+
+    context "given a remote actor's IRI" do
+      let(iris) { [remote_recipient.save.iri] }
+
+      it "puts the IRI in the remote list" do
+        expect(subject.remote).to eq([remote_recipient.iri])
+      end
+
+      it "leaves the local list empty" do
+        expect(subject.local).to be_empty
+      end
+    end
+
+    context "given an unknown IRI" do
+      let(iris) { ["https://unknown.example/actor/missing"] }
+
+      it "puts the IRI in the remote list" do
+        expect(subject.remote).to eq(iris)
+      end
+
+      it "leaves the local list empty" do
+        expect(subject.local).to be_empty
+      end
+    end
+
+    # a saved local actor always has an account. this pins the
+    # fallback behavior in case that invariant is ever violated.
+
+    context "given a local actor with no account" do
+      let(iris) { [local_recipient.save.iri] }
+
+      it "puts the IRI in the remote list" do
+        expect(subject.remote).to eq([local_recipient.iri])
+      end
+
+      it "leaves the local list empty" do
+        expect(subject.local).to be_empty
+      end
+    end
+
+    context "given a mixed list" do
+      let(iris) { [sender.iri, remote_recipient.save.iri] }
+
+      it "splits each IRI into its bucket" do
+        expect(subject.local).to eq([{sender, account}])
+        expect(subject.remote).to eq([remote_recipient.iri])
+      end
+    end
+
+    context "given an empty list" do
+      let(iris) { [] of String }
+
+      it "returns empty buckets" do
+        expect(subject.local).to be_empty
+        expect(subject.remote).to be_empty
       end
     end
   end

@@ -18,8 +18,29 @@ class Task
     belongs_to activity, class_name: ActivityPub::Activity, foreign_key: subject_iri, primary_key: iri
     validates(activity) { "missing: #{subject_iri}" unless activity? }
 
+    class State
+      include JSON::Serializable
+
+      property recipients : Array(String)?
+
+      def initialize(@recipients = nil)
+      end
+    end
+
+    @[Persistent]
+    @[Insignificant]
+    property state : State { State.new }
+
+    @[Assignable]
+    @recipients : Array(String)?
+
     def recipients
-      Ktistec::Recipients.for_deliver(activity, sender)
+      # fallback for in-flight tasks enqueued before the processor began
+      state.recipients || Ktistec::Recipients.for_deliver(activity, sender)
+    end
+
+    def recipients=(@recipients : Array(String)?)
+      state.recipients = recipients
     end
 
     def perform

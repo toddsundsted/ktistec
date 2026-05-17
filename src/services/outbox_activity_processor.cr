@@ -3,10 +3,12 @@ require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
 require "../models/account"
 require "../rules/content_rules"
+require "../models/relationship/social/follow"
 require "../models/task/deliver"
 require "../models/task/distribute_poll_updates"
 require "../models/task/notify_poll_expiry"
-require "../models/relationship/social/follow"
+require "../utils/recipients"
+require "./inbox_activity_processor"
 
 class OutboxActivityProcessor
   # Processes an outbound activity that has already been created,
@@ -106,9 +108,19 @@ class OutboxActivityProcessor
       end
     end
 
+    partition = Ktistec::Recipients.partition(
+      Ktistec::Recipients.for_deliver(activity, account.actor),
+    )
+
+    InboxActivityProcessor.process_locally(partition.local, activity)
+
+    # scheduled unconditionally even when `partition.remote` is empty.
+    # an empty transfer is a no-op.
+
     deliver_task_class.new(
       sender: account.actor,
       activity: activity,
+      recipients: partition.remote,
     ).schedule
   end
 end

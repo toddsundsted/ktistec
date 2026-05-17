@@ -932,15 +932,18 @@ module ActivityPub
            UNION
           SELECT o.in_reply_to_iri AS iri, p.depth + 1 AS depth
             FROM objects AS o, ancestors_of AS p
-            JOIN actors AS a
-              ON a.iri = o.attributed_to_iri
            WHERE o.iri = p.iri AND o.in_reply_to_iri IS NOT NULL
-             #{common_filters(objects: "o", actors: "a")}
       )
       QUERY
     end
 
-    def ancestors
+    # Returns the ancestors from `self` up to the root.
+    #
+    # Deleted/blocked ancestors are omitted from the result. Pass
+    # `include_deleted: true` or `include_blocked: true` to include
+    # those rows. `special` objects are always excluded.
+    #
+    def ancestors(*, include_deleted = false, include_blocked = false)
       query = <<-QUERY
       #{ancestors_with_recursive}
       SELECT #{Object.columns(prefix: "o")}, p.depth
@@ -948,7 +951,9 @@ module ActivityPub
         JOIN actors AS a
           ON a.iri = o.attributed_to_iri
        WHERE o.iri IN (p.iri)
-         #{common_filters(objects: "o", actors: "a")}
+         AND o.special IS NULL
+         #{include_deleted ? "" : "AND o.deleted_at IS NULL AND a.deleted_at IS NULL"}
+         #{include_blocked ? "" : "AND o.blocked_at IS NULL AND a.blocked_at IS NULL"}
        ORDER BY p.depth
       QUERY
       Object.query_all(query, iri, additional_columns: {depth: Int32})
@@ -964,20 +969,28 @@ module ActivityPub
             FROM objects AS o, replies_to AS r
        LEFT JOIN objects AS p
               ON p.iri = r.iri
-            JOIN actors AS a
-              ON a.iri = o.attributed_to_iri
            WHERE o.in_reply_to_iri = r.iri
-             #{common_filters(objects: "o", actors: "a")}
       )
       QUERY
     end
 
-    def descendants
+    # Returns the subtree rooted at `self`.
+    #
+    # Deleted/blocked descendants are omitted from the result. Pass
+    # `include_deleted: true` or `include_blocked: true` to include
+    # those rows. `special` objects are always excluded.
+    #
+    def descendants(*, include_deleted = false, include_blocked = false)
       query = <<-QUERY
       #{descendants_with_recursive}
       SELECT #{Object.columns(prefix: "o")}, r.depth
         FROM objects AS o, replies_to AS r
+        JOIN actors AS a
+          ON a.iri = o.attributed_to_iri
        WHERE o.iri IN (r.iri)
+         AND o.special IS NULL
+         #{include_deleted ? "" : "AND o.deleted_at IS NULL AND a.deleted_at IS NULL"}
+         #{include_blocked ? "" : "AND o.blocked_at IS NULL AND a.blocked_at IS NULL"}
        ORDER BY r.position
       QUERY
       Object.query_all(query, iri, additional_columns: {depth: Int32})

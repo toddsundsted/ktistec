@@ -1,16 +1,14 @@
 require "../task"
 require "../task/mixins/transfer"
 
-require "../../ktistec/constants"
+require "../../utils/recipients"
 require "../activity_pub/activity"
 require "../activity_pub/actor"
 require "../activity_pub/collection"
 require "../activity_pub/object"
-require "../relationship/social/follow"
 
 class Task
   class Deliver < Task
-    include Ktistec::Constants
     include Task::ConcurrentTask
     include Task::Transfer
 
@@ -21,20 +19,7 @@ class Task
     validates(activity) { "missing: #{subject_iri}" unless activity? }
 
     def recipients
-      [activity.to, activity.cc, activity.audience, sender.iri].flatten.flat_map do |recipient|
-        if recipient == PUBLIC
-          # no-op
-        elsif recipient == sender.iri
-          sender.iri
-        elsif recipient && (actor = ActivityPub::Actor.find?(recipient))
-          actor.iri
-        elsif recipient && recipient =~ /^#{sender.iri}\/followers$/
-          Relationship::Social::Follow.where(
-            object: sender,
-            confirmed: true,
-          ).select(&.actor?).map(&.actor.iri)
-        end
-      end.compact.sort!.uniq!
+      Ktistec::Recipients.for_deliver(activity, sender)
     end
 
     def perform

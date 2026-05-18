@@ -142,6 +142,26 @@ Spectator.describe Session do
     end
   end
 
+  describe ".invalidate_for" do
+    let(other_account) { register }
+
+    before_each do
+      subject                                 # current session
+      described_class.new(account).save       # another session for the same account
+      described_class.new(other_account).save # a session for a different account
+    end
+
+    it "removes every session for the given account" do
+      expect { described_class.invalidate_for(account) }
+        .to change { described_class.count(account_id: account.id) }.from(2).to(0)
+    end
+
+    it "does not remove sessions for other accounts" do
+      expect { described_class.invalidate_for(account) }
+        .not_to change { described_class.count(account_id: other_account.id) }
+    end
+  end
+
   describe ".clean_up_stale_sessions" do
     let(anonymous) { described_class.new.save }
     let(authenticated) { described_class.new(account).save }

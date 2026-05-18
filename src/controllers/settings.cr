@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../models/oauth2/provider/access_token"
 require "../models/session"
 require "../models/task/terminate"
 require "../services/upload_service"
@@ -70,11 +71,13 @@ class SettingsController
   end
 
   post "/settings/terminate" do |env|
-    actor = env.account.actor
+    account = env.account
+    actor = account.actor
 
     Task::Terminate.new(source: actor, subject: actor).schedule
 
-    env.session.destroy
+    OAuth2::Provider::AccessToken.invalidate_for(account)
+    Session.invalidate_for(account)
 
     redirect home_path
   end

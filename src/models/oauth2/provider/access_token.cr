@@ -77,6 +77,12 @@ module OAuth2
         find?(token: token)
       end
 
+      # Removes every access token associated with an account.
+      #
+      def self.invalidate_for(account : Account)
+        exec("DELETE FROM #{table_name} WHERE account_id = ?", account.id)
+      end
+
       # Checks if the access token is expired.
       #
       def expired?

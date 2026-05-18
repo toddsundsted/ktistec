@@ -1,7 +1,8 @@
 require "../task"
-require "./deliver"
+require "../account"
 require "../activity_pub/actor"
 require "../activity_pub/object"
+require "../../services/outbox_activity_processor"
 
 class Task
   class Terminate < Task
@@ -19,33 +20,30 @@ class Task
       end
     end
 
-    # See: TaskWorker#perform
-    private def perform_once_now(task)
-      task.perform
-    rescue ex
-      message = ex.message ? "#{ex.class}: #{ex.message}" : ex.class.to_s
-      task.backtrace = [message] + ex.backtrace
-    ensure
-      task.running = false
-      task.complete = true
-      task.last_attempt_at = Time.utc
-      task.save(skip_validation: true, skip_associated: true)
+    # deletion is a visibility concern that doesn't apply here.
+
+    def subject
+      @subject ||= ActivityPub::Actor.find(iri: subject_iri, include_deleted: true)
     end
 
     def perform
-      if (object = subject.objects.first?)
-        Log.warn { "Task::Terminate: deleting #{object.iri} published=#{!!object.published}" }
+      actor = subject
+      account = Account.find?(iri: actor.iri)
+      if (object = actor.objects.first?)
         self.next_attempt_at = 30.seconds.from_now
-        if object.published
-          task = Task::Deliver.new(sender: subject, activity: object.make_delete_activity, running: true).save
-          perform_once_now(task)
+        Log.warn { "Task::Terminate: deleting #{object.iri}" }
+        if account && object.published
+          OutboxActivityProcessor.process(account, object.make_delete_activity.save)
+        else
+          object.delete!
         end
-        object.delete!
+      elsif account && !actor.deleted?
+        Log.warn { "Task::Terminate: deleting #{actor.iri}" }
+        OutboxActivityProcessor.process(account, actor.make_delete_activity.save)
+        account.destroy
       else
-        Log.warn { "Task::Terminate: deleting #{subject.iri}" }
-        task = Task::Deliver.new(sender: subject, activity: subject.make_delete_activity, running: true).save
-        perform_once_now(task)
-        subject.delete!
+        actor.delete! unless actor.deleted?
+        account.try(&.destroy)
       end
     end
   end

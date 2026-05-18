@@ -1,6 +1,6 @@
 require "../framework/controller"
-require "../models/task/terminate"
 require "../models/session"
+require "../models/task/terminate"
 require "../services/upload_service"
 
 class SettingsController
@@ -74,7 +74,6 @@ class SettingsController
 
     Task::Terminate.new(source: actor, subject: actor).schedule
 
-    env.account.destroy
     env.session.destroy
 
     redirect home_path

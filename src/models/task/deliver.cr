@@ -18,6 +18,13 @@ class Task
     belongs_to activity, class_name: ActivityPub::Activity, foreign_key: subject_iri, primary_key: iri
     validates(activity) { "missing: #{subject_iri}" unless activity? }
 
+    # an actor (and its keypair) can be used for signing as long as it
+    # has pending deliveries to make.
+
+    def sender
+      @sender ||= ActivityPub::Actor.find(iri: source_iri, include_deleted: true)
+    end
+
     class State
       include JSON::Serializable
 

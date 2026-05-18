@@ -36,6 +36,18 @@ Spectator.describe Task::Deliver do
     end
   end
 
+  describe "#sender" do
+    before_each do
+      sender.save.delete!
+      activity.save
+    end
+
+    it "resolves a deleted sender" do
+      task = described_class.new(source_iri: sender.iri, subject_iri: activity.iri)
+      expect(task.sender.iri).to eq(sender.iri)
+    end
+  end
+
   let_build(:actor, named: :local_recipient, username: "local", local: true)
   let_build(:actor, named: :remote_recipient, username: "remote")
 

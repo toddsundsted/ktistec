@@ -17,8 +17,20 @@ module Ktistec
         "#{uri.scheme}://#{uri.host}"
       end
 
+      def self.local?(iri : String) : Bool
+        iri_uri = URI.parse(iri)
+        host_uri = URI.parse(Ktistec.host)
+        iri_uri.scheme == host_uri.scheme &&
+          iri_uri.host == host_uri.host &&
+          port(iri_uri) == port(host_uri)
+      end
+
+      private def self.port(uri : URI) : Int32?
+        uri.port || uri.scheme.try { |s| URI.default_port(s) }
+      end
+
       def local?
-        iri.starts_with?(Ktistec.host)
+        Ktistec::Model::Linked.local?(iri)
       end
 
       def cached?
@@ -85,7 +97,7 @@ module Ktistec
 
         def self.dereference?(key_pair, iri, *, ignore_cached = false, include_deleted = false, **options) : self?
           if ignore_cached || (instance = self.find?(iri, include_deleted: include_deleted)).nil?
-            if iri.starts_with?(Ktistec.host)
+            if ::Ktistec::Model::Linked.local?(iri)
               instance = self.find?(iri, include_deleted: include_deleted)
             elsif iri.includes?("#")
               Log.debug { "#{self}.dereference? - #{iri} - skipping dereference for URL with fragment" }
@@ -122,7 +134,7 @@ module Ktistec
                     def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
                       if dereference && ({{foreign_key}} = self.{{foreign_key}})
                         if ignore_changed || ({{name}}_ = self.{{name}}?).nil? || (ignore_cached && !{{name}}_.changed?)
-                          if {{foreign_key}}.starts_with?(Ktistec.host)
+                          if ::Ktistec::Model::Linked.local?({{foreign_key}})
                             {{name}}_ = self.{{name}}?
                           elsif {{foreign_key}}.includes?("#")
                             Log.debug { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - skipping dereference for URL with fragment" }

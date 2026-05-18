@@ -283,6 +283,19 @@ Spectator.describe Ktistec::Model::Linked do
       end
     end
 
+    context "when linked IRI is based on the local host" do
+      let(evil_iri) { "https://test.test.evil.com/objects/object" }
+
+      before_each do
+        subject.linked_model_iri = evil_iri
+      end
+
+      it "fetches the object" do
+        subject.linked_model?(key_pair, dereference: true)
+        expect(HTTP::Client.last?).to match("GET #{evil_iri}")
+      end
+    end
+
     context "given bad JSON" do
       before_each do
         HTTP::Client.objects[object.iri] = "<html>"
@@ -349,6 +362,15 @@ Spectator.describe Ktistec::Model::Linked do
     it "fetches but does not return the object" do
       expect(subject.dereference?(key_pair, object.iri, ignore_cached: true)).to be_nil
       expect(HTTP::Client.last?).to match("GET #{object.iri}")
+    end
+
+    context "when linked IRI is based on the local host" do
+      let(crafted_iri) { "https://test.test.evil.com/objects/object" }
+
+      it "fetches the object" do
+        subject.dereference?(key_pair, crafted_iri)
+        expect(HTTP::Client.last?).to match("GET #{crafted_iri}")
+      end
     end
 
     context "when linked object is local" do
@@ -543,12 +565,32 @@ Spectator.describe Ktistec::Model::Linked do
       expect(LinkedModel.new(iri: "https://test.test/foo_bar").local?).to be_true
       expect(LinkedModel.new(iri: "https://remote/foo_bar").local?).to be_false
     end
+
+    it "does not treat a suffix domain as local" do
+      expect(LinkedModel.new(iri: "https://test.test.evil.com/foo").local?).to be_false
+    end
+
+    it "does not treat a different scheme as local" do
+      expect(LinkedModel.new(iri: "http://test.test/foo").local?).to be_false
+    end
+
+    it "does not treat a different port as local" do
+      expect(LinkedModel.new(iri: "https://test.test:8443/foo").local?).to be_false
+    end
+
+    it "treats an explicit default port and no port as equivalent" do
+      expect(LinkedModel.new(iri: "https://test.test:443/foo").local?).to be_true
+    end
   end
 
   describe "#cached?" do
     it "indicates if the instance is cached" do
       expect(LinkedModel.new(iri: "https://test.test/foo_bar").cached?).to be_false
       expect(LinkedModel.new(iri: "https://remote/foo_bar").cached?).to be_true
+    end
+
+    it "treats a suffix domain as cached" do
+      expect(LinkedModel.new(iri: "https://test.test.evil.com/foo").cached?).to be_true
     end
   end
 end

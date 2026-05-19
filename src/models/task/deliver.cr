@@ -1,16 +1,14 @@
 require "../task"
 require "../task/mixins/transfer"
 
-require "../../ktistec/constants"
+require "../../utils/recipients"
 require "../activity_pub/activity"
 require "../activity_pub/actor"
 require "../activity_pub/collection"
 require "../activity_pub/object"
-require "../relationship/social/follow"
 
 class Task
   class Deliver < Task
-    include Ktistec::Constants
     include Task::ConcurrentTask
     include Task::Transfer
 
@@ -20,21 +18,36 @@ class Task
     belongs_to activity, class_name: ActivityPub::Activity, foreign_key: subject_iri, primary_key: iri
     validates(activity) { "missing: #{subject_iri}" unless activity? }
 
+    # an actor (and its keypair) can be used for signing as long as it
+    # has pending deliveries to make.
+
+    def sender
+      @sender ||= ActivityPub::Actor.find(iri: source_iri, include_deleted: true)
+    end
+
+    class State
+      include JSON::Serializable
+
+      property recipients : Array(String)?
+
+      def initialize(@recipients = nil)
+      end
+    end
+
+    @[Persistent]
+    @[Insignificant]
+    property state : State { State.new }
+
+    @[Assignable]
+    @recipients : Array(String)?
+
     def recipients
-      [activity.to, activity.cc, activity.audience, sender.iri].flatten.flat_map do |recipient|
-        if recipient == PUBLIC
-          # no-op
-        elsif recipient == sender.iri
-          sender.iri
-        elsif recipient && (actor = ActivityPub::Actor.find?(recipient))
-          actor.iri
-        elsif recipient && recipient =~ /^#{sender.iri}\/followers$/
-          Relationship::Social::Follow.where(
-            object: sender,
-            confirmed: true,
-          ).select(&.actor?).map(&.actor.iri)
-        end
-      end.compact.sort!.uniq!
+      # fallback for in-flight tasks enqueued before the processor began
+      state.recipients || Ktistec::Recipients.for_deliver(activity, sender)
+    end
+
+    def recipients=(@recipients : Array(String)?)
+      state.recipients = recipients
     end
 
     def perform

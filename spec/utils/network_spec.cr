@@ -107,9 +107,11 @@ Spectator.describe Ktistec::Network do
       expect { described_class.get(key_pair, "https://external/io-error") }.to raise_error(Ktistec::Network::Error, /I\/O error/)
     end
 
-    it "fails on errors" do
-      expect { described_class.get(key_pair, "https://loopback.example/path") }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
-    end
+    {% unless flag?(:allow_private_addresses) %}
+      it "fails on errors" do
+        expect { described_class.get(key_pair, "https://loopback.example/path") }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
+      end
+    {% end %}
 
     it "fails on errors" do
       expect { described_class.get(key_pair, "https://private-ip.example/path") }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
@@ -296,9 +298,11 @@ Spectator.describe Ktistec::Network do
       expect { described_class.post(key_pair, "https://external/io-error", body, content_type) }.to raise_error(Ktistec::Network::Error, /I\/O error/)
     end
 
-    it "fails on errors" do
-      expect { described_class.post(key_pair, "https://loopback.example/path", body, content_type) }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
-    end
+    {% unless flag?(:allow_private_addresses) %}
+      it "fails on errors" do
+        expect { described_class.post(key_pair, "https://loopback.example/path", body, content_type) }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
+      end
+    {% end %}
 
     it "fails on errors" do
       expect { described_class.post(key_pair, "https://private-ip.example/path", body, content_type) }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
@@ -347,10 +351,12 @@ Spectator.describe Ktistec::Network do
       end
     end
 
-    it "does not POST when the host is rejected" do
-      expect { described_class.post(key_pair, "https://loopback.example/actor/inbox", body, content_type) }.to raise_error(Ktistec::Network::Error)
-      expect(HTTP::Client.requests).to be_empty
-    end
+    {% unless flag?(:allow_private_addresses) %}
+      it "does not POST when the host is rejected" do
+        expect { described_class.post(key_pair, "https://loopback.example/actor/inbox", body, content_type) }.to raise_error(Ktistec::Network::Error)
+        expect(HTTP::Client.requests).to be_empty
+      end
+    {% end %}
 
     # see "Host header" describe block above for the rationale.
 
@@ -375,7 +381,7 @@ Spectator.describe Ktistec::Network do
     # registered range.
 
     it "rejects non-public IPv4 addresses" do
-      [
+      addrs = [
         # 0.0.0.0/32 "This host on this network" + 0.0.0.0/8 "This network"
         "0.0.0.0", "0.1.2.3", "0.255.255.255",
         # 10.0.0.0/8 private-use
@@ -413,7 +419,11 @@ Spectator.describe Ktistec::Network do
         "224.0.0.0", "239.255.255.255",
         # 240.0.0.0/4 reserved and 255.255.255.255/32 limited broadcast
         "240.0.0.0", "255.255.255.255",
-      ].each do |ip_str|
+      ]
+      {% if flag?(:allow_private_addresses) %}
+        addrs -= ["127.0.0.1", "127.0.0.5", "172.16.0.1", "192.168.1.1"]
+      {% end %}
+      addrs.each do |ip_str|
         expect(described_class.safe_for_untrusted_outbound_http?(Socket::IPAddress.new(ip_str, 0))).to be_false, "expected #{ip_str} to be unsafe"
       end
     end
@@ -438,7 +448,7 @@ Spectator.describe Ktistec::Network do
     end
 
     it "rejects non-public IPv6 addresses" do
-      [
+      addrs = [
         # ::/128 unspecified, ::1/128 loopback
         "::", "::1",
         # ::/96 IPv4-compatible IPv6 (deprecated)
@@ -473,7 +483,11 @@ Spectator.describe Ktistec::Network do
         "fe80::", "fe80::1",
         # ff00::/8 multicast
         "ff00::", "ff02::1",
-      ].each do |ip_str|
+      ]
+      {% if flag?(:allow_private_addresses) %}
+        addrs -= ["::1"]
+      {% end %}
+      addrs.each do |ip_str|
         expect(described_class.safe_for_untrusted_outbound_http?(Socket::IPAddress.new(ip_str, 0))).to be_false, "expected #{ip_str} to be unsafe"
       end
     end

@@ -32,6 +32,23 @@ Spectator.describe OAuth2::Provider::AccessToken do
     end
   end
 
+  describe ".invalidate_for" do
+    let(other_account) { register }
+
+    let_create!(oauth2_provider_access_token, named: nil, client: client, account: account, token: "another")
+    let_create!(oauth2_provider_access_token, named: other_token, client: client, account: other_account, token: "foreign")
+
+    it "removes every access token for the given account" do
+      expect { described_class.invalidate_for(account) }
+        .to change { described_class.count(account: account) }.from(2).to(0)
+    end
+
+    it "does not remove access tokens for other accounts" do
+      expect { described_class.invalidate_for(account) }
+        .not_to change { described_class.count(account: other_account) }
+    end
+  end
+
   describe "#expired?" do
     context "when token has not expired" do
       let_build(oauth2_provider_access_token, named: valid_token, client: client, account: account, expires_at: Time.utc + 1.hour)

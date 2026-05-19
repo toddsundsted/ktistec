@@ -782,8 +782,21 @@ Spectator.describe SettingsController do
         expect { post "/settings/terminate" }.to change { Account.count }.by(-1)
       end
 
-      it "ends the session" do
-        expect { post "/settings/terminate" }.to change { Session.count }.by(-1)
+      let(account) { Account.find(iri: actor.iri) }
+
+      it "invalidates every session for the account" do
+        expect { post "/settings/terminate" }
+          .to change { Session.count(account: account) }.to(0)
+      end
+
+      context "given an OAuth access token" do
+        let_create!(:oauth2_provider_client, named: oauth_client)
+        let_create!(:oauth2_provider_access_token, named: oauth_token, client: oauth_client, account: account)
+
+        it "invalidates every OAuth access token for the account" do
+          expect { post "/settings/terminate" }
+            .to change { OAuth2::Provider::AccessToken.count(account: account) }.to(0)
+        end
       end
 
       it "redirects" do

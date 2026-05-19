@@ -13,6 +13,10 @@ module Ktistec
 
     Log = ::Log.for(self)
 
+    {% if flag?(:allow_private_addresses) %}
+      Log.warn { "Outbound HTTP permitted to 127.0.0.0/8, ::1/128, 172.16.0.0/12, 192.168.0.0/16" }
+    {% end %}
+
     # An IPv4 IANA Special-Purpose Address Registry entry.
     #
     private record V4Block,
@@ -145,6 +149,17 @@ module Ktistec
       parse_v4_literal("192.175.48.0"),
     ]
 
+    # Permits outbound HTTP to IPv4 loopback and the two RFC 1918
+    # ranges.
+    #
+    {% if flag?(:allow_private_addresses) %}
+      private V4_ALLOWED_PRIVATE = [
+        parse_v4_literal("127.0.0.0"),
+        parse_v4_literal("172.16.0.0"),
+        parse_v4_literal("192.168.0.0"),
+      ]
+    {% end %}
+
     # Application policy: IANA-globally-reachable entries that Ktistec
     # still refuses outbound HTTP to. Each entry is keyed by the
     # registry block's network address.
@@ -174,6 +189,14 @@ module Ktistec
       parse_v6_literal("2620:4f:8000::"),
     ]
 
+    # Permits outbound HTTP to IPv6 loopback.
+    #
+    {% if flag?(:allow_private_addresses) %}
+      private V6_ALLOWED_PRIVATE = [
+        parse_v6_literal("::1"),
+      ]
+    {% end %}
+
     # Returns true if `addr` is a destination Ktistec is willing to
     # send outbound HTTP to on behalf of untrusted (federated) input.
     #
@@ -193,11 +216,36 @@ module Ktistec
       in Nil
         true
       in V4Block
-        block.globally_reachable && !V4_POLICY.includes?(block.network)
+        (block.globally_reachable && !V4_POLICY.includes?(block.network)) || dev_permits?(addr, block)
       in V6Block
-        block.globally_reachable && !V6_POLICY.includes?(block.network)
+        (block.globally_reachable && !V6_POLICY.includes?(block.network)) || dev_permits?(addr, block)
       end
     end
+
+    # Permits outbound HTTP to a narrow set of private/loopback ranges
+    # that cover common federation testing and development scenarios.
+    #
+    {% if flag?(:allow_private_addresses) %}
+      private def dev_permits?(addr : Socket::IPAddress, block : V4Block) : Bool
+        return false unless V4_ALLOWED_PRIVATE.includes?(block.network)
+        Log.debug { "Outbound HTTP to #{addr.address} permitted (#{block.name}, #{block.rfc})" }
+        true
+      end
+
+      private def dev_permits?(addr : Socket::IPAddress, block : V6Block) : Bool
+        return false unless V6_ALLOWED_PRIVATE.includes?(block.network)
+        Log.debug { "Outbound HTTP to #{addr.address} permitted (#{block.name}, #{block.rfc})" }
+        true
+      end
+    {% else %}
+      private def dev_permits?(addr : Socket::IPAddress, block : V4Block) : Bool
+        false
+      end
+
+      private def dev_permits?(addr : Socket::IPAddress, block : V6Block) : Bool
+        false
+      end
+    {% end %}
 
     # Returns the most-specific IANA Special-Purpose Address Registry
     # entry containing `addr`, or `nil` if `addr` is not in any

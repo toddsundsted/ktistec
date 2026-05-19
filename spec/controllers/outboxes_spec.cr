@@ -187,14 +187,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Announce","object":"#{object.iri}"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
         it "puts the object in the actor's timeline" do
@@ -366,14 +366,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Like&object=#{URI.encode_www_form(object.iri)}"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Like","object":"#{object.iri}"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
         it "does not put the object in the actor's timeline" do
@@ -513,14 +513,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Dislike&object=#{URI.encode_www_form(object.iri)}"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Dislike","object":"#{object.iri}"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
         it "does not put the object in the actor's timeline" do
@@ -1109,14 +1109,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=this+is+a+test"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Publish","content":"this is a test"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
         it "puts the object in the actor's timeline" do
@@ -1307,14 +1307,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Accept&object=#{URI.encode_www_form(follow.iri)}"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Accept","object":"#{follow.iri}"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
       end
 
@@ -1386,14 +1386,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Reject&object=#{URI.encode_www_form(follow.iri)}"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
       end
 
@@ -1459,14 +1459,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(announce.iri)}"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{announce.iri}"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
       end
 
@@ -1546,14 +1546,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(like.iri)}"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{like.iri}"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
       end
 
@@ -1633,14 +1633,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(dislike.iri)}"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{dislike.iri}"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
       end
 
@@ -1712,14 +1712,14 @@ Spectator.describe OutboxesController do
             .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}"
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
 
-        it "sends the activity to the other's inbox" do
+        it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}|
-          expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+          expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
         end
       end
 
@@ -1801,14 +1801,14 @@ Spectator.describe OutboxesController do
               .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
           end
 
-          it "sends the activity to the other's inbox" do
+          it "writes the activity to the other's inbox" do
             post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(object.iri)}"
-            expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+            expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
           end
 
-          it "sends the activity to the other's inbox" do
+          it "writes the activity to the other's inbox" do
             post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{object.iri}"}|
-            expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+            expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
           end
         end
 
@@ -1870,14 +1870,14 @@ Spectator.describe OutboxesController do
               .to change { Relationship::Content::Outbox.count(from_iri: actor.iri) }.by(1)
           end
 
-          it "sends the activity to the other's inbox" do
+          it "writes the activity to the other's inbox" do
             post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Delete&object=#{URI.encode_www_form(actor.iri)}"
-            expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+            expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
           end
 
-          it "sends the activity to the other's inbox" do
+          it "writes the activity to the other's inbox" do
             post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Delete","object":"#{actor.iri}"}|
-            expect(HTTP::Client.requests).to have("POST #{other.inbox}")
+            expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
           end
         end
       end

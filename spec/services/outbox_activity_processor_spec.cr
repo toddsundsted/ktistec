@@ -377,5 +377,48 @@ Spectator.describe OutboxActivityProcessor do
         expect(MockDeliverTask.last_activity).to eq(announce_activity)
       end
     end
+
+    context "recipient partitioning" do
+      let(local) { register.actor }
+      let_create(:like, named: :activity, actor: account.actor, object: object, to: [local.iri, other.iri])
+
+      it "adds an inbox item to the local recipient's inbox" do
+        expect { OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask) }
+          .to change { Relationship::Content::Inbox.find?(owner: local, activity: activity) }
+      end
+
+      it "passes remote recipients to the deliver task" do
+        OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask)
+        expect(MockDeliverTask.last_recipients).to eq([other.iri])
+      end
+
+      it "schedules the deliver task" do
+        OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask)
+        expect(MockDeliverTask.schedule_called_count).to eq(1)
+      end
+
+      context "given only local recipients" do
+        before_each { activity.assign(to: [local.iri]) }
+
+        it "adds an inbox item to the local recipient's inbox" do
+          expect { OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask) }
+            .to change { Relationship::Content::Inbox.find?(owner: local, activity: activity) }
+        end
+
+        it "passes no remote recipients to the deliver task" do
+          OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask)
+          expect(MockDeliverTask.last_recipients).to be_empty
+        end
+      end
+
+      context "given an existing inbox item for the local recipient" do
+        before_each { put_in_inbox(local, activity) }
+
+        it "does not add a duplicate inbox item" do
+          expect { OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask) }
+            .not_to change { Relationship::Content::Inbox.count(owner: local, activity: activity) }
+        end
+      end
+    end
   end
 end

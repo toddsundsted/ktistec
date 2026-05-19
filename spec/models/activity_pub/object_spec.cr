@@ -1942,14 +1942,14 @@ Spectator.describe ActivityPub::Object do
         expect(object5.ancestors).to eq([object5, object4, subject])
       end
 
-      it "omits deleted replies and their parents" do
+      it "omits deleted replies but keeps the rest of the chain" do
         object1.delete!
-        expect(object3.ancestors).to eq([object3, object2])
+        expect(object3.ancestors).to eq([object3, object2, subject])
       end
 
-      it "omits blocked replies and their parents" do
+      it "omits blocked replies but keeps the rest of the chain" do
         object1.block!
-        expect(object3.ancestors).to eq([object3, object2])
+        expect(object3.ancestors).to eq([object3, object2, subject])
       end
 
       it "omits destroyed replies and their parents" do
@@ -1957,19 +1957,29 @@ Spectator.describe ActivityPub::Object do
         expect(object3.ancestors).to eq([object3, object2])
       end
 
-      it "omits replies with deleted attributed to actors" do
+      it "omits replies with deleted attributed to actors but keeps the rest of the chain" do
         actor1.delete!
-        expect(object3.ancestors).to eq([object3, object2])
+        expect(object3.ancestors).to eq([object3, object2, subject])
       end
 
-      it "omits replies with blocked attributed to actors" do
+      it "omits replies with blocked attributed to actors but keeps the rest of the chain" do
         actor1.block!
-        expect(object3.ancestors).to eq([object3, object2])
+        expect(object3.ancestors).to eq([object3, object2, subject])
       end
 
-      it "omits replies with destroyed attributed to actors" do
+      it "omits replies with destroyed attributed to actors but keeps the rest of the chain" do
         actor1.destroy
-        expect(object3.ancestors).to eq([object3, object2])
+        expect(object3.ancestors).to eq([object3, object2, subject])
+      end
+
+      it "includes deleted replies" do
+        object1.delete!
+        expect(object3.ancestors(include_deleted: true)).to eq([object3, object2, object1, subject])
+      end
+
+      it "includes blocked replies" do
+        object1.block!
+        expect(object3.ancestors(include_blocked: true)).to eq([object3, object2, object1, subject])
       end
 
       it "returns the depths" do
@@ -1984,14 +1994,14 @@ Spectator.describe ActivityPub::Object do
         expect(object5.descendants).to eq([object5])
       end
 
-      it "omits deleted replies and their children" do
+      it "omits deleted replies but keeps the rest of the subtree" do
         object2.delete!
-        expect(object1.descendants).to eq([object1])
+        expect(object1.descendants).to eq([object1, object3])
       end
 
-      it "omits blocked replies and their children" do
+      it "omits blocked replies but keeps the rest of the subtree" do
         object2.block!
-        expect(object1.descendants).to eq([object1])
+        expect(object1.descendants).to eq([object1, object3])
       end
 
       it "omits destroyed replies and their children" do
@@ -1999,19 +2009,29 @@ Spectator.describe ActivityPub::Object do
         expect(object1.descendants).to eq([object1])
       end
 
-      it "omits replies with deleted attributed to actors" do
+      it "omits replies with deleted attributed to actors but keeps the rest of the subtree" do
         actor2.delete!
-        expect(object1.descendants).to eq([object1])
+        expect(object1.descendants).to eq([object1, object3])
       end
 
-      it "omits replies with blocked attributed to actors" do
+      it "omits replies with blocked attributed to actors but keeps the rest of the subtree" do
         actor2.block!
-        expect(object1.descendants).to eq([object1])
+        expect(object1.descendants).to eq([object1, object3])
       end
 
-      it "omits replies with destroyed attributed to actors" do
+      it "omits replies with destroyed attributed to actors but keeps the rest of the subtree" do
         actor2.destroy
-        expect(object1.descendants).to eq([object1])
+        expect(object1.descendants).to eq([object1, object3])
+      end
+
+      it "includes deleted replies" do
+        object2.delete!
+        expect(object1.descendants(include_deleted: true)).to eq([object1, object2, object3])
+      end
+
+      it "includes blocked replies" do
+        object2.block!
+        expect(object1.descendants(include_blocked: true)).to eq([object1, object2, object3])
       end
 
       it "returns the depths" do

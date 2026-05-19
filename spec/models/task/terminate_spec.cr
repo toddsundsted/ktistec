@@ -6,7 +6,7 @@ require "../../spec_helper/factory"
 Spectator.describe Task::Terminate do
   setup_spec
 
-  let_create(:actor, local: true)
+  let(actor) { register.actor }
 
   let(options) do
     {
@@ -83,19 +83,52 @@ Spectator.describe Task::Terminate do
           .to change { ActivityPub::Actor.count(iri: actor.iri) }.by(-1)
       end
 
+      it "destroys the account" do
+        expect { subject.perform }
+          .to change { Account.count(iri: actor.iri) }.by(-1)
+      end
+
       it "creates a delete activity for the actor" do
         expect { subject.perform }
           .to change { ActivityPub::Activity::Delete.count(object_iri: actor.iri) }.by(1)
       end
 
-      it "schedules a task to deliver the activity" do
-        expect { subject.perform }
-          .to change { Task::Deliver.count }.by(1)
+      context "and there are remote followers" do
+        let_create(:actor, named: :remote_follower)
+        before_each { do_follow(remote_follower, actor) }
+
+        it "schedules a task to deliver the activity" do
+          expect { subject.perform }
+            .to change { Task::Deliver.count }.by(1)
+        end
       end
 
       it "does not reschedule itself" do
         expect { subject.perform }
           .not_to change { subject.next_attempt_at }
+      end
+
+      context "and the actor is already deleted" do
+        # production crash-recovery path
+
+        before_each { actor.delete! }
+
+        let(terminate) { Task::Terminate.find(subject.save.id) }
+
+        it "destroys the account" do
+          expect { terminate.perform }
+            .to change { Account.count(iri: actor.iri) }.by(-1)
+        end
+
+        it "does not create a delete activity" do
+          expect { terminate.perform }
+            .not_to change { ActivityPub::Activity::Delete.count(object_iri: actor.iri) }
+        end
+
+        it "does not reschedule itself" do
+          expect { terminate.perform }
+            .not_to change { terminate.next_attempt_at }
+        end
       end
     end
   end

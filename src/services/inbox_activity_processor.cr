@@ -7,10 +7,12 @@ require "../models/task/handle_follow_request"
 require "../models/task/receive"
 require "../models/task/deliver"
 require "../models/task/deliver_delayed_object"
+require "../models/relationship/content/inbox"
 require "../models/relationship/social/follow"
 require "../models/relationship/content/notification/quote"
 require "../models/activity_pub/object/quote_authorization"
 require "../models/quote_decision"
+require "../utils/recipients"
 
 class InboxActivityProcessor
   # Processes an inbound activity that has already been received,
@@ -91,11 +93,31 @@ class InboxActivityProcessor
       end
     end
 
+    partition = Ktistec::Recipients.partition(
+      Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
+    )
+
+    process_locally(partition.local, activity)
+
+    # scheduled unconditionally even when `partition.remote` is empty:
+    # `Task::Receive#perform` does per-receiver work (quote handling)
+    # that's needed regardless of remote forwarding.
+
     receive_task_class.new(
       receiver: account.actor,
       activity: activity,
       deliver_to: deliver_to,
+      recipients: partition.remote,
     ).schedule
+  end
+
+  # Processes local recipients in-process.
+  #
+  def self.process_locally(actors_accounts : Array(Tuple(ActivityPub::Actor, Account)), activity : ActivityPub::Activity)
+    actors_accounts.each do |actor, account|
+      next if Relationship::Content::Inbox.find?(owner: actor, activity: activity)
+      process(account, activity, deliver_to: [actor.iri])
+    end
   end
 
   private def self.process_accept_quote_request(account, quote_request, accept)

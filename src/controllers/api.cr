@@ -908,6 +908,22 @@ class APIController
     "{}"
   end
 
+  get "/api/v1/instance/peers" do
+    "[]"
+  end
+
+  get "/api/v1/instance/activity" do
+    "[]"
+  end
+
+  get "/api/v1/announcements" do |env|
+    unless env.account?
+      unauthorized "api/error", error: "The access token is invalid"
+    end
+
+    "[]"
+  end
+
   get "/api/v1/filters" do |env|
     unless env.account?
       unauthorized "api/error", error: "The access token is invalid"

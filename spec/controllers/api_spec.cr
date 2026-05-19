@@ -2203,6 +2203,51 @@ Spectator.describe APIController do
     end
   end
 
+  describe "GET /api/v1/instance/peers" do
+    it "succeeds" do
+      get "/api/v1/instance/peers"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns empty array" do
+      get "/api/v1/instance/peers"
+      expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+    end
+  end
+
+  describe "GET /api/v1/instance/activity" do
+    it "succeeds" do
+      get "/api/v1/instance/activity"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns empty array" do
+      get "/api/v1/instance/activity"
+      expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+    end
+  end
+
+  describe "GET /api/v1/announcements" do
+    it "returns 401" do
+      get "/api/v1/announcements"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "with valid user access token" do
+      let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+      it "succeeds" do
+        get "/api/v1/announcements", headers: json_bearer_headers(access_token.token)
+        expect(response.status_code).to eq(200)
+      end
+
+      it "returns empty array" do
+        get "/api/v1/announcements", headers: json_bearer_headers(access_token.token)
+        expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+      end
+    end
+  end
+
   describe "GET /api/v1/filters" do
     it "returns 401" do
       get "/api/v1/filters"

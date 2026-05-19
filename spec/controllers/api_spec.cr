@@ -334,6 +334,105 @@ Spectator.describe APIController do
     end
   end
 
+  describe "GET /api/v1/directory" do
+    let_create!(:account, named: :older_account, created_at: 48.hours.ago)
+    let_create!(:account, named: :newer_account, created_at: 24.hours.ago)
+
+    macro ids
+      JSON.parse(response.body).as_a.map(&.["id"].as_s)
+    end
+
+    let(older_id) { older_account.actor.id.to_s }
+    let(newer_id) { newer_account.actor.id.to_s }
+
+    it "succeeds" do
+      get "/api/v1/directory"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds" do
+      get "/api/v1/directory?local=true"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "succeeds" do
+      get "/api/v1/directory?local=false"
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns all accounts" do
+      get "/api/v1/directory"
+      expect(ids).to contain_elements([older_id, newer_id])
+    end
+
+    it "returns no accounts" do
+      get "/api/v1/directory?local=false"
+      expect(ids).to be_empty
+    end
+
+    it "orders accounts by creation date" do
+      get "/api/v1/directory?order=new"
+      expect(ids).to eq([newer_id, older_id])
+    end
+
+    context "given a very recent post" do
+      let_create!(:object, attributed_to: older_account.actor, created_at: 1.hour.ago)
+      let_create!(:create, actor: older_account.actor, object: object)
+
+      before_each { put_in_outbox(older_account.actor, create) }
+
+      it "orders accounts by most recent post" do
+        get "/api/v1/directory?order=active"
+        expect(ids).to eq([older_id, newer_id])
+      end
+    end
+
+    context "given an older post" do
+      let_create!(:object, attributed_to: older_account.actor, created_at: 36.hours.ago)
+      let_create!(:create, actor: older_account.actor, object: object)
+
+      before_each { put_in_outbox(older_account.actor, create) }
+
+      it "orders accounts by most recent post" do
+        get "/api/v1/directory?order=active"
+        expect(ids).to eq([older_id, newer_id])
+      end
+    end
+
+    context "given a private post" do
+      let_create!(:object, attributed_to: older_account.actor, visible: false, created_at: 1.second.ago)
+      let_create!(:create, actor: older_account.actor, object: object)
+
+      before_each { put_in_outbox(older_account.actor, create) }
+
+      it "does not return private posts" do
+        get "/api/v1/directory?order=active"
+        expect(ids).to eq([newer_id, older_id])
+      end
+    end
+
+    context "given a remote actor" do
+      let_create!(:actor, named: :remote_actor)
+
+      let(remote_id) { remote_actor.id.to_s }
+
+      it "does not surface remote actors" do
+        get "/api/v1/directory"
+        expect(ids).not_to contain(remote_id)
+      end
+    end
+
+    it "limits the number of accounts" do
+      get "/api/v1/directory?limit=1"
+      expect(ids).to eq([newer_id])
+    end
+
+    it "skips accounts" do
+      get "/api/v1/directory?offset=1&order=new"
+      expect(ids).to eq([older_id])
+    end
+  end
+
   describe "GET /api/v1/accounts/verify_credentials" do
     let(actor) { account.actor }
 

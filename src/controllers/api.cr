@@ -247,6 +247,34 @@ class APIController
     end
   end
 
+  get "/api/v1/directory" do |env|
+    if parse_bool(env.params.query["local"]?) == false
+      "[]"
+    else
+      offset = (env.params.query["offset"]?.try(&.to_i?) || 0).clamp(0, Int32::MAX)
+      limit = (env.params.query["limit"]?.try(&.to_i?) || 40).clamp(1, 80)
+      order = env.params.query["order"]? == "new" ? "new" : "active"
+
+      accounts =
+        case order
+        when "new"
+          Account.all.sort_by(&.created_at).reverse!
+        else
+          # bucket has-post accounts ahead of no-post accounts
+          Account.all.sort_by do |account|
+            recent = account.actor.public_posts(limit: 1).first?.try(&.created_at)
+            {recent ? 1 : 0, recent || account.created_at}
+          end.reverse!
+        end
+
+      body = (accounts[offset, limit]? || [] of Account).map do |a|
+        API::V1::Serializers::Account.from_account(a, a.actor)
+      end
+
+      body.to_json
+    end
+  end
+
   get "/api/v1/accounts/:id" do |env|
     unless env.account?
       unauthorized "api/error", error: "The access token is invalid"
@@ -906,6 +934,22 @@ class APIController
 
   get "/api/v1/instance/translation_languages" do
     "{}"
+  end
+
+  get "/api/v1/instance/peers" do
+    "[]"
+  end
+
+  get "/api/v1/instance/activity" do
+    "[]"
+  end
+
+  get "/api/v1/announcements" do |env|
+    unless env.account?
+      unauthorized "api/error", error: "The access token is invalid"
+    end
+
+    "[]"
   end
 
   get "/api/v1/filters" do |env|

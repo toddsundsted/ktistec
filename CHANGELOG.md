@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.3.9]
+### Added
+- New Mastodon-compatible APIs.
+
+### Fixed
+- Close DNS rebinding window for outbound HTTP requests.
+- Limit the size of HTTP bodies the server reads.
+- Sanitize RSS feed output to prevent CDATA breakout.
+- Destroy all sessions and access tokens on account termination.
+
+### Changed
+- Ensure all GET and POST requests utilize `Ktistec::Network`.
+- Process local recipients in-process in inbox/outbox activity processors.
+
 ## [v3.3.8]
 ### Added
 - String safety framework with typed "safe" strings.
@@ -768,6 +782,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.3.9]: https://github.com/toddsundsted/ktistec/compare/d73c518c...5cd1c665
 [v3.3.8]: https://github.com/toddsundsted/ktistec/compare/a9c7c0ba...7f7de3d5
 [v3.3.7]: https://github.com/toddsundsted/ktistec/compare/0de33ac0...408900a5
 [v3.3.6]: https://github.com/toddsundsted/ktistec/compare/99046b6d...3b5cf8dc

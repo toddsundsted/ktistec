@@ -68,11 +68,11 @@ Spectator.describe Ktistec::Network do
     end
 
     it "fails on errors" do
-      expect { described_class.get(key_pair, "https://external/returns-401") }.to raise_error(Ktistec::Network::Error, /Access denied/)
+      expect { described_class.get(key_pair, "https://external/returns-401") }.to raise_error(Ktistec::Network::Error, /Unauthorized/)
     end
 
     it "fails on errors" do
-      expect { described_class.get(key_pair, "https://external/returns-403") }.to raise_error(Ktistec::Network::Error, /Access denied/)
+      expect { described_class.get(key_pair, "https://external/returns-403") }.to raise_error(Ktistec::Network::Error, /Forbidden/)
     end
 
     it "fails on errors" do

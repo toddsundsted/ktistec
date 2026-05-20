@@ -436,8 +436,11 @@ module Ktistec
               message = "Could not redirect [#{status_code}] [#{tmp}]"
               break
             end
-          when 401, 403
-            message = "Access denied [#{status_code}]"
+          when 401
+            message = "Unauthorized [#{status_code}]"
+            break
+          when 403
+            message = "Forbidden [#{status_code}]"
             break
           when 404, 410
             error_class = NotFoundError

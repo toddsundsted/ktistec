@@ -5,7 +5,6 @@ crystal:
   actor_emojis = Tag::Emoji.where(subject: actor)
   author_emojis = (author.iri != actor.iri) ? Tag::Emoji.where(subject: author) : actor_emojis
   is_blocked = object.blocked? || author.blocked? || actor.blocked?
-  is_deleted = object.deleted? || author.deleted? || actor.deleted?
 .content data-controller="image-viewer" data-action="click->image-viewer#handleClick"
   .summary
     - if for_thread && (parent = object.in_reply_to?)
@@ -61,9 +60,9 @@ crystal:
           - if object.sensitive
             i.red.eye.slash.icon
           = t summary
-        - partial body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
+        - partial body_partial(env, object, with_detail, show_quote, timezone)
     - else
-      - partial body_partial(env, object, with_detail, is_deleted, show_quote, timezone)
+      - partial body_partial(env, object, with_detail, show_quote, timezone)
     - if with_detail && !as_context && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq!

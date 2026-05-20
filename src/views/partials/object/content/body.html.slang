@@ -14,7 +14,7 @@ crystal:
   end
 - partial "partials/object/content/attachments"
 - if with_detail
-  div.extra.text class=(is_deleted && "deleted" || nil)
+  div.extra.text
     = emoji_html(html, object, emojis: object_emojis)
   - if object.quote_iri
     crystal:
@@ -25,7 +25,7 @@ crystal:
   - if object.responds_to?(:poll?) && (poll = object.poll?)
     - partial "partials/object/content/poll"
 - else
-  div.extra.text class=(is_deleted && "deleted" || nil) data-controller="clickable-background" data-clickable-background-href-value=href
+  div.extra.text data-controller="clickable-background" data-clickable-background-href-value=href
     = emoji_html(html, object, emojis: object_emojis)
   - if object.quote_iri
     crystal:

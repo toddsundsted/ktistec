@@ -16,12 +16,16 @@ module Ktistec::ViewHelper
       states
     end
 
-    def object_states(object)
+    def object_states(object, author = nil, actor = nil)
       states = [] of String
       states << "is-sensitive" if object.sensitive
       states << "is-draft" if object.draft?
       states << "is-deleted" if object.deleted?
       states << "is-blocked" if object.blocked?
+      states << "has-deleted-author" if author && author.deleted?
+      states << "has-deleted-actor" if actor && actor != author && actor.deleted?
+      states << "has-blocked-author" if author && author.blocked?
+      states << "has-blocked-actor" if actor && actor != author && actor.blocked?
       states << "has-replies" if object.replies_count > 0
       states << "has-quote" if object.quote_iri
       states << "has-media" if object.attachments.try { |a| a.size > 0 }

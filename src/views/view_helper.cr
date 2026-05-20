@@ -105,7 +105,7 @@ module Ktistec::ViewHelper
       partial "partials/object/content"
     end
 
-    def body_partial(env, object, with_detail, is_deleted, show_quote, timezone, content_io)
+    def body_partial(env, object, with_detail, show_quote, timezone, content_io)
       partial "partials/object/content/body"
     end
 

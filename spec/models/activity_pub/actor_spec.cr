@@ -1858,19 +1858,58 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "paginates with max_id" do
-      expect(subject.public_posts(max_id: outbox5.id, limit: 2)).to eq([object4, object3])
+      expect(subject.public_posts(max_id: object5.id, limit: 2)).to eq([object4, object3])
     end
 
     it "paginates with min_id" do
-      expect(subject.public_posts(min_id: outbox1.id, limit: 2)).to eq([object3, object2])
+      expect(subject.public_posts(min_id: object1.id, limit: 2)).to eq([object3, object2])
     end
 
     it "reports more results" do
-      expect(subject.public_posts(min_id: outbox1.id, limit: 1).more?).to be_true
+      expect(subject.public_posts(min_id: object1.id, limit: 1).more?).to be_true
     end
 
     it "reports no more results" do
       expect(subject.public_posts(limit: 5).more?).not_to be_true
+    end
+
+    it "returns the first page" do
+      expect(subject.public_posts(max_id: 0_i64, limit: 2)).to eq([object5, object4])
+    end
+
+    context "with multiple outbox rows for the same object" do
+      let_build(:create, named: extra_activity, actor: subject, object: object3)
+      let_create!(:outbox_relationship, named: extra_outbox, owner: subject, activity: extra_activity)
+
+      it "emits the object once" do
+        expect(subject.public_posts(limit: 10)).to eq([object3, object5, object4, object2, object1])
+      end
+
+      it "does not emit the object on the next page" do
+        expect(subject.public_posts(max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
+      end
+    end
+
+    context "with a max_id pointing at a filtered object" do
+      it "returns the first page" do
+        object3.delete!
+        expect(subject.public_posts(max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
+      end
+
+      it "returns the first page" do
+        actor3.block!
+        expect(subject.public_posts(max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
+      end
+
+      it "returns the first page" do
+        object3.assign(visible: false).save
+        expect(subject.public_posts(max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
+      end
+
+      it "returns the first page" do
+        object3.assign(in_reply_to: object2).save
+        expect(subject.public_posts(max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
+      end
     end
   end
 
@@ -2037,19 +2076,48 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "paginates with max_id" do
-      expect(subject.all_posts(max_id: outbox5.id, limit: 2)).to eq([object4, object3])
+      expect(subject.all_posts(max_id: object5.id, limit: 2)).to eq([object4, object3])
     end
 
     it "paginates with min_id" do
-      expect(subject.all_posts(min_id: outbox1.id, limit: 2)).to eq([object3, object2])
+      expect(subject.all_posts(min_id: object1.id, limit: 2)).to eq([object3, object2])
     end
 
     it "reports more results" do
-      expect(subject.all_posts(min_id: outbox1.id, limit: 1).more?).to be_true
+      expect(subject.all_posts(min_id: object1.id, limit: 1).more?).to be_true
     end
 
     it "reports no more results" do
       expect(subject.all_posts(limit: 5).more?).not_to be_true
+    end
+
+    it "returns the first page" do
+      expect(subject.all_posts(max_id: 0_i64, limit: 2)).to eq([object5, object4])
+    end
+
+    context "with multiple outbox rows for the same object" do
+      let_build(:create, named: extra_activity, actor: subject, object: object3)
+      let_create!(:outbox_relationship, named: extra_outbox, owner: subject, activity: extra_activity)
+
+      it "emits the object once" do
+        expect(subject.all_posts(limit: 10)).to eq([object3, object5, object4, object2, object1])
+      end
+
+      it "does not emit the object on the next page" do
+        expect(subject.all_posts(max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
+      end
+    end
+
+    context "with a max_id pointing at a filtered object" do
+      it "returns the first page" do
+        object3.delete!
+        expect(subject.all_posts(max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
+      end
+
+      it "returns the first page" do
+        actor3.block!
+        expect(subject.all_posts(max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
+      end
     end
   end
 

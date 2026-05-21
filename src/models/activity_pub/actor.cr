@@ -795,6 +795,55 @@ module ActivityPub
       Object.query_with_cursor(query, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
+    # Translates an `Object.id` (external cursor) to the canonical
+    # outbox `relationships.id` (internal cursor), additionally
+    # restricted to visible, non-reply objects. Returns nil for
+    # unknown ids.
+    #
+    private def translate_object_id_to_public_outbox_id(o_id : Int64) : Int64?
+      query = <<-QUERY
+        SELECT MAX(r.id)
+          FROM objects AS o
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+           AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+           AND r.type = '#{Relationship::Content::Outbox}'
+         WHERE r.from_iri = ?
+           AND o.id = ?
+           AND o.visible = 1
+           AND o.in_reply_to_iri IS NULL
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+      QUERY
+      Object.scalar(query, self.iri, o_id).as(Int64?)
+    end
+
+    # Translates an `Object.id` (external cursor) to the canonical
+    # outbox `relationships.id` (internal cursor). Returns nil for
+    # unknown ids.
+    #
+    private def translate_object_id_to_outbox_id(o_id : Int64) : Int64?
+      query = <<-QUERY
+        SELECT MAX(r.id)
+          FROM objects AS o
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+           AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+           AND r.type = '#{Relationship::Content::Outbox}'
+         WHERE r.from_iri = ?
+           AND o.id = ?
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+      QUERY
+      Object.scalar(query, self.iri, o_id).as(Int64?)
+    end
+
     # Returns the actor's public posts and shares.
     #
     # Meant to be called on local (not cached) actors.
@@ -830,8 +879,10 @@ module ActivityPub
     # Does not include private (not visible) posts and replies.
     #
     def public_posts(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_public_outbox_id(max_id) if max_id
+      min_id = translate_object_id_to_public_outbox_id(min_id) if min_id
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
+         SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -845,6 +896,17 @@ module ActivityPub
             #{common_filters(objects: "o", actors: "t", activities: "a")}
             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
             AND o.visible = 1
+            AND NOT EXISTS (
+              SELECT 1
+                FROM relationships AS r2
+                JOIN activities AS a2 ON a2.iri = r2.to_iri
+               WHERE r2.from_iri = r.from_iri
+                 AND r2.type = '#{Relationship::Content::Outbox}'
+                 AND a2.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+                 AND a2.undone_at IS NULL
+                 AND a2.object_iri = a.object_iri
+                 AND r2.id > r.id
+            )
             AND %{cursor_condition}
       QUERY
       Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
@@ -942,8 +1004,10 @@ module ActivityPub
     # Includes private posts and replies!
     #
     def all_posts(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_outbox_id(max_id) if max_id
+      min_id = translate_object_id_to_outbox_id(min_id) if min_id
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
+         SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -955,6 +1019,17 @@ module ActivityPub
             AND r.type = '#{Relationship::Content::Outbox}'
           WHERE r.from_iri = ?
             #{common_filters(objects: "o", actors: "t", activities: "a")}
+            AND NOT EXISTS (
+              SELECT 1
+                FROM relationships AS r2
+                JOIN activities AS a2 ON a2.iri = r2.to_iri
+               WHERE r2.from_iri = r.from_iri
+                 AND r2.type = '#{Relationship::Content::Outbox}'
+                 AND a2.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+                 AND a2.undone_at IS NULL
+                 AND a2.object_iri = a.object_iri
+                 AND r2.id > r.id
+            )
             AND %{cursor_condition}
       QUERY
       Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)

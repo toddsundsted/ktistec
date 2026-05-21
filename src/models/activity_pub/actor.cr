@@ -1060,6 +1060,30 @@ module ActivityPub
 
     private alias Timeline = Relationship::Content::Timeline
 
+    # Translates an `Object.id` (external cursor) to the canonical
+    # timeline `relationships.id` (internal cursor). Returns nil for
+    # unknown ids or ids of objects that wouldn't appear in the result
+    # set.
+    #
+    private def translate_object_id_to_timeline_id(o_id : Int64, type_list : String, exclude_replies : Bool) : Int64?
+      exclude_replies_clause =
+        exclude_replies ? "AND o.in_reply_to_iri IS NULL" : ""
+      query = <<-QUERY
+        SELECT MAX(t.id)
+          FROM relationships AS t
+          JOIN objects AS o
+            ON o.iri = t.to_iri
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+         WHERE t.from_iri = ?
+           AND t.type IN (#{type_list})
+           AND o.id = ?
+           #{exclude_replies_clause}
+           #{common_filters(objects: "o", actors: "c")}
+      QUERY
+      Timeline.scalar(query, self.iri, o_id).as(Int64?)
+    end
+
     # Returns entries in the actor's timeline.
     #
     # Meant to be called on local (not cached) actors.
@@ -1111,20 +1135,21 @@ module ActivityPub
     # May be filtered to include only objects with associated
     # relationships of the specified type (via `inclusion`).
     #
-    # The cursor values correspond to timeline relationship id.
-    #
     def timeline(*, exclude_replies = false, inclusion = nil, max_id = nil, min_id = nil, limit = 10)
-      exclude_replies =
-        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
-      inclusion =
+      inclusion_types =
         case inclusion
         when Class, String
-          %Q|AND +t.type = '#{inclusion}'|
+          [inclusion.to_s]
         when Array
-          %Q|AND +t.type IN ('#{inclusion.map(&.to_s).join("','")}')|
+          inclusion.map(&.to_s)
         else
-          %Q|AND +t.type IN ('#{Timeline.all_subtypes.map(&.to_s).join("','")}')|
+          Timeline.all_subtypes.map(&.to_s)
         end
+      type_list = "'#{inclusion_types.join("','")}'"
+      exclude_replies_clause =
+        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
+      max_id = translate_object_id_to_timeline_id(max_id, type_list, exclude_replies) if max_id
+      min_id = translate_object_id_to_timeline_id(min_id, type_list, exclude_replies) if min_id
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
             FROM relationships AS t
@@ -1133,12 +1158,25 @@ module ActivityPub
             JOIN actors AS c
               ON c.iri = o.attributed_to_iri
            WHERE +t.from_iri = ?
-             #{inclusion}
-             #{exclude_replies}
+             AND +t.type IN (#{type_list})
+             #{exclude_replies_clause}
              #{common_filters(objects: "o", actors: "c")}
+             AND NOT EXISTS (
+               SELECT 1
+                 FROM relationships AS t2
+                WHERE t2.from_iri = t.from_iri
+                  AND t2.type IN (#{type_list})
+                  AND t2.to_iri = t.to_iri
+                  AND t2.id > t.id
+             )
              AND %{cursor_condition}
       QUERY
-      Timeline.query_with_cursor(query, self.iri, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
+      result = Timeline.query_with_cursor(query, self.iri, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
+      unless result.empty?
+        result.cursor_start = result.first.object.id
+        result.cursor_end = result.to_a.last.object.id
+      end
+      result
     end
 
     # Returns the count of entries in the actor's timeline since the

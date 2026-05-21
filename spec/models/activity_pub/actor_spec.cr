@@ -2373,13 +2373,56 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "paginates the results" do
-      expect(subject.timeline(max_id: timeline3.id, limit: 2)).to eq([timeline2, timeline1])
-      expect(subject.timeline(max_id: timeline3.id, limit: 2).more?).not_to be_true
+      expect(subject.timeline(max_id: object3.id, limit: 2)).to eq([timeline2, timeline1])
+      expect(subject.timeline(max_id: object3.id, limit: 2).more?).not_to be_true
     end
 
     it "paginates the results" do
-      expect(subject.timeline(min_id: timeline2.id, limit: 2)).to eq([timeline4, timeline3])
-      expect(subject.timeline(min_id: timeline2.id, limit: 2).more?).to be_true
+      expect(subject.timeline(min_id: object2.id, limit: 2)).to eq([timeline4, timeline3])
+      expect(subject.timeline(min_id: object2.id, limit: 2).more?).to be_true
+    end
+
+    it "returns the first page" do
+      expect(subject.timeline(max_id: 0_i64, limit: 2)).to eq([timeline5, timeline4])
+    end
+
+    it "exposes the joined object id" do
+      result = subject.timeline(limit: 2)
+      expect(result.cursor_start).to eq(object5.id)
+      expect(result.cursor_end).to eq(object4.id)
+    end
+
+    context "with multiple timeline rows for the same object" do
+      # the rule engine's "none Timeline, owner, object" precondition
+      # prevents an actor from having two timeline rows for the same
+      # object. a different subtype bypasses the rule and lets us
+      # confirm NOT EXISTS canonicalization holds.
+      let_create!(:timeline_create, named: nil, owner: subject, object: object3)
+
+      it "emits the object once" do
+        expect(subject.timeline(limit: 10).to_a.map(&.object)).to eq([object3, object5, object4, object2, object1])
+      end
+
+      it "does not emit the object on the next page" do
+        expect(subject.timeline(max_id: object3.id, limit: 5).to_a.map(&.object)).to eq([object5, object4, object2, object1])
+      end
+    end
+
+    context "with a max_id pointing at a filtered object" do
+      it "returns the first page" do
+        object3.delete!
+        expect(subject.timeline(max_id: object3.id, limit: 5).to_a.map(&.object)).to eq([object5, object4, object2, object1])
+      end
+
+      it "returns the first page" do
+        actor3.block!
+        expect(subject.timeline(max_id: object3.id, limit: 5).to_a.map(&.object)).to eq([object5, object4, object2, object1])
+      end
+
+      it "returns the first page" do
+        object3.assign(in_reply_to: object2).save
+        expect(subject.timeline(exclude_replies: true, max_id: object3.id, limit: 5).to_a.map(&.object)).to eq([object5, object4, object2, object1])
+      end
     end
   end
 

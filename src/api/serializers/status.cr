@@ -339,6 +339,10 @@ module API
 
       # Builds a Status representing an announced (boosted) object.
       #
+      # The outer `id` collapses to the boosted object's `id` so that
+      # Ktistec's Status.id space is uniformly `ActivityPub::Object.id`
+      # across the API.
+      #
       def self.from_announce(announce : ActivityPub::Activity::Announce, actor : ActivityPub::Actor? = nil) : Status
         account = Account.from_actor(announce.actor)
 
@@ -346,7 +350,7 @@ module API
         reblog = from_object(announce.object, actor: actor)
 
         Status.new(
-          id: announce.id.to_s,
+          id: announce.object.id.to_s,
           uri: Ktistec::SafeURI.from(announce.iri),
           created_at: (announce.published || announce.object.published).not_nil!.to_rfc3339,
           account: account,

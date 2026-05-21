@@ -1170,6 +1170,12 @@ Spectator.describe APIController do
           json = JSON.parse(response.body)
           expect(json.as_a.first.dig?("account", "id")).to eq(announce.actor.id.to_s)
         end
+
+        it "sets outer id to the boosted object's id" do
+          get "/api/v1/timelines/home", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.first.dig?("id")).to eq(post.id.to_s)
+        end
       end
     end
   end

@@ -342,7 +342,7 @@ module ActivityPub
     def all_following(*, max_id = nil, min_id = nil, limit = 10, public = true)
       Actor.query_with_cursor(
         social_cursor_query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     def all_followers(page = 1, size = 10, public = false)
@@ -354,7 +354,7 @@ module ActivityPub
     def all_followers(*, max_id = nil, min_id = nil, limit = 10, public = false)
       Actor.query_with_cursor(
         social_cursor_query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     def all_follow_requests(*, max_id = nil, min_id = nil, limit = 10)
@@ -369,7 +369,7 @@ module ActivityPub
            AND %{cursor_condition}
       QUERY
       Actor.query_with_cursor(
-        query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        query, self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     private def activity_query(type)

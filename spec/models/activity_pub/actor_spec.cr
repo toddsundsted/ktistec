@@ -735,19 +735,19 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "paginates with max_id" do
-      expect(subject.all_following(max_id: follow3.id, limit: 2, public: true)).to eq([following2, following1])
+      expect(subject.all_following(max_id: following3.id, limit: 2, public: true)).to eq([following2, following1])
     end
 
     it "paginates with min_id" do
-      expect(subject.all_following(min_id: follow1.id, limit: 2, public: true)).to eq([following3, following2])
+      expect(subject.all_following(min_id: following1.id, limit: 2, public: true)).to eq([following3, following2])
     end
 
     it "reports more results" do
-      expect(subject.all_following(min_id: follow1.id, limit: 1, public: true).more?).to be_true
+      expect(subject.all_following(min_id: following1.id, limit: 1, public: true).more?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_following(min_id: follow1.id, limit: 2, public: true).more?).not_to be_true
+      expect(subject.all_following(min_id: following1.id, limit: 2, public: true).more?).not_to be_true
     end
 
     create_following(4, confirmed: true, visible: false)
@@ -788,19 +788,19 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "paginates with max_id" do
-      expect(subject.all_followers(max_id: follow3.id, limit: 2, public: true)).to eq([follower2, follower1])
+      expect(subject.all_followers(max_id: follower3.id, limit: 2, public: true)).to eq([follower2, follower1])
     end
 
     it "paginates with min_id" do
-      expect(subject.all_followers(min_id: follow1.id, limit: 2, public: true)).to eq([follower3, follower2])
+      expect(subject.all_followers(min_id: follower1.id, limit: 2, public: true)).to eq([follower3, follower2])
     end
 
     it "reports more results" do
-      expect(subject.all_followers(min_id: follow1.id, limit: 1, public: true).more?).to be_true
+      expect(subject.all_followers(min_id: follower1.id, limit: 1, public: true).more?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_followers(min_id: follow1.id, limit: 2, public: true).more?).not_to be_true
+      expect(subject.all_followers(min_id: follower1.id, limit: 2, public: true).more?).not_to be_true
     end
 
     create_follower(4, confirmed: true, visible: false)
@@ -841,19 +841,19 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "paginates with max_id" do
-      expect(subject.all_follow_requests(max_id: request3.id, limit: 2)).to eq([requester2, requester1])
+      expect(subject.all_follow_requests(max_id: requester3.id, limit: 2)).to eq([requester2, requester1])
     end
 
     it "paginates with min_id" do
-      expect(subject.all_follow_requests(min_id: request1.id, limit: 2)).to eq([requester3, requester2])
+      expect(subject.all_follow_requests(min_id: requester1.id, limit: 2)).to eq([requester3, requester2])
     end
 
     it "reports more results" do
-      expect(subject.all_follow_requests(min_id: request1.id, limit: 1).more?).to be_true
+      expect(subject.all_follow_requests(min_id: requester1.id, limit: 1).more?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_follow_requests(min_id: request1.id, limit: 2).more?).not_to be_true
+      expect(subject.all_follow_requests(min_id: requester1.id, limit: 2).more?).not_to be_true
     end
 
     create_requester(4, confirmed: true)

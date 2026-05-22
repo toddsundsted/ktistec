@@ -1242,6 +1242,33 @@ module ActivityPub
       Notification.query_and_paginate(query, iri, page: page, size: size)
     end
 
+    # Returns notifications for the actor.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    def notifications(*, max_id = nil, min_id = nil, limit = 10)
+      query = <<-QUERY
+         SELECT #{Notification.columns(prefix: "n")}
+           FROM relationships AS n
+      LEFT JOIN activities AS a
+             ON a.iri = n.to_iri
+      LEFT JOIN actors AS c
+             ON c.iri = a.actor_iri
+      LEFT JOIN objects AS o
+             ON o.iri = a.object_iri
+      LEFT JOIN objects AS e
+             ON e.iri = n.to_iri
+      LEFT JOIN actors AS t
+             ON t.iri = e.attributed_to_iri
+          WHERE +n.from_iri = ?
+            AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
+            #{common_filters(actors: "c", objects: "o", activities: "a")}
+            #{common_filters(objects: "e", actors: "t")}
+            AND %{cursor_condition}
+      QUERY
+      Notification.query_with_cursor(query, iri, cursor_column: "n.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of notifications for the actor since the given
     # date.
     #

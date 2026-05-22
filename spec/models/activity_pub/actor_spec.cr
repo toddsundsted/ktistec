@@ -2490,6 +2490,84 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#notifications" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro notification(index)
+      let_build(:actor, named: actor{{index}})
+      let_build(:object, named: object{{index}})
+      let_build(:announce, named: activity{{index}}, actor: actor{{index}}, object: object{{index}})
+      let_create!(:notification_announce, named: notification{{index}}, owner: subject, activity: activity{{index}})
+    end
+
+    notification(1)
+    notification(2)
+    notification(3)
+    notification(4)
+    notification(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.notifications(limit: 2).first).to be_a(Relationship::Content::Notification)
+    end
+
+    it "returns the count" do
+      expect(subject.notifications(since: since)).to eq(5)
+      expect(subject.notifications(since: notification1.created_at)).to eq(4)
+    end
+
+    it "filters out undone activities" do
+      activity5.undo!
+      expect(subject.notifications(limit: 2)).to eq([notification4, notification3])
+      expect(subject.notifications(since: since)).to eq(4)
+    end
+
+    it "filters out activities with deleted objects" do
+      object5.delete!
+      expect(subject.notifications(limit: 2)).to eq([notification4, notification3])
+      expect(subject.notifications(since: since)).to eq(4)
+    end
+
+    it "filters out activities with blocked objects" do
+      object5.block!
+      expect(subject.notifications(limit: 2)).to eq([notification4, notification3])
+      expect(subject.notifications(since: since)).to eq(4)
+    end
+
+    it "filters out activities from deleted actors" do
+      actor5.delete!
+      expect(subject.notifications(limit: 2)).to eq([notification4, notification3])
+      expect(subject.notifications(since: since)).to eq(4)
+    end
+
+    it "filters out activities from blocked actors" do
+      actor5.block!
+      expect(subject.notifications(limit: 2)).to eq([notification4, notification3])
+      expect(subject.notifications(since: since)).to eq(4)
+    end
+
+    it "limits the results" do
+      expect(subject.notifications(limit: 2)).to eq([notification5, notification4])
+    end
+
+    it "paginates with max_id" do
+      expect(subject.notifications(max_id: notification5.id, limit: 2)).to eq([notification4, notification3])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.notifications(min_id: notification1.id, limit: 2)).to eq([notification3, notification2])
+    end
+
+    it "reports more results" do
+      expect(subject.notifications(limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.notifications(limit: 5).more?).not_to be_true
+    end
+  end
+
   context "approvals" do
     subject! do
       described_class.new(

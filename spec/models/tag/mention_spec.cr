@@ -174,6 +174,80 @@ Spectator.describe Tag::Mention do
     end
   end
 
+  describe ".all_objects" do
+    create_object_with_mentions(1, "foo@remote", "bar@remote")
+    create_object_with_mentions(2, "foo@remote")
+    create_object_with_mentions(3, "foo@remote", "bar@remote")
+    create_object_with_mentions(4, "foo@remote")
+    create_object_with_mentions(5, "foo@remote", "quux@remote")
+
+    it "returns objects with the mention" do
+      expect(described_class.all_objects("bar@remote", limit: 5)).to eq([object3, object1])
+    end
+
+    it "filters out draft objects" do
+      object5.assign(published: nil).save
+      expect(described_class.all_objects("foo@remote", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out deleted objects" do
+      object5.delete!
+      expect(described_class.all_objects("foo@remote", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out blocked objects" do
+      object5.block!
+      expect(described_class.all_objects("foo@remote", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.all_objects("foo@remote", limit: 5)).to be_empty
+    end
+
+    it "filters out objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.all_objects("foo@remote", limit: 5)).to be_empty
+    end
+
+    it "filters out objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.all_objects("foo@remote", limit: 5)).to be_empty
+    end
+
+    it "limits the results" do
+      expect(described_class.all_objects("foo@remote", limit: 2)).to eq([object5, object4])
+    end
+
+    it "paginates with max_id" do
+      expect(described_class.all_objects("foo@remote", max_id: object5.id, limit: 2)).to eq([object4, object3])
+    end
+
+    it "paginates with min_id" do
+      expect(described_class.all_objects("foo@remote", min_id: object1.id, limit: 2)).to eq([object3, object2])
+    end
+
+    it "reports more results" do
+      expect(described_class.all_objects("foo@remote", limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(described_class.all_objects("foo@remote", limit: 5).more?).not_to be_true
+    end
+
+    it "returns the first page" do
+      expect(described_class.all_objects("foo@remote", max_id: 0_i64, limit: 2)).to eq([object5, object4])
+    end
+
+    context "given an object id from another mention" do
+      create_object_with_mentions(6, "other@remote")
+
+      it "returns the first page" do
+        expect(described_class.all_objects("foo@remote", max_id: object6.id, limit: 2)).to eq([object5, object4])
+      end
+    end
+  end
+
   describe ".all_objects with since parameter" do
     create_object_with_mentions(1, "foo@remote")
     create_object_with_mentions(2, "foo@remote", "bar@remote")

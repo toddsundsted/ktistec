@@ -588,6 +588,24 @@ module ActivityPub
       Object.query_and_paginate(query, iri, page: page, size: size)
     end
 
+    # Returns the actor's draft posts.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    # Includes only unpublished posts attributed to this actor.
+    #
+    def drafts(*, max_id = nil, min_id = nil, limit = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+          WHERE o.attributed_to_iri = ?
+            AND o.published IS NULL
+            #{common_filters(objects: "o")}
+            AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of the actor's drafts since the given date.
     #
     # See `#drafts(page, size)` for further details.

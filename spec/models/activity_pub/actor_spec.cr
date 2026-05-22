@@ -1235,6 +1235,75 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#drafts" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+    let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_draft(index)
+      let_create!(:note, named: note{{index}}, attributed_to: subject)
+    end
+
+    create_draft(1)
+    create_draft(2)
+    create_draft(3)
+    create_draft(4)
+    create_draft(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.drafts(limit: 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.drafts(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.drafts(limit: 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.drafts(limit: 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
+    end
+
+    it "filters out published posts" do
+      note5.assign(published: Time.utc).save
+      expect(subject.drafts(limit: 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
+    end
+
+    it "includes only posts attributed to subject" do
+      note5.assign(attributed_to: other).save
+      expect(subject.drafts(limit: 2)).to eq([note4, note3])
+      expect(subject.drafts(since: since)).to eq(4)
+    end
+
+    it "limits the results" do
+      expect(subject.drafts(limit: 2)).to eq([note5, note4])
+    end
+
+    it "paginates with max_id" do
+      expect(subject.drafts(max_id: note5.id, limit: 2)).to eq([note4, note3])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.drafts(min_id: note1.id, limit: 2)).to eq([note3, note2])
+    end
+
+    it "reports more results" do
+      expect(subject.drafts(limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.drafts(limit: 5).more?).not_to be_true
+    end
+  end
+
   context "for outbox" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
     let(deleted) { described_class.new(iri: "https://test.test/#{random_string}").save.delete! }

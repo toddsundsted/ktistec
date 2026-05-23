@@ -2,6 +2,8 @@ require "../../../task"
 
 class Task
   module Fetch::Fetcher
+    Log = ::Log.for(self)
+
     # Temporary cache of undereferenceable IRIs. The same IRIs are
     # often found in more than one collection. This cache avoids
     # spending resources fetching when an IRI has failed once and may
@@ -80,6 +82,8 @@ class Task
                 max = base + offset
                 RANDOM.rand(min..max).hours.from_now
               end
+          else
+            Log.warn { "set_next_attempt_at [#{id}] - #{self.class}/#{subject_iri} - missing follow; not rescheduling, task will be marked complete" }
           end
         elsif count < maximum
           if follow?
@@ -88,6 +92,8 @@ class Task
                 state.failures = 0
                 RANDOM.rand(90..150).minutes.from_now
               end
+          else
+            Log.warn { "set_next_attempt_at [#{id}] - #{self.class}/#{subject_iri} - missing follow; not rescheduling, task will be marked complete" }
           end
         else
           self.next_attempt_at =

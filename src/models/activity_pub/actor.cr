@@ -567,6 +567,27 @@ module ActivityPub
       ).as(Int64)
     end
 
+    # Translates an `Object.id` (external cursor) to the canonical
+    # bookmark `relationships.id` (internal cursor). Returns nil for
+    # unknown ids or ids of objects that wouldn't appear in the result
+    # set.
+    #
+    private def translate_object_id_to_bookmark_id(o_id : Int64) : Int64?
+      query = <<-QUERY
+        SELECT MAX(r.id)
+          FROM objects AS o
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+          JOIN relationships AS r
+            ON r.to_iri = o.iri
+           AND r.type = '#{Relationship::Content::Bookmark}'
+         WHERE r.from_iri = ?
+           AND o.id = ?
+           #{common_filters(objects: "o", actors: "c")}
+      QUERY
+      Object.scalar(query, self.iri, o_id).as(Int64?)
+    end
+
     # Returns the objects that this actor has bookmarked.
     #
     # Returns objects in reverse chronological order (most recent
@@ -590,10 +611,34 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
+    # Returns the objects that this actor has bookmarked.
+    #
+    # Returns objects in reverse chronological order (most recent
+    # first). Filters out deleted/blocked objects, and objects by
+    # deleted/blocked actors.
+    #
+    def bookmarks(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_bookmark_id(max_id) if max_id
+      min_id = translate_object_id_to_bookmark_id(min_id) if min_id
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS c
+             ON c.iri = o.attributed_to_iri
+           JOIN relationships AS r
+             ON r.to_iri = o.iri
+            AND r.type = '#{Relationship::Content::Bookmark}'
+          WHERE r.from_iri = ?
+            #{common_filters(objects: "o", actors: "c")}
+            AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of objects that this actor has bookmarked
     # since the given date.
     #
-    # See `#bookmarks(page, size)` for further details.
+    # See `#bookmarks(max_id, min_id, limit)` for further details.
     #
     def bookmarks(since : Time)
       query = <<-QUERY

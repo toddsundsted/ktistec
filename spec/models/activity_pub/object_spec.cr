@@ -1637,6 +1637,10 @@ Spectator.describe ActivityPub::Object do
           expect(subject.with_replies_count!(actor).replies_count).to eq(0)
         end
 
+        it "doesn't count any replies" do
+          expect(object1.with_replies_count!(actor).replies_count).to eq(0)
+        end
+
         context "and an approved object" do
           let_create!(:approved_relationship, named: :approved, actor: actor, object: object5)
 

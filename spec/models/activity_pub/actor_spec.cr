@@ -1482,6 +1482,89 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#pins" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_pin(index)
+      let_create!(:note, named: note{{index}}, attributed_to: subject, local: true)
+      let_create!(:pin_relationship, named: pin{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_pin(1)
+    create_pin(2)
+    create_pin(3)
+    create_pin(4)
+    create_pin(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.pins(limit: 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.pins(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.pins(limit: 2)).to eq([note4, note3])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.pins(limit: 2)).to eq([note4, note3])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
+    it "filters out non-public posts" do
+      note5.assign(visible: false).save
+      expect(subject.pins(limit: 2)).to eq([note4, note3])
+      expect(subject.pins(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      subject.delete!
+      expect(subject.pins(limit: 2)).to be_empty
+      expect(subject.pins(since: since)).to eq(0)
+    end
+
+    it "filters out posts by blocked actors" do
+      subject.block!
+      expect(subject.pins(limit: 2)).to be_empty
+      expect(subject.pins(since: since)).to eq(0)
+    end
+
+    it "limits the results" do
+      expect(subject.pins(limit: 2)).to eq([note5, note4])
+    end
+
+    it "paginates with max_id" do
+      expect(subject.pins(max_id: note5.id, limit: 2)).to eq([note4, note3])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.pins(min_id: note1.id, limit: 2)).to eq([note3, note2])
+    end
+
+    it "reports more results" do
+      expect(subject.pins(limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.pins(limit: 5).more?).not_to be_true
+    end
+
+    it "returns the first page" do
+      expect(subject.pins(max_id: 0_i64, limit: 2)).to eq([note5, note4])
+    end
+
+    it "returns results in reverse chronological order" do
+      expect(subject.pins(limit: 5)).to eq([note5, note4, note3, note2, note1])
+    end
+  end
+
   describe "#drafts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }

@@ -403,6 +403,50 @@ module ActivityPub
       QUERY
     end
 
+    # Translates an `Object.id` (external cursor) to the canonical
+    # `activities.id` (internal cursor). Returns nil for unknown ids
+    # or ids of objects that wouldn't appear in the result set.
+    #
+    private def translate_object_id_to_activity_id(o_id : Int64, type) : Int64?
+      query = <<-QUERY
+        SELECT MAX(a.id)
+          FROM objects AS o
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+         WHERE a.actor_iri = ?
+           AND a.type = '#{type}'
+           AND o.id = ?
+           #{common_filters(objects: "o", actors: "c", activities: "a")}
+      QUERY
+      Object.scalar(query, self.iri, o_id).as(Int64?)
+    end
+
+    private def activity_cursor_query(type)
+      <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS c
+             ON c.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+          WHERE a.actor_iri = ?
+            AND a.type = '#{type}'
+            #{common_filters(objects: "o", actors: "c", activities: "a")}
+            AND NOT EXISTS (
+              SELECT 1
+                FROM activities AS a2
+               WHERE a2.actor_iri = a.actor_iri
+                 AND a2.type = a.type
+                 AND a2.undone_at IS NULL
+                 AND a2.object_iri = a.object_iri
+                 AND a2.id > a.id
+            )
+            AND %{cursor_condition}
+      QUERY
+    end
+
     # Returns the objects that this actor has liked.
     #
     # Returns objects in reverse chronological order (most recent
@@ -416,10 +460,25 @@ module ActivityPub
         self.iri, page: page, size: size)
     end
 
+    # Returns the objects that this actor has liked.
+    #
+    # Returns objects in reverse chronological order (by when liked,
+    # most recent first). Filters out deleted/blocked objects, and
+    # objects by deleted/blocked actors. Also filters out likes that
+    # have been undone.
+    #
+    def likes(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_activity_id(max_id, ActivityPub::Activity::Like) if max_id
+      min_id = translate_object_id_to_activity_id(min_id, ActivityPub::Activity::Like) if min_id
+      Object.query_with_cursor(
+        activity_cursor_query(ActivityPub::Activity::Like),
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of objects that this actor has liked since the
     # given date.
     #
-    # See `#likes(page, size)` for further details.
+    # See `#likes(max_id, min_id, limit)` for further details.
     #
     def likes(since : Time)
       Object.scalar(
@@ -441,10 +500,25 @@ module ActivityPub
         self.iri, page: page, size: size)
     end
 
+    # Returns the objects that this actor has disliked.
+    #
+    # Returns objects in reverse chronological order (by when
+    # disliked, most recent first). Filters out deleted/blocked
+    # objects, and objects by deleted/blocked actors. Also filters out
+    # dislikes that have been undone.
+    #
+    def dislikes(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_activity_id(max_id, ActivityPub::Activity::Dislike) if max_id
+      min_id = translate_object_id_to_activity_id(min_id, ActivityPub::Activity::Dislike) if min_id
+      Object.query_with_cursor(
+        activity_cursor_query(ActivityPub::Activity::Dislike),
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of objects that this actor has disliked since the
     # given date.
     #
-    # See `#dislikes(page, size)` for further details.
+    # See `#dislikes(max_id, min_id, limit)` for further details.
     #
     def dislikes(since : Time)
       Object.scalar(
@@ -466,10 +540,25 @@ module ActivityPub
         self.iri, page: page, size: size)
     end
 
+    # Returns the objects that this actor has announced.
+    #
+    # Returns objects in reverse chronological order (by when
+    # announced, most recent first). Filters out deleted/blocked
+    # objects, and objects by deleted/blocked actors. Also filters out
+    # announces that have been undone.
+    #
+    def announces(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_activity_id(max_id, ActivityPub::Activity::Announce) if max_id
+      min_id = translate_object_id_to_activity_id(min_id, ActivityPub::Activity::Announce) if min_id
+      Object.query_with_cursor(
+        activity_cursor_query(ActivityPub::Activity::Announce),
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of objects that this actor has announced
     # (boosted) since the given date.
     #
-    # See `#announces(page, size)` for further details.
+    # See `#announces(max_id, min_id, limit)` for further details.
     #
     def announces(since : Time)
       Object.scalar(

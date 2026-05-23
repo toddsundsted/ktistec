@@ -934,6 +934,81 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#likes" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_like(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:like, named: like{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_like(1)
+    create_like(2)
+    create_like(3)
+    create_like(4)
+    create_like(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.likes(limit: 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.likes(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.likes(limit: 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.likes(limit: 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.likes(limit: 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.likes(limit: 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
+    end
+
+    it "filters out posts if the like has been undone" do
+      like5.undo!
+      expect(subject.likes(limit: 2)).to eq([note4, note3])
+      expect(subject.likes(since: since)).to eq(4)
+    end
+
+    it "limits the results" do
+      expect(subject.likes(limit: 2)).to eq([note5, note4])
+    end
+
+    it "paginates with max_id" do
+      expect(subject.likes(max_id: note5.id, limit: 2)).to eq([note4, note3])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.likes(min_id: note1.id, limit: 2)).to eq([note3, note2])
+    end
+
+    it "reports more results" do
+      expect(subject.likes(limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.likes(limit: 5).more?).not_to be_true
+    end
+  end
+
   describe "#dislikes" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
@@ -995,6 +1070,81 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#dislikes" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_dislike(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:dislike, named: dislike{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_dislike(1)
+    create_dislike(2)
+    create_dislike(3)
+    create_dislike(4)
+    create_dislike(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.dislikes(limit: 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.dislikes(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.dislikes(limit: 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.dislikes(limit: 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.dislikes(limit: 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.dislikes(limit: 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "filters out posts if the dislike has been undone" do
+      dislike5.undo!
+      expect(subject.dislikes(limit: 2)).to eq([note4, note3])
+      expect(subject.dislikes(since: since)).to eq(4)
+    end
+
+    it "limits the results" do
+      expect(subject.dislikes(limit: 2)).to eq([note5, note4])
+    end
+
+    it "paginates with max_id" do
+      expect(subject.dislikes(max_id: note5.id, limit: 2)).to eq([note4, note3])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.dislikes(min_id: note1.id, limit: 2)).to eq([note3, note2])
+    end
+
+    it "reports more results" do
+      expect(subject.dislikes(limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.dislikes(limit: 5).more?).not_to be_true
+    end
+  end
+
   describe "#announces" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
@@ -1053,6 +1203,81 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.announces(1, 2)).to eq([note5, note4])
       expect(subject.announces(2, 2)).to eq([note3, note2])
       expect(subject.announces(2, 2).more?).to be_true
+    end
+  end
+
+  describe "#announces" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro create_announce(index)
+      let_create!(:note, named: note{{index}})
+      let_create!(:announce, named: announce{{index}}, actor: subject, object: note{{index}})
+    end
+
+    create_announce(1)
+    create_announce(2)
+    create_announce(3)
+    create_announce(4)
+    create_announce(5)
+
+    let(since) { KTISTEC_EPOCH }
+
+    it "instantiates the correct subclass" do
+      expect(subject.announces(limit: 2).first).to be_a(ActivityPub::Object::Note)
+    end
+
+    it "returns the count" do
+      expect(subject.announces(since: since)).to eq(5)
+    end
+
+    it "filters out deleted posts" do
+      note5.delete!
+      expect(subject.announces(limit: 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
+    end
+
+    it "filters out blocked posts" do
+      note5.block!
+      expect(subject.announces(limit: 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
+    end
+
+    it "filters out posts by deleted actors" do
+      note5.attributed_to.delete!
+      expect(subject.announces(limit: 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
+    end
+
+    it "filters out posts by blocked actors" do
+      note5.attributed_to.block!
+      expect(subject.announces(limit: 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
+    end
+
+    it "filters out posts if the announce has been undone" do
+      announce5.undo!
+      expect(subject.announces(limit: 2)).to eq([note4, note3])
+      expect(subject.announces(since: since)).to eq(4)
+    end
+
+    it "limits the results" do
+      expect(subject.announces(limit: 2)).to eq([note5, note4])
+    end
+
+    it "paginates with max_id" do
+      expect(subject.announces(max_id: note5.id, limit: 2)).to eq([note4, note3])
+    end
+
+    it "paginates with min_id" do
+      expect(subject.announces(min_id: note1.id, limit: 2)).to eq([note3, note2])
+    end
+
+    it "reports more results" do
+      expect(subject.announces(limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(subject.announces(limit: 5).more?).not_to be_true
     end
   end
 

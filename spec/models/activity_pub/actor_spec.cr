@@ -1763,6 +1763,74 @@ Spectator.describe ActivityPub::Actor do
       end
     end
 
+    describe "#in_outbox" do
+      it "instantiates the correct subclass" do
+        expect(subject.in_outbox(limit: 2, public: false).first).to be_a(ActivityPub::Activity::Create)
+      end
+
+      it "filters out non-public posts" do
+        expect(subject.in_outbox(limit: 2, public: true)).to be_empty
+      end
+
+      it "filters out deleted posts" do
+        note5.delete!
+        expect(subject.in_outbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out blocked posts" do
+        note5.block!
+        expect(subject.in_outbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out posts by deleted actors" do
+        activity5.assign(actor: deleted).save
+        expect(subject.in_outbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out posts by blocked actors" do
+        activity5.assign(actor: blocked).save
+        expect(subject.in_outbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out undone activities" do
+        activity5.undo!
+        expect(subject.in_outbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "includes replies" do
+        note5.assign(in_reply_to: note4).save
+        expect(subject.in_outbox(limit: 2, public: false)).to eq([activity5, activity4])
+      end
+
+      it "limits the results" do
+        expect(subject.in_outbox(limit: 2, public: false)).to eq([activity5, activity4])
+      end
+
+      it "paginates with max_id" do
+        expect(subject.in_outbox(max_id: activity5.id, limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "paginates with min_id" do
+        expect(subject.in_outbox(min_id: activity1.id, limit: 2, public: false)).to eq([activity3, activity2])
+      end
+
+      it "reports more results" do
+        expect(subject.in_outbox(limit: 2, public: false).more?).to be_true
+      end
+
+      it "reports no more results" do
+        expect(subject.in_outbox(limit: 5, public: false).more?).not_to be_true
+      end
+
+      it "returns the first page" do
+        expect(subject.in_outbox(max_id: 0_i64, limit: 2, public: false)).to eq([activity5, activity4])
+      end
+
+      it "returns results in reverse chronological order" do
+        expect(subject.in_outbox(limit: 5, public: false)).to eq([activity5, activity4, activity3, activity2, activity1])
+      end
+    end
+
     let_build(:note)
 
     describe "#in_outbox?" do
@@ -1872,6 +1940,74 @@ Spectator.describe ActivityPub::Actor do
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
         expect(subject.in_inbox(2, 2, public: false)).to eq([activity3, activity2])
         expect(subject.in_inbox(2, 2, public: false).more?).to be_true
+      end
+    end
+
+    describe "#in_inbox" do
+      it "instantiates the correct subclass" do
+        expect(subject.in_inbox(limit: 2, public: false).first).to be_a(ActivityPub::Activity::Create)
+      end
+
+      it "filters out non-public posts" do
+        expect(subject.in_inbox(limit: 2, public: true)).to be_empty
+      end
+
+      it "filters out deleted posts" do
+        note5.delete!
+        expect(subject.in_inbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out blocked posts" do
+        note5.block!
+        expect(subject.in_inbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out posts by deleted actors" do
+        activity5.assign(actor: deleted).save
+        expect(subject.in_inbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out posts by blocked actors" do
+        activity5.assign(actor: blocked).save
+        expect(subject.in_inbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "filters out undone activities" do
+        activity5.undo!
+        expect(subject.in_inbox(limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "includes replies" do
+        note5.assign(in_reply_to: note4).save
+        expect(subject.in_inbox(limit: 2, public: false)).to eq([activity5, activity4])
+      end
+
+      it "limits the results" do
+        expect(subject.in_inbox(limit: 2, public: false)).to eq([activity5, activity4])
+      end
+
+      it "paginates with max_id" do
+        expect(subject.in_inbox(max_id: activity5.id, limit: 2, public: false)).to eq([activity4, activity3])
+      end
+
+      it "paginates with min_id" do
+        expect(subject.in_inbox(min_id: activity1.id, limit: 2, public: false)).to eq([activity3, activity2])
+      end
+
+      it "reports more results" do
+        expect(subject.in_inbox(limit: 2, public: false).more?).to be_true
+      end
+
+      it "reports no more results" do
+        expect(subject.in_inbox(limit: 5, public: false).more?).not_to be_true
+      end
+
+      it "returns the first page" do
+        expect(subject.in_inbox(max_id: 0_i64, limit: 2, public: false)).to eq([activity5, activity4])
+      end
+
+      it "returns results in reverse chronological order" do
+        expect(subject.in_inbox(limit: 5, public: false)).to eq([activity5, activity4, activity3, activity2, activity1])
       end
     end
 

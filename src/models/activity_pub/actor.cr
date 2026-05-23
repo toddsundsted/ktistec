@@ -849,6 +849,88 @@ module ActivityPub
       Activity.query_and_paginate(query, iri, page: page, size: size)
     end
 
+    # Returns mailbox contents with cursor-based pagination.
+    #
+    # The cursor column is the mailbox `relationships.id` rather than
+    # the activity id so the collection stays ordered by when each
+    # activity arrived in the mailbox. Externally the cursor is the
+    # activity id; the translation helper converts at the input
+    # boundary.
+    #
+    protected def self.content(iri, mailbox, inclusion = nil, exclusion = nil, *, max_id = nil, min_id = nil, limit = 10, public = true, replies = true)
+      mailbox =
+        case mailbox
+        when Class
+          %Q|AND r.type = '#{mailbox}'|
+        when Array
+          %Q|AND r.type IN ('#{mailbox.map(&.to_s).join("','")}')|
+        end
+      inclusion =
+        case inclusion
+        when Class
+          %Q|AND a.type = '#{inclusion}'|
+        when Array
+          %Q|AND a.type IN ('#{inclusion.map(&.to_s).join("','")}')|
+        end
+      exclusion =
+        case exclusion
+        when Class
+          %Q|AND a.type != '#{exclusion}'|
+        when Array
+          %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
+        end
+      max_id = translate_activity_id_to_relationship_id(iri, mailbox, inclusion, exclusion, max_id, public, replies) if max_id
+      min_id = translate_activity_id_to_relationship_id(iri, mailbox, inclusion, exclusion, min_id, public, replies) if min_id
+      query = <<-QUERY
+         SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "obj")}
+           FROM activities AS a
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+      LEFT JOIN actors AS act
+             ON act.iri = a.actor_iri
+      LEFT JOIN objects AS obj
+             ON obj.iri = a.object_iri
+          WHERE r.from_iri LIKE ?
+            #{mailbox}
+            AND r.confirmed = 1
+            #{Actor.common_filters(actors: "act", objects: "obj", activities: "a")}
+            #{inclusion}
+            #{exclusion}
+       #{public ? %Q|AND a.visible = 1| : nil}
+       #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
+            AND %{cursor_condition}
+      QUERY
+      Activity.query_with_cursor(query, iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
+    # Translates an `Activity.id` (external cursor) to the canonical
+    # mailbox `relationships.id` (internal cursor). Returns nil for
+    # unknown ids or ids of activities that wouldn't appear in the
+    # result set.
+    #
+    private def self.translate_activity_id_to_relationship_id(iri, mailbox, inclusion, exclusion, a_id, public, replies) : Int64?
+      query = <<-QUERY
+         SELECT MAX(r.id)
+           FROM activities AS a
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+      LEFT JOIN actors AS act
+             ON act.iri = a.actor_iri
+      LEFT JOIN objects AS obj
+             ON obj.iri = a.object_iri
+          WHERE r.from_iri LIKE ?
+            AND a.id = ?
+            #{mailbox}
+            AND r.confirmed = 1
+            #{Actor.common_filters(actors: "act", objects: "obj", activities: "a")}
+            #{inclusion}
+            #{exclusion}
+       #{public ? %Q|AND a.visible = 1| : nil}
+       #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
+      QUERY
+      Activity.scalar(query, iri, a_id).as(Int64?)
+    end
+
     private def find_in?(object, mailbox, inclusion = nil, exclusion = nil)
       mailbox =
         case mailbox
@@ -895,12 +977,20 @@ module ActivityPub
       self.class.content(self.iri, Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
+    def in_outbox(*, max_id = nil, min_id = nil, limit = 10, public = true)
+      self.class.content(self.iri, Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], max_id: max_id, min_id: min_id, limit: limit, public: public)
+    end
+
     def in_outbox?(object : Object, inclusion = nil, exclusion = nil)
       find_in?(object, Relationship::Content::Outbox, inclusion, exclusion)
     end
 
     def in_inbox(page = 1, size = 10, public = true)
       self.class.content(self.iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
+    end
+
+    def in_inbox(*, max_id = nil, min_id = nil, limit = 10, public = true)
+      self.class.content(self.iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], max_id: max_id, min_id: min_id, limit: limit, public: public)
     end
 
     def in_inbox?(object : Object, inclusion = nil, exclusion = nil)

@@ -78,6 +78,20 @@ end
 Spectator.describe TaskWorker do
   setup_spec
 
+  describe ".start" do
+    context "when KTISTEC_DISABLE_TASKS is set" do
+      before_each { ENV["KTISTEC_DISABLE_TASKS"] = "1" }
+      after_each { ENV.delete("KTISTEC_DISABLE_TASKS") }
+
+      it "does not start the worker and skips the startup block" do
+        called = false
+        TaskWorker.start { called = true }
+        expect(TaskWorker.running?).to be_false
+        expect(called).to be_false
+      end
+    end
+  end
+
   describe ".stop" do
     before_each do
       TaskWorker.start do

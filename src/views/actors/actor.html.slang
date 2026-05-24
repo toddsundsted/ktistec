@@ -72,7 +72,15 @@
     meta name="twitter:description" content=og_description
     meta name="twitter:image" content=og_image
   - partial actor_panel_partial(env, actor)
-  - objects = actor.public_posts_with_pins(**pagination_params(env))
-  - partial "actors/public_posts"
+  section.ui.feed data-controller="icon-load-error"
+    - (pinned + objects.to_a).each do |object|
+      crystal:
+        activity = object.activities.find do |activity|
+          Relationship::Content::Outbox.find?(owner: actor, activity: activity)
+        end
+        _actor = activity ? activity.actor : object.attributed_to
+        _author = object.attributed_to
+      - partial object_partial(env, object, activity: activity, actor: _actor, author: _author, for_actor: actor)
+  - partial paginate(env, objects)
 - else
   - partial actor_panel_partial(env, actor)

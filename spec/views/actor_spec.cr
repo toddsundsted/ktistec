@@ -13,15 +13,18 @@ Spectator.describe "actor" do
 
     let(env) { make_env("GET", "/actor/username") }
 
+    let(pinned) { [] of ActivityPub::Object }
+    let(objects) { Ktistec::Util::PaginatedArray(ActivityPub::Object).new }
+
     module ::Ktistec::ViewHelper
-      def self.render_actor_html_slang(env, actor)
+      def self.render_actor_html_slang(env, actor, pinned, objects)
         render "./src/views/actors/actor.html.slang"
       end
     end
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper.render_actor_html_slang(env, actor))
+        XML.parse_html(Ktistec::ViewHelper.render_actor_html_slang(env, actor, pinned, objects))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end

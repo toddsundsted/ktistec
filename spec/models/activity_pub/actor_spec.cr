@@ -2516,6 +2516,21 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.public_posts(limit: 2)).to eq([object4, object3])
     end
 
+    context "given a pinned post" do
+      let_build(:object, named: own_object, attributed_to: subject)
+      let_build(:create, named: own_create, actor: subject, object: own_object)
+      let_create!(:outbox_relationship, named: own_outbox, owner: subject, activity: own_create)
+      let_create!(:pin_relationship, actor: subject, object: own_object)
+
+      it "includes the pinned post" do
+        expect(subject.public_posts(limit: 10, exclude_pinned: false)).to have(own_object)
+      end
+
+      it "excludes the pinned post" do
+        expect(subject.public_posts(limit: 10, exclude_pinned: true)).not_to have(own_object)
+      end
+    end
+
     it "paginates with max_id" do
       expect(subject.public_posts(max_id: object5.id, limit: 2)).to eq([object4, object3])
     end

@@ -6,6 +6,7 @@ require "../models/activity_pub/activity/create"
 require "../models/relationship/content/inbox"
 require "../models/relationship/content/outbox"
 require "../models/relationship/content/timeline/announce"
+require "../models/tag/hashtag"
 require "../models/poll"
 require "../services/oauth2/client_registration"
 require "../services/object_factory"
@@ -369,6 +370,31 @@ class APIController
     end
 
     if (link = link_header("/api/v1/timelines/public", statuses, params[:limit]))
+      env.response.headers["Link"] = link
+    end
+
+    statuses.to_a.to_json
+  end
+
+  get "/api/v1/timelines/tag/:hashtag" do |env|
+    hashtag = env.params.url["hashtag"]
+
+    actor = env.account?.try(&.actor)
+    params = cursor_pagination_params(env)
+    params = params.merge(limit: params[:limit].clamp(1, 40))
+
+    posts =
+      if actor
+        Tag::Hashtag.all_objects(hashtag, **params)
+      else
+        Tag::Hashtag.public_posts(hashtag, **params)
+      end
+
+    statuses = posts.map do |object|
+      API::V1::Serializers::Status.from_object(object, actor: actor)
+    end
+
+    if (link = link_header("/api/v1/timelines/tag/#{hashtag}", statuses, params[:limit]))
       env.response.headers["Link"] = link
     end
 

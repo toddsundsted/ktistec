@@ -112,9 +112,6 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
             }
             .extra.text {
                 max-width: unset;
-                &.deleted {
-                    opacity: 50%;
-                }
             }
             .detail {
                 a {
@@ -181,6 +178,13 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
             @media screen and (min-width: 1200px) {          /* desktops & larger */
             }
             @media screen and (min-width: 1800px) {          /* wide desktops & larger */
+            }
+        }
+
+        &:is(.is-deleted, .has-deleted-author, .has-deleted-actor,
+             .is-blocked, .has-blocked-author, .has-blocked-actor) {
+            > .content .extra.text {
+                opacity: 50%;
             }
         }
     }

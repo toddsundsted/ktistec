@@ -423,7 +423,7 @@ class InboxesController
       forbidden
     end
 
-    activities = account.actor.in_inbox(**pagination_params(env), public: env.account? != account)
+    activities = account.actor.in_inbox(**cursor_pagination_params(env), public: env.account? != account)
 
     ok "relationships/inbox", env: env, account: account, activities: activities
   end

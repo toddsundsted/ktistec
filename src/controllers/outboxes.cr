@@ -280,7 +280,7 @@ class OutboxesController
       forbidden
     end
 
-    activities = account.actor.in_outbox(**pagination_params(env), public: env.account? != account)
+    activities = account.actor.in_outbox(**cursor_pagination_params(env), public: env.account? != account)
 
     ok "relationships/outbox", env: env, activities: activities
   end

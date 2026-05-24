@@ -267,7 +267,7 @@
     h4 Content Variations
     .ui.text.container
       section.ui.feed
-        .event.blocked
+        .event.has-blocked-actor
           .label
             i.user.outline.icon
           .content
@@ -282,16 +282,16 @@
               a.ui.mini.iconic.button.source href="#" target="_blank"
                 i.external.arrow.icon
                 | Source
-        .event.deleted
+        .event.is-deleted
           .label
             i.user.outline.icon
           .content
             .summary
               a.user>
-                | Deleted User
+                | User
               | posted
               a.date< 5 days ago
-            .extra.text.deleted
+            .extra.text
               p Lorem ipsum dolor sit amet
             .extra.text
               em This content is deleted!

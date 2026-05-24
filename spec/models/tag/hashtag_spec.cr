@@ -171,6 +171,80 @@ Spectator.describe Tag::Hashtag do
     end
   end
 
+  describe ".all_objects" do
+    create_tagged_object(1, "foo", "bar")
+    create_tagged_object(2, "foo")
+    create_tagged_object(3, "foo", "bar")
+    create_tagged_object(4, "foo")
+    create_tagged_object(5, "foo", "quux")
+
+    it "returns objects with the tag" do
+      expect(described_class.all_objects("bar", limit: 5)).to eq([object3, object1])
+    end
+
+    it "filters out draft objects" do
+      object5.assign(published: nil).save
+      expect(described_class.all_objects("foo", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out deleted objects" do
+      object5.delete!
+      expect(described_class.all_objects("foo", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out blocked objects" do
+      object5.block!
+      expect(described_class.all_objects("foo", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.all_objects("foo", limit: 5)).to be_empty
+    end
+
+    it "filters out objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.all_objects("foo", limit: 5)).to be_empty
+    end
+
+    it "filters out objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.all_objects("foo", limit: 5)).to be_empty
+    end
+
+    it "limits the results" do
+      expect(described_class.all_objects("foo", limit: 2)).to eq([object5, object4])
+    end
+
+    it "paginates with max_id" do
+      expect(described_class.all_objects("foo", max_id: object5.id, limit: 2)).to eq([object4, object3])
+    end
+
+    it "paginates with min_id" do
+      expect(described_class.all_objects("foo", min_id: object1.id, limit: 2)).to eq([object3, object2])
+    end
+
+    it "reports more results" do
+      expect(described_class.all_objects("foo", limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(described_class.all_objects("foo", limit: 5).more?).not_to be_true
+    end
+
+    it "returns the first page" do
+      expect(described_class.all_objects("foo", max_id: 0_i64, limit: 2)).to eq([object5, object4])
+    end
+
+    context "given an object from another tag" do
+      create_tagged_object(6, "other")
+
+      it "returns the first page" do
+        expect(described_class.all_objects("foo", max_id: object6.id, limit: 2)).to eq([object5, object4])
+      end
+    end
+  end
+
   describe ".all_objects with since parameter" do
     create_tagged_object(1, "foo")
     create_tagged_object(2, "foo", "bar")
@@ -311,6 +385,111 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.public_posts("foo", 1, 2)).to eq([object5, object4])
       expect(described_class.public_posts("foo", 2, 2)).to eq([object3, object2])
       expect(described_class.public_posts("foo", 2, 2).more?).to be_true
+    end
+  end
+
+  describe ".public_posts" do
+    create_tagged_object(1, "foo", "bar")
+    create_tagged_object(2, "foo")
+    create_tagged_object(3, "foo", "bar")
+    create_tagged_object(4, "foo")
+    create_tagged_object(5, "foo", "quux")
+
+    it "returns objects with the tag" do
+      expect(described_class.public_posts("bar", limit: 5)).to eq([object3, object1])
+    end
+
+    it "filters out non-published objects" do
+      object5.assign(published: nil).save
+      expect(described_class.public_posts("foo", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out non-visible objects" do
+      object5.assign(visible: false).save
+      expect(described_class.public_posts("foo", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out deleted objects" do
+      object5.delete!
+      expect(described_class.public_posts("foo", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out blocked objects" do
+      object5.block!
+      expect(described_class.public_posts("foo", limit: 5)).not_to have(object5)
+    end
+
+    it "filters out objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.public_posts("foo", limit: 5)).to be_empty
+    end
+
+    it "filters out objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.public_posts("foo", limit: 5)).to be_empty
+    end
+
+    it "filters out objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.public_posts("foo", limit: 5)).to be_empty
+    end
+
+    context "given a shared object" do
+      let_create!(:object, named: shared, published: Time.utc(2016, 2, 15, 10, 20, 6))
+      let_create!(:announce, object: shared, actor: author)
+      before_each do
+        put_in_outbox(author, announce)
+        described_class.new(name: "foo", subject: shared).save
+      end
+
+      it "includes the shared object" do
+        expect(described_class.public_posts("foo", limit: 6)).to have(shared)
+      end
+    end
+
+    it "limits the results" do
+      expect(described_class.public_posts("foo", limit: 2)).to eq([object5, object4])
+    end
+
+    it "paginates with max_id" do
+      expect(described_class.public_posts("foo", max_id: object5.id, limit: 2)).to eq([object4, object3])
+    end
+
+    it "paginates with min_id" do
+      expect(described_class.public_posts("foo", min_id: object1.id, limit: 2)).to eq([object3, object2])
+    end
+
+    it "reports more results" do
+      expect(described_class.public_posts("foo", limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(described_class.public_posts("foo", limit: 5).more?).not_to be_true
+    end
+
+    it "returns the first page" do
+      expect(described_class.public_posts("foo", max_id: 0_i64, limit: 2)).to eq([object5, object4])
+    end
+
+    context "given multiple outbox items for the same object" do
+      let_build(:create, named: extra_activity, actor: author, object: object3)
+      let_create!(:outbox_relationship, owner: author, activity: extra_activity)
+
+      it "emits the object once" do
+        expect(described_class.public_posts("foo", limit: 10)).to eq([object3, object5, object4, object2, object1])
+      end
+
+      it "does not emit the object on the next page" do
+        expect(described_class.public_posts("foo", max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
+      end
+    end
+
+    context "given an object id from another tag" do
+      create_tagged_object(6, "other")
+
+      it "returns the first page" do
+        expect(described_class.public_posts("foo", max_id: object6.id, limit: 2)).to eq([object5, object4])
+      end
     end
   end
 

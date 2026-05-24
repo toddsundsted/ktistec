@@ -648,7 +648,7 @@ Spectator.describe API::V1::Serializers::Status do
     subject { described_class.from_announce(announce) }
 
     it "returns id" do
-      expect(subject.id).to eq(announce.id.to_s)
+      expect(subject.id).to eq(object.id.to_s)
     end
 
     it "returns uri" do

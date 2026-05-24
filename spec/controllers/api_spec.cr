@@ -1170,6 +1170,12 @@ Spectator.describe APIController do
           json = JSON.parse(response.body)
           expect(json.as_a.first.dig?("account", "id")).to eq(announce.actor.id.to_s)
         end
+
+        it "sets outer id to the boosted object's id" do
+          get "/api/v1/timelines/home", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.first.dig?("id")).to eq(post.id.to_s)
+        end
       end
     end
   end
@@ -1250,6 +1256,88 @@ Spectator.describe APIController do
           get "/api/v1/timelines/public?only_media=true", headers: json_bearer_headers(access_token.token)
           expect(response.status_code).to eq(200)
         end
+      end
+    end
+  end
+
+  describe "GET /api/v1/timelines/tag/:hashtag" do
+    let_create(:actor, named: :local_actor, local: true)
+    let_create(:actor, named: :remote_actor, local: false)
+    let_create(:object, named: :local_post, attributed_to: local_actor, published: Time.utc, visible: true)
+    let_create(:object, named: :remote_post, attributed_to: remote_actor, published: Time.utc, visible: true)
+    let_create(:create, named: :local_create, actor: local_actor, object: local_post)
+
+    before_each do
+      put_in_outbox(local_actor, local_create)
+      Tag::Hashtag.new(name: "test", subject: local_post).save
+      Tag::Hashtag.new(name: "test", subject: remote_post).save
+    end
+
+    it "returns 200" do
+      get "/api/v1/timelines/tag/test", headers: JSON_HEADERS
+      expect(response.status_code).to eq(200)
+    end
+
+    it "returns JSON" do
+      get "/api/v1/timelines/tag/test", headers: JSON_HEADERS
+      expect(response.headers["Content-Type"]?).to eq("application/json")
+    end
+
+    macro ids
+      JSON.parse(response.body).as_a.map(&.dig?("id"))
+    end
+
+    it "includes local public post" do
+      get "/api/v1/timelines/tag/test", headers: JSON_HEADERS
+      expect(ids).to contain(local_post.id.to_s)
+    end
+
+    it "excludes remote post" do
+      get "/api/v1/timelines/tag/test", headers: JSON_HEADERS
+      expect(ids).not_to contain(remote_post.id.to_s)
+    end
+
+    it "returns empty array" do
+      get "/api/v1/timelines/tag/nonexistent", headers: JSON_HEADERS
+      expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+    end
+
+    context "with valid user token" do
+      let_create(:oauth2_provider_access_token, named: :access_token, client: client, account: account)
+
+      it "returns 200" do
+        get "/api/v1/timelines/tag/test", headers: json_bearer_headers(access_token.token)
+        expect(response.status_code).to eq(200)
+      end
+
+      it "returns JSON" do
+        get "/api/v1/timelines/tag/test", headers: json_bearer_headers(access_token.token)
+        expect(response.headers["Content-Type"]?).to eq("application/json")
+      end
+
+      it "includes local post" do
+        get "/api/v1/timelines/tag/test", headers: json_bearer_headers(access_token.token)
+        expect(ids).to contain(local_post.id.to_s)
+      end
+
+      it "includes remote post" do
+        get "/api/v1/timelines/tag/test", headers: json_bearer_headers(access_token.token)
+        expect(ids).to contain(remote_post.id.to_s)
+      end
+
+      it "returns empty array" do
+        get "/api/v1/timelines/tag/nonexistent", headers: json_bearer_headers(access_token.token)
+        expect(JSON.parse(response.body)).to eq(JSON.parse("[]"))
+      end
+
+      it "honors limit" do
+        get "/api/v1/timelines/tag/test?limit=1", headers: json_bearer_headers(access_token.token)
+        expect(JSON.parse(response.body).as_a.size).to eq(1)
+      end
+
+      it "includes next link" do
+        get "/api/v1/timelines/tag/test?limit=1", headers: json_bearer_headers(access_token.token)
+        expect(response.headers["Link"]?).to contain(%Q(rel="next"))
       end
     end
   end

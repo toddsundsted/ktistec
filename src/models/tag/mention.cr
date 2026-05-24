@@ -55,6 +55,29 @@ class Tag
       ActivityPub::Object.query_all(query, name).first?
     end
 
+    # Returns the maximum tag `t.id` for the given object id,
+    # restricted to objects tagged with the given mention name. Used
+    # to translate the externally-supplied object id into the internal
+    # object id. Returns nil for unknown ids or ids of objects that
+    # wouldn't appear in the result set.
+    #
+    private def self.translate_object_id_to_tag_id(name : String, o_id : Int64) : Int64?
+      query = <<-QUERY
+        SELECT MAX(t.id)
+          FROM objects AS o
+          JOIN tags AS t
+            ON t.subject_iri = o.iri
+           AND t.type = '#{self}'
+           AND t.name = ?
+          JOIN actors AS a
+            ON a.iri = o.attributed_to_iri
+         WHERE o.id = ?
+           AND o.published IS NOT NULL
+           #{common_filters(objects: "o", actors: "a")}
+      QUERY
+      ActivityPub::Object.scalar(query, name, o_id).as(Int64?)
+    end
+
     # Returns the objects with the given mention.
     #
     # Includes private (not visible) objects.
@@ -77,6 +100,38 @@ class Tag
          LIMIT ? OFFSET ?
       QUERY
       ActivityPub::Object.query_and_paginate(query, name, page: page, size: size)
+    end
+
+    # Returns the objects with the given mention.
+    #
+    # Includes private (not visible) objects.
+    #
+    # Orders objects by `id` for consistency with the query above.
+    #
+    def self.all_objects(name, *, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_tag_id(name, max_id) if max_id
+      min_id = translate_object_id_to_tag_id(name, min_id) if min_id
+      query = <<-QUERY
+        SELECT #{ActivityPub::Object.columns(prefix: "o")}
+          FROM objects AS o
+          JOIN tags AS t
+            ON t.subject_iri = o.iri
+           AND t.type = '#{self}'
+          JOIN actors AS a
+            ON a.iri = o.attributed_to_iri
+         WHERE t.name = ?
+           AND o.published IS NOT NULL
+           #{common_filters(objects: "o", actors: "a")}
+           AND NOT EXISTS (
+             SELECT 1 FROM tags AS t2
+              WHERE t2.type = '#{self}'
+                AND t2.name = t.name
+                AND t2.subject_iri = t.subject_iri
+                AND t2.id > t.id
+           )
+           AND %{cursor_condition}
+      QUERY
+      ActivityPub::Object.query_with_cursor(query, name, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the count of objects with the given mention since the

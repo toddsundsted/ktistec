@@ -485,6 +485,35 @@ module ActivityPub
       Object.scalar(query).as(Int64)
     end
 
+    # Returns the maximum local-outbox `r.id` for the given object id,
+    # restricted to status-producing (Announce or Create), non-undone
+    # outbox rows in any local account's outbox, for visible non-reply
+    # objects. Used to translate the externally-supplied object id
+    # into the internal object id. Returns nil for unknown ids or ids
+    # of objects that wouldn't appear in the result set.
+    #
+    private def self.translate_object_id_to_outbox_id(o_id : Int64) : Int64?
+      query = <<-QUERY
+        SELECT MAX(r.id)
+          FROM objects AS o
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+           AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+           AND r.type = '#{Relationship::Content::Outbox}'
+          JOIN accounts AS c
+            ON c.iri = r.from_iri
+         WHERE o.id = ?
+           AND o.visible = 1
+           AND o.in_reply_to_iri IS NULL
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+      QUERY
+      Object.scalar(query, o_id).as(Int64?)
+    end
+
     # Returns the site's public posts.
     #
     # Does not include private (not visible) posts and replies.
@@ -510,6 +539,47 @@ module ActivityPub
              LIMIT ? OFFSET ?
       QUERY
       Object.query_and_paginate(query, page: page, size: size)
+    end
+
+    # Returns the site's public posts with cursor-based pagination.
+    #
+    # Does not include private (not visible) posts and replies.
+    #
+    def self.public_posts(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_outbox_id(max_id) if max_id
+      min_id = translate_object_id_to_outbox_id(min_id) if min_id
+      query = <<-QUERY
+          SELECT #{Object.columns(prefix: "o")}
+            FROM accounts AS c
+            JOIN relationships AS r
+              ON likelihood(r.from_iri = c.iri, 0.99)
+             AND r.type = '#{Relationship::Content::Outbox}'
+            JOIN activities AS a
+              ON a.iri = r.to_iri
+             AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+            JOIN objects AS o
+              ON o.iri = a.object_iri
+            JOIN actors AS t
+              ON t.iri = o.attributed_to_iri
+           WHERE o.visible = 1
+             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
+             #{common_filters(objects: "o", actors: "t", activities: "a")}
+             AND NOT EXISTS (
+               SELECT 1
+                 FROM accounts AS c2
+                 JOIN relationships AS r2
+                   ON likelihood(r2.from_iri = c2.iri, 0.99)
+                  AND r2.type = '#{Relationship::Content::Outbox}'
+                 JOIN activities AS a2
+                   ON a2.iri = r2.to_iri
+                  AND a2.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+                WHERE a2.undone_at IS NULL
+                  AND a2.object_iri = a.object_iri
+                  AND r2.id > r.id
+             )
+             AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the count of the site's public posts.

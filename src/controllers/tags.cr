@@ -21,10 +21,10 @@ class TagsController
     hashtag = env.params.url["hashtag"]
 
     if env.account?
-      collection = Tag::Hashtag.all_objects(hashtag, **pagination_params(env))
+      collection = Tag::Hashtag.all_objects(hashtag, **cursor_pagination_params(env))
       count = Tag::Hashtag.all_objects_count(hashtag)
     else
-      collection = Tag::Hashtag.public_posts(hashtag, **pagination_params(env))
+      collection = Tag::Hashtag.public_posts(hashtag, **cursor_pagination_params(env))
       count = Tag::Hashtag.public_posts_count(hashtag)
     end
 

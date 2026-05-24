@@ -80,17 +80,31 @@ class ActorsController
     end
 
     cursor_params = cursor_pagination_params(env)
-    first_page = cursor_params[:max_id].nil? && cursor_params[:min_id].nil?
-    pinned = first_page ? actor.pinned_posts : [] of ActivityPub::Object
-    tail_limit = first_page ? Math.max(cursor_params[:limit] - pinned.size, 1) : cursor_params[:limit]
-    objects = actor.public_posts(
-      max_id: cursor_params[:max_id],
-      min_id: cursor_params[:min_id],
-      limit: tail_limit,
-      exclude_pinned: true,
-    )
 
-    ok "actors/actor", env: env, actor: actor, pinned: pinned, objects: objects
+    if accepts?("text/html")
+      if env.account?.try(&.actor) == actor
+        filters = env.params.query.fetch_all("filters")
+        inclusion = filters.includes?("no-shares") ? [Relationship::Content::Timeline::Create] : nil
+        exclude_replies = filters.includes?("no-replies")
+        timeline = actor.timeline(**cursor_params, inclusion: inclusion, exclude_replies: exclude_replies)
+        ok "actors/self", env: env, actor: actor, timeline: timeline
+      else
+        first_page = cursor_params[:max_id].nil? && cursor_params[:min_id].nil?
+        pinned = first_page ? actor.pinned_posts : [] of ActivityPub::Object
+        tail_limit = first_page ? Math.max(cursor_params[:limit] - pinned.size, 1) : cursor_params[:limit]
+        objects = actor.public_posts(
+          max_id: cursor_params[:max_id],
+          min_id: cursor_params[:min_id],
+          limit: tail_limit,
+          exclude_pinned: true,
+        )
+        ok "actors/actor", env: env, actor: actor, pinned: pinned, objects: objects
+      end
+    else
+      ok "actors/actor", env: env, actor: actor,
+        pinned: [] of ActivityPub::Object,
+        objects: Ktistec::Util::PaginatedArray(ActivityPub::Object).new
+    end
   end
 
   get "/actors/:username/public-posts" do |env|

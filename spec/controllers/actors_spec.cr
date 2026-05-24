@@ -831,7 +831,13 @@ Spectator.describe ActorsController do
         end
 
         it "excludes turbo-stream-source on subsequent pages" do
-          get "/actors/#{actor.username}/timeline?page=2", ACCEPT_HTML
+          get "/actors/#{actor.username}/timeline?max_id=1", ACCEPT_HTML
+          expect(response.status_code).to eq(200)
+          expect(response.body).to_not contain("turbo-stream-source")
+        end
+
+        it "excludes turbo-stream-source on subsequent pages" do
+          get "/actors/#{actor.username}/timeline?min_id=1", ACCEPT_HTML
           expect(response.status_code).to eq(200)
           expect(response.body).to_not contain("turbo-stream-source")
         end

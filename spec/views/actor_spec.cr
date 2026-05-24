@@ -33,163 +33,175 @@ Spectator.describe "actor" do
     it "does not render an editor" do
       expect(subject.xpath_nodes("//trix-editor")).to be_empty
     end
+  end
 
-    context "if authenticated" do
-      sign_in
+  describe "self.html.slang" do
+    let(env) { make_env("GET", "/actor/username") }
 
-      it "does not render an editor" do
-        expect(subject.xpath_nodes("//trix-editor")).to be_empty
+    let(timeline) { Ktistec::Util::PaginatedArray(Relationship::Content::Timeline).new }
+
+    module ::Ktistec::ViewHelper
+      def self.render_self_html_slang(env, actor, timeline)
+        render "./src/views/actors/self.html.slang"
+      end
+    end
+
+    subject do
+      begin
+        XML.parse_html(Ktistec::ViewHelper.render_self_html_slang(env, actor, timeline))
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    sign_in
+
+    let(actor) { env.account.actor }
+
+    it "renders an editor" do
+      expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
+    end
+
+    before_each do
+      env.account.assign(last_notifications_checked_at: 1.hour.ago).save
+    end
+
+    let(tooltip) { subject.xpath_nodes("//a[contains(@href,'notifications')]//span[contains(@class,'label')]/@title").first?.try(&.text) }
+    let(color) do
+      subject.xpath_nodes("//a[contains(@href,'notifications')]//span[contains(@class,'label')]").first?.try do |elem|
+        elem["class"].split.find(&.in? ["red", "orange", "yellow"])
+      end
+    end
+
+    it "does not render tooltip" do
+      expect(tooltip).to be_nil
+    end
+
+    it "does not render visible label" do
+      expect(color).to be_nil
+    end
+
+    context "given a follow notification" do
+      let_create!(:notification_follow, owner: actor)
+
+      it "renders follow tooltip" do
+        expect(tooltip).to eq("follow 1")
       end
 
-      context "if account actor is actor" do
-        let(actor) { env.account.actor }
+      it "renders red label" do
+        expect(color).to eq("red")
+      end
+    end
 
-        it "renders an editor" do
-          expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
-        end
+    context "given a reply notification" do
+      let_create!(:notification_reply, owner: actor)
 
-        before_each do
-          env.account.assign(last_notifications_checked_at: 1.hour.ago).save
-        end
+      it "renders reply tooltip" do
+        expect(tooltip).to eq("reply 1")
+      end
 
-        let(tooltip) { subject.xpath_nodes("//a[contains(@href,'notifications')]//span[contains(@class,'label')]/@title").first?.try(&.text) }
-        let(color) do
-          subject.xpath_nodes("//a[contains(@href,'notifications')]//span[contains(@class,'label')]").first?.try do |elem|
-            elem["class"].split.find(&.in? ["red", "orange", "yellow"])
-          end
-        end
+      it "renders red label" do
+        expect(color).to eq("red")
+      end
+    end
 
-        it "does not render tooltip" do
-          expect(tooltip).to be_nil
-        end
+    context "given a mention notification" do
+      let_create!(:notification_mention, owner: actor)
 
-        it "does not render visible label" do
-          expect(color).to be_nil
-        end
+      it "renders mention tooltip" do
+        expect(tooltip).to eq("mention 1")
+      end
 
-        context "given a follow notification" do
-          let_create!(:notification_follow, owner: actor)
+      it "renders red label" do
+        expect(color).to eq("red")
+      end
+    end
 
-          it "renders follow tooltip" do
-            expect(tooltip).to eq("follow 1")
-          end
+    context "given an announce notification" do
+      let_create!(:notification_announce, owner: actor)
 
-          it "renders red label" do
-            expect(color).to eq("red")
-          end
-        end
+      it "renders social tooltip" do
+        expect(tooltip).to eq("social 1")
+      end
 
-        context "given a reply notification" do
-          let_create!(:notification_reply, owner: actor)
+      it "renders orange label" do
+        expect(color).to eq("orange")
+      end
+    end
 
-          it "renders reply tooltip" do
-            expect(tooltip).to eq("reply 1")
-          end
+    context "given a like notification" do
+      let_create!(:notification_like, owner: actor)
 
-          it "renders red label" do
-            expect(color).to eq("red")
-          end
-        end
+      it "renders social tooltip" do
+        expect(tooltip).to eq("social 1")
+      end
 
-        context "given a mention notification" do
-          let_create!(:notification_mention, owner: actor)
+      it "renders orange label" do
+        expect(color).to eq("orange")
+      end
+    end
 
-          it "renders mention tooltip" do
-            expect(tooltip).to eq("mention 1")
-          end
+    context "given a dislike notification" do
+      let_create!(:notification_dislike, owner: actor)
 
-          it "renders red label" do
-            expect(color).to eq("red")
-          end
-        end
+      it "renders social tooltip" do
+        expect(tooltip).to eq("social 1")
+      end
 
-        context "given an announce notification" do
-          let_create!(:notification_announce, owner: actor)
+      it "renders orange label" do
+        expect(color).to eq("orange")
+      end
+    end
 
-          it "renders social tooltip" do
-            expect(tooltip).to eq("social 1")
-          end
+    context "given a follow hashtag notification" do
+      let_create!(:notification_follow_hashtag, owner: actor, name: "foo")
 
-          it "renders orange label" do
-            expect(color).to eq("orange")
-          end
-        end
+      it "renders content tooltip" do
+        expect(tooltip).to eq("content 1")
+      end
 
-        context "given a like notification" do
-          let_create!(:notification_like, owner: actor)
+      it "renders yellow label" do
+        expect(color).to eq("yellow")
+      end
+    end
 
-          it "renders social tooltip" do
-            expect(tooltip).to eq("social 1")
-          end
+    context "given a follow mention notification" do
+      let_create!(:notification_follow_mention, owner: actor, name: "foo@bar")
 
-          it "renders orange label" do
-            expect(color).to eq("orange")
-          end
-        end
+      it "renders content tooltip" do
+        expect(tooltip).to eq("content 1")
+      end
 
-        context "given a dislike notification" do
-          let_create!(:notification_dislike, owner: actor)
+      it "renders yellow label" do
+        expect(color).to eq("yellow")
+      end
+    end
 
-          it "renders social tooltip" do
-            expect(tooltip).to eq("social 1")
-          end
+    context "given a follow thread notification" do
+      let_create!(:notification_follow_thread, owner: actor)
 
-          it "renders orange label" do
-            expect(color).to eq("orange")
-          end
-        end
+      it "renders content tooltip" do
+        expect(tooltip).to eq("content 1")
+      end
 
-        context "given a follow hashtag notification" do
-          let_create!(:notification_follow_hashtag, owner: actor, name: "foo")
+      it "renders yellow label" do
+        expect(color).to eq("yellow")
+      end
+    end
 
-          it "renders content tooltip" do
-            expect(tooltip).to eq("content 1")
-          end
+    context "given multiple notifications" do
+      let_create!(:notification_like, owner: actor)
+      let_create!(:notification_dislike, owner: actor)
+      let_create!(:notification_follow_thread, owner: actor)
+      let_create!(:notification_follow, named: :notif_follow1, owner: actor)
+      let_create!(:notification_follow, named: :notif_follow2, owner: actor)
 
-          it "renders yellow label" do
-            expect(color).to eq("yellow")
-          end
-        end
+      it "renders combined tooltip" do
+        expect(tooltip).to eq("follow 2 | social 2 | content 1")
+      end
 
-        context "given a follow mention notification" do
-          let_create!(:notification_follow_mention, owner: actor, name: "foo@bar")
-
-          it "renders content tooltip" do
-            expect(tooltip).to eq("content 1")
-          end
-
-          it "renders yellow label" do
-            expect(color).to eq("yellow")
-          end
-        end
-
-        context "given a follow thread notification" do
-          let_create!(:notification_follow_thread, owner: actor)
-
-          it "renders content tooltip" do
-            expect(tooltip).to eq("content 1")
-          end
-
-          it "renders yellow label" do
-            expect(color).to eq("yellow")
-          end
-        end
-
-        context "given multiple notifications" do
-          let_create!(:notification_like, owner: actor)
-          let_create!(:notification_dislike, owner: actor)
-          let_create!(:notification_follow_thread, owner: actor)
-          let_create!(:notification_follow, named: :notif_follow1, owner: actor)
-          let_create!(:notification_follow, named: :notif_follow2, owner: actor)
-
-          it "renders combined tooltip" do
-            expect(tooltip).to eq("follow 2 | social 2 | content 1")
-          end
-
-          it "renders red label" do
-            expect(color).to eq("red")
-          end
-        end
+      it "renders red label" do
+        expect(color).to eq("red")
       end
     end
   end

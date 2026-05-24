@@ -1068,21 +1068,59 @@ module ActivityPub
     #
     # Does not include private (not visible) posts.
     #
-    # Note: The offset-based overload prioritizes pinned posts; this
-    # cursor-based overload does not. A pin-aware cursor variant will
-    # be needed when offset-based pagination is retired.
+    # Includes pinned posts, by default.
     #
-    def known_posts(*, max_id = nil, min_id = nil, limit = 10)
+    def known_posts(*, max_id = nil, min_id = nil, limit = 10, exclude_pinned = false)
+      if exclude_pinned
+        query = <<-QUERY
+           SELECT #{Object.columns(prefix: "o")}
+             FROM objects AS o
+            WHERE o.attributed_to_iri = ?
+              #{common_filters(objects: "o")}
+              AND o.published IS NOT NULL
+              AND o.visible = 1
+              AND NOT EXISTS (
+                SELECT 1 FROM relationships AS p
+                 WHERE p.type = '#{Relationship::Content::Pin}'
+                   AND p.from_iri = ?
+                   AND p.to_iri = o.iri
+              )
+              AND %{cursor_condition}
+        QUERY
+        Object.query_with_cursor(query, self.iri, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
+      else
+        query = <<-QUERY
+           SELECT #{Object.columns(prefix: "o")}
+             FROM objects AS o
+            WHERE o.attributed_to_iri = ?
+              #{common_filters(objects: "o")}
+              AND o.published IS NOT NULL
+              AND o.visible = 1
+              AND %{cursor_condition}
+        QUERY
+        Object.query_with_cursor(query, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
+      end
+    end
+
+    # Returns the actor's pinned posts.
+    #
+    # Meant to be called on both local and cached actors.
+    #
+    def pinned_posts
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
+           JOIN relationships AS p
+             ON p.type = '#{Relationship::Content::Pin}'
+            AND p.from_iri = ?
+            AND p.to_iri = o.iri
           WHERE o.attributed_to_iri = ?
             #{common_filters(objects: "o")}
             AND o.published IS NOT NULL
             AND o.visible = 1
-            AND %{cursor_condition}
+       ORDER BY p.id DESC
       QUERY
-      Object.query_with_cursor(query, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
+      Object.query_all(query, self.iri, self.iri)
     end
 
     # Translates an `Object.id` (external cursor) to the canonical

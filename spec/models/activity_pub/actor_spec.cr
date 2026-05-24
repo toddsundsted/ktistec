@@ -2204,6 +2204,18 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.known_posts(limit: 3)).to eq([post3, post1])
     end
 
+    context "given a pinned post" do
+      let_create!(:pin_relationship, actor: subject, object: post1)
+
+      it "includes the pinned post" do
+        expect(subject.known_posts(limit: 5, exclude_pinned: false)).to eq([post5, post3, post1])
+      end
+
+      it "excludes the pinned post" do
+        expect(subject.known_posts(limit: 5, exclude_pinned: true)).to eq([post5, post3])
+      end
+    end
+
     it "paginates with max_id" do
       expect(subject.known_posts(max_id: post5.id, limit: 2)).to eq([post3, post1])
     end
@@ -2218,6 +2230,63 @@ Spectator.describe ActivityPub::Actor do
 
     it "reports no more results" do
       expect(subject.known_posts(limit: 5).more?).not_to be_true
+    end
+  end
+
+  describe "#pinned_posts" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    macro post(index)
+      let_create!(
+        :object, named: post{{index}},
+        attributed_to: subject,
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+        visible: {{index}}.odd?
+      )
+    end
+
+    post(1)
+    post(2)
+    post(3)
+    post(4)
+    post(5)
+
+    it "is empty when no pins exist" do
+      expect(subject.pinned_posts).to be_empty
+    end
+
+    context "given pinned posts" do
+      let_create!(:pin_relationship, named: pin1, actor: subject, object: post1)
+      let_create!(:pin_relationship, named: pin3, actor: subject, object: post3)
+      let_create!(:pin_relationship, named: pin5, actor: subject, object: post5)
+
+      it "instantiates the correct subclass" do
+        expect(subject.pinned_posts.first).to be_a(ActivityPub::Object)
+      end
+
+      it "returns pinned posts" do
+        expect(subject.pinned_posts).to eq([post5, post3, post1])
+      end
+
+      it "filters out deleted posts" do
+        post5.delete!
+        expect(subject.pinned_posts).to eq([post3, post1])
+      end
+
+      it "filters out blocked posts" do
+        post5.block!
+        expect(subject.pinned_posts).to eq([post3, post1])
+      end
+
+      it "filters out non-public posts" do
+        post5.assign(visible: false).save
+        expect(subject.pinned_posts).to eq([post3, post1])
+      end
+
+      it "filters out draft posts" do
+        post5.assign(published: nil).save
+        expect(subject.pinned_posts).to eq([post3, post1])
+      end
     end
   end
 

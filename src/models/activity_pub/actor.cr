@@ -342,7 +342,7 @@ module ActivityPub
     def all_following(*, max_id = nil, min_id = nil, limit = 10, public = true)
       Actor.query_with_cursor(
         social_cursor_query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     def all_followers(page = 1, size = 10, public = false)
@@ -354,7 +354,7 @@ module ActivityPub
     def all_followers(*, max_id = nil, min_id = nil, limit = 10, public = false)
       Actor.query_with_cursor(
         social_cursor_query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-        self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     def all_follow_requests(*, max_id = nil, min_id = nil, limit = 10)
@@ -369,7 +369,7 @@ module ActivityPub
            AND %{cursor_condition}
       QUERY
       Actor.query_with_cursor(
-        query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+        query, self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     private def activity_query(type)
@@ -403,6 +403,50 @@ module ActivityPub
       QUERY
     end
 
+    # Translates an `Object.id` (external cursor) to the canonical
+    # `activities.id` (internal cursor). Returns nil for unknown ids
+    # or ids of objects that wouldn't appear in the result set.
+    #
+    private def translate_object_id_to_activity_id(o_id : Int64, type) : Int64?
+      query = <<-QUERY
+        SELECT MAX(a.id)
+          FROM objects AS o
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+         WHERE a.actor_iri = ?
+           AND a.type = '#{type}'
+           AND o.id = ?
+           #{common_filters(objects: "o", actors: "c", activities: "a")}
+      QUERY
+      Object.scalar(query, self.iri, o_id).as(Int64?)
+    end
+
+    private def activity_cursor_query(type)
+      <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS c
+             ON c.iri = o.attributed_to_iri
+           JOIN activities AS a
+             ON a.object_iri = o.iri
+          WHERE a.actor_iri = ?
+            AND a.type = '#{type}'
+            #{common_filters(objects: "o", actors: "c", activities: "a")}
+            AND NOT EXISTS (
+              SELECT 1
+                FROM activities AS a2
+               WHERE a2.actor_iri = a.actor_iri
+                 AND a2.type = a.type
+                 AND a2.undone_at IS NULL
+                 AND a2.object_iri = a.object_iri
+                 AND a2.id > a.id
+            )
+            AND %{cursor_condition}
+      QUERY
+    end
+
     # Returns the objects that this actor has liked.
     #
     # Returns objects in reverse chronological order (most recent
@@ -416,10 +460,25 @@ module ActivityPub
         self.iri, page: page, size: size)
     end
 
+    # Returns the objects that this actor has liked.
+    #
+    # Returns objects in reverse chronological order (by when liked,
+    # most recent first). Filters out deleted/blocked objects, and
+    # objects by deleted/blocked actors. Also filters out likes that
+    # have been undone.
+    #
+    def likes(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_activity_id(max_id, ActivityPub::Activity::Like) if max_id
+      min_id = translate_object_id_to_activity_id(min_id, ActivityPub::Activity::Like) if min_id
+      Object.query_with_cursor(
+        activity_cursor_query(ActivityPub::Activity::Like),
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of objects that this actor has liked since the
     # given date.
     #
-    # See `#likes(page, size)` for further details.
+    # See `#likes(max_id, min_id, limit)` for further details.
     #
     def likes(since : Time)
       Object.scalar(
@@ -441,10 +500,25 @@ module ActivityPub
         self.iri, page: page, size: size)
     end
 
+    # Returns the objects that this actor has disliked.
+    #
+    # Returns objects in reverse chronological order (by when
+    # disliked, most recent first). Filters out deleted/blocked
+    # objects, and objects by deleted/blocked actors. Also filters out
+    # dislikes that have been undone.
+    #
+    def dislikes(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_activity_id(max_id, ActivityPub::Activity::Dislike) if max_id
+      min_id = translate_object_id_to_activity_id(min_id, ActivityPub::Activity::Dislike) if min_id
+      Object.query_with_cursor(
+        activity_cursor_query(ActivityPub::Activity::Dislike),
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of objects that this actor has disliked since the
     # given date.
     #
-    # See `#dislikes(page, size)` for further details.
+    # See `#dislikes(max_id, min_id, limit)` for further details.
     #
     def dislikes(since : Time)
       Object.scalar(
@@ -466,16 +540,52 @@ module ActivityPub
         self.iri, page: page, size: size)
     end
 
+    # Returns the objects that this actor has announced.
+    #
+    # Returns objects in reverse chronological order (by when
+    # announced, most recent first). Filters out deleted/blocked
+    # objects, and objects by deleted/blocked actors. Also filters out
+    # announces that have been undone.
+    #
+    def announces(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_activity_id(max_id, ActivityPub::Activity::Announce) if max_id
+      min_id = translate_object_id_to_activity_id(min_id, ActivityPub::Activity::Announce) if min_id
+      Object.query_with_cursor(
+        activity_cursor_query(ActivityPub::Activity::Announce),
+        self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of objects that this actor has announced
     # (boosted) since the given date.
     #
-    # See `#announces(page, size)` for further details.
+    # See `#announces(max_id, min_id, limit)` for further details.
     #
     def announces(since : Time)
       Object.scalar(
         activity_count_query(ActivityPub::Activity::Announce),
         iri, since,
       ).as(Int64)
+    end
+
+    # Translates an `Object.id` (external cursor) to the canonical
+    # bookmark `relationships.id` (internal cursor). Returns nil for
+    # unknown ids or ids of objects that wouldn't appear in the result
+    # set.
+    #
+    private def translate_object_id_to_bookmark_id(o_id : Int64) : Int64?
+      query = <<-QUERY
+        SELECT MAX(r.id)
+          FROM objects AS o
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+          JOIN relationships AS r
+            ON r.to_iri = o.iri
+           AND r.type = '#{Relationship::Content::Bookmark}'
+         WHERE r.from_iri = ?
+           AND o.id = ?
+           #{common_filters(objects: "o", actors: "c")}
+      QUERY
+      Object.scalar(query, self.iri, o_id).as(Int64?)
     end
 
     # Returns the objects that this actor has bookmarked.
@@ -501,10 +611,34 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
+    # Returns the objects that this actor has bookmarked.
+    #
+    # Returns objects in reverse chronological order (most recent
+    # first). Filters out deleted/blocked objects, and objects by
+    # deleted/blocked actors.
+    #
+    def bookmarks(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_bookmark_id(max_id) if max_id
+      min_id = translate_object_id_to_bookmark_id(min_id) if min_id
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS c
+             ON c.iri = o.attributed_to_iri
+           JOIN relationships AS r
+             ON r.to_iri = o.iri
+            AND r.type = '#{Relationship::Content::Bookmark}'
+          WHERE r.from_iri = ?
+            #{common_filters(objects: "o", actors: "c")}
+            AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of objects that this actor has bookmarked
     # since the given date.
     #
-    # See `#bookmarks(page, size)` for further details.
+    # See `#bookmarks(max_id, min_id, limit)` for further details.
     #
     def bookmarks(since : Time)
       query = <<-QUERY
@@ -520,6 +654,28 @@ module ActivityPub
             AND r.created_at > ?
       QUERY
       Object.scalar(query, iri, since).as(Int64)
+    end
+
+    # Translates an `Object.id` (external cursor) to the canonical
+    # pin `relationships.id` (internal cursor). Returns nil for
+    # unknown ids or ids of objects that wouldn't appear in the result
+    # set.
+    #
+    private def translate_object_id_to_pin_id(o_id : Int64) : Int64?
+      query = <<-QUERY
+        SELECT MAX(r.id)
+          FROM objects AS o
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+          JOIN relationships AS r
+            ON r.to_iri = o.iri
+           AND r.type = '#{Relationship::Content::Pin}'
+         WHERE r.from_iri = ?
+           AND o.id = ?
+           AND o.visible = 1
+           #{common_filters(objects: "o", actors: "c")}
+      QUERY
+      Object.scalar(query, self.iri, o_id).as(Int64?)
     end
 
     # Returns the objects that this actor has pinned.
@@ -547,10 +703,36 @@ module ActivityPub
       Object.query_and_paginate(query, self.iri, page: page, size: size)
     end
 
+    # Returns the objects that this actor has pinned.
+    #
+    # Returns objects in reverse chronological order (most recent
+    # first). Filters out deleted/blocked objects, and objects by
+    # deleted/blocked actors. Does not include private (not visible)
+    # posts.
+    #
+    def pins(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_pin_id(max_id) if max_id
+      min_id = translate_object_id_to_pin_id(min_id) if min_id
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN actors AS c
+             ON c.iri = o.attributed_to_iri
+           JOIN relationships AS r
+             ON r.to_iri = o.iri
+            AND r.type = '#{Relationship::Content::Pin}'
+          WHERE r.from_iri = ?
+            #{common_filters(objects: "o", actors: "c")}
+            AND o.visible = 1
+            AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
     # Returns the count of objects that this actor has pinned since the
     # given date.
     #
-    # See `#pins` for further details.
+    # See `#pins(max_id, min_id, limit)` for further details.
     #
     def pins(since : Time)
       query = <<-QUERY
@@ -586,6 +768,24 @@ module ActivityPub
           LIMIT ? OFFSET ?
       QUERY
       Object.query_and_paginate(query, iri, page: page, size: size)
+    end
+
+    # Returns the actor's draft posts.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    # Includes only unpublished posts attributed to this actor.
+    #
+    def drafts(*, max_id = nil, min_id = nil, limit = 10)
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+          WHERE o.attributed_to_iri = ?
+            AND o.published IS NULL
+            #{common_filters(objects: "o")}
+            AND %{cursor_condition}
+      QUERY
+      Object.query_with_cursor(query, iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the count of the actor's drafts since the given date.
@@ -649,6 +849,88 @@ module ActivityPub
       Activity.query_and_paginate(query, iri, page: page, size: size)
     end
 
+    # Returns mailbox contents with cursor-based pagination.
+    #
+    # The cursor column is the mailbox `relationships.id` rather than
+    # the activity id so the collection stays ordered by when each
+    # activity arrived in the mailbox. Externally the cursor is the
+    # activity id; the translation helper converts at the input
+    # boundary.
+    #
+    protected def self.content(iri, mailbox, inclusion = nil, exclusion = nil, *, max_id = nil, min_id = nil, limit = 10, public = true, replies = true)
+      mailbox =
+        case mailbox
+        when Class
+          %Q|AND r.type = '#{mailbox}'|
+        when Array
+          %Q|AND r.type IN ('#{mailbox.map(&.to_s).join("','")}')|
+        end
+      inclusion =
+        case inclusion
+        when Class
+          %Q|AND a.type = '#{inclusion}'|
+        when Array
+          %Q|AND a.type IN ('#{inclusion.map(&.to_s).join("','")}')|
+        end
+      exclusion =
+        case exclusion
+        when Class
+          %Q|AND a.type != '#{exclusion}'|
+        when Array
+          %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
+        end
+      max_id = translate_activity_id_to_relationship_id(iri, mailbox, inclusion, exclusion, max_id, public, replies) if max_id
+      min_id = translate_activity_id_to_relationship_id(iri, mailbox, inclusion, exclusion, min_id, public, replies) if min_id
+      query = <<-QUERY
+         SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "obj")}
+           FROM activities AS a
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+      LEFT JOIN actors AS act
+             ON act.iri = a.actor_iri
+      LEFT JOIN objects AS obj
+             ON obj.iri = a.object_iri
+          WHERE r.from_iri LIKE ?
+            #{mailbox}
+            AND r.confirmed = 1
+            #{Actor.common_filters(actors: "act", objects: "obj", activities: "a")}
+            #{inclusion}
+            #{exclusion}
+       #{public ? %Q|AND a.visible = 1| : nil}
+       #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
+            AND %{cursor_condition}
+      QUERY
+      Activity.query_with_cursor(query, iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
+    end
+
+    # Translates an `Activity.id` (external cursor) to the canonical
+    # mailbox `relationships.id` (internal cursor). Returns nil for
+    # unknown ids or ids of activities that wouldn't appear in the
+    # result set.
+    #
+    private def self.translate_activity_id_to_relationship_id(iri, mailbox, inclusion, exclusion, a_id, public, replies) : Int64?
+      query = <<-QUERY
+         SELECT MAX(r.id)
+           FROM activities AS a
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+      LEFT JOIN actors AS act
+             ON act.iri = a.actor_iri
+      LEFT JOIN objects AS obj
+             ON obj.iri = a.object_iri
+          WHERE r.from_iri LIKE ?
+            AND a.id = ?
+            #{mailbox}
+            AND r.confirmed = 1
+            #{Actor.common_filters(actors: "act", objects: "obj", activities: "a")}
+            #{inclusion}
+            #{exclusion}
+       #{public ? %Q|AND a.visible = 1| : nil}
+       #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
+      QUERY
+      Activity.scalar(query, iri, a_id).as(Int64?)
+    end
+
     private def find_in?(object, mailbox, inclusion = nil, exclusion = nil)
       mailbox =
         case mailbox
@@ -695,12 +977,20 @@ module ActivityPub
       self.class.content(self.iri, Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
+    def in_outbox(*, max_id = nil, min_id = nil, limit = 10, public = true)
+      self.class.content(self.iri, Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], max_id: max_id, min_id: min_id, limit: limit, public: public)
+    end
+
     def in_outbox?(object : Object, inclusion = nil, exclusion = nil)
       find_in?(object, Relationship::Content::Outbox, inclusion, exclusion)
     end
 
     def in_inbox(page = 1, size = 10, public = true)
       self.class.content(self.iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
+    end
+
+    def in_inbox(*, max_id = nil, min_id = nil, limit = 10, public = true)
+      self.class.content(self.iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], max_id: max_id, min_id: min_id, limit: limit, public: public)
     end
 
     def in_inbox?(object : Object, inclusion = nil, exclusion = nil)
@@ -795,6 +1085,55 @@ module ActivityPub
       Object.query_with_cursor(query, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
+    # Translates an `Object.id` (external cursor) to the canonical
+    # outbox `relationships.id` (internal cursor), additionally
+    # restricted to visible, non-reply objects. Returns nil for
+    # unknown ids.
+    #
+    private def translate_object_id_to_public_outbox_id(o_id : Int64) : Int64?
+      query = <<-QUERY
+        SELECT MAX(r.id)
+          FROM objects AS o
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+           AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+           AND r.type = '#{Relationship::Content::Outbox}'
+         WHERE r.from_iri = ?
+           AND o.id = ?
+           AND o.visible = 1
+           AND o.in_reply_to_iri IS NULL
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+      QUERY
+      Object.scalar(query, self.iri, o_id).as(Int64?)
+    end
+
+    # Translates an `Object.id` (external cursor) to the canonical
+    # outbox `relationships.id` (internal cursor). Returns nil for
+    # unknown ids.
+    #
+    private def translate_object_id_to_outbox_id(o_id : Int64) : Int64?
+      query = <<-QUERY
+        SELECT MAX(r.id)
+          FROM objects AS o
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+           AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+           AND r.type = '#{Relationship::Content::Outbox}'
+         WHERE r.from_iri = ?
+           AND o.id = ?
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+      QUERY
+      Object.scalar(query, self.iri, o_id).as(Int64?)
+    end
+
     # Returns the actor's public posts and shares.
     #
     # Meant to be called on local (not cached) actors.
@@ -830,8 +1169,10 @@ module ActivityPub
     # Does not include private (not visible) posts and replies.
     #
     def public_posts(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_public_outbox_id(max_id) if max_id
+      min_id = translate_object_id_to_public_outbox_id(min_id) if min_id
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
+         SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -845,6 +1186,17 @@ module ActivityPub
             #{common_filters(objects: "o", actors: "t", activities: "a")}
             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
             AND o.visible = 1
+            AND NOT EXISTS (
+              SELECT 1
+                FROM relationships AS r2
+                JOIN activities AS a2 ON a2.iri = r2.to_iri
+               WHERE r2.from_iri = r.from_iri
+                 AND r2.type = '#{Relationship::Content::Outbox}'
+                 AND a2.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+                 AND a2.undone_at IS NULL
+                 AND a2.object_iri = a.object_iri
+                 AND r2.id > r.id
+            )
             AND %{cursor_condition}
       QUERY
       Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
@@ -942,8 +1294,10 @@ module ActivityPub
     # Includes private posts and replies!
     #
     def all_posts(*, max_id = nil, min_id = nil, limit = 10)
+      max_id = translate_object_id_to_outbox_id(max_id) if max_id
+      min_id = translate_object_id_to_outbox_id(min_id) if min_id
       query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
+         SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
            JOIN actors AS t
              ON t.iri = o.attributed_to_iri
@@ -955,6 +1309,17 @@ module ActivityPub
             AND r.type = '#{Relationship::Content::Outbox}'
           WHERE r.from_iri = ?
             #{common_filters(objects: "o", actors: "t", activities: "a")}
+            AND NOT EXISTS (
+              SELECT 1
+                FROM relationships AS r2
+                JOIN activities AS a2 ON a2.iri = r2.to_iri
+               WHERE r2.from_iri = r.from_iri
+                 AND r2.type = '#{Relationship::Content::Outbox}'
+                 AND a2.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+                 AND a2.undone_at IS NULL
+                 AND a2.object_iri = a.object_iri
+                 AND r2.id > r.id
+            )
             AND %{cursor_condition}
       QUERY
       Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
@@ -984,6 +1349,30 @@ module ActivityPub
     end
 
     private alias Timeline = Relationship::Content::Timeline
+
+    # Translates an `Object.id` (external cursor) to the canonical
+    # timeline `relationships.id` (internal cursor). Returns nil for
+    # unknown ids or ids of objects that wouldn't appear in the result
+    # set.
+    #
+    private def translate_object_id_to_timeline_id(o_id : Int64, type_list : String, exclude_replies : Bool) : Int64?
+      exclude_replies_clause =
+        exclude_replies ? "AND o.in_reply_to_iri IS NULL" : ""
+      query = <<-QUERY
+        SELECT MAX(t.id)
+          FROM relationships AS t
+          JOIN objects AS o
+            ON o.iri = t.to_iri
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+         WHERE t.from_iri = ?
+           AND t.type IN (#{type_list})
+           AND o.id = ?
+           #{exclude_replies_clause}
+           #{common_filters(objects: "o", actors: "c")}
+      QUERY
+      Timeline.scalar(query, self.iri, o_id).as(Int64?)
+    end
 
     # Returns entries in the actor's timeline.
     #
@@ -1036,20 +1425,21 @@ module ActivityPub
     # May be filtered to include only objects with associated
     # relationships of the specified type (via `inclusion`).
     #
-    # The cursor values correspond to timeline relationship id.
-    #
     def timeline(*, exclude_replies = false, inclusion = nil, max_id = nil, min_id = nil, limit = 10)
-      exclude_replies =
-        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
-      inclusion =
+      inclusion_types =
         case inclusion
         when Class, String
-          %Q|AND +t.type = '#{inclusion}'|
+          [inclusion.to_s]
         when Array
-          %Q|AND +t.type IN ('#{inclusion.map(&.to_s).join("','")}')|
+          inclusion.map(&.to_s)
         else
-          %Q|AND +t.type IN ('#{Timeline.all_subtypes.map(&.to_s).join("','")}')|
+          Timeline.all_subtypes.map(&.to_s)
         end
+      type_list = "'#{inclusion_types.join("','")}'"
+      exclude_replies_clause =
+        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
+      max_id = translate_object_id_to_timeline_id(max_id, type_list, exclude_replies) if max_id
+      min_id = translate_object_id_to_timeline_id(min_id, type_list, exclude_replies) if min_id
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
             FROM relationships AS t
@@ -1058,12 +1448,25 @@ module ActivityPub
             JOIN actors AS c
               ON c.iri = o.attributed_to_iri
            WHERE +t.from_iri = ?
-             #{inclusion}
-             #{exclude_replies}
+             AND +t.type IN (#{type_list})
+             #{exclude_replies_clause}
              #{common_filters(objects: "o", actors: "c")}
+             AND NOT EXISTS (
+               SELECT 1
+                 FROM relationships AS t2
+                WHERE t2.from_iri = t.from_iri
+                  AND t2.type IN (#{type_list})
+                  AND t2.to_iri = t.to_iri
+                  AND t2.id > t.id
+             )
              AND %{cursor_condition}
       QUERY
-      Timeline.query_with_cursor(query, self.iri, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
+      result = Timeline.query_with_cursor(query, self.iri, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
+      unless result.empty?
+        result.cursor_start = result.first.object.id
+        result.cursor_end = result.to_a.last.object.id
+      end
+      result
     end
 
     # Returns the count of entries in the actor's timeline since the
@@ -1127,6 +1530,33 @@ module ActivityPub
           LIMIT ? OFFSET ?
       QUERY
       Notification.query_and_paginate(query, iri, page: page, size: size)
+    end
+
+    # Returns notifications for the actor.
+    #
+    # Meant to be called on local (not cached) actors.
+    #
+    def notifications(*, max_id = nil, min_id = nil, limit = 10)
+      query = <<-QUERY
+         SELECT #{Notification.columns(prefix: "n")}
+           FROM relationships AS n
+      LEFT JOIN activities AS a
+             ON a.iri = n.to_iri
+      LEFT JOIN actors AS c
+             ON c.iri = a.actor_iri
+      LEFT JOIN objects AS o
+             ON o.iri = a.object_iri
+      LEFT JOIN objects AS e
+             ON e.iri = n.to_iri
+      LEFT JOIN actors AS t
+             ON t.iri = e.attributed_to_iri
+          WHERE +n.from_iri = ?
+            AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
+            #{common_filters(actors: "c", objects: "o", activities: "a")}
+            #{common_filters(objects: "e", actors: "t")}
+            AND %{cursor_condition}
+      QUERY
+      Notification.query_with_cursor(query, iri, cursor_column: "n.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the count of notifications for the actor since the given

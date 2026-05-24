@@ -1367,6 +1367,92 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe ".public_posts" do
+    let(actor) { register.actor }
+
+    public_post(1, :announce)
+    public_post(2, :create)
+    public_post(3, :announce)
+    public_post(4, :create)
+    public_post(5, :announce)
+
+    it "instantiates the correct subclass" do
+      expect(described_class.public_posts(limit: 2).first).to be_a(ActivityPub::Object)
+    end
+
+    it "filters out deleted posts" do
+      post5.delete!
+      expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
+    end
+
+    it "filters out blocked posts" do
+      post5.block!
+      expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
+    end
+
+    it "filters out posts by deleted actors" do
+      actor5.delete!
+      expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
+    end
+
+    it "filters out posts by blocked actors" do
+      actor5.block!
+      expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
+    end
+
+    it "filters out non-public posts" do
+      post5.assign(visible: false).save
+      expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
+    end
+
+    it "filters out replies" do
+      post5.assign(in_reply_to: post3).save
+      expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
+    end
+
+    it "filters out objects belonging to undone activities" do
+      activity5.undo!
+      expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
+    end
+
+    it "limits the results" do
+      expect(described_class.public_posts(limit: 2)).to eq([post5, post4])
+    end
+
+    it "paginates with max_id" do
+      expect(described_class.public_posts(max_id: post5.id, limit: 2)).to eq([post4, post3])
+    end
+
+    it "paginates with min_id" do
+      expect(described_class.public_posts(min_id: post1.id, limit: 2)).to eq([post3, post2])
+    end
+
+    it "reports more results" do
+      expect(described_class.public_posts(limit: 2).more?).to be_true
+    end
+
+    it "reports no more results" do
+      expect(described_class.public_posts(limit: 5).more?).not_to be_true
+    end
+
+    it "returns the first page" do
+      expect(described_class.public_posts(max_id: 0_i64, limit: 2)).to eq([post5, post4])
+    end
+
+    context "given multiple outbox items for the same object" do
+      let_build(:create, named: extra_activity, actor: actor, object: post3)
+      let_create!(:outbox_relationship, owner: actor, activity: extra_activity)
+
+      it "emits the object once" do
+        expect(described_class.public_posts(limit: 10)).to eq([post3, post5, post4, post2, post1])
+      end
+
+      it "does not emit the object on the next page" do
+        expect(described_class.public_posts(max_id: post3.id, limit: 5)).to eq([post5, post4, post2, post1])
+      end
+    end
+  end
+
   describe ".public_posts_count" do
     let(actor) { register.actor }
 

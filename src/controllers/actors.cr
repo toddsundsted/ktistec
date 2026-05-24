@@ -89,7 +89,7 @@ class ActorsController
 
     actor = account.actor
 
-    objects = actor.public_posts(**pagination_params(env))
+    objects = actor.public_posts(**cursor_pagination_params(env))
 
     ok "actors/public_posts", env: env, actor: actor, objects: objects
   end
@@ -101,7 +101,7 @@ class ActorsController
 
     actor = account.actor
 
-    objects = actor.public_posts(**pagination_params(env))
+    objects = actor.public_posts(**cursor_pagination_params(env))
 
     actor_name = actor.display_name
     actor_url = actor.display_link.not_nil!.to_s
@@ -124,7 +124,7 @@ class ActorsController
 
     actor = account.actor
 
-    objects = actor.all_posts(**pagination_params(env))
+    objects = actor.all_posts(**cursor_pagination_params(env))
 
     ok "actors/posts", env: env, actor: actor, objects: objects
   end
@@ -136,7 +136,7 @@ class ActorsController
 
     actor = account.actor
 
-    objects = actor.bookmarks(**pagination_params(env))
+    objects = actor.bookmarks(**cursor_pagination_params(env))
 
     ok "actors/bookmarks", env: env, actor: actor, objects: objects
   end
@@ -148,7 +148,7 @@ class ActorsController
 
     actor = account.actor
 
-    objects = actor.pins(**pagination_params(env))
+    objects = actor.pins(**cursor_pagination_params(env))
 
     ok "actors/featured", env: env, objects: objects
   end
@@ -174,7 +174,7 @@ class ActorsController
 
     actor = account.actor
 
-    notifications = actor.notifications(**pagination_params(env))
+    notifications = actor.notifications(**cursor_pagination_params(env))
 
     account.update_last_notifications_checked_at
 
@@ -186,7 +186,7 @@ class ActorsController
       not_found
     end
 
-    drafts = account.actor.drafts(**pagination_params(env))
+    drafts = account.actor.drafts(**cursor_pagination_params(env))
 
     ok "objects/index", env: env, drafts: drafts
   end

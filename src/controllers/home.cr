@@ -30,7 +30,7 @@ class HomeController
 
       ok "home/step_2", env: env, account: account, actor: actor
     elsif (account = env.account?).nil?
-      objects = ActivityPub::Object.public_posts(**pagination_params(env))
+      objects = ActivityPub::Object.public_posts(**cursor_pagination_params(env))
 
       ok "home/index", env: env, accounts: accounts, objects: objects
     else
@@ -39,7 +39,7 @@ class HomeController
   end
 
   get "/feed.rss" do |env|
-    objects = ActivityPub::Object.public_posts(**pagination_params(env))
+    objects = ActivityPub::Object.public_posts(**cursor_pagination_params(env))
 
     site_name = Ktistec.site
     site_host = Ktistec.host

@@ -56,7 +56,7 @@ class RelationshipsController
       not_found
     end
 
-    objects = account.actor.likes(**pagination_params(env))
+    objects = account.actor.likes(**cursor_pagination_params(env))
     ok "relationships/objects", env: env, objects: objects, title: "Likes"
   end
 
@@ -65,7 +65,7 @@ class RelationshipsController
       not_found
     end
 
-    objects = account.actor.announces(**pagination_params(env))
+    objects = account.actor.announces(**cursor_pagination_params(env))
     ok "relationships/objects", env: env, objects: objects, title: "Shares"
   end
 end

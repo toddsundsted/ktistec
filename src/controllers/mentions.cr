@@ -8,7 +8,7 @@ class MentionsController
   get "/mentions/:mention" do |env|
     mention = env.params.url["mention"]
 
-    collection = Tag::Mention.all_objects(mention, **pagination_params(env))
+    collection = Tag::Mention.all_objects(mention, **cursor_pagination_params(env))
     count = Tag::Mention.all_objects_count(mention)
 
     not_found if collection.empty?

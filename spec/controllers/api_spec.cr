@@ -1340,6 +1340,18 @@ Spectator.describe APIController do
         expect(response.headers["Link"]?).to contain(%Q(rel="next"))
       end
     end
+
+    context "given a hashtag requiring URL encoding" do
+      before_each do
+        Tag::Hashtag.new(name: "café", subject: local_post).save
+        Tag::Hashtag.new(name: "café", subject: remote_post).save
+      end
+
+      it "encodes the hashtag" do
+        get "/api/v1/timelines/tag/caf%C3%A9", headers: JSON_HEADERS
+        expect(response.headers["Link"]?).to contain("/api/v1/timelines/tag/caf%C3%A9")
+      end
+    end
   end
 
   describe "GET /api/v1/statuses/:id" do

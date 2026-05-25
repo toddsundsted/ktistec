@@ -1151,7 +1151,7 @@ Spectator.describe ActivityPub::Object do
     it "paginates the results" do
       expect(described_class.federated_posts(1, 2)).to eq([post5, post3])
       expect(described_class.federated_posts(2, 2)).to eq([post1])
-      expect(described_class.federated_posts(2, 2).more?).not_to be_true
+      expect(described_class.federated_posts(2, 2).has_next?).not_to be_true
     end
 
     context "with an unpublished post" do
@@ -1214,12 +1214,12 @@ Spectator.describe ActivityPub::Object do
 
     it "paginates the results" do
       expect(described_class.federated_posts(max_id: post3.id, limit: 2)).to eq([post1])
-      expect(described_class.federated_posts(max_id: post3.id, limit: 2).more?).not_to be_true
+      expect(described_class.federated_posts(max_id: post3.id, limit: 2).has_next?).not_to be_true
     end
 
     it "paginates the results" do
       expect(described_class.federated_posts(min_id: post2.id, limit: 1)).to eq([post3])
-      expect(described_class.federated_posts(min_id: post2.id, limit: 1).more?).to be_true
+      expect(described_class.federated_posts(min_id: post2.id, limit: 1).has_next?).to be_true
     end
 
     context "with an unpublished post" do
@@ -1363,7 +1363,7 @@ Spectator.describe ActivityPub::Object do
     it "paginates the results" do
       expect(described_class.public_posts(1, 2)).to eq([post5, post4])
       expect(described_class.public_posts(3, 2)).to eq([post1])
-      expect(described_class.public_posts(3, 2).more?).not_to be_true
+      expect(described_class.public_posts(3, 2).has_next?).not_to be_true
     end
   end
 
@@ -1428,11 +1428,11 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "reports more results" do
-      expect(described_class.public_posts(limit: 2).more?).to be_true
+      expect(described_class.public_posts(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(described_class.public_posts(limit: 5).more?).not_to be_true
+      expect(described_class.public_posts(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do

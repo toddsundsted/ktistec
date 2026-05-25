@@ -743,11 +743,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_following(min_id: following1.id, limit: 1, public: true).more?).to be_true
+      expect(subject.all_following(min_id: following1.id, limit: 1, public: true).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_following(min_id: following1.id, limit: 2, public: true).more?).not_to be_true
+      expect(subject.all_following(min_id: following1.id, limit: 2, public: true).has_next?).not_to be_true
     end
 
     create_following(4, confirmed: true, visible: false)
@@ -796,11 +796,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_followers(min_id: follower1.id, limit: 1, public: true).more?).to be_true
+      expect(subject.all_followers(min_id: follower1.id, limit: 1, public: true).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_followers(min_id: follower1.id, limit: 2, public: true).more?).not_to be_true
+      expect(subject.all_followers(min_id: follower1.id, limit: 2, public: true).has_next?).not_to be_true
     end
 
     create_follower(4, confirmed: true, visible: false)
@@ -849,11 +849,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_follow_requests(min_id: requester1.id, limit: 1).more?).to be_true
+      expect(subject.all_follow_requests(min_id: requester1.id, limit: 1).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_follow_requests(min_id: requester1.id, limit: 2).more?).not_to be_true
+      expect(subject.all_follow_requests(min_id: requester1.id, limit: 2).has_next?).not_to be_true
     end
 
     create_requester(4, confirmed: true)
@@ -930,7 +930,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.likes(1, 2)).to eq([note5, note4])
       expect(subject.likes(2, 2)).to eq([note3, note2])
-      expect(subject.likes(2, 2).more?).to be_true
+      expect(subject.likes(2, 2).has_next?).to be_true
     end
   end
 
@@ -1001,11 +1001,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.likes(limit: 2).more?).to be_true
+      expect(subject.likes(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.likes(limit: 5).more?).not_to be_true
+      expect(subject.likes(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -1066,7 +1066,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.dislikes(1, 2)).to eq([note5, note4])
       expect(subject.dislikes(2, 2)).to eq([note3, note2])
-      expect(subject.dislikes(2, 2).more?).to be_true
+      expect(subject.dislikes(2, 2).has_next?).to be_true
     end
   end
 
@@ -1137,11 +1137,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.dislikes(limit: 2).more?).to be_true
+      expect(subject.dislikes(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.dislikes(limit: 5).more?).not_to be_true
+      expect(subject.dislikes(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -1202,7 +1202,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.announces(1, 2)).to eq([note5, note4])
       expect(subject.announces(2, 2)).to eq([note3, note2])
-      expect(subject.announces(2, 2).more?).to be_true
+      expect(subject.announces(2, 2).has_next?).to be_true
     end
   end
 
@@ -1273,11 +1273,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.announces(limit: 2).more?).to be_true
+      expect(subject.announces(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.announces(limit: 5).more?).not_to be_true
+      expect(subject.announces(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -1332,7 +1332,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.bookmarks(1, 2)).to eq([note5, note4])
       expect(subject.bookmarks(2, 2)).to eq([note3, note2])
-      expect(subject.bookmarks(2, 2).more?).to be_true
+      expect(subject.bookmarks(2, 2).has_next?).to be_true
     end
 
     it "returns results in reverse chronological order" do
@@ -1401,11 +1401,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.bookmarks(limit: 2).more?).to be_true
+      expect(subject.bookmarks(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.bookmarks(limit: 5).more?).not_to be_true
+      expect(subject.bookmarks(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -1474,7 +1474,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.pins(1, 2)).to eq([note5, note4])
       expect(subject.pins(2, 2)).to eq([note3, note2])
-      expect(subject.pins(2, 2).more?).to be_true
+      expect(subject.pins(2, 2).has_next?).to be_true
     end
 
     it "returns results in reverse chronological order" do
@@ -1549,11 +1549,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.pins(limit: 2).more?).to be_true
+      expect(subject.pins(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.pins(limit: 5).more?).not_to be_true
+      expect(subject.pins(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -1616,7 +1616,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.drafts(1, 2)).to eq([note5, note4])
       expect(subject.drafts(2, 2)).to eq([note3, note2])
-      expect(subject.drafts(2, 2).more?).to be_true
+      expect(subject.drafts(2, 2).has_next?).to be_true
     end
   end
 
@@ -1681,11 +1681,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.drafts(limit: 2).more?).to be_true
+      expect(subject.drafts(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.drafts(limit: 5).more?).not_to be_true
+      expect(subject.drafts(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -1759,7 +1759,7 @@ Spectator.describe ActivityPub::Actor do
       it "paginates the results" do
         expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
         expect(subject.in_outbox(2, 2, public: false)).to eq([activity3, activity2])
-        expect(subject.in_outbox(2, 2, public: false).more?).to be_true
+        expect(subject.in_outbox(2, 2, public: false).has_next?).to be_true
       end
     end
 
@@ -1815,11 +1815,11 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "reports more results" do
-        expect(subject.in_outbox(limit: 2, public: false).more?).to be_true
+        expect(subject.in_outbox(limit: 2, public: false).has_next?).to be_true
       end
 
       it "reports no more results" do
-        expect(subject.in_outbox(limit: 5, public: false).more?).not_to be_true
+        expect(subject.in_outbox(limit: 5, public: false).has_next?).not_to be_true
       end
 
       it "returns the first page" do
@@ -1939,7 +1939,7 @@ Spectator.describe ActivityPub::Actor do
       it "paginates the results" do
         expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
         expect(subject.in_inbox(2, 2, public: false)).to eq([activity3, activity2])
-        expect(subject.in_inbox(2, 2, public: false).more?).to be_true
+        expect(subject.in_inbox(2, 2, public: false).has_next?).to be_true
       end
     end
 
@@ -1995,11 +1995,11 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "reports more results" do
-        expect(subject.in_inbox(limit: 2, public: false).more?).to be_true
+        expect(subject.in_inbox(limit: 2, public: false).has_next?).to be_true
       end
 
       it "reports no more results" do
-        expect(subject.in_inbox(limit: 5, public: false).more?).not_to be_true
+        expect(subject.in_inbox(limit: 5, public: false).has_next?).not_to be_true
       end
 
       it "returns the first page" do
@@ -2159,7 +2159,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.known_posts(1, 2)).to eq([post5, post3])
       expect(subject.known_posts(2, 2)).to eq([post1])
-      expect(subject.known_posts(2, 2).more?).not_to be_true
+      expect(subject.known_posts(2, 2).has_next?).not_to be_true
     end
   end
 
@@ -2225,11 +2225,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.known_posts(min_id: post1.id, limit: 1).more?).to be_true
+      expect(subject.known_posts(min_id: post1.id, limit: 1).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.known_posts(limit: 5).more?).not_to be_true
+      expect(subject.known_posts(limit: 5).has_next?).not_to be_true
     end
 
     context "when insertion order and publication time diverge" do
@@ -2402,7 +2402,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.public_posts_with_pins(1, 2)).to eq([object5, object4])
       expect(subject.public_posts_with_pins(3, 2)).to eq([object1])
-      expect(subject.public_posts_with_pins(3, 2).more?).not_to be_true
+      expect(subject.public_posts_with_pins(3, 2).has_next?).not_to be_true
     end
   end
 
@@ -2470,7 +2470,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.public_posts(1, 2)).to eq([object5, object4])
       expect(subject.public_posts(3, 2)).to eq([object1])
-      expect(subject.public_posts(3, 2).more?).not_to be_true
+      expect(subject.public_posts(3, 2).has_next?).not_to be_true
     end
   end
 
@@ -2559,11 +2559,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.public_posts(min_id: object1.id, limit: 1).more?).to be_true
+      expect(subject.public_posts(min_id: object1.id, limit: 1).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.public_posts(limit: 5).more?).not_to be_true
+      expect(subject.public_posts(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -2688,7 +2688,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
       expect(subject.all_posts(3, 2)).to eq([object1])
-      expect(subject.all_posts(3, 2).more?).not_to be_true
+      expect(subject.all_posts(3, 2).has_next?).not_to be_true
     end
   end
 
@@ -2777,11 +2777,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_posts(min_id: object1.id, limit: 1).more?).to be_true
+      expect(subject.all_posts(min_id: object1.id, limit: 1).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_posts(limit: 5).more?).not_to be_true
+      expect(subject.all_posts(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -2939,7 +2939,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.timeline(page: 1, size: 2)).to eq([timeline5, timeline4])
       expect(subject.timeline(page: 3, size: 2)).to eq([timeline1])
-      expect(subject.timeline(page: 3, size: 2).more?).not_to be_true
+      expect(subject.timeline(page: 3, size: 2).has_next?).not_to be_true
     end
   end
 
@@ -3067,12 +3067,12 @@ Spectator.describe ActivityPub::Actor do
 
     it "paginates the results" do
       expect(subject.timeline(max_id: object3.id, limit: 2)).to eq([timeline2, timeline1])
-      expect(subject.timeline(max_id: object3.id, limit: 2).more?).not_to be_true
+      expect(subject.timeline(max_id: object3.id, limit: 2).has_next?).not_to be_true
     end
 
     it "paginates the results" do
       expect(subject.timeline(min_id: object2.id, limit: 2)).to eq([timeline4, timeline3])
-      expect(subject.timeline(min_id: object2.id, limit: 2).more?).to be_true
+      expect(subject.timeline(min_id: object2.id, limit: 2).has_next?).to be_true
     end
 
     it "returns the first page" do
@@ -3179,7 +3179,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
       expect(subject.notifications(page: 3, size: 2)).to eq([notification1])
-      expect(subject.notifications(page: 3, size: 2).more?).not_to be_true
+      expect(subject.notifications(page: 3, size: 2).has_next?).not_to be_true
     end
   end
 
@@ -3253,11 +3253,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.notifications(limit: 2).more?).to be_true
+      expect(subject.notifications(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.notifications(limit: 5).more?).not_to be_true
+      expect(subject.notifications(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -3305,7 +3305,7 @@ Spectator.describe ActivityPub::Actor do
       it "paginates the results" do
         expect(subject.terms(page: 1, size: 2)).to eq([term1, term2])
         expect(subject.terms(page: 3, size: 2)).to eq([term5])
-        expect(subject.terms(page: 3, size: 2).more?).not_to be_true
+        expect(subject.terms(page: 3, size: 2).has_next?).not_to be_true
       end
     end
   end

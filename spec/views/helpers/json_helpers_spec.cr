@@ -48,7 +48,7 @@ Spectator.describe "helpers" do
       end
 
       context "with more pages" do
-        before_each { collection.more = true }
+        before_each { collection.has_next = true }
 
         it "includes a link to the next page" do
           expect(subject["next"]?).to eq("https://test.test/?page=2")
@@ -76,7 +76,7 @@ Spectator.describe "helpers" do
       end
 
       context "with more pages" do
-        before_each { collection.more = true }
+        before_each { collection.has_next = true }
 
         it "includes a link to the next page" do
           expect(subject["next"]?).to eq("https://test.test/?page=3")
@@ -131,7 +131,7 @@ Spectator.describe "helpers" do
       end
 
       context "with more pages" do
-        before_each { collection.more = true }
+        before_each { collection.has_next = true }
 
         it "includes a link to the next page" do
           expect(subject["next"]?).to eq("https://test.test/?max_id=50")
@@ -159,7 +159,7 @@ Spectator.describe "helpers" do
       end
 
       context "with more pages" do
-        before_each { collection.more = true }
+        before_each { collection.has_next = true }
 
         it "includes a link to the next page" do
           expect(subject["next"]?).to eq("https://test.test/?max_id=50")

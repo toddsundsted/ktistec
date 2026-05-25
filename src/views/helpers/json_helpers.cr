@@ -26,7 +26,7 @@ module Ktistec::ViewHelper
         %temp["min_id"] = {{collection}}.cursor_start.to_s
         content_io << %Q("prev":"#{host}#{%path}?#{%temp}",)
       end
-      if {{collection}}.more?
+      if {{collection}}.has_next?
         %temp = %query.dup
         %temp.delete_all("max_id")
         %temp.delete_all("min_id")
@@ -66,7 +66,7 @@ module Ktistec::ViewHelper
           content_io << %Q("prev":"#{host}#{%path}?#{%query}",)
         end
       end
-      if {{collection}}.more?
+      if {{collection}}.has_next?
         %query["page"] = (%page + 1).to_s
         content_io << %Q("next":"#{host}#{%path}?#{%query}",)
       end

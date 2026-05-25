@@ -51,7 +51,7 @@ Spectator.describe "partials" do
       end
 
       context "and contains more" do
-        before_each { collection.more = true }
+        before_each { collection.has_next = true }
 
         it "contains a link to the next page" do
           expect(subject.dig?("next")).to eq("#{Ktistec.host}/collection?page=2&size=2")
@@ -92,7 +92,7 @@ Spectator.describe "partials" do
       end
 
       context "and contains more" do
-        before_each { collection.more = true }
+        before_each { collection.has_next = true }
 
         it "contains a link to the next page" do
           expect(subject.dig?("first", "next")).to eq("#{Ktistec.host}/collection?page=2")

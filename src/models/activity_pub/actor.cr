@@ -1133,13 +1133,13 @@ module ActivityPub
       args << limit + 1
 
       items = Object.sql(query, args: args)
-      more = items.size > limit
-      items = items[0...limit] if more
+      has_next = items.size > limit
+      items = items[0...limit] if has_next
       items = items.reverse if min_cursor && !max_cursor
 
       Ktistec::Util::PaginatedArray(Object).new(items.size).tap do |array|
         items.each { |item| array << item }
-        array.more = more
+        array.has_next = has_next
         if array.size > 0
           array.cursor_start = array.first.id
           array.cursor_end = items.last.id
@@ -1381,7 +1381,7 @@ module ActivityPub
       Ktistec::Util::PaginatedArray(Object).new.tap do |array|
         (pinned + non_pinned).each { |obj| array << obj }
         if array.size > size
-          array.more = true
+          array.has_next = true
           array.pop
         end
       end

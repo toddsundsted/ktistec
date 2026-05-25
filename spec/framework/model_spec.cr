@@ -229,9 +229,9 @@ Spectator.describe Ktistec::Model do
       expect(result.map(&.id)).to eq([5, 4])
     end
 
-    it "sets `more?`" do
+    it "sets `has_next?`" do
       result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
-      expect(result.more?).to be_true
+      expect(result.has_next?).to be_true
     end
 
     it "sets `cursor_start`" do

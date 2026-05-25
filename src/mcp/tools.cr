@@ -257,55 +257,55 @@ module MCP
           objects = notifications.map do |notification|
             notification_to_json_any(notification)
           end
-          {objects.compact, notifications.more?}
+          {objects.compact, notifications.has_next?}
         when "timeline"
           timeline = actor.timeline(page: page, size: size)
           objects = timeline.map do |rel|
             JSON::Any.new(MCP::Resources.object_contents(rel.object))
           end
-          {objects, timeline.more?}
+          {objects, timeline.has_next?}
         when "posts"
           posts = actor.all_posts(page: page, size: size)
           objects = posts.map do |post|
             JSON::Any.new(MCP::Resources.object_contents(post))
           end
-          {objects, posts.more?}
+          {objects, posts.has_next?}
         when "drafts"
           drafts = actor.drafts(page: page, size: size)
           objects = drafts.map do |draft|
             JSON::Any.new(MCP::Resources.object_contents(draft))
           end
-          {objects, drafts.more?}
+          {objects, drafts.has_next?}
         when "likes"
           likes = actor.likes(page: page, size: size)
           objects = likes.map do |liked_object|
             JSON::Any.new(MCP::Resources.object_contents(liked_object))
           end
-          {objects, likes.more?}
+          {objects, likes.has_next?}
         when "dislikes"
           dislikes = actor.dislikes(page: page, size: size)
           objects = dislikes.map do |disliked_object|
             JSON::Any.new(MCP::Resources.object_contents(disliked_object))
           end
-          {objects, dislikes.more?}
+          {objects, dislikes.has_next?}
         when "announces"
           announces = actor.announces(page: page, size: size)
           objects = announces.map do |announced_object|
             JSON::Any.new(MCP::Resources.object_contents(announced_object))
           end
-          {objects, announces.more?}
+          {objects, announces.has_next?}
         when "bookmarks"
           bookmarks = actor.bookmarks(page: page, size: size)
           objects = bookmarks.map do |bookmarked_object|
             JSON::Any.new(MCP::Resources.object_contents(bookmarked_object))
           end
-          {objects, bookmarks.more?}
+          {objects, bookmarks.has_next?}
         when "pins"
           pins = actor.pins(page: page, size: size)
           objects = pins.map do |pinned_object|
             JSON::Any.new(MCP::Resources.object_contents(pinned_object))
           end
-          {objects, pins.more?}
+          {objects, pins.has_next?}
         when "followers"
           followers = Relationship::Social::Follow.followers_for(actor.iri, page: page, size: size)
           objects = followers.map do |relationship|
@@ -316,7 +316,7 @@ module MCP
               "confirmed"    => JSON::Any.new(relationship.confirmed),
             })
           end
-          {objects, followers.more?}
+          {objects, followers.has_next?}
         when "following"
           following = Relationship::Social::Follow.following_for(actor.iri, page: page, size: size)
           objects = following.map do |relationship|
@@ -327,7 +327,7 @@ module MCP
               "confirmed"    => JSON::Any.new(relationship.confirmed),
             })
           end
-          {objects, following.more?}
+          {objects, following.has_next?}
         else
           if name.starts_with?("hashtag#")
             hashtag = name.sub("hashtag#", "")
@@ -335,14 +335,14 @@ module MCP
             objects = hashtag_objects.map do |obj|
               JSON::Any.new(MCP::Resources.object_contents(obj))
             end
-            {objects, hashtag_objects.more?}
+            {objects, hashtag_objects.has_next?}
           elsif name.starts_with?("mention@")
             mention = name.sub("mention@", "")
             mention_objects = Tag::Mention.all_objects(mention, page: page, size: size)
             objects = mention_objects.map do |obj|
               JSON::Any.new(MCP::Resources.object_contents(obj))
             end
-            {objects, mention_objects.more?}
+            {objects, mention_objects.has_next?}
           else
             raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
           end

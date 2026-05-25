@@ -167,7 +167,7 @@ Spectator.describe Tag::Hashtag do
     it "paginates the results" do
       expect(described_class.all_objects("foo", 1, 2)).to eq([object5, object4])
       expect(described_class.all_objects("foo", 2, 2)).to eq([object3, object2])
-      expect(described_class.all_objects("foo", 2, 2).more?).to be_true
+      expect(described_class.all_objects("foo", 2, 2).has_next?).to be_true
     end
   end
 
@@ -225,11 +225,11 @@ Spectator.describe Tag::Hashtag do
     end
 
     it "reports more results" do
-      expect(described_class.all_objects("foo", limit: 2).more?).to be_true
+      expect(described_class.all_objects("foo", limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(described_class.all_objects("foo", limit: 5).more?).not_to be_true
+      expect(described_class.all_objects("foo", limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -384,7 +384,7 @@ Spectator.describe Tag::Hashtag do
     it "paginates the results" do
       expect(described_class.public_posts("foo", 1, 2)).to eq([object5, object4])
       expect(described_class.public_posts("foo", 2, 2)).to eq([object3, object2])
-      expect(described_class.public_posts("foo", 2, 2).more?).to be_true
+      expect(described_class.public_posts("foo", 2, 2).has_next?).to be_true
     end
   end
 
@@ -460,11 +460,11 @@ Spectator.describe Tag::Hashtag do
     end
 
     it "reports more results" do
-      expect(described_class.public_posts("foo", limit: 2).more?).to be_true
+      expect(described_class.public_posts("foo", limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(described_class.public_posts("foo", limit: 5).more?).not_to be_true
+      expect(described_class.public_posts("foo", limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do

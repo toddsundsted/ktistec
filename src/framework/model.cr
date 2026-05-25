@@ -317,7 +317,7 @@ module Ktistec
               rs.each { array << compose(rs, **additional_columns) }
             end
             if array.size > size
-              array.more = true
+              array.has_next = true
               array.pop
             end
           end
@@ -371,9 +371,9 @@ module Ktistec
           Ktistec.database.query(query, args: all_args) do |rs|
             rs.each { result << compose(rs, **additional_columns) }
           end
-          more = false
+          has_next = false
           if result.size > limit
-            more = true
+            has_next = true
             result.pop
           end
           items = result.to_a
@@ -382,7 +382,7 @@ module Ktistec
           end
           Ktistec::Util::PaginatedArray(self).new(items.size).tap do |array|
             items.each { |item| array << item }
-            array.more = more
+            array.has_next = has_next
             if array.size > 0
               array.cursor_start = array.first.id
               array.cursor_end = items.last.id

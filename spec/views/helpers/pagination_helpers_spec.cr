@@ -31,7 +31,7 @@ Spectator.describe "helpers" do
 
     context "with offset pagination" do
       context "with more pages" do
-        before_each { collection.more = true }
+        before_each { collection.has_next = true }
 
         it "renders the next link" do
           expect(subject.xpath_nodes("//a/@href")).to contain_exactly("?page=2")
@@ -62,7 +62,7 @@ Spectator.describe "helpers" do
       end
 
       context "with more results" do
-        before_each { collection.more = true }
+        before_each { collection.has_next = true }
 
         it "renders the prev link" do
           expect(subject.xpath_nodes("//a/@href")).to contain("?min_id=100")
@@ -247,7 +247,7 @@ Spectator.describe "helpers" do
     context "with cursor_end and more" do
       before_each do
         collection.cursor_end = 50_i64
-        collection.more = true
+        collection.has_next = true
       end
 
       it "includes next link" do

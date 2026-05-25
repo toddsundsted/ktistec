@@ -1036,6 +1036,30 @@ module ActivityPub
       find_activity_for(object, ActivityPub::Activity::Like)
     end
 
+    # Translates an `Object.id` (external cursor) to its
+    # `(published, id)` tuple (internal cursor for `known_posts`).
+    # Returns nil for unknown / invalid ids so the caller falls
+    # back to the first page.
+    #
+    private def translate_object_id_to_published_and_id(o_id : Int64, exclude_pinned = false) : {Time, Int64}?
+      pin_filter = exclude_pinned ? "AND NOT EXISTS (SELECT 1 FROM relationships AS p WHERE p.type = '#{Relationship::Content::Pin}' AND p.from_iri = ? AND p.to_iri = o.iri)" : ""
+      query = <<-QUERY
+        SELECT o.published, o.id
+          FROM objects AS o
+         WHERE o.attributed_to_iri = ?
+           AND o.id = ?
+           #{common_filters(objects: "o")}
+           AND o.published IS NOT NULL
+           AND o.visible = 1
+           #{pin_filter}
+      QUERY
+      args = [self.iri, o_id] of ::DB::Any
+      args << self.iri if exclude_pinned
+      Ktistec.database.query_one?(query, args: args) do |rs|
+        {rs.read(Time), rs.read(Int64)}
+      end
+    end
+
     # Returns the actor's known posts.
     #
     # Meant to be called on both local and cached actors.
@@ -1066,39 +1090,60 @@ module ActivityPub
     #
     # Meant to be called on both local and cached actors.
     #
+    # Orders by publication time (most recent first).
+    #
     # Does not include private (not visible) posts.
     #
     # Includes pinned posts, by default.
     #
     def known_posts(*, max_id = nil, min_id = nil, limit = 10, exclude_pinned = false)
-      if exclude_pinned
-        query = <<-QUERY
-           SELECT #{Object.columns(prefix: "o")}
-             FROM objects AS o
-            WHERE o.attributed_to_iri = ?
-              #{common_filters(objects: "o")}
-              AND o.published IS NOT NULL
-              AND o.visible = 1
-              AND NOT EXISTS (
-                SELECT 1 FROM relationships AS p
-                 WHERE p.type = '#{Relationship::Content::Pin}'
-                   AND p.from_iri = ?
-                   AND p.to_iri = o.iri
-              )
-              AND %{cursor_condition}
-        QUERY
-        Object.query_with_cursor(query, self.iri, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
-      else
-        query = <<-QUERY
-           SELECT #{Object.columns(prefix: "o")}
-             FROM objects AS o
-            WHERE o.attributed_to_iri = ?
-              #{common_filters(objects: "o")}
-              AND o.published IS NOT NULL
-              AND o.visible = 1
-              AND %{cursor_condition}
-        QUERY
-        Object.query_with_cursor(query, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
+      max_cursor = max_id ? translate_object_id_to_published_and_id(max_id, exclude_pinned: exclude_pinned) : nil
+      min_cursor = min_id ? translate_object_id_to_published_and_id(min_id, exclude_pinned: exclude_pinned) : nil
+
+      cursor_predicates = [] of String
+      cursor_args = [] of ::DB::Any
+      if max_cursor
+        cursor_predicates << "(o.published, o.id) < (?, ?)"
+        cursor_args << max_cursor[0] << max_cursor[1]
+      end
+      if min_cursor
+        cursor_predicates << "(o.published, o.id) > (?, ?)"
+        cursor_args << min_cursor[0] << min_cursor[1]
+      end
+      cursor_condition = cursor_predicates.empty? ? "1" : cursor_predicates.join(" AND ")
+      direction = min_cursor && !max_cursor ? "ASC" : "DESC"
+
+      pin_filter = exclude_pinned ? "AND NOT EXISTS (SELECT 1 FROM relationships AS p WHERE p.type = '#{Relationship::Content::Pin}' AND p.from_iri = ? AND p.to_iri = o.iri)" : ""
+
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+          WHERE o.attributed_to_iri = ?
+            #{common_filters(objects: "o")}
+            AND o.published IS NOT NULL
+            AND o.visible = 1
+            #{pin_filter}
+            AND #{cursor_condition}
+       ORDER BY o.published #{direction}, o.id #{direction} LIMIT ?
+      QUERY
+
+      args = [self.iri] of ::DB::Any
+      args << self.iri if exclude_pinned
+      args.concat(cursor_args)
+      args << limit + 1
+
+      items = Object.sql(query, args: args)
+      more = items.size > limit
+      items = items[0...limit] if more
+      items = items.reverse if min_cursor && !max_cursor
+
+      Ktistec::Util::PaginatedArray(Object).new(items.size).tap do |array|
+        items.each { |item| array << item }
+        array.more = more
+        if array.size > 0
+          array.cursor_start = array.first.id
+          array.cursor_end = items.last.id
+        end
       end
     end
 

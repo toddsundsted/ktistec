@@ -2231,6 +2231,25 @@ Spectator.describe ActivityPub::Actor do
     it "reports no more results" do
       expect(subject.known_posts(limit: 5).more?).not_to be_true
     end
+
+    context "when insertion order and publication time diverge" do
+      before_each do
+        post3.assign(published: Time.utc(2022, 1, 1)).save
+        post5.assign(published: Time.utc(2020, 1, 1)).save
+      end
+
+      it "orders by publication time" do
+        expect(subject.known_posts(limit: 2)).to eq([post3, post5])
+      end
+    end
+
+    it "treats a non-public object id as an invalid cursor" do
+      expect(subject.known_posts(max_id: post4.id, limit: 2)).to eq([post5, post3])
+    end
+
+    it "treats a non-public object id as an invalid min_id cursor" do
+      expect(subject.known_posts(min_id: post4.id, limit: 2)).to eq([post5, post3])
+    end
   end
 
   describe "#pinned_posts" do

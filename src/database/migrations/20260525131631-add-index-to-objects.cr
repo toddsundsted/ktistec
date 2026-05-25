@@ -7,9 +7,16 @@ up do |db|
     CREATE INDEX IF NOT EXISTS idx_objects_attributed_to_iri_published_id
       ON objects (attributed_to_iri ASC, published DESC, id DESC)
   STR
+  db.exec <<-STR
+    DROP INDEX IF EXISTS idx_objects_attributed_to_iri
+  STR
 end
 
 down do |db|
+  db.exec <<-STR
+    CREATE INDEX IF NOT EXISTS idx_objects_attributed_to_iri
+      ON objects (attributed_to_iri ASC)
+  STR
   db.exec <<-STR
     DROP INDEX IF EXISTS idx_objects_attributed_to_iri_published_id
   STR

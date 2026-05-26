@@ -1111,7 +1111,9 @@ module ActivityPub
         cursor_args << min_cursor[0] << min_cursor[1]
       end
       cursor_condition = cursor_predicates.empty? ? "1" : cursor_predicates.join(" AND ")
-      direction = min_cursor && !max_cursor ? "ASC" : "DESC"
+
+      ascending = min_cursor && !max_cursor
+      direction = ascending ? "ASC" : "DESC"
 
       pin_filter = exclude_pinned ? "AND NOT EXISTS (SELECT 1 FROM relationships AS p WHERE p.type = '#{Relationship::Content::Pin}' AND p.from_iri = ? AND p.to_iri = o.iri)" : ""
 
@@ -1133,18 +1135,30 @@ module ActivityPub
       args << limit + 1
 
       items = Object.sql(query, args: args)
-      has_next = items.size > limit
-      items = items[0...limit] if has_next
-      items = items.reverse if min_cursor && !max_cursor
+      main_more = items.size > limit
+      items.pop if main_more
+      items.reverse! if ascending
 
-      Ktistec::Util::PaginatedArray(Object).new(items.size).tap do |array|
-        items.each { |item| array << item }
-        array.has_next = has_next
-        if array.size > 0
-          array.cursor_start = array.first.id
-          array.cursor_end = items.last.id
-        end
+      array = Ktistec::Util::PaginatedArray(Object).new(items)
+      if array.size > 0
+        array.cursor_start = array.first.id
+        array.cursor_end = array.last.id
       end
+
+      # navigable-only contract: derive has_prev?/has_next? from
+      # max_id?, min_id?, main_more. hand-crafted cursors may result
+      # in undefined behavior.
+      if ascending
+        array.has_prev = main_more
+        array.has_next = true
+      elsif max_cursor
+        array.has_prev = true
+        array.has_next = main_more
+      else
+        array.has_prev = false
+        array.has_next = main_more
+      end
+      array
     end
 
     # Returns the actor's pinned posts.

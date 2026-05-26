@@ -1132,8 +1132,13 @@ Spectator.describe APIController do
           expect(json.as_a.map(&.dig?("account", "id"))).to eq([other.id.to_s, other.id.to_s])
         end
 
-        it "includes prev" do
-          get "/api/v1/timelines/home", headers: json_bearer_headers(access_token.token)
+        it "does not include prev on the first page" do
+          get "/api/v1/timelines/home?limit=1", headers: json_bearer_headers(access_token.token)
+          expect(response.headers["Link"]?).not_to contain(%Q(rel="prev"))
+        end
+
+        it "includes prev when paging back" do
+          get "/api/v1/timelines/home?max_id=#{post2.id}", headers: json_bearer_headers(access_token.token)
           expect(response.headers["Link"]?).to contain(%Q(rel="prev"))
         end
 
@@ -1232,8 +1237,13 @@ Spectator.describe APIController do
           expect(json.as_a.map(&.dig?("account", "id"))).to eq([other.id.to_s, other.id.to_s])
         end
 
-        it "includes prev" do
-          get "/api/v1/timelines/public", headers: json_bearer_headers(access_token.token)
+        it "does not include prev on the first page" do
+          get "/api/v1/timelines/public?limit=1", headers: json_bearer_headers(access_token.token)
+          expect(response.headers["Link"]?).not_to contain(%Q(rel="prev"))
+        end
+
+        it "includes prev when paging back" do
+          get "/api/v1/timelines/public?max_id=#{post2.id}", headers: json_bearer_headers(access_token.token)
           expect(response.headers["Link"]?).to contain(%Q(rel="prev"))
         end
 
@@ -1342,13 +1352,17 @@ Spectator.describe APIController do
     end
 
     context "given a hashtag requiring URL encoding" do
+      let_create(:object, named: :other_local_post, attributed_to: local_actor, published: Time.utc, visible: true)
+      let_create(:create, named: :other_local_create, actor: local_actor, object: other_local_post)
+
       before_each do
+        put_in_outbox(local_actor, other_local_create)
         Tag::Hashtag.new(name: "café", subject: local_post).save
-        Tag::Hashtag.new(name: "café", subject: remote_post).save
+        Tag::Hashtag.new(name: "café", subject: other_local_post).save
       end
 
       it "encodes the hashtag" do
-        get "/api/v1/timelines/tag/caf%C3%A9", headers: JSON_HEADERS
+        get "/api/v1/timelines/tag/caf%C3%A9?limit=1", headers: JSON_HEADERS
         expect(response.headers["Link"]?).to contain("/api/v1/timelines/tag/caf%C3%A9")
       end
     end

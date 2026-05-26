@@ -636,6 +636,12 @@ end
 Spectator.describe Ktistec::Util::PaginatedArray do
   subject { Ktistec::Util::PaginatedArray{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} }
 
+  describe ".has_prev" do
+    it "changes the indicator" do
+      expect { subject.has_prev = true }.to change { subject.has_prev? }
+    end
+  end
+
   describe ".has_next" do
     it "changes the indicator" do
       expect { subject.has_next = true }.to change { subject.has_next? }

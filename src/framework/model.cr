@@ -361,33 +361,41 @@ module Ktistec
           cursor_args << min_id
           cursor_condition << "#{cursor_column} > ?"
         end
-        direction = min_id && !max_id ? "ASC" : "DESC"
+        ascending = !!(min_id && !max_id)
+        direction = ascending ? "ASC" : "DESC"
         cursor_condition = cursor_condition.empty? ? "1" : cursor_condition.join(" AND ")
-        query = query % {cursor_condition: cursor_condition}
-        query += " ORDER BY #{cursor_column} #{direction} LIMIT ?"
+        main_query = query % {cursor_condition: cursor_condition}
+        main_query += " ORDER BY #{cursor_column} #{direction} LIMIT ?"
         all_args = args.to_a + cursor_args + [limit + 1]
-        Internal.log_query(query, all_args) do
+        Internal.log_query(main_query, all_args) do
           result = Ktistec::Util::PaginatedArray(self).new
-          Ktistec.database.query(query, args: all_args) do |rs|
+          Ktistec.database.query(main_query, args: all_args) do |rs|
             rs.each { result << compose(rs, **additional_columns) }
           end
-          has_next = false
+          main_more = false
           if result.size > limit
-            has_next = true
+            main_more = true
             result.pop
           end
-          items = result.to_a
-          if min_id && !max_id
-            items = items.reverse
+          result.reverse! if ascending
+          if result.size > 0
+            result.cursor_start = result.first.id
+            result.cursor_end = result.last.id
           end
-          Ktistec::Util::PaginatedArray(self).new(items.size).tap do |array|
-            items.each { |item| array << item }
-            array.has_next = has_next
-            if array.size > 0
-              array.cursor_start = array.first.id
-              array.cursor_end = items.last.id
-            end
+          # navigable-only contract: derive has_prev?/has_next? from
+          # max_id?, min_id?, main_more. hand-crafted cursors may
+          # result in undefined behavior.
+          if ascending
+            result.has_prev = main_more
+            result.has_next = true
+          elsif max_id
+            result.has_prev = true
+            result.has_next = main_more
+          else
+            result.has_prev = false
+            result.has_next = main_more
           end
+          result
         end
       end
 

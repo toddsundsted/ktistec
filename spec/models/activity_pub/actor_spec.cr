@@ -743,11 +743,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_following(min_id: following1.id, limit: 1, public: true).has_next?).to be_true
+      expect(subject.all_following(min_id: following1.id, limit: 1, public: true).has_prev?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_following(min_id: following1.id, limit: 2, public: true).has_next?).not_to be_true
+      expect(subject.all_following(min_id: following1.id, limit: 2, public: true).has_prev?).not_to be_true
     end
 
     create_following(4, confirmed: true, visible: false)
@@ -796,11 +796,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_followers(min_id: follower1.id, limit: 1, public: true).has_next?).to be_true
+      expect(subject.all_followers(min_id: follower1.id, limit: 1, public: true).has_prev?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_followers(min_id: follower1.id, limit: 2, public: true).has_next?).not_to be_true
+      expect(subject.all_followers(min_id: follower1.id, limit: 2, public: true).has_prev?).not_to be_true
     end
 
     create_follower(4, confirmed: true, visible: false)
@@ -849,11 +849,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_follow_requests(min_id: requester1.id, limit: 1).has_next?).to be_true
+      expect(subject.all_follow_requests(min_id: requester1.id, limit: 1).has_prev?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_follow_requests(min_id: requester1.id, limit: 2).has_next?).not_to be_true
+      expect(subject.all_follow_requests(min_id: requester1.id, limit: 2).has_prev?).not_to be_true
     end
 
     create_requester(4, confirmed: true)
@@ -2225,7 +2225,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.known_posts(min_id: post1.id, limit: 1).has_next?).to be_true
+      expect(subject.known_posts(min_id: post1.id, limit: 1).has_prev?).to be_true
     end
 
     it "reports no more results" do
@@ -2559,7 +2559,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.public_posts(min_id: object1.id, limit: 1).has_next?).to be_true
+      expect(subject.public_posts(min_id: object1.id, limit: 1).has_prev?).to be_true
     end
 
     it "reports no more results" do
@@ -2777,7 +2777,7 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_posts(min_id: object1.id, limit: 1).has_next?).to be_true
+      expect(subject.all_posts(min_id: object1.id, limit: 1).has_prev?).to be_true
     end
 
     it "reports no more results" do
@@ -3072,7 +3072,7 @@ Spectator.describe ActivityPub::Actor do
 
     it "paginates the results" do
       expect(subject.timeline(min_id: object2.id, limit: 2)).to eq([timeline4, timeline3])
-      expect(subject.timeline(min_id: object2.id, limit: 2).has_next?).to be_true
+      expect(subject.timeline(min_id: object2.id, limit: 2).has_prev?).to be_true
     end
 
     it "returns the first page" do

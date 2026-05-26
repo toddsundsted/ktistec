@@ -1219,7 +1219,7 @@ Spectator.describe ActivityPub::Object do
 
     it "paginates the results" do
       expect(described_class.federated_posts(min_id: post2.id, limit: 1)).to eq([post3])
-      expect(described_class.federated_posts(min_id: post2.id, limit: 1).has_next?).to be_true
+      expect(described_class.federated_posts(min_id: post2.id, limit: 1).has_prev?).to be_true
     end
 
     context "with an unpublished post" do

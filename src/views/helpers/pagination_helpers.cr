@@ -22,7 +22,7 @@ module Ktistec::ViewHelper
 
     def link_header(path, collection, limit)
       links = [] of String
-      if (cursor_start = collection.cursor_start)
+      if collection.has_prev? && (cursor_start = collection.cursor_start)
         links << %Q(<#{Ktistec.host}#{path}?min_id=#{cursor_start}&limit=#{limit}>; rel="prev")
       end
       if collection.has_next? && (cursor_end = collection.cursor_end)

@@ -399,17 +399,22 @@ module Ktistec
         @array = Array(T).new(size)
       end
 
-      delegate :<<, :compact, :each, :each_with_index, :group_by, :empty?, :first, :first?, :pop, :size, :to_a, :to_s, :inspect, :includes?, to: @array
+      def initialize(@array : Array(T))
+      end
+
+      delegate :<<, :compact, :each, :each_with_index, :group_by, :empty?, :first, :first?, :last, :last?, :pop, :reverse!, :size, :to_a, :to_s, :inspect, :includes?, to: @array
 
       def map(& : T -> U) : PaginatedArray(U) forall U
         PaginatedArray(U).new(size).tap do |array|
           each { |t| array << yield t }
+          array.has_prev = has_prev?
           array.has_next = has_next?
           array.cursor_start = cursor_start
           array.cursor_end = cursor_end
         end
       end
 
+      property? has_prev : Bool = false
       property? has_next : Bool = false
       property cursor_start : Int64? = nil
       property cursor_end : Int64? = nil

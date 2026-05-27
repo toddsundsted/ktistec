@@ -263,6 +263,43 @@ Spectator.describe ActorsController do
       og_image_alt = html.xpath_node("//meta[@property='og:image:alt']")
       expect(og_image_alt.try(&.["content"])).to eq(actor.username)
     end
+
+    context "with pinned posts" do
+      macro make_post(name)
+        let_build(:object, named: {{name}}, attributed_to: actor, visible: true, published: Time.utc)
+        let_build(:create, named: {{name}}_create, actor: actor, object: {{name}})
+        let_create!(:outbox_relationship, named: {{name}}_outbox, owner: actor, activity: {{name}}_create)
+      end
+
+      make_post(post1)
+      make_post(post2)
+      make_post(post3)
+      make_post(post4)
+      make_post(post5)
+      make_post(pinned)
+
+      let_create!(:pin_relationship, actor: actor, object: pinned)
+
+      it "includes the pinned post on the first page" do
+        get "/actors/#{actor.username}?limit=2", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[@id='object-#{pinned.id}']")).not_to be_empty
+      end
+
+      it "excludes the pinned post on subsequent pages" do
+        get "/actors/#{actor.username}?limit=2&max_id=#{post5.id}", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[@id='object-#{pinned.id}']")).to be_empty
+      end
+
+      it "includes the pinned post when paging back" do
+        get "/actors/#{actor.username}?limit=2&min_id=#{post4.id}", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[@id='object-#{pinned.id}']")).not_to be_empty
+      end
+
+      it "excludes the pinned post on subsequent pages" do
+        get "/actors/#{actor.username}?limit=2&min_id=#{post2.id}", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[@id='object-#{pinned.id}']")).to be_empty
+      end
+    end
   end
 
   describe "GET /actors/:username/feed.rss" do

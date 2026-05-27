@@ -230,6 +230,52 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "cursor_paginate_with_pins" do
+    let_create(:actor)
+    let_create(:object, named: pinned_object, attributed_to: actor, visible: true, published: Time.utc)
+    let_create!(:pin_relationship, actor: actor, object: pinned_object)
+    let_create(:object, named: tail1, attributed_to: actor, visible: true)
+    let_create(:object, named: tail2, attributed_to: actor, visible: true)
+    let_create(:object, named: tail3, attributed_to: actor, visible: true)
+
+    let(tail) do
+      Ktistec::Util::PaginatedArray(ActivityPub::Object).new.tap do |t|
+        t << tail1
+        t << tail2
+        t << tail3
+        t.cursor_end = tail3.id
+        t.has_next = false
+      end
+    end
+
+    context "when the tail has no previous page" do
+      before_each { tail.has_prev = false }
+
+      it "returns pinned posts and the tail" do
+        pinned, result = self.class.cursor_paginate_with_pins(actor, 10) { tail }
+        expect(pinned.map(&.id)).to eq([pinned_object.id])
+        expect(result.map(&.id)).to eq([tail1.id, tail2.id, tail3.id])
+      end
+    end
+
+    context "when the tail has a previous page" do
+      before_each { tail.has_prev = true }
+
+      it "returns no pinned posts and the tail" do
+        pinned, result = self.class.cursor_paginate_with_pins(actor, 10) { tail }
+        expect(pinned).to be_empty
+        expect(result.map(&.id)).to eq([tail1.id, tail2.id, tail3.id])
+      end
+    end
+
+    it "trims the tail" do
+      _, result = self.class.cursor_paginate_with_pins(actor, 2) { tail }
+      expect(result.map(&.id)).to eq([tail1.id])
+      expect(result.cursor_end).to eq(tail1.id)
+      expect(result.has_next?).to be_true
+    end
+  end
+
   describe "link_header" do
     let(collection) { Ktistec::Util::PaginatedArray(String).new }
 

@@ -92,15 +92,9 @@ class InteractionsController
       actor = actor_or_object.save
       actor.up!
       cursor_params = cursor_pagination_params(env)
-      first_page = cursor_params[:max_id].nil? && cursor_params[:min_id].nil?
-      pinned = first_page ? actor.pinned_posts : [] of ActivityPub::Object
-      tail_limit = first_page ? Math.max(cursor_params[:limit] - pinned.size, 1) : cursor_params[:limit]
-      objects = actor.known_posts(
-        max_id: cursor_params[:max_id],
-        min_id: cursor_params[:min_id],
-        limit: tail_limit,
-        exclude_pinned: true,
-      )
+      pinned, objects = cursor_paginate_with_pins(actor, cursor_params[:limit]) do
+        actor.known_posts(**cursor_params, exclude_pinned: true)
+      end
       ok "actors/remote", env: env, actor: actor, pinned: pinned, objects: objects
     when ActivityPub::Object
       actor_or_object.attributed_to?(env.account.actor, dereference: true)

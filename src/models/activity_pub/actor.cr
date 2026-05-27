@@ -1342,65 +1342,6 @@ module ActivityPub
       end
     end
 
-    # Returns the actor's public posts and shares.
-    #
-    # Meant to be called on local (not cached) actors.
-    #
-    # Does not include private (not visible) posts and replies.
-    #
-    def public_posts_with_pins(page = 1, size = 10)
-      base_offset = (page - 1) * size
-      all_pinned_query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN relationships AS p
-             ON p.type = '#{Relationship::Content::Pin}'
-            AND p.from_iri = ?
-            AND p.to_iri = o.iri
-          WHERE o.visible = 1
-            #{common_filters(objects: "o")}
-       ORDER BY p.id DESC
-      QUERY
-      all_pinned = Object.query_all(all_pinned_query, self.iri)
-      pinned_to_skip = [base_offset, all_pinned.size].min
-      pinned_available = all_pinned.size - pinned_to_skip
-      pinned_to_take = [size, pinned_available].min
-      pinned = all_pinned[pinned_to_skip, pinned_to_take]
-      non_pinned_needed = size - pinned.size + 1 # +1 for pagination check
-      non_pinned_offset = [0, base_offset - all_pinned.size].max
-      non_pinned_query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = '#{Relationship::Content::Outbox}'
-      LEFT JOIN relationships AS p
-             ON p.type = '#{Relationship::Content::Pin}'
-            AND p.from_iri = ?
-            AND p.to_iri = o.iri
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "t", activities: "a")}
-            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-            AND o.visible = 1
-            AND p.id IS NULL
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      non_pinned = Object.query_all(non_pinned_query, self.iri, self.iri, non_pinned_needed, non_pinned_offset)
-      Ktistec::Util::PaginatedArray(Object).new.tap do |array|
-        (pinned + non_pinned).each { |obj| array << obj }
-        if array.size > size
-          array.has_next = true
-          array.pop
-        end
-      end
-    end
-
     # Returns the actor's posts and shares.
     #
     # Meant to be called on local (not cached) actors.

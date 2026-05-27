@@ -20,6 +20,24 @@ module Ktistec::ViewHelper
       }
     end
 
+    def cursor_paginate_with_pins(actor, limit : Int32, &)
+      tail = yield
+      if tail.has_prev?
+        {[] of ActivityPub::Object, tail}
+      else
+        pinned = actor.pinned_posts
+        target = Math.max(limit - pinned.size, 1)
+        if pinned.size > 0 && tail.size > target
+          while tail.size > target
+            tail.pop
+          end
+          tail.cursor_end = tail.last.id
+          tail.has_next = true
+        end
+        {pinned, tail}
+      end
+    end
+
     def link_header(path, collection, limit)
       links = [] of String
       if collection.has_prev? && (cursor_start = collection.cursor_start)

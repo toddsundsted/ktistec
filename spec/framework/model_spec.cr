@@ -94,8 +94,8 @@ class QueryModel
     super(*args, **opts)
   end
 
-  def self.query_with_cursor(*args, **opts)
-    super(*args, **opts)
+  def self.query_with_cursor(*args_, **opts)
+    super(*args_, **opts)
   end
 
   def self.query_all(*args, **opts)
@@ -219,39 +219,109 @@ Spectator.describe Ktistec::Model do
 
     let(base_query) { "SELECT id FROM query_models WHERE %{cursor_condition}" }
 
-    it "returns all items" do
-      result = QueryModel.query_with_cursor(base_query, cursor_column: "id")
-      expect(result.map(&.id)).to eq([5, 4, 3, 2, 1])
+    context "first page" do
+      it "returns items" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id")
+        expect(result.map(&.id)).to eq([5, 4, 3, 2, 1])
+      end
+
+      it "respects the limit" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
+        expect(result.map(&.id)).to eq([5, 4])
+      end
+
+      it "sets `cursor_start` to the first item's id" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
+        expect(result.cursor_start).to eq(5)
+      end
+
+      it "sets `cursor_end` to the last item's id" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
+        expect(result.cursor_end).to eq(4)
+      end
+
+      it "sets `has_prev?` to false" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
+        expect(result.has_prev?).to be_false
+      end
+
+      it "sets `has_next?` to true" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
+        expect(result.has_next?).to be_true
+      end
+
+      it "sets `has_next?` to false" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 5)
+        expect(result.has_next?).to be_false
+      end
     end
 
-    it "respects the limit" do
-      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
-      expect(result.map(&.id)).to eq([5, 4])
+    context "forward navigation" do
+      it "returns items less than `max_id`" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", max_id: 4_i64)
+        expect(result.map(&.id)).to eq([3, 2, 1])
+      end
+
+      it "respects the limit" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", max_id: 4_i64, limit: 1)
+        expect(result.map(&.id)).to eq([3])
+      end
+
+      it "sets `has_prev?` to true" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", max_id: 4_i64)
+        expect(result.has_prev?).to be_true
+      end
+
+      it "sets `has_next?` to true" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", max_id: 4_i64, limit: 1)
+        expect(result.has_next?).to be_true
+      end
+
+      it "sets `has_next?` to false" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", max_id: 4_i64, limit: 5)
+        expect(result.has_next?).to be_false
+      end
     end
 
-    it "sets `more?`" do
-      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
-      expect(result.more?).to be_true
+    context "backward navigation" do
+      it "returns items greater than `min_id`" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", min_id: 2_i64)
+        expect(result.map(&.id)).to eq([5, 4, 3])
+      end
+
+      it "respects the limit" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", min_id: 1_i64, limit: 2)
+        expect(result.map(&.id)).to eq([3, 2])
+      end
+
+      it "sets `has_next?` to true" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", min_id: 2_i64)
+        expect(result.has_next?).to be_true
+      end
+
+      it "sets `has_prev?` to true" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", min_id: 1_i64, limit: 2)
+        expect(result.has_prev?).to be_true
+      end
+
+      it "sets `has_prev?` to false" do
+        result = QueryModel.query_with_cursor(base_query, cursor_column: "id", min_id: 2_i64, limit: 5)
+        expect(result.has_prev?).to be_false
+      end
     end
 
-    it "sets `cursor_start`" do
-      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
-      expect(result.cursor_start).to eq(5)
-    end
+    context "with bound arguments" do
+      let(filtered_query) { "SELECT id FROM query_models WHERE id <> ? AND %{cursor_condition}" }
 
-    it "sets `cursor_end`" do
-      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", limit: 2)
-      expect(result.cursor_end).to eq(4)
-    end
+      it "accepts positional arguments" do
+        result = QueryModel.query_with_cursor(filtered_query, 3, cursor_column: "id")
+        expect(result.map(&.id)).to eq([5, 4, 2, 1])
+      end
 
-    it "returns items less than `max_id`" do
-      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", max_id: 4_i64)
-      expect(result.map(&.id)).to eq([3, 2, 1])
-    end
-
-    it "returns items greater than `min_id`" do
-      result = QueryModel.query_with_cursor(base_query, cursor_column: "id", min_id: 2_i64)
-      expect(result.map(&.id)).to eq([5, 4, 3])
+      it "accepts arguments via `args`" do
+        result = QueryModel.query_with_cursor(filtered_query, args: [3], cursor_column: "id")
+        expect(result.map(&.id)).to eq([5, 4, 2, 1])
+      end
     end
   end
 

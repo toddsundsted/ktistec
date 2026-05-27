@@ -743,11 +743,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_following(min_id: following1.id, limit: 1, public: true).more?).to be_true
+      expect(subject.all_following(min_id: following1.id, limit: 1, public: true).has_prev?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_following(min_id: following1.id, limit: 2, public: true).more?).not_to be_true
+      expect(subject.all_following(min_id: following1.id, limit: 2, public: true).has_prev?).not_to be_true
     end
 
     create_following(4, confirmed: true, visible: false)
@@ -796,11 +796,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_followers(min_id: follower1.id, limit: 1, public: true).more?).to be_true
+      expect(subject.all_followers(min_id: follower1.id, limit: 1, public: true).has_prev?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_followers(min_id: follower1.id, limit: 2, public: true).more?).not_to be_true
+      expect(subject.all_followers(min_id: follower1.id, limit: 2, public: true).has_prev?).not_to be_true
     end
 
     create_follower(4, confirmed: true, visible: false)
@@ -849,11 +849,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_follow_requests(min_id: requester1.id, limit: 1).more?).to be_true
+      expect(subject.all_follow_requests(min_id: requester1.id, limit: 1).has_prev?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_follow_requests(min_id: requester1.id, limit: 2).more?).not_to be_true
+      expect(subject.all_follow_requests(min_id: requester1.id, limit: 2).has_prev?).not_to be_true
     end
 
     create_requester(4, confirmed: true)
@@ -930,7 +930,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.likes(1, 2)).to eq([note5, note4])
       expect(subject.likes(2, 2)).to eq([note3, note2])
-      expect(subject.likes(2, 2).more?).to be_true
+      expect(subject.likes(2, 2).has_next?).to be_true
     end
   end
 
@@ -1001,11 +1001,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.likes(limit: 2).more?).to be_true
+      expect(subject.likes(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.likes(limit: 5).more?).not_to be_true
+      expect(subject.likes(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -1066,7 +1066,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.dislikes(1, 2)).to eq([note5, note4])
       expect(subject.dislikes(2, 2)).to eq([note3, note2])
-      expect(subject.dislikes(2, 2).more?).to be_true
+      expect(subject.dislikes(2, 2).has_next?).to be_true
     end
   end
 
@@ -1137,11 +1137,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.dislikes(limit: 2).more?).to be_true
+      expect(subject.dislikes(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.dislikes(limit: 5).more?).not_to be_true
+      expect(subject.dislikes(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -1202,7 +1202,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.announces(1, 2)).to eq([note5, note4])
       expect(subject.announces(2, 2)).to eq([note3, note2])
-      expect(subject.announces(2, 2).more?).to be_true
+      expect(subject.announces(2, 2).has_next?).to be_true
     end
   end
 
@@ -1273,11 +1273,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.announces(limit: 2).more?).to be_true
+      expect(subject.announces(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.announces(limit: 5).more?).not_to be_true
+      expect(subject.announces(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -1332,7 +1332,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.bookmarks(1, 2)).to eq([note5, note4])
       expect(subject.bookmarks(2, 2)).to eq([note3, note2])
-      expect(subject.bookmarks(2, 2).more?).to be_true
+      expect(subject.bookmarks(2, 2).has_next?).to be_true
     end
 
     it "returns results in reverse chronological order" do
@@ -1401,11 +1401,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.bookmarks(limit: 2).more?).to be_true
+      expect(subject.bookmarks(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.bookmarks(limit: 5).more?).not_to be_true
+      expect(subject.bookmarks(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -1474,7 +1474,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.pins(1, 2)).to eq([note5, note4])
       expect(subject.pins(2, 2)).to eq([note3, note2])
-      expect(subject.pins(2, 2).more?).to be_true
+      expect(subject.pins(2, 2).has_next?).to be_true
     end
 
     it "returns results in reverse chronological order" do
@@ -1549,11 +1549,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.pins(limit: 2).more?).to be_true
+      expect(subject.pins(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.pins(limit: 5).more?).not_to be_true
+      expect(subject.pins(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -1616,7 +1616,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.drafts(1, 2)).to eq([note5, note4])
       expect(subject.drafts(2, 2)).to eq([note3, note2])
-      expect(subject.drafts(2, 2).more?).to be_true
+      expect(subject.drafts(2, 2).has_next?).to be_true
     end
   end
 
@@ -1681,11 +1681,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.drafts(limit: 2).more?).to be_true
+      expect(subject.drafts(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.drafts(limit: 5).more?).not_to be_true
+      expect(subject.drafts(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -1716,52 +1716,6 @@ Spectator.describe ActivityPub::Actor do
     add_to_outbox(3)
     add_to_outbox(4)
     add_to_outbox(5)
-
-    describe "#in_outbox" do
-      it "instantiates the correct subclass" do
-        expect(subject.in_outbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
-      end
-
-      it "filters out non-public posts" do
-        expect(subject.in_outbox(1, 2, public: true)).to be_empty
-      end
-
-      it "filters out deleted posts" do
-        note5.delete!
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out blocked posts" do
-        note5.block!
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out posts by deleted actors" do
-        activity5.assign(actor: deleted).save
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out posts by blocked actors" do
-        activity5.assign(actor: blocked).save
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out undone activities" do
-        activity5.undo!
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "includes replies" do
-        note5.assign(in_reply_to: note4).save
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
-      end
-
-      it "paginates the results" do
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
-        expect(subject.in_outbox(2, 2, public: false)).to eq([activity3, activity2])
-        expect(subject.in_outbox(2, 2, public: false).more?).to be_true
-      end
-    end
 
     describe "#in_outbox" do
       it "instantiates the correct subclass" do
@@ -1815,11 +1769,11 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "reports more results" do
-        expect(subject.in_outbox(limit: 2, public: false).more?).to be_true
+        expect(subject.in_outbox(limit: 2, public: false).has_next?).to be_true
       end
 
       it "reports no more results" do
-        expect(subject.in_outbox(limit: 5, public: false).more?).not_to be_true
+        expect(subject.in_outbox(limit: 5, public: false).has_next?).not_to be_true
       end
 
       it "returns the first page" do
@@ -1899,52 +1853,6 @@ Spectator.describe ActivityPub::Actor do
 
     describe "#in_inbox" do
       it "instantiates the correct subclass" do
-        expect(subject.in_inbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
-      end
-
-      it "filters out non-public posts" do
-        expect(subject.in_inbox(1, 2, public: true)).to be_empty
-      end
-
-      it "filters out deleted posts" do
-        note5.delete!
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out blocked posts" do
-        note5.block!
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out posts by deleted actors" do
-        activity5.assign(actor: deleted).save
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out posts by blocked actors" do
-        activity5.assign(actor: blocked).save
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out undone activities" do
-        activity5.undo!
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "includes replies" do
-        note5.assign(in_reply_to: note4).save
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
-      end
-
-      it "paginates the results" do
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
-        expect(subject.in_inbox(2, 2, public: false)).to eq([activity3, activity2])
-        expect(subject.in_inbox(2, 2, public: false).more?).to be_true
-      end
-    end
-
-    describe "#in_inbox" do
-      it "instantiates the correct subclass" do
         expect(subject.in_inbox(limit: 2, public: false).first).to be_a(ActivityPub::Activity::Create)
       end
 
@@ -1995,11 +1903,11 @@ Spectator.describe ActivityPub::Actor do
       end
 
       it "reports more results" do
-        expect(subject.in_inbox(limit: 2, public: false).more?).to be_true
+        expect(subject.in_inbox(limit: 2, public: false).has_next?).to be_true
       end
 
       it "reports no more results" do
-        expect(subject.in_inbox(limit: 5, public: false).more?).not_to be_true
+        expect(subject.in_inbox(limit: 5, public: false).has_next?).not_to be_true
       end
 
       it "returns the first page" do
@@ -2121,67 +2029,6 @@ Spectator.describe ActivityPub::Actor do
     post(5)
 
     it "instantiates the correct subclass" do
-      expect(subject.known_posts(1, 2).first).to be_a(ActivityPub::Object)
-    end
-
-    it "filters out non-public posts" do
-      expect(subject.known_posts(1, 2)).to eq([post5, post3])
-    end
-
-    it "filters out deleted posts" do
-      post5.delete!
-      expect(subject.known_posts(1, 3)).to eq([post3, post1])
-    end
-
-    it "filters out blocked posts" do
-      post5.block!
-      expect(subject.known_posts(1, 3)).to eq([post3, post1])
-    end
-
-    it "filters out draft posts" do
-      post5.assign(published: nil).save
-      expect(subject.known_posts(1, 3)).to eq([post3, post1])
-    end
-
-    context "given a pinned post" do
-      let_create!(:pin_relationship, actor: subject, object: post1)
-
-      it "returns the pinned post first" do
-        expect(subject.known_posts(1, 3)).to eq([post1, post5, post3])
-      end
-
-      it "does not duplicate pinned posts" do
-        result = subject.known_posts(1, 10)
-        expect(result.to_a.count { |o| o.id == post1.id }).to eq(1)
-      end
-    end
-
-    it "paginates the results" do
-      expect(subject.known_posts(1, 2)).to eq([post5, post3])
-      expect(subject.known_posts(2, 2)).to eq([post1])
-      expect(subject.known_posts(2, 2).more?).not_to be_true
-    end
-  end
-
-  describe "#known_posts" do
-    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
-
-    macro post(index)
-      let_create!(
-        :object, named: post{{index}},
-        attributed_to: subject,
-        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-        visible: {{index}}.odd?
-      )
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
-
-    it "instantiates the correct subclass" do
       expect(subject.known_posts(limit: 2).first).to be_a(ActivityPub::Object)
     end
 
@@ -2204,6 +2051,18 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.known_posts(limit: 3)).to eq([post3, post1])
     end
 
+    context "given a pinned post" do
+      let_create!(:pin_relationship, actor: subject, object: post1)
+
+      it "includes the pinned post" do
+        expect(subject.known_posts(limit: 5, exclude_pinned: false)).to eq([post5, post3, post1])
+      end
+
+      it "excludes the pinned post" do
+        expect(subject.known_posts(limit: 5, exclude_pinned: true)).to eq([post5, post3])
+      end
+    end
+
     it "paginates with max_id" do
       expect(subject.known_posts(max_id: post5.id, limit: 2)).to eq([post3, post1])
     end
@@ -2213,22 +2072,43 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.known_posts(min_id: post1.id, limit: 1).more?).to be_true
+      expect(subject.known_posts(min_id: post1.id, limit: 1).has_prev?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.known_posts(limit: 5).more?).not_to be_true
+      expect(subject.known_posts(limit: 5).has_next?).not_to be_true
+    end
+
+    context "when insertion order and publication time diverge" do
+      before_each do
+        post3.assign(published: Time.utc(2022, 1, 1)).save
+        post5.assign(published: Time.utc(2020, 1, 1)).save
+      end
+
+      it "orders by publication time" do
+        expect(subject.known_posts(limit: 2)).to eq([post3, post5])
+      end
+    end
+
+    it "treats a non-public object id as an invalid cursor" do
+      expect(subject.known_posts(max_id: post4.id, limit: 2)).to eq([post5, post3])
+    end
+
+    it "treats a non-public object id as an invalid min_id cursor" do
+      expect(subject.known_posts(min_id: post4.id, limit: 2)).to eq([post5, post3])
     end
   end
 
-  describe "#public_posts_with_pins" do
+  describe "#pinned_posts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
+      let_create!(
+        :object, named: post{{index}},
+        attributed_to: subject,
+        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
+        visible: {{index}}.odd?
+      )
     end
 
     post(1)
@@ -2237,152 +2117,42 @@ Spectator.describe ActivityPub::Actor do
     post(4)
     post(5)
 
-    it "instantiates the correct subclass" do
-      expect(subject.public_posts_with_pins(1, 2).first).to be_a(ActivityPub::Object)
+    it "is empty when no pins exist" do
+      expect(subject.pinned_posts).to be_empty
     end
 
-    it "filters out deleted posts" do
-      object5.delete!
-      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
-    end
+    context "given pinned posts" do
+      let_create!(:pin_relationship, named: pin1, actor: subject, object: post1)
+      let_create!(:pin_relationship, named: pin3, actor: subject, object: post3)
+      let_create!(:pin_relationship, named: pin5, actor: subject, object: post5)
 
-    it "filters out blocked posts" do
-      object5.block!
-      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out posts by deleted actors" do
-      actor5.delete!
-      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out posts by blocked actors" do
-      actor5.block!
-      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out non-public posts" do
-      object5.assign(visible: false).save
-      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out replies" do
-      object5.assign(in_reply_to: object3).save
-      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out posts belonging to undone activities" do
-      activity5.undo!
-      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
-    end
-
-    # only local (not cached) actors have an outbox
-    it "filters out posts that are not in an outbox" do
-      outbox5.destroy
-      expect(subject.public_posts_with_pins(1, 2)).to eq([object4, object3])
-    end
-
-    context "given a pinned post" do
-      let_create!(:object, named: object1, attributed_to: subject)
-      let_create!(:pin_relationship, actor: subject, object: object1)
-
-      it "returns the pinned post first" do
-        expect(subject.public_posts_with_pins(1, 3)).to eq([object1, object5, object4])
+      it "instantiates the correct subclass" do
+        expect(subject.pinned_posts.first).to be_a(ActivityPub::Object)
       end
 
-      it "does not duplicate pinned posts" do
-        result = subject.public_posts_with_pins(1, 10)
-        expect(result.to_a.count { |o| o.id == object1.id }).to eq(1)
+      it "returns pinned posts" do
+        expect(subject.pinned_posts).to eq([post5, post3, post1])
       end
 
       it "filters out deleted posts" do
-        object1.delete!
-        expect(subject.public_posts_with_pins(1, 3)).to eq([object5, object4, object3])
+        post5.delete!
+        expect(subject.pinned_posts).to eq([post3, post1])
       end
 
       it "filters out blocked posts" do
-        object1.block!
-        expect(subject.public_posts_with_pins(1, 3)).to eq([object5, object4, object3])
+        post5.block!
+        expect(subject.pinned_posts).to eq([post3, post1])
       end
 
       it "filters out non-public posts" do
-        object1.assign(visible: false).save
-        expect(subject.public_posts_with_pins(1, 3)).to eq([object5, object4, object3])
+        post5.assign(visible: false).save
+        expect(subject.pinned_posts).to eq([post3, post1])
       end
-    end
 
-    it "paginates the results" do
-      expect(subject.public_posts_with_pins(1, 2)).to eq([object5, object4])
-      expect(subject.public_posts_with_pins(3, 2)).to eq([object1])
-      expect(subject.public_posts_with_pins(3, 2).more?).not_to be_true
-    end
-  end
-
-  describe "#public_posts" do
-    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
-
-    macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
-
-    it "instantiates the correct subclass" do
-      expect(subject.public_posts(1, 2).first).to be_a(ActivityPub::Object)
-    end
-
-    it "filters out deleted posts" do
-      object5.delete!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out blocked posts" do
-      object5.block!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out posts by deleted actors" do
-      actor5.delete!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out posts by blocked actors" do
-      actor5.block!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out non-public posts" do
-      object5.assign(visible: false).save
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out replies" do
-      object5.assign(in_reply_to: object3).save
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out posts belonging to undone activities" do
-      activity5.undo!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    # only local (not cached) actors have an outbox
-    it "filters out posts that are not in an outbox" do
-      outbox5.destroy
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "paginates the results" do
-      expect(subject.public_posts(1, 2)).to eq([object5, object4])
-      expect(subject.public_posts(3, 2)).to eq([object1])
-      expect(subject.public_posts(3, 2).more?).not_to be_true
+      it "filters out draft posts" do
+        post5.assign(published: nil).save
+        expect(subject.pinned_posts).to eq([post3, post1])
+      end
     end
   end
 
@@ -2447,6 +2217,21 @@ Spectator.describe ActivityPub::Actor do
       expect(subject.public_posts(limit: 2)).to eq([object4, object3])
     end
 
+    context "given a pinned post" do
+      let_build(:object, named: own_object, attributed_to: subject)
+      let_build(:create, named: own_create, actor: subject, object: own_object)
+      let_create!(:outbox_relationship, named: own_outbox, owner: subject, activity: own_create)
+      let_create!(:pin_relationship, actor: subject, object: own_object)
+
+      it "includes the pinned post" do
+        expect(subject.public_posts(limit: 10, exclude_pinned: false)).to have(own_object)
+      end
+
+      it "excludes the pinned post" do
+        expect(subject.public_posts(limit: 10, exclude_pinned: true)).not_to have(own_object)
+      end
+    end
+
     it "paginates with max_id" do
       expect(subject.public_posts(max_id: object5.id, limit: 2)).to eq([object4, object3])
     end
@@ -2456,11 +2241,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.public_posts(min_id: object1.id, limit: 1).more?).to be_true
+      expect(subject.public_posts(min_id: object1.id, limit: 1).has_prev?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.public_posts(limit: 5).more?).not_to be_true
+      expect(subject.public_posts(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -2585,7 +2370,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.all_posts(1, 2)).to eq([object5, object4])
       expect(subject.all_posts(3, 2)).to eq([object1])
-      expect(subject.all_posts(3, 2).more?).not_to be_true
+      expect(subject.all_posts(3, 2).has_next?).not_to be_true
     end
   end
 
@@ -2674,11 +2459,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.all_posts(min_id: object1.id, limit: 1).more?).to be_true
+      expect(subject.all_posts(min_id: object1.id, limit: 1).has_prev?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.all_posts(limit: 5).more?).not_to be_true
+      expect(subject.all_posts(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -2836,7 +2621,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.timeline(page: 1, size: 2)).to eq([timeline5, timeline4])
       expect(subject.timeline(page: 3, size: 2)).to eq([timeline1])
-      expect(subject.timeline(page: 3, size: 2).more?).not_to be_true
+      expect(subject.timeline(page: 3, size: 2).has_next?).not_to be_true
     end
   end
 
@@ -2964,12 +2749,12 @@ Spectator.describe ActivityPub::Actor do
 
     it "paginates the results" do
       expect(subject.timeline(max_id: object3.id, limit: 2)).to eq([timeline2, timeline1])
-      expect(subject.timeline(max_id: object3.id, limit: 2).more?).not_to be_true
+      expect(subject.timeline(max_id: object3.id, limit: 2).has_next?).not_to be_true
     end
 
     it "paginates the results" do
       expect(subject.timeline(min_id: object2.id, limit: 2)).to eq([timeline4, timeline3])
-      expect(subject.timeline(min_id: object2.id, limit: 2).more?).to be_true
+      expect(subject.timeline(min_id: object2.id, limit: 2).has_prev?).to be_true
     end
 
     it "returns the first page" do
@@ -3076,7 +2861,7 @@ Spectator.describe ActivityPub::Actor do
     it "paginates the results" do
       expect(subject.notifications(page: 1, size: 2)).to eq([notification5, notification4])
       expect(subject.notifications(page: 3, size: 2)).to eq([notification1])
-      expect(subject.notifications(page: 3, size: 2).more?).not_to be_true
+      expect(subject.notifications(page: 3, size: 2).has_next?).not_to be_true
     end
   end
 
@@ -3150,11 +2935,11 @@ Spectator.describe ActivityPub::Actor do
     end
 
     it "reports more results" do
-      expect(subject.notifications(limit: 2).more?).to be_true
+      expect(subject.notifications(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(subject.notifications(limit: 5).more?).not_to be_true
+      expect(subject.notifications(limit: 5).has_next?).not_to be_true
     end
   end
 
@@ -3202,7 +2987,7 @@ Spectator.describe ActivityPub::Actor do
       it "paginates the results" do
         expect(subject.terms(page: 1, size: 2)).to eq([term1, term2])
         expect(subject.terms(page: 3, size: 2)).to eq([term5])
-        expect(subject.terms(page: 3, size: 2).more?).not_to be_true
+        expect(subject.terms(page: 3, size: 2).has_next?).not_to be_true
       end
     end
   end

@@ -90,7 +90,7 @@ module Ktistec::ViewHelper
       label_color = "yellow"
       tooltip = false
       if count > 0
-        notifications = actor.notifications(size: count)
+        notifications = actor.notifications(limit: count.to_i)
         groups =
           notifications.group_by do |notification|
             case notification

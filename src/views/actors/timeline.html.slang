@@ -1,4 +1,4 @@
-- if (env.params.query["page"]?.try(&.to_i) || 1) == 1
+- if env.params.query["max_id"]?.nil? && env.params.query["min_id"]?.nil?
   turbo-stream-source src=stream_path("actor", "homepage", query: env.request.query)
 section.ui.feed data-controller="icon-load-error"
   #refresh-posts-message

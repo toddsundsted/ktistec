@@ -87,7 +87,7 @@ Spectator.describe Relationship::Social::Follow do
       it "supports pagination" do
         followers = described_class.followers_for(followed_actor.iri, page: 1, size: 1)
         expect(followers.size).to eq(1)
-        expect(followers.more?).to be_true
+        expect(followers.has_next?).to be_true
       end
     end
   end
@@ -110,7 +110,7 @@ Spectator.describe Relationship::Social::Follow do
       it "supports pagination" do
         following = described_class.following_for(following_actor.iri, page: 1, size: 1)
         expect(following.size).to eq(1)
-        expect(following.more?).to be_true
+        expect(following.has_next?).to be_true
       end
     end
   end

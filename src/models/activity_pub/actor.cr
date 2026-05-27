@@ -304,21 +304,6 @@ module ActivityPub
       !other.deleted? && !other.blocked? ? Relationship::Social::Follow.find?(**options.merge({actor: self, object: other})) : nil
     end
 
-    private def social_query(type, orig, dest, public = true)
-      public = public ? "AND r.confirmed = 1 AND r.visible = 1" : nil
-      <<-QUERY
-        SELECT #{Actor.columns(prefix: "a")}
-          FROM actors AS a, relationships AS r
-         WHERE a.iri = r.#{orig}
-           #{common_filters(actors: "a")}
-           AND r.type = '#{type}'
-           AND r.#{dest} = ?
-           #{public}
-      ORDER BY r.id DESC
-         LIMIT ? OFFSET ?
-      QUERY
-    end
-
     private def social_cursor_query(type, orig, dest, public = true)
       public = public ? "AND r.confirmed = 1 AND r.visible = 1" : nil
       <<-QUERY
@@ -333,22 +318,10 @@ module ActivityPub
       QUERY
     end
 
-    def all_following(page = 1, size = 10, public = true)
-      Actor.query_and_paginate(
-        social_query(Relationship::Social::Follow, :to_iri, :from_iri, public),
-        self.iri, page: page, size: size)
-    end
-
     def all_following(*, max_id = nil, min_id = nil, limit = 10, public = true)
       Actor.query_with_cursor(
         social_cursor_query(Relationship::Social::Follow, :to_iri, :from_iri, public),
         self.iri, cursor_column: "a.id", max_id: max_id, min_id: min_id, limit: limit)
-    end
-
-    def all_followers(page = 1, size = 10, public = false)
-      Actor.query_and_paginate(
-        social_query(Relationship::Social::Follow, :from_iri, :to_iri, public),
-        self.iri, page: page, size: size)
     end
 
     def all_followers(*, max_id = nil, min_id = nil, limit = 10, public = false)
@@ -804,51 +777,6 @@ module ActivityPub
       Object.scalar(query, iri, since).as(Int64)
     end
 
-    protected def self.content(iri, mailbox, inclusion = nil, exclusion = nil, page = 1, size = 10, public = true, replies = true)
-      mailbox =
-        case mailbox
-        when Class
-          %Q|AND r.type = '#{mailbox}'|
-        when Array
-          %Q|AND r.type IN ('#{mailbox.map(&.to_s).join("','")}')|
-        end
-      inclusion =
-        case inclusion
-        when Class
-          %Q|AND a.type = '#{inclusion}'|
-        when Array
-          %Q|AND a.type IN ('#{inclusion.map(&.to_s).join("','")}')|
-        end
-      exclusion =
-        case exclusion
-        when Class
-          %Q|AND a.type != '#{exclusion}'|
-        when Array
-          %Q|AND a.type NOT IN ('#{exclusion.map(&.to_s).join("','")}')|
-        end
-      query = <<-QUERY
-         SELECT #{Activity.columns(prefix: "a")}, #{Object.columns(prefix: "obj")}
-           FROM activities AS a
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-      LEFT JOIN actors AS act
-             ON act.iri = a.actor_iri
-      LEFT JOIN objects AS obj
-             ON obj.iri = a.object_iri
-          WHERE r.from_iri LIKE ?
-            #{mailbox}
-            AND r.confirmed = 1
-            #{Actor.common_filters(actors: "act", objects: "obj", activities: "a")}
-            #{inclusion}
-            #{exclusion}
-       #{public ? %Q|AND a.visible = 1| : nil}
-       #{!replies ? %Q|AND obj.in_reply_to_iri IS NULL| : nil}
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      Activity.query_and_paginate(query, iri, page: page, size: size)
-    end
-
     # Returns mailbox contents with cursor-based pagination.
     #
     # The cursor column is the mailbox `relationships.id` rather than
@@ -973,20 +901,12 @@ module ActivityPub
       Activity.scalar(query, self.iri, object.iri).as(Int64) > 0
     end
 
-    def in_outbox(page = 1, size = 10, public = true)
-      self.class.content(self.iri, Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
-    end
-
     def in_outbox(*, max_id = nil, min_id = nil, limit = 10, public = true)
       self.class.content(self.iri, Relationship::Content::Outbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], max_id: max_id, min_id: min_id, limit: limit, public: public)
     end
 
     def in_outbox?(object : Object, inclusion = nil, exclusion = nil)
       find_in?(object, Relationship::Content::Outbox, inclusion, exclusion)
-    end
-
-    def in_inbox(page = 1, size = 10, public = true)
-      self.class.content(self.iri, Relationship::Content::Inbox, nil, [ActivityPub::Activity::Delete, ActivityPub::Activity::Undo], page, size, public)
     end
 
     def in_inbox(*, max_id = nil, min_id = nil, limit = 10, public = true)
@@ -1036,19 +956,131 @@ module ActivityPub
       find_activity_for(object, ActivityPub::Activity::Like)
     end
 
+    # Returns the SQL fragment and bound arguments for excluding
+    # pinned objects. The SQL references `o` as the object alias; call
+    # sites must alias `objects AS o`.
+    #
+    private def pin_exclusion_clause(exclude_pinned : Bool) : {String, Array(::DB::Any)}
+      if exclude_pinned
+        {
+          "AND NOT EXISTS (SELECT 1 FROM relationships AS p WHERE p.type = '#{Relationship::Content::Pin}' AND p.from_iri = ? AND p.to_iri = o.iri)",
+          [self.iri] of ::DB::Any,
+        }
+      else
+        {"", [] of ::DB::Any}
+      end
+    end
+
+    # Translates an `Object.id` (external cursor) to its
+    # `(published, id)` tuple (internal cursor for `known_posts`).
+    # Returns nil for unknown / invalid ids so the caller falls
+    # back to the first page.
+    #
+    private def translate_object_id_to_published_and_id(o_id : Int64, exclude_pinned = false) : {Time, Int64}?
+      pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
+      query = <<-QUERY
+        SELECT o.published, o.id
+          FROM objects AS o
+         WHERE o.attributed_to_iri = ?
+           AND o.id = ?
+           #{common_filters(objects: "o")}
+           AND o.published IS NOT NULL
+           AND o.visible = 1
+           #{pin_filter}
+      QUERY
+      args = [self.iri, o_id] of ::DB::Any
+      args.concat(pin_args)
+      Ktistec.database.query_one?(query, args: args) do |rs|
+        {rs.read(Time), rs.read(Int64)}
+      end
+    end
+
+    # Returns the actor's known posts.
+    #
     # Returns the actor's known posts.
     #
     # Meant to be called on both local and cached actors.
     #
+    # Orders by publication time (most recent first).
+    #
     # Does not include private (not visible) posts.
     #
-    # Orders pinned posts first.
+    # Includes pinned posts, by default.
     #
-    def known_posts(page = 1, size = 10)
+    def known_posts(*, max_id = nil, min_id = nil, limit = 10, exclude_pinned = false)
+      max_cursor = max_id ? translate_object_id_to_published_and_id(max_id, exclude_pinned: exclude_pinned) : nil
+      min_cursor = min_id ? translate_object_id_to_published_and_id(min_id, exclude_pinned: exclude_pinned) : nil
+
+      cursor_predicates = [] of String
+      cursor_args = [] of ::DB::Any
+      if max_cursor
+        cursor_predicates << "(o.published, o.id) < (?, ?)"
+        cursor_args << max_cursor[0] << max_cursor[1]
+      end
+      if min_cursor
+        cursor_predicates << "(o.published, o.id) > (?, ?)"
+        cursor_args << min_cursor[0] << min_cursor[1]
+      end
+      cursor_condition = cursor_predicates.empty? ? "1" : cursor_predicates.join(" AND ")
+
+      ascending = min_cursor && !max_cursor
+      direction = ascending ? "ASC" : "DESC"
+
+      pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
+
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
-      LEFT JOIN relationships AS p
+          WHERE o.attributed_to_iri = ?
+            #{common_filters(objects: "o")}
+            AND o.published IS NOT NULL
+            AND o.visible = 1
+            #{pin_filter}
+            AND #{cursor_condition}
+       ORDER BY o.published #{direction}, o.id #{direction} LIMIT ?
+      QUERY
+
+      args = [self.iri] of ::DB::Any
+      args.concat(pin_args)
+      args.concat(cursor_args)
+      args << limit + 1
+
+      items = Object.sql(query, args: args)
+      main_more = items.size > limit
+      items.pop if main_more
+      items.reverse! if ascending
+
+      array = Ktistec::Util::PaginatedArray(Object).new(items)
+      if array.size > 0
+        array.cursor_start = array.first.id
+        array.cursor_end = array.last.id
+      end
+
+      # navigable-only contract: derive has_prev?/has_next? from
+      # max_id?, min_id?, main_more. hand-crafted cursors may result
+      # in undefined behavior.
+      if ascending
+        array.has_prev = main_more
+        array.has_next = true
+      elsif max_cursor
+        array.has_prev = true
+        array.has_next = main_more
+      else
+        array.has_prev = false
+        array.has_next = main_more
+      end
+      array
+    end
+
+    # Returns the actor's pinned posts.
+    #
+    # Meant to be called on both local and cached actors.
+    #
+    def pinned_posts
+      query = <<-QUERY
+         SELECT #{Object.columns(prefix: "o")}
+           FROM objects AS o
+           JOIN relationships AS p
              ON p.type = '#{Relationship::Content::Pin}'
             AND p.from_iri = ?
             AND p.to_iri = o.iri
@@ -1056,33 +1088,9 @@ module ActivityPub
             #{common_filters(objects: "o")}
             AND o.published IS NOT NULL
             AND o.visible = 1
-       ORDER BY p.id DESC, o.published DESC
-          LIMIT ? OFFSET ?
+       ORDER BY p.id DESC
       QUERY
-      Object.query_and_paginate(query, self.iri, self.iri, page: page, size: size)
-    end
-
-    # Returns the actor's known posts.
-    #
-    # Meant to be called on both local and cached actors.
-    #
-    # Does not include private (not visible) posts.
-    #
-    # Note: The offset-based overload prioritizes pinned posts; this
-    # cursor-based overload does not. A pin-aware cursor variant will
-    # be needed when offset-based pagination is retired.
-    #
-    def known_posts(*, max_id = nil, min_id = nil, limit = 10)
-      query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-          WHERE o.attributed_to_iri = ?
-            #{common_filters(objects: "o")}
-            AND o.published IS NOT NULL
-            AND o.visible = 1
-            AND %{cursor_condition}
-      QUERY
-      Object.query_with_cursor(query, self.iri, cursor_column: "o.id", max_id: max_id, min_id: min_id, limit: limit)
+      Object.query_all(query, self.iri, self.iri)
     end
 
     # Translates an `Object.id` (external cursor) to the canonical
@@ -1090,7 +1098,8 @@ module ActivityPub
     # restricted to visible, non-reply objects. Returns nil for
     # unknown ids.
     #
-    private def translate_object_id_to_public_outbox_id(o_id : Int64) : Int64?
+    private def translate_object_id_to_public_outbox_id(o_id : Int64, exclude_pinned = false) : Int64?
+      pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
       query = <<-QUERY
         SELECT MAX(r.id)
           FROM objects AS o
@@ -1107,8 +1116,11 @@ module ActivityPub
            AND o.visible = 1
            AND o.in_reply_to_iri IS NULL
            #{common_filters(objects: "o", actors: "t", activities: "a")}
+           #{pin_filter}
       QUERY
-      Object.scalar(query, self.iri, o_id).as(Int64?)
+      args = [self.iri, o_id] of ::DB::Any
+      args.concat(pin_args)
+      Object.scalar(query, args: args).as(Int64?)
     end
 
     # Translates an `Object.id` (external cursor) to the canonical
@@ -1140,37 +1152,10 @@ module ActivityPub
     #
     # Does not include private (not visible) posts and replies.
     #
-    def public_posts(page = 1, size = 10)
-      query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = '#{Relationship::Content::Outbox}'
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "t", activities: "a")}
-            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-            AND o.visible = 1
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      Object.query_and_paginate(query, self.iri, page: page, size: size)
-    end
-
-    # Returns the actor's public posts and shares.
-    #
-    # Meant to be called on local (not cached) actors.
-    #
-    # Does not include private (not visible) posts and replies.
-    #
-    def public_posts(*, max_id = nil, min_id = nil, limit = 10)
-      max_id = translate_object_id_to_public_outbox_id(max_id) if max_id
-      min_id = translate_object_id_to_public_outbox_id(min_id) if min_id
+    def public_posts(*, max_id = nil, min_id = nil, limit = 10, exclude_pinned = false)
+      max_id = translate_object_id_to_public_outbox_id(max_id, exclude_pinned) if max_id
+      min_id = translate_object_id_to_public_outbox_id(min_id, exclude_pinned) if min_id
+      pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
@@ -1197,68 +1182,12 @@ module ActivityPub
                  AND a2.object_iri = a.object_iri
                  AND r2.id > r.id
             )
+            #{pin_filter}
             AND %{cursor_condition}
       QUERY
-      Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
-    end
-
-    # Returns the actor's public posts and shares.
-    #
-    # Meant to be called on local (not cached) actors.
-    #
-    # Does not include private (not visible) posts and replies.
-    #
-    def public_posts_with_pins(page = 1, size = 10)
-      base_offset = (page - 1) * size
-      all_pinned_query = <<-QUERY
-         SELECT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN relationships AS p
-             ON p.type = '#{Relationship::Content::Pin}'
-            AND p.from_iri = ?
-            AND p.to_iri = o.iri
-          WHERE o.visible = 1
-            #{common_filters(objects: "o")}
-       ORDER BY p.id DESC
-      QUERY
-      all_pinned = Object.query_all(all_pinned_query, self.iri)
-      pinned_to_skip = [base_offset, all_pinned.size].min
-      pinned_available = all_pinned.size - pinned_to_skip
-      pinned_to_take = [size, pinned_available].min
-      pinned = all_pinned[pinned_to_skip, pinned_to_take]
-      non_pinned_needed = size - pinned.size + 1 # +1 for pagination check
-      non_pinned_offset = [0, base_offset - all_pinned.size].max
-      non_pinned_query = <<-QUERY
-         SELECT DISTINCT #{Object.columns(prefix: "o")}
-           FROM objects AS o
-           JOIN actors AS t
-             ON t.iri = o.attributed_to_iri
-           JOIN activities AS a
-             ON a.object_iri = o.iri
-            AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           JOIN relationships AS r
-             ON r.to_iri = a.iri
-            AND r.type = '#{Relationship::Content::Outbox}'
-      LEFT JOIN relationships AS p
-             ON p.type = '#{Relationship::Content::Pin}'
-            AND p.from_iri = ?
-            AND p.to_iri = o.iri
-          WHERE r.from_iri = ?
-            #{common_filters(objects: "o", actors: "t", activities: "a")}
-            AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-            AND o.visible = 1
-            AND p.id IS NULL
-       ORDER BY r.id DESC
-          LIMIT ? OFFSET ?
-      QUERY
-      non_pinned = Object.query_all(non_pinned_query, self.iri, self.iri, non_pinned_needed, non_pinned_offset)
-      Ktistec::Util::PaginatedArray(Object).new.tap do |array|
-        (pinned + non_pinned).each { |obj| array << obj }
-        if array.size > size
-          array.more = true
-          array.pop
-        end
-      end
+      args = [self.iri] of ::DB::Any
+      args.concat(pin_args)
+      Object.query_with_cursor(query, args: args, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the actor's posts and shares.

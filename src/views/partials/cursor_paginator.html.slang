@@ -1,6 +1,6 @@
 crystal:
-  _prev = collection.cursor_start
-  _next = collection.cursor_end && collection.more?
+  _prev = collection.cursor_start && collection.has_prev?
+  _next = collection.cursor_end && collection.has_next?
   temp = query.dup
   temp.delete_all("max_id")
   temp.delete_all("min_id")

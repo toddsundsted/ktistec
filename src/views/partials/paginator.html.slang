@@ -1,6 +1,6 @@
 crystal:
   _prev = page > 1
-  _next = collection.more?
+  _next = collection.has_next?
   temp = query.dup
 - if _prev || _next
   nav.ui.secondary.pagination.menu

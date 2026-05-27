@@ -1121,70 +1121,6 @@ Spectator.describe ActivityPub::Object do
     post(5)
 
     it "instantiates the correct subclass" do
-      expect(described_class.federated_posts(1, 2).first).to be_a(ActivityPub::Object)
-    end
-
-    it "filters out deleted posts" do
-      post5.delete!
-      expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
-    end
-
-    it "filters out blocked posts" do
-      post5.block!
-      expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
-    end
-
-    it "filters out posts by deleted actors" do
-      actor5.delete!
-      expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
-    end
-
-    it "filters out posts by blocked actors" do
-      actor5.block!
-      expect(described_class.federated_posts(1, 2)).to eq([post3, post1])
-    end
-
-    it "filters out non-public posts" do
-      expect(described_class.federated_posts(1, 2)).to eq([post5, post3])
-    end
-
-    it "paginates the results" do
-      expect(described_class.federated_posts(1, 2)).to eq([post5, post3])
-      expect(described_class.federated_posts(2, 2)).to eq([post1])
-      expect(described_class.federated_posts(2, 2).more?).not_to be_true
-    end
-
-    context "with an unpublished post" do
-      let_create!(
-        :object, named: :draft_post,
-        published: nil,
-        visible: true,
-      )
-
-      it "filters out draft posts" do
-        expect(described_class.federated_posts(1, 10)).not_to contain(draft_post)
-      end
-    end
-  end
-
-  describe ".federated_posts" do
-    macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_create!(
-        :object, named: post{{index}},
-        attributed_to: actor{{index}},
-        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-        visible: {{index}}.odd?
-      )
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
-
-    it "instantiates the correct subclass" do
       expect(described_class.federated_posts(limit: 2).first).to be_a(ActivityPub::Object)
     end
 
@@ -1214,12 +1150,12 @@ Spectator.describe ActivityPub::Object do
 
     it "paginates the results" do
       expect(described_class.federated_posts(max_id: post3.id, limit: 2)).to eq([post1])
-      expect(described_class.federated_posts(max_id: post3.id, limit: 2).more?).not_to be_true
+      expect(described_class.federated_posts(max_id: post3.id, limit: 2).has_next?).not_to be_true
     end
 
     it "paginates the results" do
       expect(described_class.federated_posts(min_id: post2.id, limit: 1)).to eq([post3])
-      expect(described_class.federated_posts(min_id: post2.id, limit: 1).more?).to be_true
+      expect(described_class.federated_posts(min_id: post2.id, limit: 1).has_prev?).to be_true
     end
 
     context "with an unpublished post" do
@@ -1319,64 +1255,6 @@ Spectator.describe ActivityPub::Object do
     public_post(5, :announce)
 
     it "instantiates the correct subclass" do
-      expect(described_class.public_posts(1, 2).first).to be_a(ActivityPub::Object)
-    end
-
-    it "filters out deleted posts" do
-      post5.delete!
-      expect(described_class.public_posts(1, 2)).to eq([post4, post3])
-    end
-
-    it "filters out blocked posts" do
-      post5.block!
-      expect(described_class.public_posts(1, 2)).to eq([post4, post3])
-    end
-
-    it "filters out posts by deleted actors" do
-      actor5.delete!
-      expect(described_class.public_posts(1, 2)).to eq([post4, post3])
-    end
-
-    it "filters out posts by blocked actors" do
-      actor5.block!
-      expect(described_class.public_posts(1, 2)).to eq([post4, post3])
-    end
-
-    it "filters out non-public posts" do
-      post5.assign(visible: false).save
-      expect(described_class.public_posts(1, 2)).to eq([post4, post3])
-    end
-
-    it "filters out replies" do
-      post5.assign(in_reply_to: post3).save
-      expect(described_class.public_posts(1, 2)).to eq([post4, post3])
-    end
-
-    it "filters out objects belonging to undone activities" do
-      activity5.undo!
-      expect(described_class.public_posts(1, 2)).to eq([post4, post3])
-    end
-
-    let_build(:create, actor: actor, object: post5)
-    let_build(:outbox_relationship, named: :outbox, owner: actor, activity: create)
-
-    it "paginates the results" do
-      expect(described_class.public_posts(1, 2)).to eq([post5, post4])
-      expect(described_class.public_posts(3, 2)).to eq([post1])
-      expect(described_class.public_posts(3, 2).more?).not_to be_true
-    end
-  end
-
-  describe ".public_posts" do
-    let(actor) { register.actor }
-
-    public_post(1, :announce)
-    public_post(2, :create)
-    public_post(3, :announce)
-    public_post(4, :create)
-    public_post(5, :announce)
-
-    it "instantiates the correct subclass" do
       expect(described_class.public_posts(limit: 2).first).to be_a(ActivityPub::Object)
     end
 
@@ -1428,11 +1306,11 @@ Spectator.describe ActivityPub::Object do
     end
 
     it "reports more results" do
-      expect(described_class.public_posts(limit: 2).more?).to be_true
+      expect(described_class.public_posts(limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(described_class.public_posts(limit: 5).more?).not_to be_true
+      expect(described_class.public_posts(limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do
@@ -1757,6 +1635,10 @@ Spectator.describe ActivityPub::Object do
 
         it "doesn't count any replies" do
           expect(subject.with_replies_count!(actor).replies_count).to eq(0)
+        end
+
+        it "doesn't count any replies" do
+          expect(object1.with_replies_count!(actor).replies_count).to eq(0)
         end
 
         context "and an approved object" do

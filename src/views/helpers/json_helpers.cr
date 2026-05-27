@@ -20,17 +20,19 @@ module Ktistec::ViewHelper
       else
         content_io << %Q("type":"OrderedCollectionPage",)
         content_io << %Q("id":"#{host}#{%path}?#{%query}",)
-        %temp = %query.dup
-        %temp.delete_all("max_id")
-        %temp.delete_all("min_id")
-        %temp["min_id"] = {{collection}}.cursor_start.to_s
-        content_io << %Q("prev":"#{host}#{%path}?#{%temp}",)
+        if {{collection}}.has_prev? && (%cursor_start = {{collection}}.cursor_start)
+          %temp = %query.dup
+          %temp.delete_all("max_id")
+          %temp.delete_all("min_id")
+          %temp["min_id"] = %cursor_start.to_s
+          content_io << %Q("prev":"#{host}#{%path}?#{%temp}",)
+        end
       end
-      if {{collection}}.more?
+      if {{collection}}.has_next? && (%cursor_end = {{collection}}.cursor_end)
         %temp = %query.dup
         %temp.delete_all("max_id")
         %temp.delete_all("min_id")
-        %temp["max_id"] = {{collection}}.cursor_end.to_s
+        %temp["max_id"] = %cursor_end.to_s
         content_io << %Q("next":"#{host}#{%path}?#{%temp}",)
       end
       content_io << %Q("orderedItems":[)
@@ -66,7 +68,7 @@ module Ktistec::ViewHelper
           content_io << %Q("prev":"#{host}#{%path}?#{%query}",)
         end
       end
-      if {{collection}}.more?
+      if {{collection}}.has_next?
         %query["page"] = (%page + 1).to_s
         content_io << %Q("next":"#{host}#{%path}?#{%query}",)
       end

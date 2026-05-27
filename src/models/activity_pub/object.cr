@@ -428,26 +428,6 @@ module ActivityPub
       end
     end
 
-    # Returns federated posts.
-    #
-    # Includes local posts. Does not include private (not visible)
-    # posts.
-    #
-    def self.federated_posts(page = 1, size = 10)
-      query = <<-QUERY
-          SELECT #{Object.columns(prefix: "o")}
-            FROM objects AS o
-            JOIN actors AS t
-              ON t.iri = o.attributed_to_iri
-           WHERE o.visible = 1
-             #{common_filters(objects: "o", actors: "t")}
-             AND o.published IS NOT NULL
-        ORDER BY o.id DESC
-           LIMIT ? OFFSET ?
-      QUERY
-      Object.query_and_paginate(query, page: page, size: size)
-    end
-
     # Returns federated posts with cursor-based pagination.
     #
     # Includes local posts. Does not include private (not visible)
@@ -512,33 +492,6 @@ module ActivityPub
            #{common_filters(objects: "o", actors: "t", activities: "a")}
       QUERY
       Object.scalar(query, o_id).as(Int64?)
-    end
-
-    # Returns the site's public posts.
-    #
-    # Does not include private (not visible) posts and replies.
-    #
-    def self.public_posts(page = 1, size = 10)
-      query = <<-QUERY
-          SELECT DISTINCT #{Object.columns(prefix: "o")}
-            FROM accounts AS c
-            JOIN relationships AS r
-              ON likelihood(r.from_iri = c.iri, 0.99)
-             AND r.type = '#{Relationship::Content::Outbox}'
-            JOIN activities AS a
-              ON a.iri = r.to_iri
-             AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-            JOIN objects AS o
-              ON o.iri = a.object_iri
-            JOIN actors AS t
-              ON t.iri = o.attributed_to_iri
-           WHERE o.visible = 1
-             AND likelihood(o.in_reply_to_iri IS NULL, 0.25)
-             #{common_filters(objects: "o", actors: "t", activities: "a")}
-          ORDER BY r.id DESC
-             LIMIT ? OFFSET ?
-      QUERY
-      Object.query_and_paginate(query, page: page, size: size)
     end
 
     # Returns the site's public posts with cursor-based pagination.
@@ -693,17 +646,18 @@ module ActivityPub
     def with_replies_count!(approved_by)
       query = <<-QUERY
       #{with_replies_count_query_with_recursive}
-         SELECT count(o.iri) - 1
+         SELECT count(o.iri)
            FROM objects AS o, replies_to AS t
       LEFT JOIN relationships AS r
              ON r.type = '#{Relationship::Content::Approved}'
              AND r.from_iri = ? AND r.to_iri = o.iri
           WHERE o.iri IN (t.iri)
+            AND o.iri != ?
             AND o.visible = 1
-            AND ((o.in_reply_to_iri IS NULL) OR (r.id IS NOT NULL))
+            AND r.id IS NOT NULL
       QUERY
       from_iri = approved_by.responds_to?(:iri) ? approved_by.iri : approved_by.to_s
-      Object.scalar(query, iri, from_iri).as(Int64?).try { |replies_count| self.replies_count = replies_count }
+      Object.scalar(query, iri, from_iri, iri).as(Int64?).try { |replies_count| self.replies_count = replies_count }
       self
     end
 

@@ -317,7 +317,7 @@ module Ktistec
               rs.each { array << compose(rs, **additional_columns) }
             end
             if array.size > size
-              array.more = true
+              array.has_next = true
               array.pop
             end
           end
@@ -344,12 +344,13 @@ module Ktistec
       #
       protected def query_with_cursor(
         query : String,
-        *args,
+        *args_,
         cursor_column : String,
         max_id : Int64? = nil,
         min_id : Int64? = nil,
         limit : Int32 = 10,
         additional_columns = NamedTuple.new,
+        args : Enumerable? = nil,
       )
         cursor_args = [] of Int64
         cursor_condition = [] of String
@@ -361,33 +362,41 @@ module Ktistec
           cursor_args << min_id
           cursor_condition << "#{cursor_column} > ?"
         end
-        direction = min_id && !max_id ? "ASC" : "DESC"
+        ascending = !!(min_id && !max_id)
+        direction = ascending ? "ASC" : "DESC"
         cursor_condition = cursor_condition.empty? ? "1" : cursor_condition.join(" AND ")
-        query = query % {cursor_condition: cursor_condition}
-        query += " ORDER BY #{cursor_column} #{direction} LIMIT ?"
-        all_args = args.to_a + cursor_args + [limit + 1]
-        Internal.log_query(query, all_args) do
+        main_query = query % {cursor_condition: cursor_condition}
+        main_query += " ORDER BY #{cursor_column} #{direction} LIMIT ?"
+        all_args = (args || args_).to_a + cursor_args + [limit + 1]
+        Internal.log_query(main_query, all_args) do
           result = Ktistec::Util::PaginatedArray(self).new
-          Ktistec.database.query(query, args: all_args) do |rs|
+          Ktistec.database.query(main_query, args: all_args) do |rs|
             rs.each { result << compose(rs, **additional_columns) }
           end
-          more = false
+          main_more = false
           if result.size > limit
-            more = true
+            main_more = true
             result.pop
           end
-          items = result.to_a
-          if min_id && !max_id
-            items = items.reverse
+          result.reverse! if ascending
+          if result.size > 0
+            result.cursor_start = result.first.id
+            result.cursor_end = result.last.id
           end
-          Ktistec::Util::PaginatedArray(self).new(items.size).tap do |array|
-            items.each { |item| array << item }
-            array.more = more
-            if array.size > 0
-              array.cursor_start = array.first.id
-              array.cursor_end = items.last.id
-            end
+          # navigable-only contract: derive has_prev?/has_next? from
+          # max_id?, min_id?, main_more. hand-crafted cursors may
+          # result in undefined behavior.
+          if ascending
+            result.has_prev = main_more
+            result.has_next = true
+          elsif max_id
+            result.has_prev = true
+            result.has_next = main_more
+          else
+            result.has_prev = false
+            result.has_next = main_more
           end
+          result
         end
       end
 

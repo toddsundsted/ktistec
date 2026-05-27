@@ -47,8 +47,8 @@ Spectator.describe "helpers" do
         expect(subject["next"]?).to be_nil
       end
 
-      context "with more pages" do
-        before_each { collection.more = true }
+      context "with a next page" do
+        before_each { collection.has_next = true }
 
         it "includes a link to the next page" do
           expect(subject["next"]?).to eq("https://test.test/?page=2")
@@ -75,8 +75,8 @@ Spectator.describe "helpers" do
         expect(subject["next"]?).to be_nil
       end
 
-      context "with more pages" do
-        before_each { collection.more = true }
+      context "with a next page" do
+        before_each { collection.has_next = true }
 
         it "includes a link to the next page" do
           expect(subject["next"]?).to eq("https://test.test/?page=3")
@@ -130,8 +130,8 @@ Spectator.describe "helpers" do
         expect(subject["next"]?).to be_nil
       end
 
-      context "with more pages" do
-        before_each { collection.more = true }
+      context "with a next page" do
+        before_each { collection.has_next = true }
 
         it "includes a link to the next page" do
           expect(subject["next"]?).to eq("https://test.test/?max_id=50")
@@ -150,16 +150,24 @@ Spectator.describe "helpers" do
         expect(subject["orderedItems"]?).to be_truthy
       end
 
-      it "includes a link to the previous page" do
-        expect(subject["prev"]?).to eq("https://test.test/?min_id=100")
+      it "does not include a link to the previous page" do
+        expect(subject["prev"]?).to be_nil
       end
 
       it "does not include a link to the next page" do
         expect(subject["next"]?).to be_nil
       end
 
-      context "with more pages" do
-        before_each { collection.more = true }
+      context "with a previous page" do
+        before_each { collection.has_prev = true }
+
+        it "includes a link to the previous page" do
+          expect(subject["prev"]?).to eq("https://test.test/?min_id=100")
+        end
+      end
+
+      context "with a next page" do
+        before_each { collection.has_next = true }
 
         it "includes a link to the next page" do
           expect(subject["next"]?).to eq("https://test.test/?max_id=50")

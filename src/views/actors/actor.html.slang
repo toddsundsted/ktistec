@@ -1,56 +1,4 @@
-- if env.account?.try(&.actor) == actor
-  crystal:
-    filters = env.params.query.fetch_all("filters")
-    count, color, tooltip = notification_count_and_color(actor, env.account.last_notifications_checked_at)
-  .ui.stackable.secondary.menu
-    input.menu-toggle-checkbox type="checkbox" id="menu-toggle"
-    .mobile-menu-toggle
-      label for="menu-toggle"
-        i.bars.icon
-        span.title Collections and Filters
-        - if count > 0
-          span.ui.mini.transitional.horizontal.circular.label class=color title=tooltip = count
-        - else
-          span.invisible.label
-    .menu-items data-turbo-prefetch="false"
-      a.item href=actor_relationships_path(actor, "posts") Posts
-      a.item href=actor_relationships_path(actor, "drafts") Drafts
-      a.item.notifications href=actor_relationships_path(actor, "notifications") Notifications
-        - if count > 0
-          span.ui.mini.transitional.horizontal.circular.label class=color title=tooltip = count
-        - else
-          span.invisible.label
-      - env.account.pinned_collections.each do |label, path|
-        a.item href=Utils::Paths.pinned_collection_path(path) = label
-      a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
-        i.horizontal.sliders.icon
-        .menu
-          form data-controller="checkbox-submit" data-turbo-frame="main-timeline" data-turbo-action="replace"
-            = params_to_inputs(env.params.query, exclude: ["filters"])
-            input type="hidden" name="filters" value=""
-            .item
-              .ui.slider.checkbox
-                input#timeline-no-shares type="checkbox" name="filters" value="no-shares" data-action="change->checkbox-submit#change" checked=filters.includes?("no-shares")
-                label for="timeline-no-shares" Don't include shared posts
-            .item
-              .ui.slider.checkbox
-                input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->checkbox-submit#change" checked=filters.includes?("no-replies")
-                label for="timeline-no-replies" Don't include replies
-  - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
-  - partial "partials/editor"
-  crystal:
-    if filters.includes?("no-shares") && filters.includes?("no-replies")
-      timeline = actor.timeline(**pagination_params(env), inclusion: [Relationship::Content::Timeline::Create], exclude_replies: true)
-    elsif filters.includes?("no-shares")
-      timeline = actor.timeline(**pagination_params(env), inclusion: [Relationship::Content::Timeline::Create])
-    elsif filters.includes?("no-replies")
-      timeline = actor.timeline(**pagination_params(env), exclude_replies: true)
-    else
-      timeline = actor.timeline(**pagination_params(env))
-    end
-  turbo-frame#main-timeline
-    - partial "actors/timeline"
-- elsif !actor.blocked?
+- if !actor.blocked?
   - content_for "head" do
     link rel="alternate" type="application/rss+xml" title="#{actor.display_name}: RSS Feed" href=Utils::Paths.actor_feed_path(actor)
   - content_for "og_metadata" do
@@ -72,7 +20,15 @@
     meta name="twitter:description" content=og_description
     meta name="twitter:image" content=og_image
   - partial actor_panel_partial(env, actor)
-  - objects = actor.public_posts_with_pins(**pagination_params(env))
-  - partial "actors/public_posts"
+  section.ui.feed data-controller="icon-load-error"
+    - (pinned + objects.to_a).each do |object|
+      crystal:
+        activity = object.activities.find do |activity|
+          Relationship::Content::Outbox.find?(owner: actor, activity: activity)
+        end
+        _actor = activity ? activity.actor : object.attributed_to
+        _author = object.attributed_to
+      - partial object_partial(env, object, activity: activity, actor: _actor, author: _author, for_actor: actor)
+  - partial paginate(env, objects)
 - else
   - partial actor_panel_partial(env, actor)

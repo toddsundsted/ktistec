@@ -17,6 +17,10 @@ class TaskWorker
   class_getter? running : Bool = false
 
   def self.start(&)
+    if ENV["KTISTEC_DISABLE_TASKS"]?
+      Log.warn { "TaskWorker disabled by KTISTEC_DISABLE_TASKS" }
+      return
+    end
     @@running = true
     yield
     self.new.tap do |worker|

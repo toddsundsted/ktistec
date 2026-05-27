@@ -202,40 +202,6 @@ class Tag
     # Does not include private (not visible) posts. Includes
     # other's posts that have been shared.
     #
-    def self.public_posts(name, page = 1, size = 10)
-      # note: disqualify the index on tag *name* because, although it
-      # has high cardinality, the distribution of names is very uneven
-      # and this method is likely to be called on those tags it would
-      # help the least (the most popular).
-      query = <<-QUERY
-        SELECT #{ActivityPub::Object.columns(prefix: "o")}
-          FROM objects AS o
-          JOIN activities AS a
-            ON a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           AND a.object_iri = o.iri
-          JOIN relationships AS r
-            ON r.type = '#{Relationship::Content::Outbox}'
-           AND r.to_iri = a.iri
-          JOIN actors AS t
-            ON t.iri = o.attributed_to_iri
-          JOIN tags AS g
-            ON g.subject_iri = o.iri
-           AND g.type = '#{Tag::Hashtag}'
-           AND +g.name = ?
-         WHERE o.visible = 1
-           AND o.published IS NOT NULL
-           #{common_filters(objects: "o", actors: "t", activities: "a")}
-        ORDER BY r.id DESC
-           LIMIT ? OFFSET ?
-      QUERY
-      ActivityPub::Object.query_and_paginate(query, name, page: page, size: size)
-    end
-
-    # Returns the site's public posts with the given hashtag.
-    #
-    # Does not include private (not visible) posts. Includes
-    # other's posts that have been shared.
-    #
     def self.public_posts(name, *, max_id = nil, min_id = nil, limit = 10)
       max_id = translate_object_id_to_outbox_id(name, max_id) if max_id
       min_id = translate_object_id_to_outbox_id(name, min_id) if min_id

@@ -91,7 +91,11 @@ class InteractionsController
     when ActivityPub::Actor
       actor = actor_or_object.save
       actor.up!
-      ok "actors/remote", env: env, actor: actor
+      cursor_params = cursor_pagination_params(env)
+      pinned, objects = cursor_paginate_with_pins(actor, cursor_params[:limit]) do
+        actor.known_posts(**cursor_params, exclude_pinned: true)
+      end
+      ok "actors/remote", env: env, actor: actor, pinned: pinned, objects: objects
     when ActivityPub::Object
       actor_or_object.attributed_to?(env.account.actor, dereference: true)
       object = actor_or_object.save

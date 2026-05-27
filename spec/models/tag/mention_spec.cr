@@ -170,7 +170,7 @@ Spectator.describe Tag::Mention do
     it "paginates the results" do
       expect(described_class.all_objects("foo@remote", 1, 2)).to eq([object5, object4])
       expect(described_class.all_objects("foo@remote", 2, 2)).to eq([object3, object2])
-      expect(described_class.all_objects("foo@remote", 2, 2).more?).to be_true
+      expect(described_class.all_objects("foo@remote", 2, 2).has_next?).to be_true
     end
   end
 
@@ -228,11 +228,11 @@ Spectator.describe Tag::Mention do
     end
 
     it "reports more results" do
-      expect(described_class.all_objects("foo@remote", limit: 2).more?).to be_true
+      expect(described_class.all_objects("foo@remote", limit: 2).has_next?).to be_true
     end
 
     it "reports no more results" do
-      expect(described_class.all_objects("foo@remote", limit: 5).more?).not_to be_true
+      expect(described_class.all_objects("foo@remote", limit: 5).has_next?).not_to be_true
     end
 
     it "returns the first page" do

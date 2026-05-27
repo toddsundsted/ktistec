@@ -79,7 +79,26 @@ class ActorsController
       end
     end
 
-    ok "actors/actor", env: env, actor: actor
+    cursor_params = cursor_pagination_params(env)
+
+    if accepts?("text/html")
+      if env.account?.try(&.actor) == actor
+        filters = env.params.query.fetch_all("filters")
+        inclusion = filters.includes?("no-shares") ? [Relationship::Content::Timeline::Create] : nil
+        exclude_replies = filters.includes?("no-replies")
+        timeline = actor.timeline(**cursor_params, inclusion: inclusion, exclude_replies: exclude_replies)
+        ok "actors/self", env: env, actor: actor, timeline: timeline
+      else
+        pinned, objects = cursor_paginate_with_pins(actor, cursor_params[:limit]) do
+          actor.public_posts(**cursor_params, exclude_pinned: true)
+        end
+        ok "actors/actor", env: env, actor: actor, pinned: pinned, objects: objects
+      end
+    else
+      ok "actors/actor", env: env, actor: actor,
+        pinned: [] of ActivityPub::Object,
+        objects: Ktistec::Util::PaginatedArray(ActivityPub::Object).new
+    end
   end
 
   get "/actors/:username/public-posts" do |env|
@@ -199,7 +218,12 @@ class ActorsController
       not_found
     end
 
-    ok "actors/remote", env: env, actor: actor
+    cursor_params = cursor_pagination_params(env)
+    pinned, objects = cursor_paginate_with_pins(actor, cursor_params[:limit]) do
+      actor.known_posts(**cursor_params, exclude_pinned: true)
+    end
+
+    ok "actors/remote", env: env, actor: actor, pinned: pinned, objects: objects
   end
 
   # MULTI_USER NOTE: block and unblock operations set/clear a global

@@ -31,7 +31,7 @@ Spectator.describe "helpers" do
 
     context "with offset pagination" do
       context "with more pages" do
-        before_each { collection.more = true }
+        before_each { collection.has_next = true }
 
         it "renders the next link" do
           expect(subject.xpath_nodes("//a/@href")).to contain_exactly("?page=2")
@@ -53,20 +53,24 @@ Spectator.describe "helpers" do
         collection.cursor_end = 50_i64
       end
 
-      it "renders the prev link" do
-        expect(subject.xpath_nodes("//a/@href")).to contain_exactly("?min_id=100")
+      it "does not render the prev link" do
+        expect(subject.xpath_nodes("//a/@href")).not_to contain("?min_id=100")
       end
 
       it "does not render the next link" do
         expect(subject.xpath_nodes("//a/@href")).not_to contain("?max_id=50")
       end
 
-      context "with more results" do
-        before_each { collection.more = true }
+      context "with prev results" do
+        before_each { collection.has_prev = true }
 
         it "renders the prev link" do
           expect(subject.xpath_nodes("//a/@href")).to contain("?min_id=100")
         end
+      end
+
+      context "with next results" do
+        before_each { collection.has_next = true }
 
         it "renders the next link" do
           expect(subject.xpath_nodes("//a/@href")).to contain("?max_id=50")
@@ -226,11 +230,68 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe "cursor_paginate_with_pins" do
+    let_create(:actor)
+    let_create(:object, named: pinned_object, attributed_to: actor, visible: true, published: Time.utc)
+    let_create!(:pin_relationship, actor: actor, object: pinned_object)
+    let_create(:object, named: tail1, attributed_to: actor, visible: true)
+    let_create(:object, named: tail2, attributed_to: actor, visible: true)
+    let_create(:object, named: tail3, attributed_to: actor, visible: true)
+
+    let(tail) do
+      Ktistec::Util::PaginatedArray(ActivityPub::Object).new.tap do |t|
+        t << tail1
+        t << tail2
+        t << tail3
+        t.cursor_end = tail3.id
+        t.has_next = false
+      end
+    end
+
+    context "when the tail has no previous page" do
+      before_each { tail.has_prev = false }
+
+      it "returns pinned posts and the tail" do
+        pinned, result = self.class.cursor_paginate_with_pins(actor, 10) { tail }
+        expect(pinned.map(&.id)).to eq([pinned_object.id])
+        expect(result.map(&.id)).to eq([tail1.id, tail2.id, tail3.id])
+      end
+    end
+
+    context "when the tail has a previous page" do
+      before_each { tail.has_prev = true }
+
+      it "returns no pinned posts and the tail" do
+        pinned, result = self.class.cursor_paginate_with_pins(actor, 10) { tail }
+        expect(pinned).to be_empty
+        expect(result.map(&.id)).to eq([tail1.id, tail2.id, tail3.id])
+      end
+    end
+
+    it "trims the tail" do
+      _, result = self.class.cursor_paginate_with_pins(actor, 2) { tail }
+      expect(result.map(&.id)).to eq([tail1.id])
+      expect(result.cursor_end).to eq(tail1.id)
+      expect(result.has_next?).to be_true
+    end
+
+    it "does not mutate the tail" do
+      self.class.cursor_paginate_with_pins(actor, 2) { tail }
+      expect(tail.map(&.id)).to eq([tail1.id, tail2.id, tail3.id])
+      expect(tail.cursor_end).to eq(tail3.id)
+      expect(tail.has_next?).to be_false
+    end
+  end
+
   describe "link_header" do
     let(collection) { Ktistec::Util::PaginatedArray(String).new }
 
+    macro header
+      self.class.link_header("/api/v1/timelines/home", collection, 20)
+    end
+
     it "returns nil" do
-      expect(self.class.link_header("/api/v1/timelines/home", collection, 20)).to be_nil
+      expect(header).to be_nil
     end
 
     context "with cursor_start" do
@@ -238,21 +299,34 @@ Spectator.describe "helpers" do
         collection.cursor_start = 100_i64
       end
 
-      it "includes prev link" do
-        result = self.class.link_header("/api/v1/timelines/home", collection, 20)
-        expect(result).to eq(%Q(<https://test.test/api/v1/timelines/home?min_id=100&limit=20>; rel="prev"))
+      it "returns nil" do
+        expect(header).to be_nil
+      end
+
+      context "and has_prev" do
+        before_each { collection.has_prev = true }
+
+        it "includes prev link" do
+          expect(header).to eq(%Q(<https://test.test/api/v1/timelines/home?min_id=100&limit=20>; rel="prev"))
+        end
       end
     end
 
-    context "with cursor_end and more" do
+    context "with cursor_end" do
       before_each do
         collection.cursor_end = 50_i64
-        collection.more = true
       end
 
-      it "includes next link" do
-        result = self.class.link_header("/api/v1/timelines/home", collection, 20)
-        expect(result).to contain(%Q(<https://test.test/api/v1/timelines/home?max_id=50&limit=20>; rel="next"))
+      it "returns nil" do
+        expect(header).to be_nil
+      end
+
+      context "and has_next" do
+        before_each { collection.has_next = true }
+
+        it "includes next link" do
+          expect(header).to contain(%Q(<https://test.test/api/v1/timelines/home?max_id=50&limit=20>; rel="next"))
+        end
       end
     end
   end

@@ -394,7 +394,7 @@ class APIController
       API::V1::Serializers::Status.from_object(object, actor: actor)
     end
 
-    if (link = link_header("/api/v1/timelines/tag/#{hashtag}", statuses, params[:limit]))
+    if (link = link_header("/api/v1/timelines/tag/#{URI.encode_path_segment(hashtag)}", statuses, params[:limit]))
       env.response.headers["Link"] = link
     end
 

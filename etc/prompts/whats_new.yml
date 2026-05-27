@@ -27,11 +27,15 @@ messages:
         ## Step 3: Fetch Content
 
         1. **Get timeline content details** (if timeline count > 0):
-           - Call: `paginate_collection(name: "timeline", page: 1, size: [count])`
+           - First call: `paginate_collection(name: "timeline", limit: min(count, 20))`
+           - If more needed: `paginate_collection(name: "timeline", limit: min(remaining, 20), older_than: [next_older_than from previous response])`
+           - Repeat until `count` items collected or `next_older_than` is absent
            - Returns object data
 
         2. **Get notification details** (if notifications count > 0):
-           - Call: `paginate_collection(name: "notifications", page: 1, size: [count])`
+           - First call: `paginate_collection(name: "notifications", limit: min(count, 20))`
+           - If more needed: `paginate_collection(name: "notifications", limit: min(remaining, 20), older_than: [next_older_than from previous response])`
+           - Repeat until `count` items collected or `next_older_than` is absent
            - Returns data specific to each type of notification
 
         ## Step 4: Output

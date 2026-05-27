@@ -493,7 +493,11 @@ Spectator.describe MCP::Tools do
         expect(content.size).to eq(1)
         data = JSON.parse(content.first["text"].as_s)
         expect(data["objects"].as_a.size).to eq(expected_size)
-        expect(data["more"]).to eq(has_more)
+        if has_more
+          expect(data["next_older_than"]?).not_to be_nil
+        else
+          expect(data["next_older_than"]?).to be_nil
+        end
         data["objects"].as_a
       end
 
@@ -926,9 +930,9 @@ Spectator.describe MCP::Tools do
         end
       end
 
-      context "with page and/or size parameters" do
+      context "with older_than/newer_than/limit parameters" do
         before_each do
-          25.times do
+          20.times do
             object = Factory.create(:object) # ameba:disable Ktistec/NoImperativeFactories
             put_in_timeline_create(account.actor, object)
           end
@@ -940,28 +944,72 @@ Spectator.describe MCP::Tools do
           expect_paginated_response(request, 10, true)
         end
 
-        it "returns the 3rd page of objects" do
-          request = paginate_timeline_request("paginate-10", {"page" => 3})
-
-          expect_paginated_response(request, 5, false)
-        end
-
-        it "returns specified number of objects when size is provided" do
-          request = paginate_timeline_request("paginate-size-2", {"size" => 5})
+        it "returns specified number of objects when limit is provided" do
+          request = paginate_timeline_request("paginate-size-2", {"limit" => 5})
 
           expect_paginated_response(request, 5, true)
         end
 
-        it "returns maximum number of objects when size equals limit" do
-          request = paginate_timeline_request("paginate-size-3", {"size" => 20})
+        it "returns maximum number of objects when limit equals max" do
+          request = paginate_timeline_request("paginate-size-3", {"limit" => 20})
 
-          expect_paginated_response(request, 20, true)
+          expect_paginated_response(request, 20, false)
         end
 
-        it "works correctly with both page and size parameters" do
-          request = paginate_timeline_request("paginate-size-8", {"page" => 2, "size" => 5})
+        it "paginates forward" do
+          page = paginate_timeline_request("paginate-cursor-1", {"limit" => 5})
+          response = described_class.handle_tools_call(page, account)
+          data = JSON.parse(response["content"].as_a.first["text"].as_s)
+          older_than = data["next_older_than"].as_i64
 
-          expect_paginated_response(request, 5, true)
+          page = paginate_timeline_request("paginate-cursor-2", {"older_than" => older_than, "limit" => 5})
+          response = described_class.handle_tools_call(page, account)
+          data = JSON.parse(response["content"].as_a.first["text"].as_s)
+
+          expect(data["objects"].as_a.size).to eq(5)
+          expect(data["next_older_than"].as_i64).to be < older_than
+          expect(data["next_newer_than"]?).not_to be_nil
+        end
+
+        it "paginates backward" do
+          page = paginate_timeline_request("paginate-cursor-3", {"limit" => 5})
+          response = described_class.handle_tools_call(page, account)
+          data = JSON.parse(response["content"].as_a.first["text"].as_s)
+          older_than = data["next_older_than"].as_i64
+
+          page = paginate_timeline_request("paginate-cursor-4", {"older_than" => older_than, "limit" => 5})
+          response = described_class.handle_tools_call(page, account)
+          data = JSON.parse(response["content"].as_a.first["text"].as_s)
+          newer_than = data["next_newer_than"].as_i64
+
+          page = paginate_timeline_request("paginate-cursor-5", {"newer_than" => newer_than, "limit" => 5})
+          response = described_class.handle_tools_call(page, account)
+          data = JSON.parse(response["content"].as_a.first["text"].as_s)
+
+          expect(data["objects"].as_a.size).to eq(5)
+          expect(data["next_older_than"].as_i64).to eq(older_than)
+          expect(data["next_newer_than"]?).to be_nil
+        end
+
+        it "omits next_newer_than on the first page" do
+          page = paginate_timeline_request("paginate-cursor-6", {"limit" => 5})
+          response = described_class.handle_tools_call(page, account)
+          data = JSON.parse(response["content"].as_a.first["text"].as_s)
+
+          expect(data["next_newer_than"]?).to be_nil
+        end
+
+        it "omits next_older_than on the final page" do
+          page = paginate_timeline_request("paginate-cursor-6", {"limit" => 20})
+          response = described_class.handle_tools_call(page, account)
+          data = JSON.parse(response["content"].as_a.first["text"].as_s)
+
+          expect(data["next_older_than"]?).to be_nil
+        end
+
+        it "rejects limit above maximum" do
+          request = paginate_timeline_request("paginate-limit-too-big", {"limit" => 21})
+          expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /`limit` must be <= 20/)
         end
       end
 
@@ -1019,7 +1067,7 @@ Spectator.describe MCP::Tools do
           )
 
           it "supports pagination for hashtag collections" do
-            request = paginate_hashtag_request("paginate-hashtag-3", "technology", {"size" => 1})
+            request = paginate_hashtag_request("paginate-hashtag-3", "technology", {"limit" => 1})
 
             objects = expect_paginated_response(request, 1, true)
             # returns most recent post first
@@ -1089,7 +1137,7 @@ Spectator.describe MCP::Tools do
           )
 
           it "supports pagination for mention collections" do
-            request = paginate_mention_request("paginate-mention-3", "testuser@example.com", {"size" => 1})
+            request = paginate_mention_request("paginate-mention-3", "testuser@example.com", {"limit" => 1})
 
             objects = expect_paginated_response(request, 1, true)
             # returns most recent post first
@@ -1138,7 +1186,7 @@ Spectator.describe MCP::Tools do
             let_create!(:like, named: nil, actor: account.actor, object: post)
 
             it "supports pagination for likes collection" do
-              request = paginate_likes_request("paginate-likes-3", {"size" => 1})
+              request = paginate_likes_request("paginate-likes-3", {"limit" => 1})
 
               objects = expect_paginated_response(request, 1, true)
               # returns most recent like first
@@ -1182,7 +1230,7 @@ Spectator.describe MCP::Tools do
             let_create!(:dislike, named: nil, actor: account.actor, object: post)
 
             it "supports pagination for dislikes collection" do
-              request = paginate_dislikes_request("paginate-dislikes-3", {"size" => 1})
+              request = paginate_dislikes_request("paginate-dislikes-3", {"limit" => 1})
 
               objects = expect_paginated_response(request, 1, true)
               # returns most recent dislike first
@@ -1226,7 +1274,7 @@ Spectator.describe MCP::Tools do
             let_create!(:announce, named: nil, actor: account.actor, object: post)
 
             it "supports pagination for announces collection" do
-              request = paginate_announces_request("paginate-announces-3", {"size" => 1})
+              request = paginate_announces_request("paginate-announces-3", {"limit" => 1})
 
               objects = expect_paginated_response(request, 1, true)
               # returns most recent announce first
@@ -1270,7 +1318,7 @@ Spectator.describe MCP::Tools do
             let_create!(:bookmark_relationship, named: nil, actor: account.actor, object: post)
 
             it "supports pagination for bookmarks collection" do
-              request = paginate_bookmarks_request("paginate-bookmarks-3", {"size" => 1})
+              request = paginate_bookmarks_request("paginate-bookmarks-3", {"limit" => 1})
 
               objects = expect_paginated_response(request, 1, true)
               # returns most recent bookmark first
@@ -1314,7 +1362,7 @@ Spectator.describe MCP::Tools do
             let_create!(:pin_relationship, named: nil, actor: account.actor, object: post)
 
             it "supports pagination for pins collection" do
-              request = paginate_pins_request("paginate-pins-3", {"size" => 1})
+              request = paginate_pins_request("paginate-pins-3", {"limit" => 1})
 
               objects = expect_paginated_response(request, 1, true)
               # returns most recent pin first
@@ -1368,7 +1416,7 @@ Spectator.describe MCP::Tools do
             end
 
             it "supports pagination for followers collection" do
-              request = paginate_followers_request("paginate-followers-4", {"size" => 1})
+              request = paginate_followers_request("paginate-followers-4", {"limit" => 1})
 
               objects = expect_paginated_response(request, 1, true)
 
@@ -1423,7 +1471,7 @@ Spectator.describe MCP::Tools do
             end
 
             it "supports pagination for following collection" do
-              request = paginate_following_request("paginate-following-4", {"size" => 1})
+              request = paginate_following_request("paginate-following-4", {"limit" => 1})
 
               objects = expect_paginated_response(request, 1, true)
 

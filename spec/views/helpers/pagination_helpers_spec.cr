@@ -274,6 +274,13 @@ Spectator.describe "helpers" do
       expect(result.cursor_end).to eq(tail1.id)
       expect(result.has_next?).to be_true
     end
+
+    it "does not mutate the tail" do
+      self.class.cursor_paginate_with_pins(actor, 2) { tail }
+      expect(tail.map(&.id)).to eq([tail1.id, tail2.id, tail3.id])
+      expect(tail.cursor_end).to eq(tail3.id)
+      expect(tail.has_next?).to be_false
+    end
   end
 
   describe "link_header" do

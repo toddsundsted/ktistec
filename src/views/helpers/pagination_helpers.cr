@@ -28,13 +28,15 @@ module Ktistec::ViewHelper
         pinned = actor.pinned_posts
         target = Math.max(limit - pinned.size, 1)
         if pinned.size > 0 && tail.size > target
-          while tail.size > target
-            tail.pop
-          end
-          tail.cursor_end = tail.last.id
-          tail.has_next = true
+          trimmed = Ktistec::Util::PaginatedArray(ActivityPub::Object).new(tail.to_a.first(target))
+          trimmed.has_prev = tail.has_prev?
+          trimmed.has_next = true
+          trimmed.cursor_start = trimmed.first.id
+          trimmed.cursor_end = trimmed.last.id
+          {pinned, trimmed}
+        else
+          {pinned, tail}
         end
-        {pinned, tail}
       end
     end
 

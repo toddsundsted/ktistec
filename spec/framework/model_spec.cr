@@ -94,8 +94,8 @@ class QueryModel
     super(*args, **opts)
   end
 
-  def self.query_with_cursor(*args, **opts)
-    super(*args, **opts)
+  def self.query_with_cursor(*args_, **opts)
+    super(*args_, **opts)
   end
 
   def self.query_all(*args, **opts)
@@ -307,6 +307,20 @@ Spectator.describe Ktistec::Model do
       it "sets `has_prev?` to false" do
         result = QueryModel.query_with_cursor(base_query, cursor_column: "id", min_id: 2_i64, limit: 5)
         expect(result.has_prev?).to be_false
+      end
+    end
+
+    context "with bound arguments" do
+      let(filtered_query) { "SELECT id FROM query_models WHERE id <> ? AND %{cursor_condition}" }
+
+      it "accepts positional arguments" do
+        result = QueryModel.query_with_cursor(filtered_query, 3, cursor_column: "id")
+        expect(result.map(&.id)).to eq([5, 4, 2, 1])
+      end
+
+      it "accepts arguments via `args`" do
+        result = QueryModel.query_with_cursor(filtered_query, args: [3], cursor_column: "id")
+        expect(result.map(&.id)).to eq([5, 4, 2, 1])
       end
     end
   end

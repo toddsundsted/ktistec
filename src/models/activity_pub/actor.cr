@@ -1036,13 +1036,28 @@ module ActivityPub
       find_activity_for(object, ActivityPub::Activity::Like)
     end
 
+    # Returns the SQL fragment and bound arguments for excluding
+    # pinned objects. The SQL references `o` as the object alias; call
+    # sites must alias `objects AS o`.
+    #
+    private def pin_exclusion_clause(exclude_pinned : Bool) : {String, Array(::DB::Any)}
+      if exclude_pinned
+        {
+          "AND NOT EXISTS (SELECT 1 FROM relationships AS p WHERE p.type = '#{Relationship::Content::Pin}' AND p.from_iri = ? AND p.to_iri = o.iri)",
+          [self.iri] of ::DB::Any,
+        }
+      else
+        {"", [] of ::DB::Any}
+      end
+    end
+
     # Translates an `Object.id` (external cursor) to its
     # `(published, id)` tuple (internal cursor for `known_posts`).
     # Returns nil for unknown / invalid ids so the caller falls
     # back to the first page.
     #
     private def translate_object_id_to_published_and_id(o_id : Int64, exclude_pinned = false) : {Time, Int64}?
-      pin_filter = exclude_pinned ? "AND NOT EXISTS (SELECT 1 FROM relationships AS p WHERE p.type = '#{Relationship::Content::Pin}' AND p.from_iri = ? AND p.to_iri = o.iri)" : ""
+      pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
       query = <<-QUERY
         SELECT o.published, o.id
           FROM objects AS o
@@ -1054,7 +1069,7 @@ module ActivityPub
            #{pin_filter}
       QUERY
       args = [self.iri, o_id] of ::DB::Any
-      args << self.iri if exclude_pinned
+      args.concat(pin_args)
       Ktistec.database.query_one?(query, args: args) do |rs|
         {rs.read(Time), rs.read(Int64)}
       end
@@ -1115,7 +1130,7 @@ module ActivityPub
       ascending = min_cursor && !max_cursor
       direction = ascending ? "ASC" : "DESC"
 
-      pin_filter = exclude_pinned ? "AND NOT EXISTS (SELECT 1 FROM relationships AS p WHERE p.type = '#{Relationship::Content::Pin}' AND p.from_iri = ? AND p.to_iri = o.iri)" : ""
+      pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
 
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
@@ -1130,7 +1145,7 @@ module ActivityPub
       QUERY
 
       args = [self.iri] of ::DB::Any
-      args << self.iri if exclude_pinned
+      args.concat(pin_args)
       args.concat(cursor_args)
       args << limit + 1
 
@@ -1188,51 +1203,28 @@ module ActivityPub
     # unknown ids.
     #
     private def translate_object_id_to_public_outbox_id(o_id : Int64, exclude_pinned = false) : Int64?
-      if exclude_pinned
-        query = <<-QUERY
-          SELECT MAX(r.id)
-            FROM objects AS o
-            JOIN actors AS t
-              ON t.iri = o.attributed_to_iri
-            JOIN activities AS a
-              ON a.object_iri = o.iri
-             AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-            JOIN relationships AS r
-              ON r.to_iri = a.iri
-             AND r.type = '#{Relationship::Content::Outbox}'
-           WHERE r.from_iri = ?
-             AND o.id = ?
-             AND o.visible = 1
-             AND o.in_reply_to_iri IS NULL
-             #{common_filters(objects: "o", actors: "t", activities: "a")}
-             AND NOT EXISTS (
-               SELECT 1 FROM relationships AS p
-                WHERE p.type = '#{Relationship::Content::Pin}'
-                  AND p.from_iri = ?
-                  AND p.to_iri = o.iri
-             )
-        QUERY
-        Object.scalar(query, self.iri, o_id, self.iri).as(Int64?)
-      else
-        query = <<-QUERY
-          SELECT MAX(r.id)
-            FROM objects AS o
-            JOIN actors AS t
-              ON t.iri = o.attributed_to_iri
-            JOIN activities AS a
-              ON a.object_iri = o.iri
-             AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-            JOIN relationships AS r
-              ON r.to_iri = a.iri
-             AND r.type = '#{Relationship::Content::Outbox}'
-           WHERE r.from_iri = ?
-             AND o.id = ?
-             AND o.visible = 1
-             AND o.in_reply_to_iri IS NULL
-             #{common_filters(objects: "o", actors: "t", activities: "a")}
-        QUERY
-        Object.scalar(query, self.iri, o_id).as(Int64?)
-      end
+      pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
+      query = <<-QUERY
+        SELECT MAX(r.id)
+          FROM objects AS o
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+          JOIN activities AS a
+            ON a.object_iri = o.iri
+           AND a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
+          JOIN relationships AS r
+            ON r.to_iri = a.iri
+           AND r.type = '#{Relationship::Content::Outbox}'
+         WHERE r.from_iri = ?
+           AND o.id = ?
+           AND o.visible = 1
+           AND o.in_reply_to_iri IS NULL
+           #{common_filters(objects: "o", actors: "t", activities: "a")}
+           #{pin_filter}
+      QUERY
+      args = [self.iri, o_id] of ::DB::Any
+      args.concat(pin_args)
+      Object.scalar(query, args: args).as(Int64?)
     end
 
     # Translates an `Object.id` (external cursor) to the canonical
@@ -1295,17 +1287,7 @@ module ActivityPub
     def public_posts(*, max_id = nil, min_id = nil, limit = 10, exclude_pinned = false)
       max_id = translate_object_id_to_public_outbox_id(max_id, exclude_pinned) if max_id
       min_id = translate_object_id_to_public_outbox_id(min_id, exclude_pinned) if min_id
-      pin_exclusion =
-        if exclude_pinned
-          <<-CLAUSE
-            AND NOT EXISTS (
-              SELECT 1 FROM relationships AS p
-               WHERE p.type = '#{Relationship::Content::Pin}'
-                 AND p.from_iri = ?
-                 AND p.to_iri = o.iri
-            )
-          CLAUSE
-        end
+      pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
       query = <<-QUERY
          SELECT #{Object.columns(prefix: "o")}
            FROM objects AS o
@@ -1332,14 +1314,12 @@ module ActivityPub
                  AND a2.object_iri = a.object_iri
                  AND r2.id > r.id
             )
-            #{pin_exclusion}
+            #{pin_filter}
             AND %{cursor_condition}
       QUERY
-      if exclude_pinned
-        Object.query_with_cursor(query, self.iri, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
-      else
-        Object.query_with_cursor(query, self.iri, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
-      end
+      args = [self.iri] of ::DB::Any
+      args.concat(pin_args)
+      Object.query_with_cursor(query, args: args, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     # Returns the actor's posts and shares.

@@ -344,12 +344,13 @@ module Ktistec
       #
       protected def query_with_cursor(
         query : String,
-        *args,
+        *args_,
         cursor_column : String,
         max_id : Int64? = nil,
         min_id : Int64? = nil,
         limit : Int32 = 10,
         additional_columns = NamedTuple.new,
+        args : Enumerable? = nil,
       )
         cursor_args = [] of Int64
         cursor_condition = [] of String
@@ -366,7 +367,7 @@ module Ktistec
         cursor_condition = cursor_condition.empty? ? "1" : cursor_condition.join(" AND ")
         main_query = query % {cursor_condition: cursor_condition}
         main_query += " ORDER BY #{cursor_column} #{direction} LIMIT ?"
-        all_args = args.to_a + cursor_args + [limit + 1]
+        all_args = (args || args_).to_a + cursor_args + [limit + 1]
         Internal.log_query(main_query, all_args) do
           result = Ktistec::Util::PaginatedArray(self).new
           Ktistec.database.query(main_query, args: all_args) do |rs|

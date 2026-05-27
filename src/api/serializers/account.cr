@@ -240,7 +240,7 @@ module API
       end
 
       private def self.last_status_at(actor : ActivityPub::Actor) : String?
-        unless (posts = actor.public_posts(page: 1, size: 1)).empty?
+        unless (posts = actor.public_posts(limit: 1)).empty?
           posts.first.published.try(&.to_s("%Y-%m-%d"))
         end
       end

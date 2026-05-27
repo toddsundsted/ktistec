@@ -1719,52 +1719,6 @@ Spectator.describe ActivityPub::Actor do
 
     describe "#in_outbox" do
       it "instantiates the correct subclass" do
-        expect(subject.in_outbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
-      end
-
-      it "filters out non-public posts" do
-        expect(subject.in_outbox(1, 2, public: true)).to be_empty
-      end
-
-      it "filters out deleted posts" do
-        note5.delete!
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out blocked posts" do
-        note5.block!
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out posts by deleted actors" do
-        activity5.assign(actor: deleted).save
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out posts by blocked actors" do
-        activity5.assign(actor: blocked).save
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out undone activities" do
-        activity5.undo!
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "includes replies" do
-        note5.assign(in_reply_to: note4).save
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
-      end
-
-      it "paginates the results" do
-        expect(subject.in_outbox(1, 2, public: false)).to eq([activity5, activity4])
-        expect(subject.in_outbox(2, 2, public: false)).to eq([activity3, activity2])
-        expect(subject.in_outbox(2, 2, public: false).has_next?).to be_true
-      end
-    end
-
-    describe "#in_outbox" do
-      it "instantiates the correct subclass" do
         expect(subject.in_outbox(limit: 2, public: false).first).to be_a(ActivityPub::Activity::Create)
       end
 
@@ -1896,52 +1850,6 @@ Spectator.describe ActivityPub::Actor do
     add_to_inbox(3)
     add_to_inbox(4)
     add_to_inbox(5)
-
-    describe "#in_inbox" do
-      it "instantiates the correct subclass" do
-        expect(subject.in_inbox(1, 2, public: false).first).to be_a(ActivityPub::Activity::Create)
-      end
-
-      it "filters out non-public posts" do
-        expect(subject.in_inbox(1, 2, public: true)).to be_empty
-      end
-
-      it "filters out deleted posts" do
-        note5.delete!
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out blocked posts" do
-        note5.block!
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out posts by deleted actors" do
-        activity5.assign(actor: deleted).save
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out posts by blocked actors" do
-        activity5.assign(actor: blocked).save
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "filters out undone activities" do
-        activity5.undo!
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity4, activity3])
-      end
-
-      it "includes replies" do
-        note5.assign(in_reply_to: note4).save
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
-      end
-
-      it "paginates the results" do
-        expect(subject.in_inbox(1, 2, public: false)).to eq([activity5, activity4])
-        expect(subject.in_inbox(2, 2, public: false)).to eq([activity3, activity2])
-        expect(subject.in_inbox(2, 2, public: false).has_next?).to be_true
-      end
-    end
 
     describe "#in_inbox" do
       it "instantiates the correct subclass" do
@@ -2121,67 +2029,6 @@ Spectator.describe ActivityPub::Actor do
     post(5)
 
     it "instantiates the correct subclass" do
-      expect(subject.known_posts(1, 2).first).to be_a(ActivityPub::Object)
-    end
-
-    it "filters out non-public posts" do
-      expect(subject.known_posts(1, 2)).to eq([post5, post3])
-    end
-
-    it "filters out deleted posts" do
-      post5.delete!
-      expect(subject.known_posts(1, 3)).to eq([post3, post1])
-    end
-
-    it "filters out blocked posts" do
-      post5.block!
-      expect(subject.known_posts(1, 3)).to eq([post3, post1])
-    end
-
-    it "filters out draft posts" do
-      post5.assign(published: nil).save
-      expect(subject.known_posts(1, 3)).to eq([post3, post1])
-    end
-
-    context "given a pinned post" do
-      let_create!(:pin_relationship, actor: subject, object: post1)
-
-      it "returns the pinned post first" do
-        expect(subject.known_posts(1, 3)).to eq([post1, post5, post3])
-      end
-
-      it "does not duplicate pinned posts" do
-        result = subject.known_posts(1, 10)
-        expect(result.to_a.count { |o| o.id == post1.id }).to eq(1)
-      end
-    end
-
-    it "paginates the results" do
-      expect(subject.known_posts(1, 2)).to eq([post5, post3])
-      expect(subject.known_posts(2, 2)).to eq([post1])
-      expect(subject.known_posts(2, 2).has_next?).not_to be_true
-    end
-  end
-
-  describe "#known_posts" do
-    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
-
-    macro post(index)
-      let_create!(
-        :object, named: post{{index}},
-        attributed_to: subject,
-        published: Time.utc(2016, 2, 15, 10, 20, {{index}}),
-        visible: {{index}}.odd?
-      )
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
-
-    it "instantiates the correct subclass" do
       expect(subject.known_posts(limit: 2).first).to be_a(ActivityPub::Object)
     end
 
@@ -2306,74 +2153,6 @@ Spectator.describe ActivityPub::Actor do
         post5.assign(published: nil).save
         expect(subject.pinned_posts).to eq([post3, post1])
       end
-    end
-  end
-
-  describe "#public_posts" do
-    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
-
-    macro post(index)
-      let_build(:actor, named: actor{{index}})
-      let_build(:object, named: object{{index}}, attributed_to: actor{{index}})
-      let_build(:announce, named: activity{{index}}, actor: subject, object: object{{index}})
-      let_create!(:outbox_relationship, named: outbox{{index}}, owner: subject, activity: activity{{index}})
-    end
-
-    post(1)
-    post(2)
-    post(3)
-    post(4)
-    post(5)
-
-    it "instantiates the correct subclass" do
-      expect(subject.public_posts(1, 2).first).to be_a(ActivityPub::Object)
-    end
-
-    it "filters out deleted posts" do
-      object5.delete!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out blocked posts" do
-      object5.block!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out posts by deleted actors" do
-      actor5.delete!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out posts by blocked actors" do
-      actor5.block!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out non-public posts" do
-      object5.assign(visible: false).save
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out replies" do
-      object5.assign(in_reply_to: object3).save
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "filters out posts belonging to undone activities" do
-      activity5.undo!
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    # only local (not cached) actors have an outbox
-    it "filters out posts that are not in an outbox" do
-      outbox5.destroy
-      expect(subject.public_posts(1, 2)).to eq([object4, object3])
-    end
-
-    it "paginates the results" do
-      expect(subject.public_posts(1, 2)).to eq([object5, object4])
-      expect(subject.public_posts(3, 2)).to eq([object1])
-      expect(subject.public_posts(3, 2).has_next?).not_to be_true
     end
   end
 

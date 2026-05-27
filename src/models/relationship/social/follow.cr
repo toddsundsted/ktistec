@@ -35,6 +35,16 @@ class Relationship
         QUERY
       end
 
+      private def self.follow_cursor_query(direction)
+        <<-QUERY
+          SELECT #{columns}
+            FROM relationships
+           WHERE type = '#{self}'
+             AND #{direction} = ?
+             AND %{cursor_condition}
+        QUERY
+      end
+
       private def self.follow_count_query(direction)
         <<-QUERY
           SELECT COUNT(*)
@@ -56,6 +66,17 @@ class Relationship
         query_and_paginate(query, actor_iri, page: page, size: size)
       end
 
+      # Returns followers.
+      #
+      # Returns relationships where the actor is being followed (`to_iri`).
+      #
+      # Results are ordered by most recent first.
+      #
+      def self.followers_for(actor_iri : String, *, max_id = nil, min_id = nil, limit = 10)
+        query = follow_cursor_query("to_iri")
+        query_with_cursor(query, actor_iri, cursor_column: "id", max_id: max_id, min_id: min_id, limit: limit)
+      end
+
       # Returns following.
       #
       # Returns relationships where the actor is following others (`from_iri`).
@@ -65,6 +86,17 @@ class Relationship
       def self.following_for(actor_iri : String, page = 1, size = 10)
         query = follow_query("from_iri")
         query_and_paginate(query, actor_iri, page: page, size: size)
+      end
+
+      # Returns following.
+      #
+      # Returns relationships where the actor is following others (`from_iri`).
+      #
+      # Results are ordered by most recent first.
+      #
+      def self.following_for(actor_iri : String, *, max_id = nil, min_id = nil, limit = 10)
+        query = follow_cursor_query("from_iri")
+        query_with_cursor(query, actor_iri, cursor_column: "id", max_id: max_id, min_id: min_id, limit: limit)
       end
 
       # Returns count of followers.

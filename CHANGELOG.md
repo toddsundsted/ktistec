@@ -1,6 +1,21 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.4.0]
+### Added
+- Cursor-based pagination for web-navigable collections. (fixes [#122](https://github.com/toddsundsted/ktistec/issues/122))
+- Mastodon-compatible API: `/api/v1/timelines/tag/:hashtag` endpoint.
+
+### Fixed
+- Negative replies count when viewing a post that is also a reply.
+- Order cached actors' posts by `published` rather than `id`.
+
+### Changed
+- Report 401 and 403 as distinct errors in `Ktistec::Network.get`.
+
+### Removed
+- Unused paginated query methods.
+
 ## [v3.3.9]
 ### Added
 - New Mastodon-compatible APIs.
@@ -782,6 +797,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.4.0]: https://github.com/toddsundsted/ktistec/compare/e882df3b...7461a3e2
 [v3.3.9]: https://github.com/toddsundsted/ktistec/compare/d73c518c...5cd1c665
 [v3.3.8]: https://github.com/toddsundsted/ktistec/compare/a9c7c0ba...7f7de3d5
 [v3.3.7]: https://github.com/toddsundsted/ktistec/compare/0de33ac0...408900a5

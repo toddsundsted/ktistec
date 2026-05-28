@@ -296,34 +296,6 @@ module Ktistec
         {% end %}
       end
 
-      # Executes an offset-based paginated query.
-      #
-      # The query must include `LIMIT ? OFFSET ?` placeholders as the
-      # last two bind parameters.
-      #
-      # Parameters:
-      # - `query`: SQL query
-      # - `*args`: Bind parameters for the query
-      # - `page`: Page number (default 1, 1-indexed)
-      # - `size`: Number of items per page (default 10)
-      # - `additional_columns`: Extra columns to read from the result set
-      #
-      protected def query_and_paginate(query, *args, additional_columns = NamedTuple.new, page = 1, size = 10)
-        Internal.log_query(query, {*args, size.to_i + 1, ((page - 1) * size).to_i}) do
-          Ktistec::Util::PaginatedArray(self).new.tap do |array|
-            Ktistec.database.query(
-              query, *args, size.to_i + 1, ((page - 1) * size).to_i,
-            ) do |rs|
-              rs.each { array << compose(rs, **additional_columns) }
-            end
-            if array.size > size
-              array.has_next = true
-              array.pop
-            end
-          end
-        end
-      end
-
       # Executes a cursor-based paginated query.
       #
       # The query must include a placeholder `%{cursor_condition}`

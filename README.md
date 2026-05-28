@@ -895,15 +895,16 @@ day/week/month.
 - `name` (string, required) - Name of the collection to count.
 - `since` (string, required) - RFC3339 timestamp to count from (e.g., `2024-01-01T00:00:00Z`)
 
-#### paginate\_collection(name, page, size)
+#### paginate\_collection(name, older\_than, newer\_than, limit)
 
 Paginate through collections of ActivityPub items. Use this tool when
 you want to retrieve the items in a collection.
 
 **Parameters:**
 - `name` (string, required) - Name of the collection to paginate
-- `page` (integer, optional) - Page number (defaults to 1, minimum 1)
-- `size` (integer, optional) - Number of items per page (defaults to 10, minimum 1, maximum 20)
+- `older_than` (integer, optional) - Return items older than this cursor
+- `newer_than` (integer, optional) - Return items newer than this cursor
+- `limit` (integer, optional) - Number of items per page (defaults to 10, minimum 1, maximum 20)
 
 #### read\_resources(uris)
 

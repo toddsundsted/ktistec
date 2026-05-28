@@ -1,16 +1,5 @@
 module Ktistec::ViewHelper
   module ClassMethods
-    # NOTE: This method is redefined when running tests. It sets the
-    # `max_size` to 20, regardless of account authentication.
-
-    def pagination_params(env)
-      max_size = env.account? ? 1000 : 20
-      {
-        page: Math.max(env.params.query["page"]?.try(&.to_i) || 1, 1),
-        size: Math.min(env.params.query["size"]?.try(&.to_i) || 10, max_size),
-      }
-    end
-
     def cursor_pagination_params(env)
       max_limit = env.account? ? 1000 : 20
       {
@@ -52,13 +41,8 @@ module Ktistec::ViewHelper
     end
 
     def paginate(env, collection, content_io)
-      query = env.params.query
-      if collection.cursor_start
-        partial "partials/cursor_paginator"
-      else
-        page = (p = query["page"]?) && (p = p.to_i) > 0 ? p : 1 # ameba:disable Lint/UselessAssign
-        partial "partials/paginator"
-      end
+      query = env.params.query # ameba:disable Lint/UselessAssign
+      partial "partials/cursor_paginator"
     end
   end
 end

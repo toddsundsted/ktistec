@@ -9,6 +9,8 @@ module Ktistec
       String
       Int
       Float
+      Bool
+      Null
       Constant
       Identifier
       Operator
@@ -17,11 +19,13 @@ module Ktistec
 
     getter type, value
 
-    delegate to_s, to: value
-
     # Creates a new token.
     #
-    def initialize(@type : Type, @value : String | Int64 | Float64 | Nil = nil)
+    def initialize(@type : Type, @value : String | Int64 | Float64 | Bool | Nil = nil)
+    end
+
+    def to_s : ::String
+      @type.null? ? "nil" : @value.to_s
     end
 
     def eoi?
@@ -50,6 +54,18 @@ module Ktistec
 
     def as_f
       @value.as(Float).to_f64
+    end
+
+    def bool?
+      Type::Bool == @type
+    end
+
+    def as_bool
+      @value.as(Bool)
+    end
+
+    def null?
+      Type::Null == @type
     end
 
     def constant?
@@ -159,7 +175,14 @@ module Ktistec
         when 'a'..'z'
           start = @index
           forward_while(&.in_set?("a-zA-Z0-9_"))
-          return @token = Token.new(Token::Type::Identifier, @input[start..@index - 1])
+          text = @input[start..@index - 1]
+          return @token =
+            case text
+            when "true"  then Token.new(Token::Type::Bool, true)
+            when "false" then Token.new(Token::Type::Bool, false)
+            when "nil"   then Token.new(Token::Type::Null, nil)
+            else              Token.new(Token::Type::Identifier, text)
+            end
         else
           @index += 1
           return @token = Token.new(Token::Type::Operator, @input[@index - 1].to_s)

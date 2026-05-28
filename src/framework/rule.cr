@@ -29,17 +29,19 @@ module Ktistec
     ) : ConditionPair?
       case expression
       when School::Lit
-        if (term = block.call expression.target)
-          { %Q|"#{table}"."#{column}" = ?|, term }
-        else
+        case (term = block.call expression.target)
+        when nil
           { %Q|"#{table}"."#{column}" IS NULL|, nil }
+        else
+          { %Q|"#{table}"."#{column}" = ?|, term }
         end
       when School::Var
         if bindings.has_key?(expression.name)
-          if (term = block.call bindings[expression.name])
-            { %Q|"#{table}"."#{column}" = ?|, term }
-          else
+          case (term = block.call bindings[expression.name])
+          when nil
             { %Q|"#{table}"."#{column}" IS NULL|, nil }
+          else
+            { %Q|"#{table}"."#{column}" = ?|, term }
           end
         else
           { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
@@ -48,17 +50,19 @@ module Ktistec
         target = expression.target
         case target
         when School::Lit
-          if (term = block.call target.target)
-            { %Q|"#{table}"."#{column}" != ?|, term }
-          else
+          case (term = block.call target.target)
+          when nil
             { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
+          else
+            { %Q|"#{table}"."#{column}" != ?|, term }
           end
         when School::Var
           if bindings.has_key?(target.name)
-            if (term = block.call bindings[target.name])
-              { %Q|"#{table}"."#{column}" != ?|, term }
-            else
+            case (term = block.call bindings[target.name])
+            when nil
               { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
+            else
+              { %Q|"#{table}"."#{column}" != ?|, term }
             end
           else
             { %Q|"#{table}"."#{column}" IS NULL|, nil }
@@ -67,26 +71,31 @@ module Ktistec
       when School::Within
         # if within contains an unbound var it will
         # effectively match anything. `wildcard` tracks
-        # that.
+        # that. `nil` targets are pulled out of the IN
+        # list and OR'd with `col IS NULL`. `has_nil`
+        # tracks that.
         wildcard = false
+        has_nil = false
         params = [] of String
         values = [] of SupportedType
         expression.targets.each do |tgt|
           case tgt
           when School::Lit
-            if (term = block.call tgt.target)
+            case (term = block.call tgt.target)
+            when nil
+              has_nil = true
+            else
               params << "?"
               values << term
-            else
-              params << "NULL"
             end
           when School::Var
             if bindings.has_key?(tgt.name)
-              if (term = block.call bindings[tgt.name])
+              case (term = block.call bindings[tgt.name])
+              when nil
+                has_nil = true
+              else
                 params << "?"
                 values << term
-              else
-                params << "NULL"
               end
             else
               wildcard = true
@@ -95,6 +104,10 @@ module Ktistec
         end
         if wildcard
           { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
+        elsif params.empty? && has_nil
+          { %Q|"#{table}"."#{column}" IS NULL|, nil }
+        elsif has_nil
+          { %Q|("#{table}"."#{column}" IN (#{params.join(',')}) OR "#{table}"."#{column}" IS NULL)|, values }
         else
           { %Q|"#{table}"."#{column}" IN (#{params.join(',')})|, values }
         end
@@ -102,26 +115,29 @@ module Ktistec
         target = expression.target
         case target
         when School::Lit
-          if (term = block.call target.target)
-            { %Q|"#{table}"."#{column}" = strip(?)|, term }
-          else
+          case (term = block.call target.target)
+          when nil
             { %Q|"#{table}"."#{column}" IS NULL|, nil }
+          else
+            { %Q|"#{table}"."#{column}" = strip(?)|, term }
           end
         when School::Var
           if bindings.has_key?(target.name)
-            if (term = block.call bindings[target.name])
-              { %Q|"#{table}"."#{column}" = strip(?)|, term }
-            else
+            case (term = block.call bindings[target.name])
+            when nil
               { %Q|"#{table}"."#{column}" IS NULL|, nil }
+            else
+              { %Q|"#{table}"."#{column}" = strip(?)|, term }
             end
           else
             { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
           end
         when School::Accessor
-          if (term = block.call target.call(bindings))
-            { %Q|"#{table}"."#{column}" = strip(?)|, term }
-          else
+          case (term = block.call target.call(bindings))
+          when nil
             { %Q|"#{table}"."#{column}" IS NULL|, nil }
+          else
+            { %Q|"#{table}"."#{column}" = strip(?)|, term }
           end
         else
           raise "#{target.class} is unsupported"
@@ -130,51 +146,57 @@ module Ktistec
         target = expression.target
         case target
         when School::Lit
-          if (term = block.call target.target)
-            { %Q|like("#{table}"."#{column}", ?, '\\')|, term }
-          else
+          case (term = block.call target.target)
+          when nil
             { %Q|"#{table}"."#{column}" IS NULL|, nil }
+          else
+            { %Q|like("#{table}"."#{column}", ?, '\\')|, term }
           end
         when School::Var
           if bindings.has_key?(target.name)
-            if (term = block.call bindings[target.name])
-              { %Q|like("#{table}"."#{column}", ?, '\\')|, term }
-            else
+            case (term = block.call bindings[target.name])
+            when nil
               { %Q|"#{table}"."#{column}" IS NULL|, nil }
+            else
+              { %Q|like("#{table}"."#{column}", ?, '\\')|, term }
             end
           else
             { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
           end
         when School::Accessor
-          if (term = block.call target.call(bindings))
-            { %Q|like("#{table}"."#{column}", ?, '\\')|, term }
-          else
+          case (term = block.call target.call(bindings))
+          when nil
             { %Q|"#{table}"."#{column}" IS NULL|, nil }
+          else
+            { %Q|like("#{table}"."#{column}", ?, '\\')|, term }
           end
         when Ktistec::Function::Strip
           target = target.target
           case target
           when School::Lit
-            if (term = block.call target.target)
-              { %Q|like("#{table}"."#{column}", strip(?), '\\')|, term }
-            else
+            case (term = block.call target.target)
+            when nil
               { %Q|"#{table}"."#{column}" IS NULL|, nil }
+            else
+              { %Q|like("#{table}"."#{column}", strip(?), '\\')|, term }
             end
           when School::Var
             if bindings.has_key?(target.name)
-              if (term = block.call bindings[target.name])
-                { %Q|like("#{table}"."#{column}", strip(?), '\\')|, term }
-              else
+              case (term = block.call bindings[target.name])
+              when nil
                 { %Q|"#{table}"."#{column}" IS NULL|, nil }
+              else
+                { %Q|like("#{table}"."#{column}", strip(?), '\\')|, term }
               end
             else
               { %Q|"#{table}"."#{column}" IS NOT NULL|, nil }
             end
           when School::Accessor
-            if (term = block.call target.call(bindings))
-              { %Q|like("#{table}"."#{column}", strip(?), '\\')|, term }
-            else
+            case (term = block.call target.call(bindings))
+            when nil
               { %Q|"#{table}"."#{column}" IS NULL|, nil }
+            else
+              { %Q|like("#{table}"."#{column}", strip(?), '\\')|, term }
             end
           else
             raise "#{target.class} is unsupported"
@@ -183,10 +205,11 @@ module Ktistec
           raise "#{target.class} is unsupported"
         end
       when School::Accessor
-        if (term = block.call expression.call(bindings))
-          { %Q|"#{table}"."#{column}" = ?|, term }
-        else
+        case (term = block.call expression.call(bindings))
+        when nil
           { %Q|"#{table}"."#{column}" IS NULL|, nil }
+        else
+          { %Q|"#{table}"."#{column}" = ?|, term }
         end
       else
         raise "#{expression.class} is unsupported"
@@ -374,7 +397,8 @@ module Ktistec
                 {% for property in properties %}
                   if @options.has_key?({{property.id.stringify}})
                     if (target = @options[{{property.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
-                      break unless (value = model.{{property.id}})
+                      value = model.{{property.id}}
+                      break if value.nil?
                       temporary[name] = value
                     end
                   end

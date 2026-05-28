@@ -68,6 +68,24 @@ Spectator.describe Ktistec::Lexer do
       expect(lexer.token.as_f).to eq(+123.4)
     end
 
+    it "is a literal true" do
+      lexer = described_class.new("true")
+      expect(lexer.advance.bool?).to be_true
+      expect(lexer.token.as_bool).to be_true
+    end
+
+    it "is a literal false" do
+      lexer = described_class.new("false")
+      expect(lexer.advance.bool?).to be_true
+      expect(lexer.token.as_bool).to be_false
+    end
+
+    it "is a literal nil" do
+      lexer = described_class.new("nil")
+      expect(lexer.advance.null?).to be_true
+      expect(lexer.token.value).to be_nil
+    end
+
     it "is a constant" do
       lexer = described_class.new("Constant")
       expect(lexer.advance.constant?).to be_true
@@ -78,6 +96,18 @@ Spectator.describe Ktistec::Lexer do
       lexer = described_class.new("identifier")
       expect(lexer.advance.identifier?).to be_true
       expect(lexer.token.as_s).to eq("identifier")
+    end
+
+    it "is an identifier" do
+      lexer = described_class.new("truely")
+      expect(lexer.advance.identifier?).to be_true
+      expect(lexer.token.as_s).to eq("truely")
+    end
+
+    it "is an identifier" do
+      lexer = described_class.new("nilly")
+      expect(lexer.advance.identifier?).to be_true
+      expect(lexer.token.as_s).to eq("nilly")
     end
 
     it "is an operator" do
@@ -110,7 +140,7 @@ Spectator.describe Ktistec::Lexer do
     end
 
     def analyze_fully(lexer)
-      results = [] of {Symbol, String | Int64 | Float64}
+      results = [] of {Symbol, String | Int64 | Float64 | Bool | Nil}
       until lexer.advance.eoi?
         case lexer.token.type
         in Ktistec::Token::Type::EOI
@@ -123,6 +153,10 @@ Spectator.describe Ktistec::Lexer do
           results << {:int, lexer.token.as_i}
         in Ktistec::Token::Type::Float
           results << {:float, lexer.token.as_f}
+        in Ktistec::Token::Type::Bool
+          results << {:bool, lexer.token.as_bool}
+        in Ktistec::Token::Type::Null
+          results << {:null, nil}
         in Ktistec::Token::Type::Constant
           results << {:constant, lexer.token.as_s}
         in Ktistec::Token::Type::Identifier
@@ -152,6 +186,11 @@ Spectator.describe Ktistec::Lexer do
     it "ignores comments" do
       lexer = described_class.new(%q|12.3 # comment|)
       expect(analyze_fully(lexer)).to eq([{:float, 12.3}])
+    end
+
+    it "handles successive literals" do
+      lexer = described_class.new("true false nil")
+      expect(analyze_fully(lexer)).to eq([{:bool, true}, {:bool, false}, {:null, nil}])
     end
   end
 end

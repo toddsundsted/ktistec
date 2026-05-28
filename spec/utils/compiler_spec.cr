@@ -207,6 +207,35 @@ Spectator.describe Ktistec::Compiler do
       end
     end
 
+    context "given a rule with keyword literals" do
+      let(input) do
+        <<-END
+          rule "name"
+            condition FooBar, true, foo: false
+            condition FooBar, nil, foo: nil
+          end
+        END
+      end
+
+      let(conditions) { subject.compile.rules.first.conditions.map(&.as(CompilerSpec::FooBar)) }
+
+      it "compiles true as a literal" do
+        expect(conditions[0].target).to eq(School::Lit.new(true))
+      end
+
+      it "compiles false as a literal option value" do
+        expect(conditions[0].options).to eq({"foo" => School::Lit.new(false)})
+      end
+
+      it "compiles nil as a literal" do
+        expect(conditions[1].target).to eq(School::Lit.new(nil))
+      end
+
+      it "compiles nil as a literal option value" do
+        expect(conditions[1].options).to eq({"foo" => School::Lit.new(nil)})
+      end
+    end
+
     context "given a rule with 'within'" do
       let(input) do
         <<-END

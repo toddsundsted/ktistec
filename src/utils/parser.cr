@@ -252,7 +252,7 @@ module Ktistec
         case token.type
         in Token::Type::EOI
           @nodes["(end)"].clone
-        in Token::Type::String, Token::Type::Int, Token::Type::Float
+        in Token::Type::String, Token::Type::Int, Token::Type::Float, Token::Type::Bool, Token::Type::Null
           @nodes["(literal)"].clone.tap do |node|
             node.id = token.to_s
           end

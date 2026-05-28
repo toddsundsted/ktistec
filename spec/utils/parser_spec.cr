@@ -181,6 +181,24 @@ Spectator.describe Ktistec::Parser do
       expect(parser.current).to be_a(Ktistec::Identifier)
     end
 
+    it "is a literal true" do
+      parser = described_class.new("true")
+      expect(parser.current).to be_a(Ktistec::Literal)
+      expect(parser.current.token.value).to be_true
+    end
+
+    it "is a literal false" do
+      parser = described_class.new("false")
+      expect(parser.current).to be_a(Ktistec::Literal)
+      expect(parser.current.token.value).to be_false
+    end
+
+    it "is a literal nil" do
+      parser = described_class.new("nil")
+      expect(parser.current).to be_a(Ktistec::Literal)
+      expect(parser.current.token.value).to be_nil
+    end
+
     it "is an operator" do
       parser = described_class.new(".")
       expect { parser.current }.to be_a(Ktistec::Operator)

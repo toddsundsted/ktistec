@@ -42,6 +42,7 @@ Spectator.describe ContentRules do
   let_create(:update, actor: other, object: object)
   let_create(:announce, actor: other, object: object)
   let_create(:like, actor: other, object: object)
+  let_create(:dislike, actor: other, object: object)
   let_create(:follow, actor: other, object: owner)
   let_create(:delete, actor: other, object: object)
   let_create(:undo, actor: other)
@@ -177,6 +178,11 @@ Spectator.describe ContentRules do
         expect(owner.notifications).to be_empty
       end
 
+      it "does not add the dislike to the notifications" do
+        run(owner, dislike)
+        expect(owner.notifications).to be_empty
+      end
+
       it "adds the follow to the notifications" do
         run(owner, follow)
         expect(owner.notifications.map(&.object_or_activity)).to eq([follow])
@@ -294,6 +300,20 @@ Spectator.describe ContentRules do
             expect(owner.notifications.map(&.object_or_activity)).to eq([object.in_reply_to])
           end
 
+          context "and the activity's actor is blocked" do
+            let_build(:actor, named: op)
+
+            before_each do
+              parent.assign(attributed_to: op).save
+              other.assign(blocked_at: Time.utc).save
+            end
+
+            it "does not add the reply to the notifications" do
+              run(owner, announce)
+              expect(owner.notifications.map(&.object_or_activity)).not_to have(object.in_reply_to)
+            end
+          end
+
           context "but object is not the root of the thread" do
             before_each { object.assign(in_reply_to_iri: "https://remote/uncached") }
 
@@ -386,6 +406,15 @@ Spectator.describe ContentRules do
             expect(owner.notifications.map(&.to_iri)).to have("foo")
           end
 
+          context "and the activity's actor is blocked" do
+            before_each { other.assign(blocked_at: Time.utc).save }
+
+            it "does not add the hashtag to the notifications" do
+              run(owner, announce)
+              expect(owner.notifications.map(&.to_iri)).not_to have("foo")
+            end
+          end
+
           context "and 'bar' is followed by the owner" do
             let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "bar")
 
@@ -461,6 +490,15 @@ Spectator.describe ContentRules do
           it "adds the object to the notifications" do
             run(owner, announce)
             expect(owner.notifications.map(&.to_iri)).to have("foo@remote.com")
+          end
+
+          context "and the activity's actor is blocked" do
+            before_each { other.assign(blocked_at: Time.utc).save }
+
+            it "does not add the object to the notifications" do
+              run(owner, announce)
+              expect(owner.notifications.map(&.to_iri)).not_to have("foo@remote.com")
+            end
           end
 
           context "and 'bar@remote.com' is followed by the owner" do
@@ -545,6 +583,30 @@ Spectator.describe ContentRules do
           run(owner, like)
           expect(owner.notifications.map(&.object_or_activity)).to eq([like])
         end
+
+        it "adds the dislike to the notifications" do
+          run(owner, dislike)
+          expect(owner.notifications.map(&.object_or_activity)).to eq([dislike])
+        end
+
+        context "and the activity's actor is blocked" do
+          before_each { other.assign(blocked_at: Time.utc).save }
+
+          it "does not add the announce to the notifications" do
+            run(owner, announce)
+            expect(owner.notifications).to be_empty
+          end
+
+          it "does not add the like to the notifications" do
+            run(owner, like)
+            expect(owner.notifications).to be_empty
+          end
+
+          it "does not add the dislike to the notifications" do
+            run(owner, dislike)
+            expect(owner.notifications).to be_empty
+          end
+        end
       end
 
       context "another object is attributed to the owner" do
@@ -557,6 +619,11 @@ Spectator.describe ContentRules do
 
         it "does not add the like to the notifications" do
           run(owner, like)
+          expect(owner.notifications).to be_empty
+        end
+
+        it "does not add the dislike to the notifications" do
+          run(owner, dislike)
           expect(owner.notifications).to be_empty
         end
       end
@@ -598,6 +665,15 @@ Spectator.describe ContentRules do
         it "does not add a duplicate hashtag to the notifications" do
           run(owner, announce)
           expect(owner.notifications.map(&.to_iri)).to eq(["hashtag"])
+        end
+
+        context "and the new activity is from a blocked actor" do
+          before_each { other.assign(blocked_at: Time.utc).save }
+
+          it "does not remove the previous notification from the notifications" do
+            run(owner, announce)
+            expect(owner.notifications).to have(notification_follow_hashtag)
+          end
         end
       end
 
@@ -654,6 +730,15 @@ Spectator.describe ContentRules do
         it "does not add a duplicate mention to the notifications" do
           run(owner, announce)
           expect(owner.notifications.map(&.to_iri)).to eq(["mention@remote.com"])
+        end
+
+        context "and the new activity is from a blocked actor" do
+          before_each { other.assign(blocked_at: Time.utc).save }
+
+          it "does not remove the previous notification from the notifications" do
+            run(owner, announce)
+            expect(owner.notifications).to have(notification_follow_mention)
+          end
         end
       end
 
@@ -712,6 +797,20 @@ Spectator.describe ContentRules do
         it "does not add another object to the notifications" do
           run(owner, announce)
           expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
+        end
+
+        context "and the new activity is from a blocked actor" do
+          let_build(:actor, named: op)
+
+          before_each do
+            origin.assign(attributed_to: op).save
+            other.assign(blocked_at: Time.utc).save
+          end
+
+          it "does not remove the previous notification from the notifications" do
+            run(owner, announce)
+            expect(owner.notifications).to have(notification_follow_thread)
+          end
         end
       end
 
@@ -900,6 +999,20 @@ Spectator.describe ContentRules do
         run(owner, announce)
         expect(owner.notifications.map(&.object_or_activity)).not_to have(another)
       end
+
+      context "and the new announce is from a blocked actor" do
+        before_each { other.assign(blocked_at: Time.utc).save }
+
+        it "does not add the new announce to the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).not_to have(announce)
+        end
+
+        it "does not remove the previous announce from the notifications" do
+          run(owner, announce)
+          expect(owner.notifications.map(&.object_or_activity)).to have(another)
+        end
+      end
     end
 
     context "given notifications with a like already added" do
@@ -944,6 +1057,79 @@ Spectator.describe ContentRules do
       it "removes the previous like from the notifications" do
         run(owner, like)
         expect(owner.notifications.map(&.object_or_activity)).not_to have(another)
+      end
+
+      context "and the new like is from a blocked actor" do
+        before_each { other.assign(blocked_at: Time.utc).save }
+
+        it "does not add the new like to the notifications" do
+          run(owner, like)
+          expect(owner.notifications.map(&.object_or_activity)).not_to have(like)
+        end
+
+        it "does not remove the previous like from the notifications" do
+          run(owner, like)
+          expect(owner.notifications.map(&.object_or_activity)).to have(another)
+        end
+      end
+    end
+
+    context "given notifications with a dislike already added" do
+      before_each do
+        undo.assign(object: dislike).save
+        put_in_notifications(owner, dislike)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([dislike]) }
+
+      it "does not add the dislike to the notifications" do
+        run(owner, dislike)
+        expect(owner.notifications.map(&.object_or_activity)).to eq([dislike])
+      end
+
+      it "removes the dislike from the notifications" do
+        run(owner, undo)
+        expect(Notification.where(from_iri: owner.iri)).to be_empty
+      end
+
+      it "does not remove the dislike from the notifications" do
+        run(owner, delete)
+        expect(owner.notifications.map(&.object_or_activity)).to eq([dislike])
+      end
+    end
+
+    context "given notifications with another dislike for the same object" do
+      let_create(:dislike, named: another, object: object)
+      let_create!(:notification_dislike, owner: owner, activity: another)
+
+      before_each do
+        object.assign(attributed_to: owner)
+      end
+
+      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([another]) }
+
+      it "adds the dislike to the notifications" do
+        run(owner, dislike)
+        expect(owner.notifications.map(&.object_or_activity)).to have(dislike)
+      end
+
+      it "removes the previous dislike from the notifications" do
+        run(owner, dislike)
+        expect(owner.notifications.map(&.object_or_activity)).not_to have(another)
+      end
+
+      context "and the new dislike is from a blocked actor" do
+        before_each { other.assign(blocked_at: Time.utc).save }
+
+        it "does not add the new dislike to the notifications" do
+          run(owner, dislike)
+          expect(owner.notifications.map(&.object_or_activity)).not_to have(dislike)
+        end
+
+        it "does not remove the previous dislike from the notifications" do
+          run(owner, dislike)
+          expect(owner.notifications.map(&.object_or_activity)).to have(another)
+        end
       end
     end
 

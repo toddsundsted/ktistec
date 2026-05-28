@@ -398,6 +398,7 @@ module Ktistec
                   if @options.has_key?({{property.id.stringify}})
                     if (target = @options[{{property.id.stringify}}]) && (name = target.name?) && !temporary.has_key?(name)
                       value = model.{{property.id}}
+                      break unless value.is_a?(Ktistec::Rule::SupportedType)
                       break if value.nil?
                       temporary[name] = value
                     end

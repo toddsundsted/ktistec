@@ -174,7 +174,8 @@ end
 
 rule "announce, step 1"
   condition activity, InMailboxOf, actor
-  condition AnnounceActivity, activity, object: object
+  condition AnnounceActivity, activity, object: object, actor: sender
+  condition Actor, sender, blocked_at: nil
   condition Object, object, attributed_to: actor
   # remove any previous notifications about this object
   condition AnnounceActivity, previous, object: object
@@ -184,7 +185,8 @@ end
 
 rule "announce, step 2"
   condition activity, InMailboxOf, actor
-  condition AnnounceActivity, activity, object: object
+  condition AnnounceActivity, activity, object: object, actor: sender
+  condition Actor, sender, blocked_at: nil
   condition Object, object, attributed_to: actor
   none NotificationAnnounce, owner: actor, activity: activity
   assert NotificationAnnounce, owner: actor, activity: activity
@@ -199,7 +201,8 @@ end
 
 rule "like, step 1"
   condition activity, InMailboxOf, actor
-  condition LikeActivity, activity, object: object
+  condition LikeActivity, activity, object: object, actor: sender
+  condition Actor, sender, blocked_at: nil
   condition Object, object, attributed_to: actor
   # remove any previous notifications about this object
   condition LikeActivity, previous, object: object
@@ -209,7 +212,8 @@ end
 
 rule "like, step 2"
   condition activity, InMailboxOf, actor
-  condition LikeActivity, activity, object: object
+  condition LikeActivity, activity, object: object, actor: sender
+  condition Actor, sender, blocked_at: nil
   condition Object, object, attributed_to: actor
   none NotificationLike, owner: actor, activity: activity
   assert NotificationLike, owner: actor, activity: activity
@@ -224,7 +228,8 @@ end
 
 rule "dislike, step 1"
   condition activity, InMailboxOf, actor
-  condition DislikeActivity, activity, object: object
+  condition DislikeActivity, activity, object: object, actor: sender
+  condition Actor, sender, blocked_at: nil
   condition Object, object, attributed_to: actor
   # remove any previous notifications about this object
   condition DislikeActivity, previous, object: object
@@ -234,7 +239,8 @@ end
 
 rule "dislike, step 2"
   condition activity, InMailboxOf, actor
-  condition DislikeActivity, activity, object: object
+  condition DislikeActivity, activity, object: object, actor: sender
+  condition Actor, sender, blocked_at: nil
   condition Object, object, attributed_to: actor
   none NotificationDislike, owner: actor, activity: activity
   assert NotificationDislike, owner: actor, activity: activity
@@ -267,7 +273,8 @@ end
 
 rule "incoming activity for object"
   condition Incoming, actor, activity
-  condition ObjectActivity, activity, object: object
+  condition ObjectActivity, activity, object: object, actor: sender
+  condition Actor, sender, blocked_at: nil
   none ObjectActivity, not activity, object: object
   assert CheckFollowFor, actor, object
 end

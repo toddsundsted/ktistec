@@ -20,7 +20,7 @@ require "../utils/compiler"
 class ContentRules
   # patterns and facts for the rules below
 
-  Ktistec::Rule.make_pattern(Actor, ActivityPub::Actor, properties: [:iri, :followers, :following])
+  Ktistec::Rule.make_pattern(Actor, ActivityPub::Actor, properties: [:iri, :followers, :following, :blocked_at])
   Ktistec::Rule.make_pattern(Activity, ActivityPub::Activity, associations: [:actor])
   Ktistec::Rule.make_pattern(ObjectActivity, ActivityPub::Activity::ObjectActivity, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(Object, ActivityPub::Object, associations: [:in_reply_to, :attributed_to], properties: [:iri, :content, :thread])
@@ -28,8 +28,8 @@ class ContentRules
   Ktistec::Rule.make_pattern(Mention, Tag::Mention, associations: [subject], properties: [name, href])
   Ktistec::Rule.make_pattern(CreateActivity, ActivityPub::Activity::Create, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(AnnounceActivity, ActivityPub::Activity::Announce, associations: [:actor, :object])
-  Ktistec::Rule.make_pattern(LikeActivity, ActivityPub::Activity::Like, associations: [:object])
-  Ktistec::Rule.make_pattern(DislikeActivity, ActivityPub::Activity::Dislike, associations: [:object])
+  Ktistec::Rule.make_pattern(LikeActivity, ActivityPub::Activity::Like, associations: [:actor, :object])
+  Ktistec::Rule.make_pattern(DislikeActivity, ActivityPub::Activity::Dislike, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(FollowActivity, ActivityPub::Activity::Follow, associations: [:object])
   Ktistec::Rule.make_pattern(DeleteActivity, ActivityPub::Activity::Delete, associations: [:object])
   Ktistec::Rule.make_pattern(UndoActivity, ActivityPub::Activity::Undo, associations: [:object])

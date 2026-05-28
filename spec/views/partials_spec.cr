@@ -23,14 +23,14 @@ Spectator.describe "partials" do
     subject { JSON.parse(render "./src/views/partials/collection.json.ecr") }
 
     context "when paginated" do
-      let(query) { "?page=1&size=2" }
+      let(query) { "?max_id=100" }
 
       it "renders a collection page" do
         expect(subject.dig("type")).to eq("OrderedCollectionPage")
       end
 
       it "contains the id of the collection page" do
-        expect(subject.dig("id")).to eq("#{Ktistec.host}/collection?page=1&size=2")
+        expect(subject.dig("id")).to eq("#{Ktistec.host}/collection?max_id=100")
       end
 
       it "contains a page of items" do
@@ -42,19 +42,25 @@ Spectator.describe "partials" do
         expect(subject.dig?("next")).to be_nil
       end
 
-      context "and on the second page" do
-        let(query) { "?page=2&size=2" }
+      context "and has a previous page" do
+        before_each do
+          collection.cursor_start = 200_i64
+          collection.has_prev = true
+        end
 
         it "contains a link to the previous page" do
-          expect(subject.dig?("prev")).to eq("#{Ktistec.host}/collection?page=1&size=2")
+          expect(subject.dig?("prev")).to eq("#{Ktistec.host}/collection?min_id=200")
         end
       end
 
       context "and contains more" do
-        before_each { collection.has_next = true }
+        before_each do
+          collection.cursor_end = 50_i64
+          collection.has_next = true
+        end
 
         it "contains a link to the next page" do
-          expect(subject.dig?("next")).to eq("#{Ktistec.host}/collection?page=2&size=2")
+          expect(subject.dig?("next")).to eq("#{Ktistec.host}/collection?max_id=50")
         end
       end
     end
@@ -79,7 +85,7 @@ Spectator.describe "partials" do
       end
 
       it "contains the first collection page" do
-        expect(subject.dig("first", "id")).to eq("#{Ktistec.host}/collection?page=1")
+        expect(subject.dig("first", "id")).to eq("#{Ktistec.host}/collection")
       end
 
       it "contains the first collection page of items" do
@@ -92,10 +98,13 @@ Spectator.describe "partials" do
       end
 
       context "and contains more" do
-        before_each { collection.has_next = true }
+        before_each do
+          collection.cursor_end = 50_i64
+          collection.has_next = true
+        end
 
         it "contains a link to the next page" do
-          expect(subject.dig?("first", "next")).to eq("#{Ktistec.host}/collection?page=2")
+          expect(subject.dig?("first", "next")).to eq("#{Ktistec.host}/collection?max_id=50")
         end
       end
     end

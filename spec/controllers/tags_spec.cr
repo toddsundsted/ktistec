@@ -103,10 +103,10 @@ Spectator.describe TagsController do
           expect(response.body).to contain("turbo-stream-source")
         end
 
-        it "includes turbo-stream-source on page=1" do
-          get "/tags/foo?page=1", ACCEPT_HTML
+        it "does not include turbo-stream-source on subsequent pages" do
+          get "/tags/foo?max_id=100", ACCEPT_HTML
           expect(response.status_code).to eq(200)
-          expect(response.body).to contain("turbo-stream-source")
+          expect(response.body).not_to contain("turbo-stream-source")
         end
       end
 

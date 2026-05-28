@@ -77,30 +77,6 @@ class Tag
     #
     # Orders objects by `id` for consistency with the query above.
     #
-    def self.all_objects(name, page = 1, size = 10)
-      query = <<-QUERY
-        SELECT #{ActivityPub::Object.columns(prefix: "o")}
-          FROM objects AS o
-          JOIN tags AS t
-            ON t.subject_iri = o.iri
-           AND t.type = '#{self}'
-          JOIN actors AS a
-            ON a.iri = o.attributed_to_iri
-         WHERE t.name = ?
-           AND o.published IS NOT NULL
-           #{common_filters(objects: "o", actors: "a")}
-      ORDER BY t.id DESC
-         LIMIT ? OFFSET ?
-      QUERY
-      ActivityPub::Object.query_and_paginate(query, name, page: page, size: size)
-    end
-
-    # Returns the objects with the given hashtag.
-    #
-    # Includes private (not visible) objects.
-    #
-    # Orders objects by `id` for consistency with the query above.
-    #
     def self.all_objects(name, *, max_id = nil, min_id = nil, limit = 10)
       max_id = translate_object_id_to_tag_id(name, max_id) if max_id
       min_id = translate_object_id_to_tag_id(name, min_id) if min_id
@@ -130,7 +106,7 @@ class Tag
     # Returns the count of objects with the given hashtag since the
     # given time.
     #
-    # Uses the same filters as `all_objects(name, page, size)` but adds
+    # Uses the same filters as `all_objects(name, max_id, min_id, limit)` but adds
     # a time-based filter on the tag's `created_at` timestamp.
     #
     # Includes private (not visible) objects for consistency.

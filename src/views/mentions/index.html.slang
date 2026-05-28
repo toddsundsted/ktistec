@@ -1,7 +1,7 @@
 - content_for "title" do
   | @#{mention}
 - if env.account?
-  - if (env.params.query["page"]?.try(&.to_i) || 1) == 1
+  - if !env.params.query["max_id"]? && !env.params.query["min_id"]?
     turbo-stream-source src=stream_path("mentions", mention)
 - partial mention_page_mention_banner(env, mention, follow, count)
 section.ui.feed data-controller="icon-load-error"

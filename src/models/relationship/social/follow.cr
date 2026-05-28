@@ -24,14 +24,13 @@ class Relationship
         ActivityPub::Activity::Follow.where(QUERY, from_iri, to_iri).first?
       end
 
-      private def self.follow_query(direction)
+      private def self.follow_cursor_query(direction)
         <<-QUERY
           SELECT #{columns}
             FROM relationships
            WHERE type = '#{self}'
              AND #{direction} = ?
-          ORDER BY id DESC
-           LIMIT ? OFFSET ?
+             AND %{cursor_condition}
         QUERY
       end
 
@@ -51,9 +50,9 @@ class Relationship
       #
       # Results are ordered by most recent first.
       #
-      def self.followers_for(actor_iri : String, page = 1, size = 10)
-        query = follow_query("to_iri")
-        query_and_paginate(query, actor_iri, page: page, size: size)
+      def self.followers_for(actor_iri : String, *, max_id = nil, min_id = nil, limit = 10)
+        query = follow_cursor_query("to_iri")
+        query_with_cursor(query, actor_iri, cursor_column: "id", max_id: max_id, min_id: min_id, limit: limit)
       end
 
       # Returns following.
@@ -62,9 +61,9 @@ class Relationship
       #
       # Results are ordered by most recent first.
       #
-      def self.following_for(actor_iri : String, page = 1, size = 10)
-        query = follow_query("from_iri")
-        query_and_paginate(query, actor_iri, page: page, size: size)
+      def self.following_for(actor_iri : String, *, max_id = nil, min_id = nil, limit = 10)
+        query = follow_cursor_query("from_iri")
+        query_with_cursor(query, actor_iri, cursor_column: "id", max_id: max_id, min_id: min_id, limit: limit)
       end
 
       # Returns count of followers.

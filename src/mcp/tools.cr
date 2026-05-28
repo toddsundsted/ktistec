@@ -236,78 +236,84 @@ module MCP
 
     def_tool(
       "paginate_collection",
-      "Paginate through collections of ActivityPub objects, activities, and actors. Use this tool when you want to inspect the contents of a collection.", [
+      "Paginate through collections of ActivityPub objects, activities, and actors. Use this tool when you want to inspect the contents of a collection.\n\n" \
+      "Pagination is cursor-based. The response includes `next_older_than` and/or `next_newer_than` cursor values. To fetch the next page in a direction, pass the corresponding cursor as `older_than` or `newer_than` on the next call. The absence of a cursor in the response means there are no more items in that direction.\n\n" \
+      "Items are returned newest-first.", [
       {name: "name", type: "string", description: "Name of the collection to paginate", required: true, matches: NAME_REGEX},
-      {name: "page", type: "integer", description: "Page number (optional, defaults to 1)", minimum: 1, default: 1},
-      {name: "size", type: "integer", description: "Number of items per page (optional, defaults to 10, maximum 1000)", minimum: 1, maximum: 20, default: 10},
+      {name: "older_than", type: "integer", description: "Return items older than this id (optional). Pass the `next_older_than` value from a previous response.", minimum: 1, default: nil},
+      {name: "newer_than", type: "integer", description: "Return items newer than this id (optional). Pass the `next_newer_than` value from a previous response.", minimum: 1, default: nil},
+      {name: "limit", type: "integer", description: "Number of items per page (optional, defaults to 10, maximum 20)", minimum: 1, maximum: 20, default: 10},
     ],
     ) do
       unless account.reload!
         raise MCPError.new("Account not found", JSON::RPC::ErrorCodes::INVALID_PARAMS)
       end
 
-      Log.debug { "paginate_collection: user=#{mcp_user_path(account)} collection=#{name} page=#{page} size=#{size}" }
+      max_id = older_than.try(&.to_i64)
+      min_id = newer_than.try(&.to_i64)
+
+      Log.debug { "paginate_collection: user=#{mcp_user_path(account)} collection=#{name} older_than=#{max_id} newer_than=#{min_id} limit=#{limit}" }
 
       actor = account.actor
 
-      objects, more =
+      objects, cursor_start, cursor_end, has_prev, has_next =
         case name
         when "notifications"
-          notifications = actor.notifications(page: page, size: size)
+          notifications = actor.notifications(max_id: max_id, min_id: min_id, limit: limit)
           objects = notifications.map do |notification|
             notification_to_json_any(notification)
           end
-          {objects.compact, notifications.has_next?}
+          {objects.compact, notifications.cursor_start, notifications.cursor_end, notifications.has_prev?, notifications.has_next?}
         when "timeline"
-          timeline = actor.timeline(page: page, size: size)
+          timeline = actor.timeline(max_id: max_id, min_id: min_id, limit: limit)
           objects = timeline.map do |rel|
             JSON::Any.new(MCP::Resources.object_contents(rel.object))
           end
-          {objects, timeline.has_next?}
+          {objects, timeline.cursor_start, timeline.cursor_end, timeline.has_prev?, timeline.has_next?}
         when "posts"
-          posts = actor.all_posts(page: page, size: size)
+          posts = actor.all_posts(max_id: max_id, min_id: min_id, limit: limit)
           objects = posts.map do |post|
             JSON::Any.new(MCP::Resources.object_contents(post))
           end
-          {objects, posts.has_next?}
+          {objects, posts.cursor_start, posts.cursor_end, posts.has_prev?, posts.has_next?}
         when "drafts"
-          drafts = actor.drafts(page: page, size: size)
+          drafts = actor.drafts(max_id: max_id, min_id: min_id, limit: limit)
           objects = drafts.map do |draft|
             JSON::Any.new(MCP::Resources.object_contents(draft))
           end
-          {objects, drafts.has_next?}
+          {objects, drafts.cursor_start, drafts.cursor_end, drafts.has_prev?, drafts.has_next?}
         when "likes"
-          likes = actor.likes(page: page, size: size)
+          likes = actor.likes(max_id: max_id, min_id: min_id, limit: limit)
           objects = likes.map do |liked_object|
             JSON::Any.new(MCP::Resources.object_contents(liked_object))
           end
-          {objects, likes.has_next?}
+          {objects, likes.cursor_start, likes.cursor_end, likes.has_prev?, likes.has_next?}
         when "dislikes"
-          dislikes = actor.dislikes(page: page, size: size)
+          dislikes = actor.dislikes(max_id: max_id, min_id: min_id, limit: limit)
           objects = dislikes.map do |disliked_object|
             JSON::Any.new(MCP::Resources.object_contents(disliked_object))
           end
-          {objects, dislikes.has_next?}
+          {objects, dislikes.cursor_start, dislikes.cursor_end, dislikes.has_prev?, dislikes.has_next?}
         when "announces"
-          announces = actor.announces(page: page, size: size)
+          announces = actor.announces(max_id: max_id, min_id: min_id, limit: limit)
           objects = announces.map do |announced_object|
             JSON::Any.new(MCP::Resources.object_contents(announced_object))
           end
-          {objects, announces.has_next?}
+          {objects, announces.cursor_start, announces.cursor_end, announces.has_prev?, announces.has_next?}
         when "bookmarks"
-          bookmarks = actor.bookmarks(page: page, size: size)
+          bookmarks = actor.bookmarks(max_id: max_id, min_id: min_id, limit: limit)
           objects = bookmarks.map do |bookmarked_object|
             JSON::Any.new(MCP::Resources.object_contents(bookmarked_object))
           end
-          {objects, bookmarks.has_next?}
+          {objects, bookmarks.cursor_start, bookmarks.cursor_end, bookmarks.has_prev?, bookmarks.has_next?}
         when "pins"
-          pins = actor.pins(page: page, size: size)
+          pins = actor.pins(max_id: max_id, min_id: min_id, limit: limit)
           objects = pins.map do |pinned_object|
             JSON::Any.new(MCP::Resources.object_contents(pinned_object))
           end
-          {objects, pins.has_next?}
+          {objects, pins.cursor_start, pins.cursor_end, pins.has_prev?, pins.has_next?}
         when "followers"
-          followers = Relationship::Social::Follow.followers_for(actor.iri, page: page, size: size)
+          followers = Relationship::Social::Follow.followers_for(actor.iri, max_id: max_id, min_id: min_id, limit: limit)
           objects = followers.map do |relationship|
             follower = relationship.actor
             JSON::Any.new({
@@ -316,9 +322,9 @@ module MCP
               "confirmed"    => JSON::Any.new(relationship.confirmed),
             })
           end
-          {objects, followers.has_next?}
+          {objects, followers.cursor_start, followers.cursor_end, followers.has_prev?, followers.has_next?}
         when "following"
-          following = Relationship::Social::Follow.following_for(actor.iri, page: page, size: size)
+          following = Relationship::Social::Follow.following_for(actor.iri, max_id: max_id, min_id: min_id, limit: limit)
           objects = following.map do |relationship|
             followed = relationship.object
             JSON::Any.new({
@@ -327,31 +333,35 @@ module MCP
               "confirmed"    => JSON::Any.new(relationship.confirmed),
             })
           end
-          {objects, following.has_next?}
+          {objects, following.cursor_start, following.cursor_end, following.has_prev?, following.has_next?}
         else
           if name.starts_with?("hashtag#")
             hashtag = name.sub("hashtag#", "")
-            hashtag_objects = Tag::Hashtag.all_objects(hashtag, page: page, size: size)
+            hashtag_objects = Tag::Hashtag.all_objects(hashtag, max_id: max_id, min_id: min_id, limit: limit)
             objects = hashtag_objects.map do |obj|
               JSON::Any.new(MCP::Resources.object_contents(obj))
             end
-            {objects, hashtag_objects.has_next?}
+            {objects, hashtag_objects.cursor_start, hashtag_objects.cursor_end, hashtag_objects.has_prev?, hashtag_objects.has_next?}
           elsif name.starts_with?("mention@")
             mention = name.sub("mention@", "")
-            mention_objects = Tag::Mention.all_objects(mention, page: page, size: size)
+            mention_objects = Tag::Mention.all_objects(mention, max_id: max_id, min_id: min_id, limit: limit)
             objects = mention_objects.map do |obj|
               JSON::Any.new(MCP::Resources.object_contents(obj))
             end
-            {objects, mention_objects.has_next?}
+            {objects, mention_objects.cursor_start, mention_objects.cursor_end, mention_objects.has_prev?, mention_objects.has_next?}
           else
             raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
           end
         end
 
-      result_data = {
-        "objects" => objects.to_a,
-        "more"    => more,
-      }
+      result_data = {} of String => Array(JSON::Any) | Int64
+      result_data["objects"] = objects.to_a
+      if has_next && (ce = cursor_end)
+        result_data["next_older_than"] = ce
+      end
+      if has_prev && (cs = cursor_start)
+        result_data["next_newer_than"] = cs
+      end
 
       JSON::Any.new({
         "content" => JSON::Any.new([JSON::Any.new({

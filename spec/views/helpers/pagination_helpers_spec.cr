@@ -29,24 +29,6 @@ Spectator.describe "helpers" do
       expect(subject.xpath_nodes("/nav[contains(@class,'pagination')]")).to be_empty
     end
 
-    context "with offset pagination" do
-      context "with more pages" do
-        before_each { collection.has_next = true }
-
-        it "renders the next link" do
-          expect(subject.xpath_nodes("//a/@href")).to contain_exactly("?page=2")
-        end
-      end
-
-      context "on the second page" do
-        let(query) { "?page=2" }
-
-        it "renders the prev link" do
-          expect(subject.xpath_nodes("//a/@href")).to contain_exactly("?page=1")
-        end
-      end
-    end
-
     context "with cursor pagination" do
       before_each do
         collection.cursor_start = 100_i64
@@ -75,82 +57,6 @@ Spectator.describe "helpers" do
         it "renders the next link" do
           expect(subject.xpath_nodes("//a/@href")).to contain("?max_id=50")
         end
-      end
-    end
-  end
-
-  describe "pagination_params" do
-    it "ensures page is at least 1" do
-      env = make_env("GET", "/?page=0")
-      result = self.class.pagination_params(env)
-      expect(result[:page]).to eq(1)
-    end
-
-    it "ignores negative page numbers" do
-      env = make_env("GET", "/?page=-5")
-      result = self.class.pagination_params(env)
-      expect(result[:page]).to eq(1)
-    end
-
-    context "when user is not authenticated" do
-      it "allows size up to 20" do
-        env = make_env("GET", "/?page=2&size=20")
-        result = self.class.pagination_params(env)
-        expect(result[:page]).to eq(2)
-        expect(result[:size]).to eq(20)
-      end
-
-      it "limits size to 20" do
-        env = make_env("GET", "/?page=2&size=21")
-        result = self.class.pagination_params(env)
-        expect(result[:page]).to eq(2)
-        expect(result[:size]).to eq(20)
-      end
-
-      it "uses default size of 10 when no size specified" do
-        env = make_env("GET", "/?page=1")
-        result = self.class.pagination_params(env)
-        expect(result[:page]).to eq(1)
-        expect(result[:size]).to eq(10)
-      end
-
-      it "uses requested size when under the limit" do
-        env = make_env("GET", "/?size=15")
-        result = self.class.pagination_params(env)
-        expect(result[:page]).to eq(1)
-        expect(result[:size]).to eq(15)
-      end
-    end
-
-    context "when user is authenticated" do
-      sign_in
-
-      it "allows size up to 1000" do
-        env = make_env("GET", "/?page=3&size=1000")
-        result = self.class.pagination_params(env)
-        expect(result[:page]).to eq(3)
-        expect(result[:size]).to eq(1000)
-      end
-
-      it "limits size to 1000" do
-        env = make_env("GET", "/?size=1001")
-        result = self.class.pagination_params(env)
-        expect(result[:page]).to eq(1)
-        expect(result[:size]).to eq(1000)
-      end
-
-      it "uses default size of 10 when no size specified" do
-        env = make_env("GET", "/?page=1")
-        result = self.class.pagination_params(env)
-        expect(result[:page]).to eq(1)
-        expect(result[:size]).to eq(10)
-      end
-
-      it "uses requested size when under the limit" do
-        env = make_env("GET", "/?size=500")
-        result = self.class.pagination_params(env)
-        expect(result[:page]).to eq(1)
-        expect(result[:size]).to eq(500)
       end
     end
   end

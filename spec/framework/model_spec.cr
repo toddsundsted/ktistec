@@ -90,10 +90,6 @@ class QueryModel
   @[Assignable]
   property bar : String?
 
-  def self.query_and_paginate(*args, **opts)
-    super(*args, **opts)
-  end
-
   def self.query_with_cursor(*args_, **opts)
     super(*args_, **opts)
   end
@@ -190,13 +186,6 @@ Spectator.describe Ktistec::Model do
 
     it "excludes abstract types" do
       expect(AbstractModel.all_subtypes).to be_empty
-    end
-  end
-
-  describe ".query_and_paginate" do
-    it "includes the additional columns" do
-      query = %Q|SELECT 0, 'foo', 'bar', ?, ?|
-      expect(QueryModel.query_and_paginate(query, additional_columns: {foo: String, bar: String})).to eq([QueryModel.new(id: 0_i64, foo: "foo", bar: "bar")])
     end
   end
 

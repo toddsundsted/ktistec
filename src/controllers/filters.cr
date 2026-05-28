@@ -20,7 +20,7 @@ class FiltersController
   get "/filters" do |env|
     actor = env.account.actor
 
-    terms = actor.terms(**pagination_params(env))
+    terms = actor.terms(**cursor_pagination_params(env))
 
     ok "filters/index", env: env, terms: terms
   end

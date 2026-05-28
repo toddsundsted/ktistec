@@ -217,37 +217,5 @@ class Tag
       QUERY
       ActivityPub::Object.query_with_cursor(query, name, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
     end
-
-    # Returns the count of public posts with the given hashtag.
-    #
-    # Does not include private (not visible) posts. Includes
-    # other's posts that have been shared.
-    #
-    def self.public_posts_count(name)
-      # note: disqualify the index on tag *name* because, although it
-      # has high cardinality, the distribution of names is very uneven
-      # and this method is likely to be called on those tags it would
-      # help the least (the most popular).
-      query = <<-QUERY
-        SELECT count(*)
-          FROM objects AS o
-          JOIN activities AS a
-            ON a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           AND a.object_iri = o.iri
-          JOIN relationships AS r
-            ON r.type = '#{Relationship::Content::Outbox}'
-           AND r.to_iri = a.iri
-          JOIN actors AS t
-            ON t.iri = o.attributed_to_iri
-          JOIN tags AS g
-            ON g.subject_iri = o.iri
-           AND g.type = '#{Tag::Hashtag}'
-           AND +g.name = ?
-         WHERE o.visible = 1
-           AND o.published IS NOT NULL
-           #{common_filters(objects: "o", actors: "t", activities: "a")}
-      QUERY
-      ActivityPub::Object.scalar(query, name).as(Int64)
-    end
   end
 end

@@ -6,7 +6,7 @@ turbo-frame#tag_page_tag_controls
     .ui.basic.segment
       p: strong
         a href=hashtag_path(hashtag) ##{hashtag}
-        - if count > 0
+        - if count && count > 0
           span< #{pluralize(count, "hashtag")}
       - if env.account?
         - if _task && (_status = fetch_task_status_line(_task))

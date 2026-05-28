@@ -1532,15 +1532,14 @@ module ActivityPub
 
     # Returns the content filter terms for the actor.
     #
-    def terms(page = 1, size = 10)
+    def terms(*, max_id = nil, min_id = nil, limit = 10)
       query = <<-QUERY
          SELECT #{FilterTerm.columns(prefix: "f")}
            FROM filter_terms AS f
           WHERE f.actor_id = ?
-       ORDER BY f.id ASC
-          LIMIT ? OFFSET ?
+            AND %{cursor_condition}
       QUERY
-      FilterTerm.query_and_paginate(query, id, page: page, size: size)
+      FilterTerm.query_with_cursor(query, id, cursor_column: "f.id", max_id: max_id, min_id: min_id, limit: limit)
     end
 
     getter followed_actors : Set(String) do

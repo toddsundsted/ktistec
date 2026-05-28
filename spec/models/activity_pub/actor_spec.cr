@@ -2981,13 +2981,31 @@ Spectator.describe ActivityPub::Actor do
 
     describe "#terms" do
       it "instantiates the correct subclass" do
-        expect(subject.terms(page: 1, size: 2).first).to be_a(FilterTerm)
+        expect(subject.terms(limit: 2).first).to be_a(FilterTerm)
       end
 
-      it "paginates the results" do
-        expect(subject.terms(page: 1, size: 2)).to eq([term1, term2])
-        expect(subject.terms(page: 3, size: 2)).to eq([term5])
-        expect(subject.terms(page: 3, size: 2).has_next?).not_to be_true
+      it "returns the results" do
+        expect(subject.terms(limit: 5)).to eq([term5, term4, term3, term2, term1])
+      end
+
+      it "limits the results" do
+        expect(subject.terms(limit: 2)).to eq([term5, term4])
+      end
+
+      it "paginates with max_id" do
+        expect(subject.terms(max_id: term5.id, limit: 2)).to eq([term4, term3])
+      end
+
+      it "paginates with min_id" do
+        expect(subject.terms(min_id: term1.id, limit: 2)).to eq([term3, term2])
+      end
+
+      it "reports more results" do
+        expect(subject.terms(limit: 2).has_next?).to be_true
+      end
+
+      it "reports no more results" do
+        expect(subject.terms(limit: 5).has_next?).not_to be_true
       end
     end
   end

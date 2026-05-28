@@ -1477,6 +1477,36 @@ Spectator.describe ActivityPub::Object do
       dislike.save.undo!
       expect(object.with_statistics!.dislikes_count).to eq(0)
     end
+
+    it "filters out announces from blocked actors" do
+      announce.save.actor.block!
+      expect(object.with_statistics!.announces_count).to eq(0)
+    end
+
+    it "filters out likes from blocked actors" do
+      like.save.actor.block!
+      expect(object.with_statistics!.likes_count).to eq(0)
+    end
+
+    it "filters out dislikes from blocked actors" do
+      dislike.save.actor.block!
+      expect(object.with_statistics!.dislikes_count).to eq(0)
+    end
+
+    it "filters out announces from deleted actors" do
+      announce.save.actor.delete!
+      expect(object.with_statistics!.announces_count).to eq(0)
+    end
+
+    it "filters out likes from deleted actors" do
+      like.save.actor.delete!
+      expect(object.with_statistics!.likes_count).to eq(0)
+    end
+
+    it "filters out dislikes from deleted actors" do
+      dislike.save.actor.delete!
+      expect(object.with_statistics!.dislikes_count).to eq(0)
+    end
   end
 
   describe "#thread" do

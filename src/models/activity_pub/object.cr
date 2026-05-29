@@ -501,10 +501,13 @@ module ActivityPub
     def self.public_posts(*, max_id = nil, min_id = nil, limit = 10)
       max_id = translate_object_id_to_outbox_id(max_id) if max_id
       min_id = translate_object_id_to_outbox_id(min_id) if min_id
+      # force the type index on the outbox relationships join. outbox
+      # relationships are a tiny fraction of the table, and a primary-key
+      # scan walks too many non-outbox rows to gather a page
       query = <<-QUERY
           SELECT #{Object.columns(prefix: "o")}
             FROM accounts AS c
-            JOIN relationships AS r
+            JOIN relationships AS r INDEXED BY idx_relationships_type
               ON likelihood(r.from_iri = c.iri, 0.99)
              AND r.type = '#{Relationship::Content::Outbox}'
             JOIN activities AS a

@@ -77,30 +77,6 @@ class Tag
     #
     # Orders objects by `id` for consistency with the query above.
     #
-    def self.all_objects(name, page = 1, size = 10)
-      query = <<-QUERY
-        SELECT #{ActivityPub::Object.columns(prefix: "o")}
-          FROM objects AS o
-          JOIN tags AS t
-            ON t.subject_iri = o.iri
-           AND t.type = '#{self}'
-          JOIN actors AS a
-            ON a.iri = o.attributed_to_iri
-         WHERE t.name = ?
-           AND o.published IS NOT NULL
-           #{common_filters(objects: "o", actors: "a")}
-      ORDER BY t.id DESC
-         LIMIT ? OFFSET ?
-      QUERY
-      ActivityPub::Object.query_and_paginate(query, name, page: page, size: size)
-    end
-
-    # Returns the objects with the given hashtag.
-    #
-    # Includes private (not visible) objects.
-    #
-    # Orders objects by `id` for consistency with the query above.
-    #
     def self.all_objects(name, *, max_id = nil, min_id = nil, limit = 10)
       max_id = translate_object_id_to_tag_id(name, max_id) if max_id
       min_id = translate_object_id_to_tag_id(name, min_id) if min_id
@@ -130,7 +106,7 @@ class Tag
     # Returns the count of objects with the given hashtag since the
     # given time.
     #
-    # Uses the same filters as `all_objects(name, page, size)` but adds
+    # Uses the same filters as `all_objects(name, max_id, min_id, limit)` but adds
     # a time-based filter on the tag's `created_at` timestamp.
     #
     # Includes private (not visible) objects for consistency.
@@ -240,38 +216,6 @@ class Tag
            AND %{cursor_condition}
       QUERY
       ActivityPub::Object.query_with_cursor(query, name, cursor_column: "r.id", max_id: max_id, min_id: min_id, limit: limit)
-    end
-
-    # Returns the count of public posts with the given hashtag.
-    #
-    # Does not include private (not visible) posts. Includes
-    # other's posts that have been shared.
-    #
-    def self.public_posts_count(name)
-      # note: disqualify the index on tag *name* because, although it
-      # has high cardinality, the distribution of names is very uneven
-      # and this method is likely to be called on those tags it would
-      # help the least (the most popular).
-      query = <<-QUERY
-        SELECT count(*)
-          FROM objects AS o
-          JOIN activities AS a
-            ON a.type IN ('#{ActivityPub::Activity::Announce}', '#{ActivityPub::Activity::Create}')
-           AND a.object_iri = o.iri
-          JOIN relationships AS r
-            ON r.type = '#{Relationship::Content::Outbox}'
-           AND r.to_iri = a.iri
-          JOIN actors AS t
-            ON t.iri = o.attributed_to_iri
-          JOIN tags AS g
-            ON g.subject_iri = o.iri
-           AND g.type = '#{Tag::Hashtag}'
-           AND +g.name = ?
-         WHERE o.visible = 1
-           AND o.published IS NOT NULL
-           #{common_filters(objects: "o", actors: "t", activities: "a")}
-      QUERY
-      ActivityPub::Object.scalar(query, name).as(Int64)
     end
   end
 end

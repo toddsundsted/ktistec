@@ -81,6 +81,12 @@ Spectator.describe TagsController do
         .to contain_exactly(object3.iri, object2.iri, object1.iri)
     end
 
+    it "does not render the hashtag count" do
+      get "/tags/foo", ACCEPT_HTML
+      expect(XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='tag_page_tag_controls']//span[contains(text(),'hashtag')]"))
+        .to be_empty
+    end
+
     context "if authenticated" do
       sign_in(as: author.username)
 
@@ -96,6 +102,12 @@ Spectator.describe TagsController do
           .to contain_exactly(object5.iri, object4.iri, object3.iri, object2.iri, object1.iri)
       end
 
+      it "renders the hashtag count" do
+        get "/tags/foo", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='tag_page_tag_controls']//span[contains(text(),'hashtag')]"))
+          .not_to be_empty
+      end
+
       describe "turbo-stream-source pagination" do
         it "includes turbo-stream-source on first page" do
           get "/tags/foo", ACCEPT_HTML
@@ -103,10 +115,10 @@ Spectator.describe TagsController do
           expect(response.body).to contain("turbo-stream-source")
         end
 
-        it "includes turbo-stream-source on page=1" do
-          get "/tags/foo?page=1", ACCEPT_HTML
+        it "does not include turbo-stream-source on subsequent pages" do
+          get "/tags/foo?max_id=100", ACCEPT_HTML
           expect(response.status_code).to eq(200)
-          expect(response.body).to contain("turbo-stream-source")
+          expect(response.body).not_to contain("turbo-stream-source")
         end
       end
 

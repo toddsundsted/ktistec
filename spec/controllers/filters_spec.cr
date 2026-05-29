@@ -81,12 +81,12 @@ Spectator.describe FiltersController do
 
       it "renders the collection" do
         get "/filters", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'term')]/@id")).to contain_exactly("term-#{term1.id}", "term-#{term2.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'term')]/@id")).to contain_exactly("term-#{term2.id}", "term-#{term1.id}")
       end
 
       it "renders the collection" do
         get "/filters", ACCEPT_JSON
-        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(term1.iri, term2.iri)
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(term2.iri, term1.iri)
       end
     end
   end

@@ -19,6 +19,9 @@ class RuleModel
   @[Persistent]
   property name : String?
   derived quux : String?, aliased_to: name
+
+  @[Persistent]
+  property active : Bool?
 end
 
 class RuleSubclassModel < RuleModel
@@ -41,13 +44,13 @@ Spectator.describe Ktistec::Rule do
       RulePattern,
       RuleModel,
       associations: [child_of],
-      properties: [id, name, quux],
+      properties: [id, name, quux, active],
     )
     Ktistec::Rule.make_pattern(
       RuleSubclassPattern,
       RuleSubclassModel,
       associations: [child_of],
-      properties: [id, name, quux],
+      properties: [id, name, quux, active],
     )
 
     describe "#vars" do
@@ -79,15 +82,16 @@ Spectator.describe Ktistec::Rule do
             id integer PRIMARY KEY AUTOINCREMENT,
             type varchar(63) NOT NULL,
             parent_id integer,
-            name text
+            name text,
+            active boolean
           )
         SQL
         Ktistec.database.exec <<-SQL
           INSERT INTO rule_models
-                 (id, type, parent_id, name)
-          VALUES (1, 'RuleModel', null, 'one'),
-                 (2, 'RuleModel', 1, 'two'),
-                 (3, 'RuleModel', 2, 'three')
+                 (id, type, parent_id, name, active)
+          VALUES (1, 'RuleModel', null, null, null),
+                 (2, 'RuleModel', 1, 'two', 1),
+                 (3, 'RuleModel', 2, 'three', 0)
         SQL
       end
       after_each do
@@ -418,6 +422,84 @@ Spectator.describe Ktistec::Rule do
 
         # properties
 
+        context "with a lit nil property" do
+          subject { RulePattern.new(name: School::Lit.new(nil)) }
+
+          it "invokes the block once" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(1)
+          end
+
+          it "does not bind values" do
+            subject.match(context, &block)
+            expect(yields).to eq([empty])
+          end
+        end
+
+        context "with a lit true property" do
+          subject { RulePattern.new(id: School::Var.new("id"), active: School::Lit.new(true)) }
+
+          it "invokes the block once" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(1)
+          end
+
+          it "matches the row with active = true" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"id" => 2_i64}])
+          end
+        end
+
+        context "with a lit false property" do
+          subject { RulePattern.new(id: School::Var.new("id"), active: School::Lit.new(false)) }
+
+          it "invokes the block once" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(1)
+          end
+
+          it "matches the row with active = false" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"id" => 3_i64}])
+          end
+        end
+
+        context "with a lit nil property" do
+          subject { RulePattern.new(id: School::Var.new("id"), active: School::Lit.new(nil)) }
+
+          it "invokes the block once" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(1)
+          end
+
+          it "matches the row with active = null" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"id" => 1_i64}])
+          end
+        end
+
+        context "with a not lit false property" do
+          subject { RulePattern.new(id: School::Var.new("id"), active: School::Not.new(School::Lit.new(false))) }
+
+          it "invokes the block once" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(1)
+          end
+
+          it "matches the row with active = true" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"id" => 2_i64}])
+          end
+        end
+
+        context "with an unbound var bool property" do
+          subject { RulePattern.new(id: School::Var.new("id"), active: School::Var.new("a")) }
+
+          it "invokes the block twice" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(2)
+          end
+
+          it "binds both true and false values" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"id" => 2_i64, "a" => true}, {"id" => 3_i64, "a" => false}])
+          end
+        end
+
         context "with a lit property that matches a model value" do
           subject { RulePattern.new(id: School::Lit.new(1_i64)) }
 
@@ -528,7 +610,7 @@ Spectator.describe Ktistec::Rule do
           end
         end
 
-        context "with a not property" do
+        context "with a not lit property" do
           subject { RulePattern.new(id: School::Not.new(School::Lit.new(1_i64), name: "id")) }
 
           it "invokes the block twice" do
@@ -541,7 +623,7 @@ Spectator.describe Ktistec::Rule do
           end
         end
 
-        context "with a not property" do
+        context "with a not var property" do
           let(bindings) { School::Bindings{"value" => 1_i64} }
 
           subject { RulePattern.new(id: School::Not.new(School::Var.new("value"), name: "id")) }
@@ -581,6 +663,60 @@ Spectator.describe Ktistec::Rule do
           it "binds the match" do
             subject.match(context, &block)
             expect(yields).to eq([{"value" => 2_i64, "id" => 2_i64}, {"value" => 2_i64, "id" => 3_i64}])
+          end
+        end
+
+        context "with a within property" do
+          subject { RulePattern.new(id: School::Var.new("id"), name: School::Within.new(School::Lit.new(nil))) }
+
+          it "invokes the block once" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"id" => 1_i64}])
+          end
+        end
+
+        context "with a within property" do
+          subject { RulePattern.new(id: School::Var.new("id"), name: School::Within.new(School::Lit.new(nil), School::Lit.new("two"))) }
+
+          it "invokes the block twice" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(2)
+          end
+
+          it "binds the match" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"id" => 1_i64}, {"id" => 2_i64}])
+          end
+        end
+
+        context "with a within property" do
+          subject { RulePattern.new(id: School::Var.new("id"), active: School::Within.new(School::Lit.new(nil), School::Lit.new(false))) }
+
+          it "invokes the block twice" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(2)
+          end
+
+          it "binds the match" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"id" => 1_i64}, {"id" => 3_i64}])
+          end
+        end
+
+        context "with a within property" do
+          let(bindings) { School::Bindings{"value" => nil} }
+
+          subject { RulePattern.new(id: School::Var.new("id"), name: School::Within.new(School::Var.new("value"))) }
+
+          it "invokes the block once" do
+            expect { subject.match(context, &block) }.to change { yields.size }.by(1)
+          end
+
+          it "binds the match" do
+            subject.match(context, &block)
+            expect(yields).to eq([{"value" => nil, "id" => 1_i64}])
           end
         end
 

@@ -134,54 +134,6 @@ Spectator.describe Tag::Mention do
     create_object_with_mentions(5, "foo@remote", "quux@remote")
 
     it "returns objects with the mention" do
-      expect(described_class.all_objects("bar@remote")).to eq([object3, object1])
-    end
-
-    it "filters out draft objects" do
-      object5.assign(published: nil).save
-      expect(described_class.all_objects("foo@remote")).not_to have(object5)
-    end
-
-    it "filters out deleted objects" do
-      object5.delete!
-      expect(described_class.all_objects("foo@remote")).not_to have(object5)
-    end
-
-    it "filters out blocked objects" do
-      object5.block!
-      expect(described_class.all_objects("foo@remote")).not_to have(object5)
-    end
-
-    it "filters out objects with deleted attributed to actors" do
-      author.delete!
-      expect(described_class.all_objects("foo@remote")).to be_empty
-    end
-
-    it "filters out objects with blocked attributed to actors" do
-      author.block!
-      expect(described_class.all_objects("foo@remote")).to be_empty
-    end
-
-    it "filters out objects with destroyed attributed to actors" do
-      author.destroy
-      expect(described_class.all_objects("foo@remote")).to be_empty
-    end
-
-    it "paginates the results" do
-      expect(described_class.all_objects("foo@remote", 1, 2)).to eq([object5, object4])
-      expect(described_class.all_objects("foo@remote", 2, 2)).to eq([object3, object2])
-      expect(described_class.all_objects("foo@remote", 2, 2).has_next?).to be_true
-    end
-  end
-
-  describe ".all_objects" do
-    create_object_with_mentions(1, "foo@remote", "bar@remote")
-    create_object_with_mentions(2, "foo@remote")
-    create_object_with_mentions(3, "foo@remote", "bar@remote")
-    create_object_with_mentions(4, "foo@remote")
-    create_object_with_mentions(5, "foo@remote", "quux@remote")
-
-    it "returns objects with the mention" do
       expect(described_class.all_objects("bar@remote", limit: 5)).to eq([object3, object1])
     end
 

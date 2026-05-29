@@ -598,10 +598,13 @@ module ActivityPub
 
     def with_statistics!
       query = <<-QUERY
-         SELECT sum(a.type = 'ActivityPub::Activity::Announce') AS announces, sum(a.type = 'ActivityPub::Activity::Like') AS likes, sum(a.type = 'ActivityPub::Activity::Dislike') AS dislikes
+         SELECT coalesce(sum(a.type = 'ActivityPub::Activity::Announce'), 0) AS announces, coalesce(sum(a.type = 'ActivityPub::Activity::Like'), 0) AS likes, coalesce(sum(a.type = 'ActivityPub::Activity::Dislike'), 0) AS dislikes
            FROM activities AS a
+           JOIN actors AS c
+             ON c.iri = a.actor_iri
           WHERE a.undone_at IS NULL
             AND a.object_iri = ?
+            #{common_filters(actors: "c")}
       QUERY
       Internal.log_query(query) do
         Ktistec.database.query_one(query, iri) do |rs|

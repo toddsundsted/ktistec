@@ -35,9 +35,12 @@
   },
   <%- end -%>
   <%- end -%>
-  <%- if recursive == true && (replies = object.replies?) -%>
+  <%- if recursive == true && object.local? && (replies_iri = object.replies_iri) -%>
+  <%- replies_iris = object.replies(approved_by: object.attributed_to).map(&.iri) -%>
+  "replies":{"type":"OrderedCollection","id":<%= replies_iri.to_json %>,"totalItems":<%= replies_iris.size %>,"orderedItems":<%= replies_iris.to_json %>},
+  <%- elsif recursive == true && (replies = object.replies?) -%>
   "replies":<%= replies.to_json_ld %>,
-  <%- elsif (replies_iri = object.replies_iri) -%>
+  <%- elsif (replies_iri = object.replies_iri || object.replies?.try(&.iri)) -%>
   "replies":<%= replies_iri.to_json %>,
   <%- end -%>
   <%- if (to = object.to) -%>

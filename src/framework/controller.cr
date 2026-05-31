@@ -205,6 +205,7 @@ module Ktistec
     def_response_helper(not_found, "Not Found", 404)
     def_response_helper(_method_not_allowed, "Method Not Allowed", 405) # requires a list of allowed methods
     def_response_helper(conflict, "Conflict", 409)
+    def_response_helper(gone, "Gone", 410)
     def_response_helper(payload_too_large, "Payload Too Large", 413)
     def_response_helper(unprocessable_entity, "Unprocessable Entity", 422)
     def_response_helper(server_error, "Server Error", 500)

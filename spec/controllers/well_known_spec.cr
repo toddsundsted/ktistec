@@ -29,9 +29,9 @@ Spectator.describe WellKnownController do
       expect(response.status_code).to eq(400)
     end
 
-    it "returns 404 if not found" do
+    it "returns 410 if gone" do
       get "/.well-known/webfinger?resource=acct%3Amissing%40test.test"
-      expect(response.status_code).to eq(404)
+      expect(response.status_code).to eq(410)
     end
 
     it "returns 200 if found" do

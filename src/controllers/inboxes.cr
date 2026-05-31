@@ -121,7 +121,7 @@ class InboxesController
     end
 
     unless (account = get_account(env))
-      not_found
+      gone
     end
 
     cap_request_body env, MAX_INBOX_REQUEST_BYTES

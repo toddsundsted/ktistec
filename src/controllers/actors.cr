@@ -51,7 +51,7 @@ class ActorsController
 
   get "/actors/:username" do |env|
     unless (account = get_account(env))
-      not_found
+      gone "actors/tombstone", env: env, iri: "#{host}/actors/#{env.params.url["username"]}"
     end
 
     actor = account.actor

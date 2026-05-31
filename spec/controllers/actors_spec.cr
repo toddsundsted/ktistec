@@ -93,14 +93,30 @@ Spectator.describe ActorsController do
   end
 
   describe "GET /actors/:username" do
-    it "returns 404 if not found" do
+    it "returns 410 if gone" do
       get "/actors/missing", ACCEPT_HTML
-      expect(response.status_code).to eq(404)
+      expect(response.status_code).to eq(410)
     end
 
-    it "returns 404 if not found" do
+    it "renders Gone page if gone" do
+      get "/actors/missing", ACCEPT_HTML
+      expect(response.status_code).to eq(410)
+      expect(XML.parse_html(response.body).xpath_nodes("//h1[text()='Gone']")).not_to be_empty
+    end
+
+    it "returns 410 if gone" do
       get "/actors/missing", ACCEPT_JSON
-      expect(response.status_code).to eq(404)
+      expect(response.status_code).to eq(410)
+    end
+
+    it "returns Tombstone if gone" do
+      get "/actors/missing", ACCEPT_JSON
+      expect(JSON.parse(response.body)["type"]).to eq("Tombstone")
+    end
+
+    it "identifies the requested actor if gone" do
+      get "/actors/missing", ACCEPT_JSON
+      expect(JSON.parse(response.body)["id"]).to eq("https://test.test/actors/missing")
     end
 
     it "returns 200 if found" do

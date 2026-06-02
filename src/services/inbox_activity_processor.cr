@@ -34,6 +34,7 @@ class InboxActivityProcessor
     handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
     receive_task_class : Task::Receive.class = Task::Receive,
     deliver_task_class : Task::Deliver.class = Task::Deliver,
+    processed : Set(String) = Set(String).new,
   )
     content_rules.run do
       recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq!
@@ -97,7 +98,10 @@ class InboxActivityProcessor
       Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
     )
 
-    process_locally(partition.local, activity)
+    # `processed` tracks the actors already handled in this delivery pass,
+    # breaking the `process` -> `process_locally` -> `process` recursion.
+    processed << account.actor.iri
+    process_locally(partition.local, activity, processed)
 
     # scheduled unconditionally even when `partition.remote` is empty:
     # `Task::Receive#perform` does per-receiver work (quote handling)
@@ -113,10 +117,10 @@ class InboxActivityProcessor
 
   # Processes local recipients in-process.
   #
-  def self.process_locally(actors_accounts : Array(Tuple(ActivityPub::Actor, Account)), activity : ActivityPub::Activity)
+  def self.process_locally(actors_accounts : Array(Tuple(ActivityPub::Actor, Account)), activity : ActivityPub::Activity, processed : Set(String) = Set(String).new)
     actors_accounts.each do |actor, account|
-      next if Relationship::Content::Inbox.find?(owner: actor, activity: activity)
-      process(account, activity, deliver_to: [actor.iri])
+      next if processed.includes?(actor.iri) || Relationship::Content::Inbox.find?(owner: actor, activity: activity)
+      process(account, activity, deliver_to: [actor.iri], processed: processed)
     end
   end
 

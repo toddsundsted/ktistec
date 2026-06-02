@@ -29,6 +29,24 @@ Spectator.describe InboxActivityProcessor do
   end
 
   describe ".process" do
+    # proves a fix to an inbox infinite-recursion server-killer: a
+    # filtered incoming Create from a remote actor recurses until the
+    # fiber stack overflows. `process_locally` re-enters `process`
+    # (via `for_receive` echoing the recipient back).
+    context "with a filtered Create from a remote actor" do
+      let_create!(:filter_term, actor: account.actor, term: "%content%")
+      let_create!(:create, named: :filtered_create, actor: other, object: object, to: [account.actor.iri])
+
+      before_each do
+        object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
+      end
+
+      it "does not recurse until crash" do
+        InboxActivityProcessor.process(account, filtered_create, receive_task_class: MockReceiveTask)
+        expect(MockReceiveTask.schedule_called_count).to eq(1)
+      end
+    end
+
     context "with a Follow activity" do
       let_create(:follow, named: :follow_activity, actor: other, object: account.actor)
 

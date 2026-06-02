@@ -1285,5 +1285,89 @@ Spectator.describe "object partials" do
         expect(subject["interactionPolicy"]?).to be_nil
       end
     end
+
+    describe "the `replies` field" do
+      let(account) { register }
+      let(object_iri) { "https://test.test/objects/#{random_string}" }
+      let(recursive) { false }
+
+      context "given a local object" do
+        let(author) { account.actor }
+        let_create!(:object, iri: object_iri, attributed_to: author, published: Time.utc, replies_iri: "#{object_iri}/replies")
+
+        it "emits replies_iri" do
+          expect(subject["replies"]).to eq(object.replies_iri)
+        end
+
+        context "when rendering recursively" do
+          let(recursive) { true }
+
+          it "is an OrderedCollection" do
+            expect(subject["replies"]["type"]).to eq("OrderedCollection")
+            expect(subject["replies"]["id"]).to eq(object.replies_iri)
+          end
+
+          it "is empty" do
+            expect(subject["replies"]["totalItems"]).to eq(0)
+            expect(subject["replies"]["orderedItems"].as_a).to be_empty
+          end
+
+          context "with replies" do
+            let_build(:actor, named: :other)
+            let_create!(:object, named: :reply, attributed_to: other, in_reply_to: object, visible: true)
+            let_create!(:object, named: nil, attributed_to: other, in_reply_to: object, visible: true)
+            let_create!(:approved_relationship, actor: author, object: reply)
+
+            it "has one reply" do
+              expect(subject["replies"]["totalItems"]).to eq(1)
+            end
+
+            it "includes only approved replies" do
+              iris = subject["replies"]["orderedItems"].as_a.map(&.as_s)
+              expect(iris).to eq([reply.iri])
+            end
+          end
+        end
+      end
+
+      context "given a remote object with cached replies" do
+        let_build(:actor, named: :author)
+        let_build(:collection, named: :replies, iri: "https://remote/posts/1/replies")
+        let_create!(:object, attributed_to: author, published: Time.utc, replies: replies)
+
+        it "emits collection iri" do
+          expect(subject["replies"]).to eq("https://remote/posts/1/replies")
+        end
+
+        context "when rendering recursively" do
+          let(recursive) { true }
+
+          before_each { replies.assign(items_iris: ["https://remote/posts/1/replies/1"]).save }
+
+          it "embeds the cached collection" do
+            expect(subject["replies"]["id"]).to eq("https://remote/posts/1/replies")
+            expect(subject["replies"]["items"]).to eq(["https://remote/posts/1/replies/1"])
+          end
+        end
+      end
+
+      context "given a remote object with replies_iri" do
+        let_build(:actor, named: :author)
+        let_create!(:object, attributed_to: author, published: Time.utc, replies_iri: "https://remote/posts/1/replies")
+
+        it "emits replies_iri" do
+          expect(subject["replies"]).to eq("https://remote/posts/1/replies")
+        end
+      end
+
+      context "given an object with no replies_iri" do
+        let_build(:actor, named: :author)
+        let_build(:object, attributed_to: author, published: Time.utc)
+
+        it "omits replies" do
+          expect(subject["replies"]?).to be_nil
+        end
+      end
+    end
   end
 end

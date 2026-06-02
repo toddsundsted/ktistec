@@ -53,7 +53,7 @@ class WellKnownController
     env.response.headers.add("Access-Control-Allow-Origin", "*")
     message.to_json
   rescue Ktistec::Model::NotFound
-    not_found
+    gone
   end
 
   get "/.well-known/nodeinfo" do |env|

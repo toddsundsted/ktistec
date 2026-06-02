@@ -26,9 +26,9 @@ Spectator.describe InboxesController do
 
     let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
-    it "returns 404 if account not found" do
+    it "returns 410 if account is gone" do
       post "/actors/0/inbox", headers
-      expect(response.status_code).to eq(404)
+      expect(response.status_code).to eq(410)
     end
 
     it "returns 503 if the server is shutting down" do

@@ -77,14 +77,14 @@ Spectator.describe RelationshipsController do
     let(other1) { register.actor }
     let(other2) { register.actor }
 
-    it "returns 404 if actor does not exist" do
+    it "returns 410 if actor is gone" do
       get "/actors/0/following", HTML_HEADERS
-      expect(response.status_code).to eq(404)
+      expect(response.status_code).to eq(410)
     end
 
-    it "returns 404 if actor does not exist" do
+    it "returns 410 if actor is gone" do
       get "/actors/0/following", JSON_HEADERS
-      expect(response.status_code).to eq(404)
+      expect(response.status_code).to eq(410)
     end
 
     context "when relationship is following" do

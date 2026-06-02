@@ -35,7 +35,7 @@ class RelationshipsController
 
   get "/actors/:username/following" do |env|
     unless (account = get_account(env))
-      not_found
+      gone
     end
 
     related = account.actor.all_following(**cursor_pagination_params(env), public: env.account? != account)
@@ -44,7 +44,7 @@ class RelationshipsController
 
   get "/actors/:username/followers" do |env|
     unless (account = get_account(env))
-      not_found
+      gone
     end
 
     related = account.actor.all_followers(**cursor_pagination_params(env), public: env.account? != account)

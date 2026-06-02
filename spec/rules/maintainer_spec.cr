@@ -112,6 +112,18 @@ Spectator.describe Rules::Maintainer do
     end
   end
 
+  describe ".reconcile_object" do
+    let_create!(:object)
+
+    before_each { Rules::View.register(view) }
+    after_each { Rules::View.registry.delete(view) }
+
+    it "reconciles the registered view for the object" do
+      Rules::Maintainer.reconcile_object(object.iri)
+      expect(materialized(view)).to contain(object.iri)
+    end
+  end
+
   describe "scoped reconciliation equals batch" do
     let_create!(:object, named: member1, visible: true)
     let_create!(:object, named: member2, visible: true)

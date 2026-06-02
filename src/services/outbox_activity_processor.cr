@@ -3,6 +3,7 @@ require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
 require "../models/account"
 require "../rules/content_rules"
+require "../rules/maintainer"
 require "../models/relationship/social/follow"
 require "../models/task/deliver"
 require "../models/task/distribute_poll_updates"
@@ -107,6 +108,18 @@ class OutboxActivityProcessor
         object.delete!
       end
     end
+
+    # re-evaluate the materialized views for the object this activity
+    # concerns, an undo names the undone activity; its object is the
+    # affected one.
+
+    object_iri =
+      if activity.is_a?(ActivityPub::Activity::Undo)
+        activity.object?.try(&.object_iri)
+      else
+        activity.object_iri
+      end
+    Rules::Maintainer.reconcile_object(object_iri) if object_iri
 
     partition = Ktistec::Recipients.partition(
       Ktistec::Recipients.for_deliver(activity, account.actor),

@@ -339,7 +339,7 @@ end
 
 def public_timeline_factory(object_iri = nil, object = false, **options)
   object = object_factory unless object_iri || object.nil? || object
-  relationship_factory(Relationship::Content::PublicTimeline, **{to_iri: object_iri, object: object}.merge(options))
+  relationship_factory(Relationship::Content::PublicTimeline, **{from_iri: Ktistec::Constants::PUBLIC, to_iri: object_iri, object: object}.merge(options))
 end
 
 def inbox_relationship_factory(owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)

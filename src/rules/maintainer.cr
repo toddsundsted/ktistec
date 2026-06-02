@@ -76,6 +76,17 @@ module Rules
       end
     end
 
+    # Re-evaluates every registered view for a changed object,
+    # projecting the object to each view's affected key(s).
+    #
+    def reconcile_object(object_iri : String) : Nil
+      View.registry.each do |view|
+        view.project(object_iri).each do |key|
+          reconcile_for(view, key)
+        end
+      end
+    end
+
     # Notifications produced imperatively. The batch reconcile leaves these
     # untouched.
     #

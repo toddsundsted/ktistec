@@ -300,8 +300,7 @@ module Ktistec
       #
       # The query must include a placeholder `%{cursor_condition}`
       # where cursor filtering conditions will be inserted, and must
-      # not include `ORDER BY` or `LIMIT` clauses (which are added
-      # automatically).
+      # not include `ORDER BY` or `LIMIT` clauses.
       #
       # Parameters:
       # - `query`: SQL query
@@ -312,7 +311,8 @@ module Ktistec
       # - `limit`: Maximum number of items to return (default 10)
       # - `additional_columns`: Extra columns to read from the result set
       #
-      # Results are always returned in descending order (newest first).
+      # Results are always returned in descending order of
+      # `cursor_column`.
       #
       protected def query_with_cursor(
         query : String,
@@ -324,22 +324,81 @@ module Ktistec
         additional_columns = NamedTuple.new,
         args : Enumerable? = nil,
       )
-        cursor_args = [] of Int64
+        query_with_keyset_cursor(
+          query,
+          *args_,
+          cursor_columns: {cursor_column},
+          max_cursor: max_id ? {max_id} : nil,
+          min_cursor: min_id ? {min_id} : nil,
+          limit: limit,
+          additional_columns: additional_columns,
+          args: args,
+        )
+      end
+
+      # Executes a cursor-based paginated query ordered by a keyset.
+      #
+      # The query must include a placeholder `%{cursor_condition}`
+      # where cursor filtering conditions will be inserted, and must
+      # not include `ORDER BY` or `LIMIT` clauses.
+      #
+      # The keyset must end in a unique column so the order is total.
+      #
+      # Parameters:
+      # - `query`: SQL query
+      # - `*args`: Bind parameters for the query
+      # - `cursor_columns`: The columns to use for cursor filtering and ordering
+      # - `max_cursor`: Return items older than this (tuple of values for `cursor_columns`)
+      # - `min_cursor`: Return items newer than this (tuple of values for `cursor_columns`)
+      # - `limit`: Maximum number of items to return (default 10)
+      # - `additional_columns`: Extra columns to read from the result set
+      #
+      # Results are always returned in descending order of
+      # `cursor_columns`.
+      #
+      protected def query_with_keyset_cursor(
+        query : String,
+        *args_,
+        cursor_columns : Tuple,
+        max_cursor : Tuple? = nil,
+        min_cursor : Tuple? = nil,
+        limit : Int32 = 10,
+        additional_columns = NamedTuple.new,
+        args : Enumerable? = nil,
+      )
+        columns = cursor_columns.join(", ")
+        placeholders = Array.new(cursor_columns.size, "?").join(", ")
+        cursor_args = [] of ::DB::Any
         cursor_condition = [] of String
-        if max_id
-          cursor_args << max_id
-          cursor_condition << "#{cursor_column} < ?"
+        if max_cursor
+          max_cursor.each { |value| cursor_args << value.as(::DB::Any) }
+          cursor_condition << "(#{columns}) < (#{placeholders})"
         end
-        if min_id
-          cursor_args << min_id
-          cursor_condition << "#{cursor_column} > ?"
+        if min_cursor
+          min_cursor.each { |value| cursor_args << value.as(::DB::Any) }
+          cursor_condition << "(#{columns}) > (#{placeholders})"
         end
-        ascending = !!(min_id && !max_id)
+        ascending = !!(min_cursor && !max_cursor)
         direction = ascending ? "ASC" : "DESC"
         cursor_condition = cursor_condition.empty? ? "1" : cursor_condition.join(" AND ")
+        order_by = cursor_columns.map { |column| "#{column} #{direction}" }.join(", ")
         main_query = query % {cursor_condition: cursor_condition}
-        main_query += " ORDER BY #{cursor_column} #{direction} LIMIT ?"
-        all_args = (args || args_).to_a + cursor_args + [limit + 1]
+        main_query += " ORDER BY #{order_by} LIMIT ?"
+        all_args = Array(::DB::Any).new
+        (args || args_).each { |arg| all_args << arg.as(::DB::Any) }
+        all_args.concat(cursor_args)
+        all_args << (limit + 1)
+        assemble_cursor_result(
+          main_query,
+          all_args,
+          ascending: ascending,
+          has_max: !!max_cursor,
+          limit: limit,
+          additional_columns: additional_columns,
+        )
+      end
+
+      private def assemble_cursor_result(main_query : String, all_args : Array, *, ascending : Bool, has_max : Bool, limit : Int32, additional_columns)
         Internal.log_query(main_query, all_args) do
           result = Ktistec::Util::PaginatedArray(self).new
           Ktistec.database.query(main_query, args: all_args) do |rs|
@@ -355,13 +414,10 @@ module Ktistec
             result.cursor_start = result.first.id
             result.cursor_end = result.last.id
           end
-          # navigable-only contract: derive has_prev?/has_next? from
-          # max_id?, min_id?, main_more. hand-crafted cursors may
-          # result in undefined behavior.
           if ascending
             result.has_prev = main_more
             result.has_next = true
-          elsif max_id
+          elsif has_max
             result.has_prev = true
             result.has_next = main_more
           else

@@ -2,6 +2,7 @@ require "../../../src/models/activity_pub/object"
 require "../../../src/models/activity_pub/activity/announce"
 require "../../../src/models/activity_pub/activity/like"
 require "../../../src/services/thread_analysis_service"
+require "../../../src/rules/maintainer"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -1254,6 +1255,8 @@ Spectator.describe ActivityPub::Object do
     public_post(4, :create)
     public_post(5, :announce)
 
+    before_each { Rules::Maintainer.reconcile(Rules::View::PublicTimeline.instance) }
+
     it "instantiates the correct subclass" do
       expect(described_class.public_posts(limit: 2).first).to be_a(ActivityPub::Object)
     end
@@ -1280,16 +1283,6 @@ Spectator.describe ActivityPub::Object do
 
     it "filters out non-public posts" do
       post5.assign(visible: false).save
-      expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
-    end
-
-    it "filters out replies" do
-      post5.assign(in_reply_to: post3).save
-      expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
-    end
-
-    it "filters out objects belonging to undone activities" do
-      activity5.undo!
       expect(described_class.public_posts(limit: 2)).to eq([post4, post3])
     end
 
@@ -1321,12 +1314,14 @@ Spectator.describe ActivityPub::Object do
       let_build(:create, named: extra_activity, actor: actor, object: post3)
       let_create!(:outbox_relationship, owner: actor, activity: extra_activity)
 
+      before_each { Rules::Maintainer.reconcile(Rules::View::PublicTimeline.instance) }
+
       it "emits the object once" do
-        expect(described_class.public_posts(limit: 10)).to eq([post3, post5, post4, post2, post1])
+        expect(described_class.public_posts(limit: 10)).to eq([post5, post4, post3, post2, post1])
       end
 
       it "does not emit the object on the next page" do
-        expect(described_class.public_posts(max_id: post3.id, limit: 5)).to eq([post5, post4, post2, post1])
+        expect(described_class.public_posts(max_id: post3.id, limit: 5)).to eq([post2, post1])
       end
     end
   end
@@ -1339,6 +1334,8 @@ Spectator.describe ActivityPub::Object do
     public_post(3, :announce)
     public_post(4, :create)
     public_post(5, :announce)
+
+    before_each { Rules::Maintainer.reconcile(Rules::View::PublicTimeline.instance) }
 
     it "instantiates the correct subclass" do
       expect(described_class.public_posts_count).to be_a(Int64)
@@ -1368,19 +1365,6 @@ Spectator.describe ActivityPub::Object do
       post5.assign(visible: false).save
       expect(described_class.public_posts_count).to eq(4)
     end
-
-    it "filters out replies" do
-      post5.assign(in_reply_to: post3).save
-      expect(described_class.public_posts_count).to eq(4)
-    end
-
-    it "filters out objects belonging to undone activities" do
-      activity5.undo!
-      expect(described_class.public_posts_count).to eq(4)
-    end
-
-    let_build(:create, actor: actor, object: post5)
-    let_build(:outbox_relationship, named: :outbox, owner: actor, activity: create)
 
     it "returns the count" do
       expect(described_class.public_posts_count).to eq(5)

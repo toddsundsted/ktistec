@@ -20,13 +20,29 @@ module Rules
 
     # Rebuilds a view's stored rows to exactly equal its membership query.
     #
-    # Inserts desired-but-absent members (`created_at` = the membership's
-    # position, so the stored ordering is independent of insertion order)
-    # and deletes stored-but-undesired rows, in one transaction.
-    #
     def reconcile(view : View) : Nil
-      query, _ = view.membership
-      type = view.type
+      query, args = view.membership
+      apply(view.type, query, args, "1", Array(DB::Any).new)
+    end
+
+    # Re-evaluates one key to an insert, delete, or no-op.
+    #
+    # Fired after a base fact changes.
+    #
+    def reconcile_for(view : View, key : View::Key) : Nil
+      query, args = view.membership(key)
+      scope, scope_args = view.stored_scope(key)
+      apply(view.type, query, args, scope, scope_args)
+    end
+
+    # Inserts the membership rows the scope lacks and deletes the stored
+    # rows in scope the membership no longer selects, in one transaction.
+    #
+    # `query` selects `(from_iri, to_iri, position)`; `scope` bounds the
+    # delete to the rows owned by the reconciled key (the whole
+    # collection, for the batch path).
+    #
+    private def apply(type : String, query : String, query_args : Array(DB::Any), scope : String, scope_args : Array(DB::Any)) : Nil
       now = Time.utc
       insert = <<-SQL
         INSERT INTO relationships (created_at, updated_at, type, from_iri, to_iri, confirmed, visible)
@@ -40,39 +56,15 @@ module Rules
       delete = <<-SQL
         DELETE FROM relationships
          WHERE type = '#{type}'
+           AND (#{scope})
            AND NOT EXISTS (
              SELECT 1 FROM (#{query}) AS m
               WHERE m.from_iri = relationships.from_iri AND m.to_iri = relationships.to_iri
            )
       SQL
       transaction do
-        Ktistec.database.exec(insert, now)
-        Ktistec.database.exec(delete)
-      end
-    end
-
-    # Re-evaluates one key to an insert, delete, or no-op.
-    #
-    # Fired after a base fact changes.
-    #
-    def reconcile_for(view : View, key : View::Key) : Nil
-      query, args = view.membership(key)
-      type = view.type
-      now = Time.utc
-      transaction do
-        desired = Ktistec.database.scalar("SELECT EXISTS(SELECT 1 FROM (#{query}) AS m)", args: args).as(Int64) == 1
-        stored = Ktistec.database.scalar("SELECT EXISTS(SELECT 1 FROM relationships WHERE type = ? AND from_iri = ? AND to_iri = ?)", type, key[:from_iri], key[:to_iri]).as(Int64) == 1
-        if desired && !stored
-          Ktistec.database.exec(<<-SQL, args: Array(DB::Any){now} + args)
-            INSERT INTO relationships (created_at, updated_at, type, from_iri, to_iri, confirmed, visible)
-                 SELECT m.position, ?, '#{type}', m.from_iri, m.to_iri, 1, 1
-                   FROM (#{query}) AS m
-          SQL
-        elsif !desired && stored
-          Ktistec.database.exec(
-            "DELETE FROM relationships WHERE type = ? AND from_iri = ? AND to_iri = ?",
-            type, key[:from_iri], key[:to_iri])
-        end
+        Ktistec.database.exec(insert, args: Array(DB::Any){now} + query_args)
+        Ktistec.database.exec(delete, args: scope_args + query_args)
       end
     end
 

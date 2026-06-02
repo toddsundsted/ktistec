@@ -30,6 +30,16 @@ module Rules
     #
     abstract def project(object_iri : String) : Array(Key)
 
+    # The SQL predicate and bind arguments identifying the stored rows
+    # that belong to a scope `key`, used to bound the scoped
+    # reconcile's delete.
+    #
+    # Defaults to the identity case.
+    #
+    def stored_scope(key : Key) : {String, Array(DB::Any)}
+      {"from_iri = ? AND to_iri = ?", Array(DB::Any){key[:from_iri], key[:to_iri]}}
+    end
+
     # Whether members reposition on new support (recency views) or
     # stay fixed at first appearance (append-only views).
     #

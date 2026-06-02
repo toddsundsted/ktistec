@@ -3,9 +3,14 @@ require "../../src/rules/maintainer"
 require "../spec_helper/base"
 require "../spec_helper/factory"
 
-private class SyntheticView < Rules::View
+# An identity-keyed view.
+#
+# The stored row's `(from_iri, to_iri)` is the membership key (one row
+# per object).
+#
+private class SyntheticIdentityKeyedView < Rules::View
   def type : String
-    "Relationship::Content::SyntheticCollection"
+    "Relationship::Content::SyntheticIdentity"
   end
 
   def membership(key : Rules::View::Key? = nil) : {String, Array(DB::Any)}
@@ -30,6 +35,49 @@ private class SyntheticView < Rules::View
   end
 end
 
+# A representative-keyed view.
+#
+# One stored row per group (an object's `attributed_to_iri`), keyed on
+# a member that changes -- the latest visible object in the group.
+#
+private class SyntheticRepresentativeKeyedView < Rules::View
+  def type : String
+    "Relationship::Content::SyntheticRepresentative"
+  end
+
+  def membership(key : Rules::View::Key? = nil) : {String, Array(DB::Any)}
+    if key
+      scope = "AND o.attributed_to_iri = ?"
+      args = Array(DB::Any){key[:to_iri]}
+    else
+      scope = ""
+      args = Array(DB::Any).new
+    end
+    query = <<-SQL
+      SELECT 'owner' AS from_iri, o.iri AS to_iri, o.created_at AS position
+        FROM objects o
+       WHERE o.visible = 1
+         AND NOT EXISTS (
+           SELECT 1 FROM objects o2
+            WHERE o2.attributed_to_iri = o.attributed_to_iri
+              AND o2.visible = 1
+              AND o2.created_at > o.created_at
+         )
+         #{scope}
+    SQL
+    {query, args}
+  end
+
+  def project(object_iri : String) : Array(Rules::View::Key)
+    group = Ktistec.database.query_one?("SELECT attributed_to_iri FROM objects WHERE iri = ?", object_iri, as: String)
+    group ? [{from_iri: "owner", to_iri: group}] : [] of Rules::View::Key
+  end
+
+  def stored_scope(key : Rules::View::Key) : {String, Array(DB::Any)}
+    {"from_iri = ? AND to_iri IN (SELECT iri FROM objects WHERE attributed_to_iri = ?)", Array(DB::Any){key[:from_iri], key[:to_iri]}}
+  end
+end
+
 private def materialized(view)
   Ktistec.database.query_all("SELECT to_iri FROM relationships WHERE type = ?", view.type, as: String).to_set
 end
@@ -42,105 +90,225 @@ private def key_for(object)
   {from_iri: "owner", to_iri: object.iri}
 end
 
+private GROUP = "https://test.test/actors/grouped"
+
+private def group_key
+  {from_iri: "owner", to_iri: GROUP}
+end
+
 Spectator.describe Rules::Maintainer do
   setup_spec
 
-  let(view) { SyntheticView.new }
-
   describe ".reconcile" do
-    context "given a stored member the query no longer selects" do
-      let_create!(:object)
+    context "an identity-keyed view" do
+      let(view) { SyntheticIdentityKeyedView.new }
 
-      before_each do
-        Rules::Maintainer.reconcile(view)
-        object.assign(visible: false).save
+      context "given a stored member the query no longer selects" do
+        let_create!(:object)
+
+        before_each do
+          Rules::Maintainer.reconcile(view)
+          object.assign(visible: false).save
+        end
+
+        pre_condition { expect(materialized(view)).to contain(object.iri) }
+
+        it "is deleted" do
+          Rules::Maintainer.reconcile(view)
+          expect(materialized(view)).not_to contain(object.iri)
+        end
       end
 
-      pre_condition { expect(materialized(view)).to contain(object.iri) }
+      context "given a missed older member" do
+        let_create!(:object, named: older, created_at: Time.utc - 2.hours)
+        let_create!(:object, named: newer, created_at: Time.utc - 1.minute)
 
-      it "is deleted" do
-        Rules::Maintainer.reconcile(view)
-        expect(materialized(view)).not_to contain(object.iri)
+        before_each { Rules::Maintainer.reconcile_for(view, key_for(newer)) }
+
+        it "positions the older member correctly" do
+          Rules::Maintainer.reconcile(view)
+          rows = rows_for(view)
+          older_row = rows.find! { |(_, to_iri, _)| to_iri == older.iri }
+          newer_row = rows.find! { |(_, to_iri, _)| to_iri == newer.iri }
+          # it is assigned a newer/higher id...
+          expect(older_row[0]).to be_gt(newer_row[0])
+          # ...but it preserves the created_at ordering
+          expect(older_row[2]).to be_lt(newer_row[2])
+        end
       end
     end
 
-    context "given a missed older member" do
-      let_create!(:object, named: older, created_at: Time.utc - 2.hours)
-      let_create!(:object, named: newer, created_at: Time.utc - 1.minute)
+    context "a representative-keyed view" do
+      let(view) { SyntheticRepresentativeKeyedView.new }
 
-      before_each { Rules::Maintainer.reconcile_for(view, key_for(newer)) }
+      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create(:object, named: third, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc)
 
-      it "positions the older member correctly" do
-        Rules::Maintainer.reconcile(view)
-        rows = rows_for(view)
-        older_row = rows.find! { |(_, to_iri, _)| to_iri == older.iri }
-        newer_row = rows.find! { |(_, to_iri, _)| to_iri == newer.iri }
-        # it is assigned a newer/higher id...
-        expect(older_row[0]).to be_gt(newer_row[0])
-        # ...but it preserves the created_at ordering
-        expect(older_row[2]).to be_lt(newer_row[2])
+      context "given an older member" do
+        before_each { Rules::Maintainer.reconcile(view) }
+
+        pre_condition { expect(materialized(view)).to eq(Set{second.iri}) }
+
+        it "swaps to the newer member" do
+          third.save
+          Rules::Maintainer.reconcile(view)
+          # one physical row per group
+          rows = rows_for(view)
+          expect(rows.size).to eq(1)
+          expect(rows.first[1]).to eq(third.iri)
+        end
       end
     end
   end
 
   describe ".reconcile_for" do
-    let_create!(:object)
+    context "an identity-keyed view" do
+      let(view) { SyntheticIdentityKeyedView.new }
 
-    it "inserts the key" do
-      Rules::Maintainer.reconcile_for(view, key_for(object))
-      expect(materialized(view)).to contain(object.iri)
-    end
+      let_create!(:object)
 
-    context "when a key is already inserted" do
-      before_each { Rules::Maintainer.reconcile_for(view, key_for(object)) }
-
-      pre_condition { expect(materialized(view)).to contain(object.iri) }
-
-      it "is does not insert a duplicate" do
-        expect { Rules::Maintainer.reconcile_for(view, key_for(object)) }
-          .not_to change { materialized(view).size }
+      it "inserts the key" do
+        Rules::Maintainer.reconcile_for(view, key_for(object))
+        expect(materialized(view)).to contain(object.iri)
       end
 
-      context "but no longer qualifies" do
-        before_each { object.assign(visible: false).save }
+      context "when a key is already inserted" do
+        before_each { Rules::Maintainer.reconcile_for(view, key_for(object)) }
 
-        it "is deleted" do
-          Rules::Maintainer.reconcile_for(view, key_for(object))
-          expect(materialized(view)).not_to contain(object.iri)
+        pre_condition { expect(materialized(view)).to contain(object.iri) }
+
+        it "does not insert a duplicate" do
+          expect { Rules::Maintainer.reconcile_for(view, key_for(object)) }
+            .not_to change { materialized(view).size }
+        end
+
+        context "but no longer qualifies" do
+          before_each { object.assign(visible: false).save }
+
+          it "is deleted" do
+            Rules::Maintainer.reconcile_for(view, key_for(object))
+            expect(materialized(view)).not_to contain(object.iri)
+          end
+        end
+      end
+    end
+
+    context "a representative-keyed view" do
+      let(view) { SyntheticRepresentativeKeyedView.new }
+
+      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create(:object, named: third, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc)
+
+      it "stores the latest member" do
+        Rules::Maintainer.reconcile_for(view, group_key)
+        expect(materialized(view)).to eq(Set{second.iri})
+      end
+
+      context "given a stored member" do
+        before_each { Rules::Maintainer.reconcile_for(view, group_key) }
+
+        pre_condition { expect(materialized(view)).to eq(Set{second.iri}) }
+
+        it "swaps to a newer member" do
+          third.save
+          Rules::Maintainer.reconcile_for(view, group_key)
+          # one physical row per group
+          rows = rows_for(view)
+          expect(rows.size).to eq(1)
+          expect(rows.first[1]).to eq(third.iri)
+          expect(rows.first[2]).to be_close(third.created_at, 1.second)
+        end
+
+        it "falls back to the previous member" do
+          second.assign(visible: false).save
+          Rules::Maintainer.reconcile_for(view, group_key)
+          expect(materialized(view)).to eq(Set{first.iri})
+        end
+
+        it "evicts the group entirely" do
+          first.assign(visible: false).save
+          second.assign(visible: false).save
+          Rules::Maintainer.reconcile_for(view, group_key)
+          expect(materialized(view)).to be_empty
         end
       end
     end
   end
 
   describe ".reconcile_object" do
-    let_create!(:object)
+    context "an identity-keyed view" do
+      let(view) { SyntheticIdentityKeyedView.new }
 
-    before_each { Rules::View.register(view) }
-    after_each { Rules::View.registry.delete(view) }
+      let_create!(:object)
 
-    it "reconciles the registered view for the object" do
-      Rules::Maintainer.reconcile_object(object.iri)
-      expect(materialized(view)).to contain(object.iri)
+      before_each { Rules::View.register(view) }
+      after_each { Rules::View.registry.delete(view) }
+
+      it "projects the object to itself" do
+        Rules::Maintainer.reconcile_object(object.iri)
+        expect(materialized(view)).to contain(object.iri)
+      end
+    end
+
+    context "a representative-keyed view" do
+      let(view) { SyntheticRepresentativeKeyedView.new }
+
+      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+
+      before_each { Rules::View.register(view) }
+      after_each { Rules::View.registry.delete(view) }
+
+      it "projects a member to its group's representative" do
+        Rules::Maintainer.reconcile_object(first.iri)
+        expect(materialized(view)).to eq(Set{second.iri})
+      end
     end
   end
 
-  describe "scoped reconciliation equals batch" do
-    let_create!(:object, named: member1, visible: true)
-    let_create!(:object, named: member2, visible: true)
-    let_create!(:object, named: member3, visible: false)
+  describe "scoped reconcile converges to batch reconcile" do
+    context "an identity-keyed view" do
+      let(view) { SyntheticIdentityKeyedView.new }
 
-    it "produces the same membership" do
-      Rules::Maintainer.reconcile(view)
-      batch = materialized(view)
+      let_create!(:object, named: member1, visible: true)
+      let_create!(:object, named: member2, visible: true)
+      let_create!(:object, named: member3, visible: false)
 
-      Ktistec.database.exec("DELETE FROM relationships WHERE type = ?", view.type)
+      it "produces the same membership" do
+        Rules::Maintainer.reconcile(view)
+        batch = materialized(view)
 
-      [member1, member2, member3].each do |object|
-        Rules::Maintainer.reconcile_for(view, key_for(object))
+        Ktistec.database.exec("DELETE FROM relationships WHERE type = ?", view.type)
+
+        [member1, member2, member3].each do |object|
+          Rules::Maintainer.reconcile_for(view, key_for(object))
+        end
+        scoped = materialized(view)
+
+        expect(scoped).to eq(batch)
       end
-      scoped = materialized(view)
+    end
 
-      expect(scoped).to eq(batch)
+    context "a representative-keyed view" do
+      let(view) { SyntheticRepresentativeKeyedView.new }
+
+      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+
+      it "produces the same membership" do
+        Rules::Maintainer.reconcile(view)
+        batch = materialized(view)
+
+        Ktistec.database.exec("DELETE FROM relationships WHERE type = ?", view.type)
+
+        Rules::Maintainer.reconcile_for(view, group_key)
+        scoped = materialized(view)
+
+        expect(scoped).to eq(batch)
+        expect(scoped).to eq(Set{second.iri})
+      end
     end
   end
 

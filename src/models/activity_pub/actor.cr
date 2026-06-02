@@ -895,21 +895,6 @@ module ActivityPub
       max_cursor = max_id ? translate_object_id_to_published_and_id(max_id, exclude_pinned: exclude_pinned) : nil
       min_cursor = min_id ? translate_object_id_to_published_and_id(min_id, exclude_pinned: exclude_pinned) : nil
 
-      cursor_predicates = [] of String
-      cursor_args = [] of ::DB::Any
-      if max_cursor
-        cursor_predicates << "(o.published, o.id) < (?, ?)"
-        cursor_args << max_cursor[0] << max_cursor[1]
-      end
-      if min_cursor
-        cursor_predicates << "(o.published, o.id) > (?, ?)"
-        cursor_args << min_cursor[0] << min_cursor[1]
-      end
-      cursor_condition = cursor_predicates.empty? ? "1" : cursor_predicates.join(" AND ")
-
-      ascending = min_cursor && !max_cursor
-      direction = ascending ? "ASC" : "DESC"
-
       pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
 
       query = <<-QUERY
@@ -920,40 +905,13 @@ module ActivityPub
             AND o.published IS NOT NULL
             AND o.visible = 1
             #{pin_filter}
-            AND #{cursor_condition}
-       ORDER BY o.published #{direction}, o.id #{direction} LIMIT ?
+            AND %{cursor_condition}
       QUERY
 
       args = [self.iri] of ::DB::Any
       args.concat(pin_args)
-      args.concat(cursor_args)
-      args << limit + 1
 
-      items = Object.sql(query, args: args)
-      main_more = items.size > limit
-      items.pop if main_more
-      items.reverse! if ascending
-
-      array = Ktistec::Util::PaginatedArray(Object).new(items)
-      if array.size > 0
-        array.cursor_start = array.first.id
-        array.cursor_end = array.last.id
-      end
-
-      # navigable-only contract: derive has_prev?/has_next? from
-      # max_id?, min_id?, main_more. hand-crafted cursors may result
-      # in undefined behavior.
-      if ascending
-        array.has_prev = main_more
-        array.has_next = true
-      elsif max_cursor
-        array.has_prev = true
-        array.has_next = main_more
-      else
-        array.has_prev = false
-        array.has_next = main_more
-      end
-      array
+      Object.query_with_keyset_cursor(query, cursor_columns: {"o.published", "o.id"}, max_cursor: max_cursor, min_cursor: min_cursor, limit: limit, args: args)
     end
 
     # Returns the actor's pinned posts.

@@ -9,6 +9,10 @@ module Ktistec
   # ...).
   #
   struct SafeURI
+    # A trusted empty URI.
+    #
+    EMPTY_URI = assert_safe("") # ameba:disable Ktistec/AssertSafeWhitelist
+
     def initialize(@value : String)
     end
 

@@ -1132,6 +1132,18 @@ Spectator.describe APIController do
           expect(json.as_a.map(&.dig?("account", "id"))).to eq([other.id.to_s, other.id.to_s])
         end
 
+        it "includes account.header" do
+          get "/api/v1/timelines/home", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.map(&.dig?("account", "header"))).to eq(["", ""])
+        end
+
+        it "includes account.header_static" do
+          get "/api/v1/timelines/home", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.as_a.map(&.dig?("account", "header_static"))).to eq(["", ""])
+        end
+
         it "does not include prev on the first page" do
           get "/api/v1/timelines/home?limit=1", headers: json_bearer_headers(access_token.token)
           expect(response.headers["Link"]?).not_to contain(%Q(rel="prev"))

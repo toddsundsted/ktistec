@@ -64,7 +64,7 @@ module Utils::Paths
   # intercepted by the client (e.g., Turbo `data-turbo-action` links).
   #
   macro current_page_path
-    ::Ktistec::SafeURI.assert_safe("")
+    ::Ktistec::SafeURI::EMPTY_URI
   end
 
   # A query-only relative reference (`?#{query}`). Resolves against

@@ -2326,6 +2326,19 @@ Spectator.describe ActivityPub::Actor do
     it "reports no more results" do
       expect(subject.notifications(limit: 5).has_next?).not_to be_true
     end
+
+    context "with a repositioned notification" do
+      # `notification1` has the lowest id but, once bumped, the newest created_at
+      before_each { notification1.assign(created_at: Time.utc(2030, 1, 1)).save }
+
+      it "orders by created_at" do
+        expect(subject.notifications.first).to eq(notification1)
+      end
+
+      it "pages correctly" do
+        expect(subject.notifications(max_id: notification1.id, limit: 2)).to eq([notification5, notification4])
+      end
+    end
   end
 
   context "approvals" do

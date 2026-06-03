@@ -1209,11 +1209,28 @@ module ActivityPub
 
     private alias Notification = Relationship::Content::Notification
 
+    # Translates an externally-supplied notification id into the
+    # notification row's `(created_at, id)` cursor pair. Returns nil for
+    # unknown ids or ids not in the actor's notifications.
+    #
+    private def translate_notification_id_to_created_at_and_id(n_id : Int64) : {Time, Int64}?
+      query = <<-QUERY
+        SELECT n.created_at, n.id
+          FROM relationships AS n
+         WHERE n.from_iri = ?
+           AND n.id = ?
+           AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
+      QUERY
+      Ktistec.database.query_one?(query, iri, n_id, as: {Time, Int64})
+    end
+
     # Returns notifications for the actor.
     #
     # Meant to be called on local (not cached) actors.
     #
     def notifications(*, max_id = nil, min_id = nil, limit = 10)
+      max_cursor = translate_notification_id_to_created_at_and_id(max_id) if max_id
+      min_cursor = translate_notification_id_to_created_at_and_id(min_id) if min_id
       query = <<-QUERY
          SELECT #{Notification.columns(prefix: "n")}
            FROM relationships AS n
@@ -1233,7 +1250,7 @@ module ActivityPub
             #{common_filters(objects: "e", actors: "t")}
             AND %{cursor_condition}
       QUERY
-      Notification.query_with_cursor(query, iri, cursor_column: "n.id", max_id: max_id, min_id: min_id, limit: limit)
+      Notification.query_with_keyset_cursor(query, iri, cursor_columns: {"n.created_at", "n.id"}, max_cursor: max_cursor, min_cursor: min_cursor, limit: limit)
     end
 
     # Returns the count of notifications for the actor since the given

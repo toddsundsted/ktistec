@@ -2,17 +2,11 @@ require "../../../src/rules/view/public_timeline"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
-
-private def selected(key = nil)
-  query, args = Rules::View::PublicTimeline.instance.membership(key)
-  Ktistec.database.query_all(query, args: args, as: {String, String, Time})
-end
-
-private def selected_iris(key = nil)
-  selected(key).map { |row| row[1] }.to_set
-end
+require "../../spec_helper/rule/view"
 
 Spectator.describe Rules::View::PublicTimeline do
+  include ViewSpecHelper
+
   setup_spec
 
   let(actor) { register.actor }

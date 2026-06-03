@@ -25,10 +25,8 @@ module API
       property note : Ktistec::SafeHTML
       property avatar : Ktistec::SafeURI
       property avatar_static : Ktistec::SafeURI
-      @[JSON::Field(emit_null: true)]
-      property header : Ktistec::SafeURI?
-      @[JSON::Field(emit_null: true)]
-      property header_static : Ktistec::SafeURI?
+      property header : Ktistec::SafeURI
+      property header_static : Ktistec::SafeURI
       property locked : Bool
       property fields : Array(Field)
       property emojis : Array(JSON::Any)
@@ -116,8 +114,8 @@ module API
         @note : Ktistec::SafeHTML,
         @avatar : Ktistec::SafeURI,
         @avatar_static : Ktistec::SafeURI,
-        @header : Ktistec::SafeURI?,
-        @header_static : Ktistec::SafeURI?,
+        @header : Ktistec::SafeURI,
+        @header_static : Ktistec::SafeURI,
         @locked : Bool,
         @fields : Array(Field),
         @emojis : Array(JSON::Any),
@@ -157,7 +155,7 @@ module API
           end
 
         avatar = Utils::Avatar.url_for(actor)
-        header = actor.image_safe
+        header = actor.image_safe || Ktistec::SafeURI::EMPTY_URI
 
         Account.new(
           id: actor.id.to_s,
@@ -195,7 +193,7 @@ module API
         fields = build_public_fields(actor)
 
         avatar = Utils::Avatar.url_for(actor)
-        header = actor.image_safe
+        header = actor.image_safe || Ktistec::SafeURI::EMPTY_URI
 
         Account.new(
           id: actor.id.to_s,

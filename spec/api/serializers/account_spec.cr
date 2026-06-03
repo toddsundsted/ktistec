@@ -61,11 +61,11 @@ Spectator.describe API::V1::Serializers::Account do
     end
 
     it "returns header" do
-      expect(subject.header).to be_nil
+      expect(subject.header).to eq("")
     end
 
     it "returns header_static" do
-      expect(subject.header_static).to be_nil
+      expect(subject.header_static).to eq("")
     end
 
     it "returns locked" do
@@ -407,11 +407,11 @@ Spectator.describe API::V1::Serializers::Account do
     end
 
     it "returns header" do
-      expect(subject.header).to be_nil
+      expect(subject.header).to eq("")
     end
 
     it "returns header_static" do
-      expect(subject.header_static).to be_nil
+      expect(subject.header_static).to eq("")
     end
 
     it "returns locked as false" do
@@ -564,12 +564,12 @@ Spectator.describe API::V1::Serializers::Account do
     context "with adversarial image" do
       before_each { actor.assign(image: "javascript:alert(1)") }
 
-      it "returns nil" do
-        expect(subject.header).to be_nil
+      it "falls back to an empty string" do
+        expect(subject.header).to eq("")
       end
 
-      it "returns nil" do
-        expect(subject.header_static).to be_nil
+      it "falls back to an empty string" do
+        expect(subject.header_static).to eq("")
       end
     end
 
@@ -653,8 +653,8 @@ Spectator.describe API::V1::Serializers::Account do
       expect(json["note"]).to eq("")
       expect(json["avatar"].as_s).to match(/\/images\/avatars\/color-\d+\.png/)
       expect(json["avatar_static"].as_s).to match(/\/images\/avatars\/color-\d+\.png/)
-      expect(json["header"]).to eq(nil)
-      expect(json["header_static"]).to eq(nil)
+      expect(json["header"]).to eq("")
+      expect(json["header_static"]).to eq("")
       expect(json["locked"]).to eq(!account.auto_approve_followers)
       expect(json["fields"].as_a).to be_empty
       expect(json["emojis"].as_a).to be_empty

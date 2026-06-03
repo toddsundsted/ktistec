@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.4.1]
+### Fixed
+- Prevent runaway recursion when handling filtered posts.
+- Ensure profile `header` and `header_static` images are always present.
+- Render the inline `replies` collection for local objects.
+- Exclude blocked actors from object statistics and notifications.
+
+### Changed
+- Return 410 Gone instead of 404 Not Found for missing actors.
+
+### Removed
+- Tag counts on public pages.
+
 ## [v3.4.0]
 ### Added
 - Cursor-based pagination for web-navigable collections. (fixes [#122](https://github.com/toddsundsted/ktistec/issues/122))
@@ -797,6 +810,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.4.1]: https://github.com/toddsundsted/ktistec/compare/448a50e1...4bfd86d3
 [v3.4.0]: https://github.com/toddsundsted/ktistec/compare/e882df3b...7461a3e2
 [v3.3.9]: https://github.com/toddsundsted/ktistec/compare/d73c518c...5cd1c665
 [v3.3.8]: https://github.com/toddsundsted/ktistec/compare/a9c7c0ba...7f7de3d5

@@ -7,6 +7,7 @@ require "../../framework/key_pair"
 require "../../framework/ext/sqlite3"
 require "../../framework/model"
 require "../../framework/model/common"
+require "../../framework/observable"
 require "../../services/upload_service"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
@@ -221,6 +222,16 @@ module ActivityPub
           end
         end
       end
+    end
+
+    OBSERVERS = Ktistec::Observable::Registry(ActivityPub::Actor).new
+
+    def after_block
+      ActivityPub::Actor::OBSERVERS.notify(:block, self)
+    end
+
+    def after_unblock
+      ActivityPub::Actor::OBSERVERS.notify(:unblock, self)
     end
 
     def handle

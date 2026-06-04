@@ -87,9 +87,6 @@ module Rules
       end
     end
 
-    # NOTE: deliberately *not* registered. `Like` reuses the existing
-    # `Notification::Like` type that School also writes; registration is
-    # the cutover and lands later, in the same commit that removes
-    # School's `like` rules.
+    register(Like.instance)
   end
 end

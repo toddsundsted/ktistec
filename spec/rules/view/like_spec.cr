@@ -13,8 +13,8 @@ Spectator.describe Rules::View::Like do
   let_build(:actor, named: liker)
 
   describe "registry" do
-    it "is not registered" do
-      expect(Rules::View.registry).not_to contain(described_class.instance)
+    it "is registered" do
+      expect(Rules::View.registry).to contain(described_class.instance)
     end
   end
 
@@ -80,6 +80,14 @@ Spectator.describe Rules::View::Like do
           end
         end
 
+        context "of a deleted object" do
+          before_each { post.delete! }
+
+          it "still selects the like (deleted is a render filter, not membership)" do
+            expect(selected_iris).to contain(activity.iri)
+          end
+        end
+
         context "liked by me" do
           before_each { activity.assign(actor: actor).save }
 
@@ -119,6 +127,14 @@ Spectator.describe Rules::View::Like do
 
       context "and the latest like is undone" do
         before_each { later.undo! }
+
+        it "falls back to the earlier like" do
+          expect(selected).to eq([{actor.iri, earlier.iri, earlier.created_at}])
+        end
+      end
+
+      context "and the latest like's sender is blocked" do
+        before_each { other.block! }
 
         it "falls back to the earlier like" do
           expect(selected).to eq([{actor.iri, earlier.iri, earlier.created_at}])

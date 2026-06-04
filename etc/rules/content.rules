@@ -199,33 +199,6 @@ rule "undo/announce"
   retract NotificationAnnounce, owner: actor, activity: activity
 end
 
-rule "like, step 1"
-  condition activity, InMailboxOf, actor
-  condition LikeActivity, activity, object: object, actor: sender
-  condition Actor, sender, blocked_at: nil
-  condition Object, object, attributed_to: actor
-  # remove any previous notifications about this object
-  condition LikeActivity, previous, object: object
-  condition NotificationLike, owner: actor, activity: previous
-  retract NotificationLike, owner: actor, activity: previous
-end
-
-rule "like, step 2"
-  condition activity, InMailboxOf, actor
-  condition LikeActivity, activity, object: object, actor: sender
-  condition Actor, sender, blocked_at: nil
-  condition Object, object, attributed_to: actor
-  none NotificationLike, owner: actor, activity: activity
-  assert NotificationLike, owner: actor, activity: activity
-end
-
-rule "undo/like"
-  condition undo, InMailboxOf, actor
-  condition UndoActivity, undo, object: activity
-  any NotificationLike, owner: actor, activity: activity
-  retract NotificationLike, owner: actor, activity: activity
-end
-
 rule "dislike, step 1"
   condition activity, InMailboxOf, actor
   condition DislikeActivity, activity, object: object, actor: sender

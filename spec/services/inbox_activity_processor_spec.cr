@@ -525,5 +525,30 @@ Spectator.describe InboxActivityProcessor do
         end
       end
     end
+
+    # the maintainer trigger drives the registered `Like` view; the like
+    # is placed in the mailbox by School's "inbox" rule during `run`, so
+    # by the time the trigger fires it qualifies for membership.
+    context "with a Like of the owner's object" do
+      let_create!(:object, named: liked, attributed_to: account.actor)
+      let_create!(:like, named: like_activity, actor: other, object: liked, to: [account.actor.iri])
+
+      it "materializes the like notification" do
+        expect { InboxActivityProcessor.process(account, like_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Like.count(from_iri: account.actor.iri, to_iri: like_activity.iri) }.from(0).to(1)
+      end
+
+      context "and the like is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: like_activity, to: [account.actor.iri])
+        let_create!(:notification_like, owner: account.actor, activity: like_activity)
+
+        pre_condition { expect(Relationship::Content::Notification::Like.count(to_iri: like_activity.iri)).to eq(1) }
+
+        it "evicts the like notification" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Notification::Like.count(to_iri: like_activity.iri) }.from(1).to(0)
+        end
+      end
+    end
   end
 end

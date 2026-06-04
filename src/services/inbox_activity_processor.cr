@@ -3,6 +3,7 @@ require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
 require "../models/account"
 require "../rules/content_rules"
+require "../rules/trigger"
 require "../models/task/handle_follow_request"
 require "../models/task/receive"
 require "../models/task/deliver"
@@ -93,6 +94,10 @@ class InboxActivityProcessor
         object.delete!
       end
     end
+
+    # re-evaluate the materialized views for the object this activity
+    # concerns.
+    Rules::Trigger.reconcile_for_activity(activity)
 
     partition = Ktistec::Recipients.partition(
       Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),

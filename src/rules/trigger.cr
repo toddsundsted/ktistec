@@ -1,5 +1,7 @@
 require "./maintainer"
 require "../models/activity_pub/activity"
+require "../models/activity_pub/activity/announce"
+require "../models/activity_pub/activity/dislike"
 require "../models/activity_pub/activity/like"
 require "../models/activity_pub/activity/undo"
 require "../models/activity_pub/actor"
@@ -30,11 +32,11 @@ module Rules
     # actor's state.
     #
     def reconcile_for_actor(actor : ActivityPub::Actor) : Nil
-      object_iris = Ktistec.database.query_all(<<-SQL, actor.iri, ActivityPub::Activity::Like.to_s, as: String)
+      object_iris = Ktistec.database.query_all(<<-SQL, actor.iri, ActivityPub::Activity::Announce.to_s, ActivityPub::Activity::Dislike.to_s, ActivityPub::Activity::Like.to_s, as: String)
         SELECT DISTINCT object_iri
           FROM activities
          WHERE actor_iri = ?
-           AND type = ?
+           AND type IN (?, ?, ?)
            AND undone_at IS NULL
            AND object_iri IS NOT NULL
         SQL

@@ -4,7 +4,6 @@ require "../spec_helper/base"
 require "../spec_helper/factory"
 
 Spectator.describe Ktistec::Database do
-  alias Notification = ::Relationship::Content::Notification
   alias Timeline = ::Relationship::Content::Timeline
 
   setup_spec
@@ -13,54 +12,6 @@ Spectator.describe Ktistec::Database do
     let(owner) { register.actor }
 
     let_build(:actor, named: other)
-
-    context "given notifications" do
-      let_build(:object, named: object1, attributed_to: owner)
-      let_create!(:announce, named: announce1, actor: owner, object: object1)
-      let_build(:object, named: object2, attributed_to: other)
-      let_create!(:announce, named: announce2, actor: other, object: object2)
-      let_build(:object, named: object3, attributed_to: owner)
-      let_create!(:announce, named: announce3, actor: owner, object: object3)
-
-      before_each do
-        put_in_inbox(owner, announce1)
-        put_in_notifications(owner, announce1)
-        put_in_notifications(owner, announce2)
-        put_in_inbox(owner, announce3)
-      end
-
-      # temporary stub to make it easier to transition the tests that follow
-      class ::Relationship::Content::Notification
-        def object_or_activity
-          if self.responds_to?(:object)
-            self.object
-          elsif self.responds_to?(:activity)
-            self.activity
-          end
-        end
-      end
-
-      def notifications
-        Notification.where(from_iri: owner.iri).map(&.object_or_activity)
-      end
-
-      pre_condition { expect(notifications).to contain_exactly(announce1, announce2).in_any_order }
-
-      it "leaves entries that belong" do
-        Ktistec::Database.recreate_timeline_and_notifications
-        expect(notifications).to have(announce1)
-      end
-
-      it "removes entries that don't belong" do
-        Ktistec::Database.recreate_timeline_and_notifications
-        expect(notifications).not_to have(announce2)
-      end
-
-      it "adds entries that are missing" do
-        Ktistec::Database.recreate_timeline_and_notifications
-        expect(notifications).to have(announce3)
-      end
-    end
 
     context "given a timeline" do
       let_build(:object, named: object1, attributed_to: owner)

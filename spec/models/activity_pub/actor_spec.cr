@@ -2637,36 +2637,77 @@ Spectator.describe ActivityPub::Actor do
   describe "after_block" do
     let(actor) { register.actor }
     let_create!(:object, named: post, attributed_to: actor)
-    let_create!(:actor, named: liker1)
-    let_create!(:actor, named: liker2)
-    let_create!(:like, named: like1, actor: liker1, object: post)
-    let_create!(:like, named: like2, actor: liker2, object: post)
+    let_create!(:actor, named: actor1)
+    let_create!(:actor, named: actor2)
 
-    before_each do
-      put_in_inbox(actor, like1)
-      put_in_inbox(actor, like2)
+    context "given an announce representative" do
+      let_create!(:announce, named: announce1, actor: actor1, object: post)
+      let_create!(:announce, named: announce2, actor: actor2, object: post)
+
+      before_each do
+        put_in_inbox(actor, announce1)
+        put_in_inbox(actor, announce2)
+      end
+
+      let_create!(:notification_announce, owner: actor, activity: announce2)
+
+      pre_condition { expect(Relationship::Content::Notification::Announce.count(from_iri: actor.iri, to_iri: announce2.iri)).to eq(1) }
+
+      it "evicts the blocked sender's announce" do
+        expect { actor2.block! }
+          .to change { Relationship::Content::Notification::Announce.find?(from_iri: actor.iri, to_iri: announce2.iri) }.to(nil)
+      end
+
+      it "promotes the earlier announce" do
+        expect { actor2.block! }
+          .to change { Relationship::Content::Notification::Announce.find?(from_iri: actor.iri, to_iri: announce1.iri) }.from(nil)
+      end
+
+      context "when a blocked actor has no announces" do
+        let_create!(:actor, named: other)
+
+        it "does not change the collection" do
+          expect { other.block! }
+            .not_to change { Relationship::Content::Notification::Announce.find?(from_iri: actor.iri, to_iri: announce2.iri) }
+        end
+      end
     end
 
-    let_create!(:notification_like, owner: actor, activity: like2)
+    context "given a like representative" do
+      let_create!(:like, named: like1, actor: actor1, object: post)
+      let_create!(:like, named: like2, actor: actor2, object: post)
 
-    pre_condition { expect(Relationship::Content::Notification::Like.count(from_iri: actor.iri, to_iri: like2.iri)).to eq(1) }
+      before_each do
+        put_in_inbox(actor, like1)
+        put_in_inbox(actor, like2)
+      end
 
-    it "evicts the blocked sender's like" do
-      expect { liker2.block! }
-        .to change { Relationship::Content::Notification::Like.find?(from_iri: actor.iri, to_iri: like2.iri) }.to(nil)
+      let_create!(:notification_like, owner: actor, activity: like2)
+
+      pre_condition { expect(Relationship::Content::Notification::Like.count(from_iri: actor.iri, to_iri: like2.iri)).to eq(1) }
+
+      it "promotes the earlier like" do
+        expect { actor2.block! }
+          .to change { Relationship::Content::Notification::Like.find?(from_iri: actor.iri, to_iri: like1.iri) }.from(nil)
+      end
     end
 
-    it "promotes the earlier like" do
-      expect { liker2.block! }
-        .to change { Relationship::Content::Notification::Like.find?(from_iri: actor.iri, to_iri: like1.iri) }.from(nil)
-    end
+    context "given a dislike representative" do
+      let_create!(:dislike, named: dislike1, actor: actor1, object: post)
+      let_create!(:dislike, named: dislike2, actor: actor2, object: post)
 
-    context "when a blocked actor has no likes" do
-      let_create!(:actor, named: other)
+      before_each do
+        put_in_inbox(actor, dislike1)
+        put_in_inbox(actor, dislike2)
+      end
 
-      it "does not change the collection" do
-        expect { other.block! }
-          .not_to change { Relationship::Content::Notification::Like.find?(from_iri: actor.iri, to_iri: like2.iri) }
+      let_create!(:notification_dislike, owner: actor, activity: dislike2)
+
+      pre_condition { expect(Relationship::Content::Notification::Dislike.count(from_iri: actor.iri, to_iri: dislike2.iri)).to eq(1) }
+
+      it "promotes the earlier dislike" do
+        expect { actor2.block! }
+          .to change { Relationship::Content::Notification::Dislike.find?(from_iri: actor.iri, to_iri: dislike1.iri) }.from(nil)
       end
     end
   end
@@ -2674,23 +2715,23 @@ Spectator.describe ActivityPub::Actor do
   describe "after_unblock" do
     let(actor) { register.actor }
     let_create!(:object, named: post, attributed_to: actor)
-    let_create!(:actor, named: liker1)
-    let_create!(:actor, named: liker2, blocked_at: 1.hour.ago)
-    let_create!(:like, named: like1, actor: liker1, object: post)
-    let_create!(:like, named: like2, actor: liker2, object: post)
+    let_create!(:actor, named: announcer1)
+    let_create!(:actor, named: announcer2, blocked_at: 1.hour.ago)
+    let_create!(:announce, named: announce1, actor: announcer1, object: post)
+    let_create!(:announce, named: announce2, actor: announcer2, object: post)
 
     before_each do
-      put_in_inbox(actor, like1)
-      put_in_inbox(actor, like2)
+      put_in_inbox(actor, announce1)
+      put_in_inbox(actor, announce2)
     end
 
-    let_create!(:notification_like, owner: actor, activity: like1)
+    let_create!(:notification_announce, owner: actor, activity: announce1)
 
-    pre_condition { expect(Relationship::Content::Notification::Like.count(from_iri: actor.iri, to_iri: like1.iri)).to eq(1) }
+    pre_condition { expect(Relationship::Content::Notification::Announce.count(from_iri: actor.iri, to_iri: announce1.iri)).to eq(1) }
 
-    it "restores the unblocked sender's like" do
-      expect { liker2.unblock! }
-        .to change { Relationship::Content::Notification::Like.find?(from_iri: actor.iri, to_iri: like2.iri) }.from(nil)
+    it "restores the unblocked sender's announce" do
+      expect { announcer2.unblock! }
+        .to change { Relationship::Content::Notification::Announce.find?(from_iri: actor.iri, to_iri: announce2.iri) }.from(nil)
     end
   end
 end

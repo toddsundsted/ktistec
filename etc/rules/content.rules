@@ -172,60 +172,6 @@ rule "delete/mention"
   retract NotificationMention, owner: actor, object: object
 end
 
-rule "announce, step 1"
-  condition activity, InMailboxOf, actor
-  condition AnnounceActivity, activity, object: object, actor: sender
-  condition Actor, sender, blocked_at: nil
-  condition Object, object, attributed_to: actor
-  # remove any previous notifications about this object
-  condition AnnounceActivity, previous, object: object
-  condition NotificationAnnounce, owner: actor, activity: previous
-  retract NotificationAnnounce, owner: actor, activity: previous
-end
-
-rule "announce, step 2"
-  condition activity, InMailboxOf, actor
-  condition AnnounceActivity, activity, object: object, actor: sender
-  condition Actor, sender, blocked_at: nil
-  condition Object, object, attributed_to: actor
-  none NotificationAnnounce, owner: actor, activity: activity
-  assert NotificationAnnounce, owner: actor, activity: activity
-end
-
-rule "undo/announce"
-  condition undo, InMailboxOf, actor
-  condition UndoActivity, undo, object: activity
-  any NotificationAnnounce, owner: actor, activity: activity
-  retract NotificationAnnounce, owner: actor, activity: activity
-end
-
-rule "dislike, step 1"
-  condition activity, InMailboxOf, actor
-  condition DislikeActivity, activity, object: object, actor: sender
-  condition Actor, sender, blocked_at: nil
-  condition Object, object, attributed_to: actor
-  # remove any previous notifications about this object
-  condition DislikeActivity, previous, object: object
-  condition NotificationDislike, owner: actor, activity: previous
-  retract NotificationDislike, owner: actor, activity: previous
-end
-
-rule "dislike, step 2"
-  condition activity, InMailboxOf, actor
-  condition DislikeActivity, activity, object: object, actor: sender
-  condition Actor, sender, blocked_at: nil
-  condition Object, object, attributed_to: actor
-  none NotificationDislike, owner: actor, activity: activity
-  assert NotificationDislike, owner: actor, activity: activity
-end
-
-rule "undo/dislike"
-  condition undo, InMailboxOf, actor
-  condition UndoActivity, undo, object: activity
-  any NotificationDislike, owner: actor, activity: activity
-  retract NotificationDislike, owner: actor, activity: activity
-end
-
 rule "follow"
   condition activity, InMailboxOf, actor
   condition FollowActivity, activity, object: actor

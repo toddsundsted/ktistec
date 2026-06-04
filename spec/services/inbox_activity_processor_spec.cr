@@ -526,6 +526,31 @@ Spectator.describe InboxActivityProcessor do
       end
     end
 
+    # the maintainer trigger drives the registered `Announce` view; the
+    # announce is placed in the mailbox by School's "inbox" rule during
+    # `run`, so by the time the trigger fires it qualifies for membership.
+    context "with an Announce of the owner's object" do
+      let_create!(:object, named: announced, attributed_to: account.actor)
+      let_create!(:announce, named: announce_activity, actor: other, object: announced, to: [account.actor.iri])
+
+      it "materializes the announce notification" do
+        expect { InboxActivityProcessor.process(account, announce_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Announce.count(from_iri: account.actor.iri, to_iri: announce_activity.iri) }.from(0).to(1)
+      end
+
+      context "and the announce is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: announce_activity, to: [account.actor.iri])
+        let_create!(:notification_announce, owner: account.actor, activity: announce_activity)
+
+        pre_condition { expect(Relationship::Content::Notification::Announce.count(to_iri: announce_activity.iri)).to eq(1) }
+
+        it "evicts the announce notification" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Notification::Announce.count(to_iri: announce_activity.iri) }.from(1).to(0)
+        end
+      end
+    end
+
     # the maintainer trigger drives the registered `Like` view; the like
     # is placed in the mailbox by School's "inbox" rule during `run`, so
     # by the time the trigger fires it qualifies for membership.
@@ -547,6 +572,31 @@ Spectator.describe InboxActivityProcessor do
         it "evicts the like notification" do
           expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
             .to change { Relationship::Content::Notification::Like.count(to_iri: like_activity.iri) }.from(1).to(0)
+        end
+      end
+    end
+
+    # the maintainer trigger drives the registered `Dislike` view; the
+    # dislike is placed in the mailbox by School's "inbox" rule during
+    # `run`, so by the time the trigger fires it qualifies for membership.
+    context "with a Dislike of the owner's object" do
+      let_create!(:object, named: disliked, attributed_to: account.actor)
+      let_create!(:dislike, named: dislike_activity, actor: other, object: disliked, to: [account.actor.iri])
+
+      it "materializes the dislike notification" do
+        expect { InboxActivityProcessor.process(account, dislike_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Dislike.count(from_iri: account.actor.iri, to_iri: dislike_activity.iri) }.from(0).to(1)
+      end
+
+      context "and the dislike is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: dislike_activity, to: [account.actor.iri])
+        let_create!(:notification_dislike, owner: account.actor, activity: dislike_activity)
+
+        pre_condition { expect(Relationship::Content::Notification::Dislike.count(to_iri: dislike_activity.iri)).to eq(1) }
+
+        it "evicts the dislike notification" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Notification::Dislike.count(to_iri: dislike_activity.iri) }.from(1).to(0)
         end
       end
     end

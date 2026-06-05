@@ -1,5 +1,6 @@
 require "../framework/model"
 require "../framework/model/**"
+require "../framework/observable"
 
 # Tag.
 #
@@ -145,7 +146,9 @@ class Tag
 
   class_property cache = Set(CacheEntry).new
 
-  def after_create
+  # Increments (or fully recounts) tag statistics for a created tag.
+  #
+  protected def increment_statistics
     entry = CacheEntry.new(short_type, name.downcase)
     if Tag.cache.includes?(entry)
       increment_count
@@ -155,7 +158,9 @@ class Tag
     end
   end
 
-  def after_destroy
+  # Decrements (or fully recounts) tag statistics for a destroyed tag.
+  #
+  protected def decrement_statistics
     entry = CacheEntry.new(short_type, name.downcase)
     if Tag.cache.includes?(entry)
       decrement_count
@@ -163,6 +168,19 @@ class Tag
       Tag.cache.add(entry)
       full_recount
     end
+  end
+
+  OBSERVERS = Ktistec::Observable::Registry(Tag).new
+
+  OBSERVERS.observe(:create, &.increment_statistics)
+  OBSERVERS.observe(:destroy, &.decrement_statistics)
+
+  def after_create
+    Tag::OBSERVERS.notify(:create, self)
+  end
+
+  def after_destroy
+    Tag::OBSERVERS.notify(:destroy, self)
   end
 
   @[Persistent]

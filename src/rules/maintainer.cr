@@ -22,27 +22,29 @@ module Rules
     #
     def reconcile(view : View) : Nil
       query, args = view.membership
-      apply(view.type, query, args, "1", Array(DB::Any).new)
+      apply(view.type, query, args, "1", Array(DB::Any).new, view.repositions?)
     end
 
-    # Re-evaluates one key to an insert, delete, or no-op.
+    # Re-evaluates one key to an insert, delete, reposition, or no-op.
     #
     # Fired after a base fact changes.
     #
     def reconcile_for(view : View, key : View::Key) : Nil
       query, args = view.membership(key)
       scope, scope_args = view.stored_scope(key)
-      apply(view.type, query, args, scope, scope_args)
+      apply(view.type, query, args, scope, scope_args, view.repositions?)
     end
 
-    # Inserts the membership rows the scope lacks and deletes the stored
-    # rows in scope the membership no longer selects, in one transaction.
+    # Inserts the membership rows the scope lacks, deletes the stored
+    # rows in scope the membership no longer selects, and changes the
+    # stored position of a member whose key is unchanged but whose
+    # position has moved, in one transaction.
     #
     # `query` selects `(from_iri, to_iri, position)`; `scope` bounds the
     # delete to the rows owned by the reconciled key (the whole
     # collection, for the batch path).
     #
-    private def apply(type : String, query : String, query_args : Array(DB::Any), scope : String, scope_args : Array(DB::Any)) : Nil
+    private def apply(type : String, query : String, query_args : Array(DB::Any), scope : String, scope_args : Array(DB::Any), repositions : Bool) : Nil
       now = Time.utc
       insert = <<-SQL
         INSERT INTO relationships (created_at, updated_at, type, from_iri, to_iri, confirmed, visible)
@@ -62,9 +64,19 @@ module Rules
               WHERE m.from_iri = relationships.from_iri AND m.to_iri = relationships.to_iri
            )
       SQL
+      reposition = <<-SQL
+        UPDATE relationships
+           SET created_at = m.position, updated_at = ?
+          FROM (#{query}) AS m
+         WHERE relationships.type = '#{type}'
+           AND relationships.from_iri = m.from_iri
+           AND relationships.to_iri = m.to_iri
+           AND relationships.created_at <> m.position
+      SQL
       transaction do
         Ktistec.database.exec(insert, args: Array(DB::Any){now} + query_args)
         Ktistec.database.exec(delete, args: scope_args + query_args)
+        Ktistec.database.exec(reposition, args: Array(DB::Any){now} + query_args) if repositions
       end
     end
 

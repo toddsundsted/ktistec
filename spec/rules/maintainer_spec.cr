@@ -78,6 +78,45 @@ private class SyntheticRepresentativeKeyedView < Rules::View
   end
 end
 
+# A stable-keyed recency view.
+#
+# One stored row per group (an object's `attributed_to_iri`). The
+# stored key never changes but the position changes to the group's
+# latest visible object.
+#
+private class SyntheticStableKeyedView < Rules::View
+  def type : String
+    "Relationship::Content::SyntheticStable"
+  end
+
+  def repositions? : Bool
+    true
+  end
+
+  def membership(key : Rules::View::Key? = nil) : {String, Array(DB::Any)}
+    if key
+      scope = "AND o.attributed_to_iri = ?"
+      args = Array(DB::Any){key[:to_iri]}
+    else
+      scope = ""
+      args = Array(DB::Any).new
+    end
+    query = <<-SQL
+      SELECT 'owner' AS from_iri, o.attributed_to_iri AS to_iri, MAX(o.created_at) AS position
+        FROM objects o
+       WHERE o.visible = 1
+       #{scope}
+       GROUP BY o.attributed_to_iri
+    SQL
+    {query, args}
+  end
+
+  def project(object_iri : String) : Array(Rules::View::Key)
+    group = Ktistec.database.query_one?("SELECT attributed_to_iri FROM objects WHERE iri = ?", object_iri, as: String)
+    group ? [{from_iri: "owner", to_iri: group}] : [] of Rules::View::Key
+  end
+end
+
 private def materialized(view)
   Ktistec.database.query_all("SELECT to_iri FROM relationships WHERE type = ?", view.type, as: String).to_set
 end
@@ -235,6 +274,39 @@ Spectator.describe Rules::Maintainer do
         end
       end
     end
+
+    context "a stable-keyed recency view" do
+      let(view) { SyntheticStableKeyedView.new }
+
+      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create(:object, named: third, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc)
+
+      it "stores the member at the latest position" do
+        Rules::Maintainer.reconcile_for(view, group_key)
+        expect(rows_for(view).first[2]).to be_close(second.created_at, 1.second)
+      end
+
+      context "given a stored member" do
+        before_each { Rules::Maintainer.reconcile_for(view, group_key) }
+
+        pre_condition { expect(rows_for(view).first[2]).to be_close(second.created_at, 1.second) }
+
+        it "updates the position when newer support arrives" do
+          third.save
+          Rules::Maintainer.reconcile_for(view, group_key)
+          expect(rows_for(view).first[2]).to be_close(third.created_at, 1.second)
+        end
+
+        it "keeps one row at the stable key" do
+          third.save
+          Rules::Maintainer.reconcile_for(view, group_key)
+          rows = rows_for(view)
+          expect(rows.size).to eq(1)
+          expect(rows.first[1]).to eq(GROUP)
+        end
+      end
+    end
   end
 
   describe ".reconcile_object" do
@@ -308,6 +380,28 @@ Spectator.describe Rules::Maintainer do
 
         expect(scoped).to eq(batch)
         expect(scoped).to eq(Set{second.iri})
+      end
+    end
+
+    context "a stable-keyed recency view" do
+      let(view) { SyntheticStableKeyedView.new }
+
+      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+
+      it "produces the same position" do
+        Rules::Maintainer.reconcile(view)
+        batch = rows_for(view).map { |(_, to_iri, position)| {to_iri, position} }
+
+        Ktistec.database.exec("DELETE FROM relationships WHERE type = ?", view.type)
+
+        second.assign(visible: false).save
+        Rules::Maintainer.reconcile_for(view, group_key)
+        second.assign(visible: true).save
+        Rules::Maintainer.reconcile_for(view, group_key)
+        scoped = rows_for(view).map { |(_, to_iri, position)| {to_iri, position} }
+
+        expect(scoped).to eq(batch)
       end
     end
   end

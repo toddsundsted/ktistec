@@ -15,6 +15,7 @@ require "../tag/emoji"
 require "../../framework/json_ld"
 require "../../framework/model"
 require "../../framework/model/**"
+require "../../framework/observable"
 require "../../utils/html"
 
 require "../../views/view_helper"
@@ -1198,14 +1199,25 @@ module ActivityPub
       end
     end
 
-    def after_delete
+    # Removes the canonical-path relationship and clears the cached value
+    # when the object is deleted or destroyed.
+    #
+    protected def purge_canonical
       Relationship::Content::Canonical.find?(to_iri: path).try(&.destroy)
       @canonical_path = nil
     end
 
+    OBSERVERS = Ktistec::Observable::Registry(ActivityPub::Object).new
+
+    OBSERVERS.observe(:delete, &.purge_canonical)
+    OBSERVERS.observe(:destroy, &.purge_canonical)
+
+    def after_delete
+      ActivityPub::Object::OBSERVERS.notify(:delete, self)
+    end
+
     def after_destroy
-      Relationship::Content::Canonical.find?(to_iri: path).try(&.destroy)
-      @canonical_path = nil
+      ActivityPub::Object::OBSERVERS.notify(:destroy, self)
     end
 
     private def path

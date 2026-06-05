@@ -1417,7 +1417,10 @@ private module ActorModelHelper
       "attachments"  => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
         name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
         type = Ktistec::JSON_LD.dig?(attachment, "@type").presence
-        value = Ktistec::JSON_LD.dig?(attachment, "http://schema.org#value").presence
+        value = (
+          Ktistec::JSON_LD.dig?(attachment, "http://schema.org#value") || # Mastodon and our own output
+          Ktistec::JSON_LD.dig?(attachment, "http://schema.org/value")    # Mitra and schema.org's own canonical context
+        ).presence
         ActivityPub::Actor::Attachment.new(name, type, value) if name && type && value
       end,
       "emojis" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|

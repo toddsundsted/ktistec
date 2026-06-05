@@ -440,6 +440,32 @@ Spectator.describe ActivityPub::Actor do
         expect(actor.shared_inbox).to eq("https://remote/shared-inbox")
       end
     end
+
+    context "given attachments whose `schema` namespace ends with a hash" do
+      it "parses the attachments" do
+        attachments = described_class.from_json_ld(json).attachments.not_nil!
+        expect(attachments.map(&.name)).to eq(["Blog", "Website"])
+      end
+
+      it "expands the type" do
+        attachments = described_class.from_json_ld(json).attachments.not_nil!
+        expect(attachments.map(&.type).uniq!).to eq(["http://schema.org#PropertyValue"])
+      end
+    end
+
+    context "given attachments whose `schema` namespace ends with a slash" do
+      let(json) { super.gsub(%q|"schema":"http://schema.org#"|, %q|"schema":"http://schema.org/"|) }
+
+      it "parses the attachments" do
+        attachments = described_class.from_json_ld(json).attachments.not_nil!
+        expect(attachments.map(&.name)).to eq(["Blog", "Website"])
+      end
+
+      it "expands the type" do
+        attachments = described_class.from_json_ld(json).attachments.not_nil!
+        expect(attachments.map(&.type).uniq!).to eq(["http://schema.org/PropertyValue"])
+      end
+    end
   end
 
   describe "#from_json_ld" do

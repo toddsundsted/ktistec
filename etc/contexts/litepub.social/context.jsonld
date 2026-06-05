@@ -13,7 +13,7 @@
             },
             "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
             "ostatus": "http://ostatus.org#",
-            "schema": "http://schema.org",
+            "schema": "http://schema.org#",
             "toot": "http://joinmastodon.org/ns#",
             "totalItems": "as:totalItems",
             "value": "schema:value",

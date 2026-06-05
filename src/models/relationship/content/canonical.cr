@@ -1,5 +1,4 @@
 require "../../relationship"
-require "../../activity_pub/object"
 
 class Relationship
   class Content

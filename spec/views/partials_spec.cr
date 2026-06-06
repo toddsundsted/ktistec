@@ -53,13 +53,30 @@ Spectator.describe "partials" do
         end
       end
 
-      context "and contains more" do
+      context "and has a next page" do
         before_each do
           collection.cursor_end = 50_i64
           collection.has_next = true
         end
 
         it "contains a link to the next page" do
+          expect(subject.dig?("next")).to eq("#{Ktistec.host}/collection?max_id=50")
+        end
+      end
+
+      context "and has previous and next pages" do
+        before_each do
+          collection.cursor_start = 200_i64
+          collection.cursor_end = 50_i64
+          collection.has_prev = true
+          collection.has_next = true
+        end
+
+        it "links to the previous page with only min_id" do
+          expect(subject.dig?("prev")).to eq("#{Ktistec.host}/collection?min_id=200")
+        end
+
+        it "links to the next page with only max_id" do
           expect(subject.dig?("next")).to eq("#{Ktistec.host}/collection?max_id=50")
         end
       end
@@ -542,16 +559,20 @@ Spectator.describe "partials" do
       end
 
       it "preserves anchors in HTML attachment values" do
-        expect(subject.xpath_nodes("//table//td[@class='value']//a/@href")).to have("https://example.com/")
+        expect(subject.xpath_nodes("//table//td[contains(@class,'value')]//a/@href")).to have("https://example.com/")
       end
 
       it "wraps URL attachment values in an anchor" do
-        expect(subject.xpath_nodes("//table//td[@class='value']//a/@href")).to have("https://example.org/intro")
+        expect(subject.xpath_nodes("//table//td[contains(@class,'value')]//a/@href")).to have("https://example.org/intro")
       end
 
       it "scrubs unsafe HTML from attachment values" do
-        expect(subject.xpath_nodes("//table//td[@class='value']//text()")).to have(/safe text/)
-        expect(subject.xpath_nodes("//table//td[@class='value']//script")).to be_empty
+        expect(subject.xpath_nodes("//table//td[contains(@class,'value')]//text()")).to have(/safe text/)
+        expect(subject.xpath_nodes("//table//td[contains(@class,'value')]//script")).to be_empty
+      end
+
+      it "truncates long attachment values" do
+        expect(subject.xpath_nodes("//table//td[contains(@class,'truncated')]")).not_to be_empty
       end
     end
   end

@@ -1,11 +1,27 @@
 module Ktistec::ViewHelper
   module ClassMethods
+    # Returns the cursor value (`max` or `min`) from the query.
+    #
+    # Accepts both the underscore and hyphen spellings.
+    #
+    def cursor_param(query, name)
+      query["#{name}_id"]? || query["#{name}-id"]?
+    end
+
+    # Returns true if the query carries any cursor pagination
+    # parameters.
+    #
+    def cursor_paginated?(query)
+      !!(cursor_param(query, "max") || cursor_param(query, "min"))
+    end
+
     def cursor_pagination_params(env)
       max_limit = env.account? ? 1000 : 20
+      query = env.params.query
       {
-        max_id: env.params.query["max_id"]?.try(&.to_i64),
-        min_id: env.params.query["min_id"]?.try(&.to_i64),
-        limit:  Math.min(Math.max(env.params.query["limit"]?.try(&.to_i) || 10, 1), max_limit),
+        max_id: cursor_param(query, "max").try(&.to_i64),
+        min_id: cursor_param(query, "min").try(&.to_i64),
+        limit:  Math.min(Math.max(query["limit"]?.try(&.to_i) || 10, 1), max_limit),
       }
     end
 

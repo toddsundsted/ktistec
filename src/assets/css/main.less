@@ -395,17 +395,24 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
         line-height: 5rem;
         font-size: 5rem;
     }
+    > .segment table {
+        border-collapse: collapse;
+    }
     > .segment th {
-        border-right: 1px solid var(--border-color);
-        text-align: right;
-        font-weight: normal;
-        padding-right: 1ex;
-        margin-right: 1ex;
+        text-align: left;
+        font-weight: bold;
+        padding: 0.5ex 1ex 0.5ex 0;
+        white-space: nowrap;
     }
     > .segment td {
         text-align: left;
         font-weight: normal;
-        padding-left: 1ex;
+        padding: 0.5ex 0 0.5ex 1ex;
+        max-width: 0;
+    }
+    > .segment tr:not(:last-child) th,
+    > .segment tr:not(:last-child) td {
+        border-bottom: 1px solid var(--border-color);
     }
     > .segment.footer {
         display: flex;

@@ -7,7 +7,7 @@ p
     have have been blocked and posts from actors that have been
     blocked. It is the equivalent of other servers' <em>federated
     timeline</em>.
-- unless env.params.query["max_id"]? || env.params.query["min_id"]?
+- unless Ktistec::ViewHelper.cursor_paginated?(env.params.query)
   turbo-stream-source src="/stream/everything"
 section.ui.feed data-controller="icon-load-error"
   - collection.each do |object|

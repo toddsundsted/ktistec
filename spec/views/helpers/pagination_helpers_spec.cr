@@ -36,18 +36,26 @@ Spectator.describe "helpers" do
       end
 
       it "does not render the prev link" do
-        expect(subject.xpath_nodes("//a/@href")).not_to contain("?min_id=100")
+        expect(subject.xpath_nodes("//a/@href")).not_to contain("?min-id=100")
       end
 
       it "does not render the next link" do
-        expect(subject.xpath_nodes("//a/@href")).not_to contain("?max_id=50")
+        expect(subject.xpath_nodes("//a/@href")).not_to contain("?max-id=50")
       end
 
       context "with prev results" do
         before_each { collection.has_prev = true }
 
         it "renders the prev link" do
-          expect(subject.xpath_nodes("//a/@href")).to contain("?min_id=100")
+          expect(subject.xpath_nodes("//a/@href")).to contain("?min-id=100")
+        end
+
+        context "when the request has underscores" do
+          let(query) { "?min_id=999" }
+
+          it "does not carry the underscore parameter forward" do
+            expect(subject.xpath_nodes("//a/@href").join).not_to contain("min_id")
+          end
         end
       end
 
@@ -55,9 +63,63 @@ Spectator.describe "helpers" do
         before_each { collection.has_next = true }
 
         it "renders the next link" do
-          expect(subject.xpath_nodes("//a/@href")).to contain("?max_id=50")
+          expect(subject.xpath_nodes("//a/@href")).to contain("?max-id=50")
+        end
+
+        context "when the request has underscores" do
+          let(query) { "?max_id=999" }
+
+          it "does not carry the underscore parameter forward" do
+            expect(subject.xpath_nodes("//a/@href").join).not_to contain("max_id")
+          end
         end
       end
+
+      context "with prev and next results" do
+        before_each do
+          collection.has_prev = true
+          collection.has_next = true
+        end
+
+        it "renders the prev link with only min-id" do
+          href = subject.xpath_nodes("//a/@href").find!(&.text.includes?("min-id"))
+          expect(href.text).to contain("min-id=100")
+          expect(href.text).not_to contain("max-id")
+        end
+
+        it "renders the next link with only max-id" do
+          href = subject.xpath_nodes("//a/@href").find!(&.text.includes?("max-id"))
+          expect(href.text).to contain("max-id=50")
+          expect(href.text).not_to contain("min-id")
+        end
+      end
+    end
+  end
+
+  describe "cursor_paginated?" do
+    it "is false without cursor parameters" do
+      query = make_env("GET", "/?limit=10").params.query
+      expect(self.class.cursor_paginated?(query)).to be_false
+    end
+
+    it "is true with max_id" do
+      query = make_env("GET", "/?max_id=10").params.query
+      expect(self.class.cursor_paginated?(query)).to be_true
+    end
+
+    it "is true with max-id" do
+      query = make_env("GET", "/?max-id=10").params.query
+      expect(self.class.cursor_paginated?(query)).to be_true
+    end
+
+    it "is true with min_id" do
+      query = make_env("GET", "/?min_id=10").params.query
+      expect(self.class.cursor_paginated?(query)).to be_true
+    end
+
+    it "is true with min-id" do
+      query = make_env("GET", "/?min-id=10").params.query
+      expect(self.class.cursor_paginated?(query)).to be_true
     end
   end
 
@@ -75,8 +137,20 @@ Spectator.describe "helpers" do
       expect(result[:max_id]).to eq(12345_i64)
     end
 
+    it "parses max-id" do
+      env = make_env("GET", "/?max-id=12345")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:max_id]).to eq(12345_i64)
+    end
+
     it "parses min_id" do
       env = make_env("GET", "/?min_id=11111")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:min_id]).to eq(11111_i64)
+    end
+
+    it "parses min-id" do
+      env = make_env("GET", "/?min-id=11111")
       result = self.class.cursor_pagination_params(env)
       expect(result[:min_id]).to eq(11111_i64)
     end

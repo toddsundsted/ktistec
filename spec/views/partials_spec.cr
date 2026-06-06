@@ -53,13 +53,30 @@ Spectator.describe "partials" do
         end
       end
 
-      context "and contains more" do
+      context "and has a next page" do
         before_each do
           collection.cursor_end = 50_i64
           collection.has_next = true
         end
 
         it "contains a link to the next page" do
+          expect(subject.dig?("next")).to eq("#{Ktistec.host}/collection?max_id=50")
+        end
+      end
+
+      context "and has previous and next pages" do
+        before_each do
+          collection.cursor_start = 200_i64
+          collection.cursor_end = 50_i64
+          collection.has_prev = true
+          collection.has_next = true
+        end
+
+        it "links to the previous page with only min_id" do
+          expect(subject.dig?("prev")).to eq("#{Ktistec.host}/collection?min_id=200")
+        end
+
+        it "links to the next page with only max_id" do
           expect(subject.dig?("next")).to eq("#{Ktistec.host}/collection?max_id=50")
         end
       end

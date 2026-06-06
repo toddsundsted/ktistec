@@ -1,7 +1,7 @@
 - content_for "title" do
   | ##{hashtag}
 - if env.account?
-  - if !env.params.query["max_id"]? && !env.params.query["min_id"]?
+  - unless Ktistec::ViewHelper.cursor_paginated?(env.params.query)
     turbo-stream-source src=stream_path("tags", hashtag)
 - partial tag_page_tag_controls(env, hashtag, task, follow, count)
 section.ui.feed data-controller="icon-load-error"

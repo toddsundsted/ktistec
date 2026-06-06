@@ -542,16 +542,20 @@ Spectator.describe "partials" do
       end
 
       it "preserves anchors in HTML attachment values" do
-        expect(subject.xpath_nodes("//table//td[@class='value']//a/@href")).to have("https://example.com/")
+        expect(subject.xpath_nodes("//table//td[contains(@class,'value')]//a/@href")).to have("https://example.com/")
       end
 
       it "wraps URL attachment values in an anchor" do
-        expect(subject.xpath_nodes("//table//td[@class='value']//a/@href")).to have("https://example.org/intro")
+        expect(subject.xpath_nodes("//table//td[contains(@class,'value')]//a/@href")).to have("https://example.org/intro")
       end
 
       it "scrubs unsafe HTML from attachment values" do
-        expect(subject.xpath_nodes("//table//td[@class='value']//text()")).to have(/safe text/)
-        expect(subject.xpath_nodes("//table//td[@class='value']//script")).to be_empty
+        expect(subject.xpath_nodes("//table//td[contains(@class,'value')]//text()")).to have(/safe text/)
+        expect(subject.xpath_nodes("//table//td[contains(@class,'value')]//script")).to be_empty
+      end
+
+      it "truncates long attachment values" do
+        expect(subject.xpath_nodes("//table//td[contains(@class,'truncated')]")).not_to be_empty
       end
     end
   end

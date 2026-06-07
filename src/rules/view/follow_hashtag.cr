@@ -66,5 +66,7 @@ module Rules
         rows.map { |(owner, name)| {from_iri: owner, to_iri: name} }
       end
     end
+
+    register(FollowHashtag.instance)
   end
 end

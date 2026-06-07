@@ -5,6 +5,7 @@ require "../../activity_pub/object"
 require "../../relationship/content/follow/hashtag"
 require "../../../framework/topic"
 require "../../../rules/content_rules"
+require "../../../rules/trigger"
 require "../../../views/view_helper"
 
 class Task
@@ -161,7 +162,12 @@ class Task
           Log.debug { "perform [#{id}] - hashtag: #{name} - complete - #{duration} seconds, #{count} fetched" }
         end
         set_next_attempt_at(maximum, count, continuation)
+        reconcile_hashtag(source.iri, name) if count > 0
       end
+    end
+
+    protected def reconcile_hashtag(owner_iri : String, name : String) : Nil
+      Rules::Trigger.reconcile_for_hashtag(owner_iri, name)
     end
 
     def after_save

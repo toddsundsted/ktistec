@@ -4,6 +4,14 @@ require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
 require "../../../spec_helper/network"
 
+class FetchHashtagSpy < Task::Fetch::Hashtag
+  getter reconcile_calls = [] of {String, String}
+
+  protected def reconcile_hashtag(owner_iri : String, name : String) : Nil
+    reconcile_calls << {owner_iri, name}
+  end
+end
+
 Spectator.describe Task::Fetch::Hashtag do
   setup_spec
 
@@ -58,6 +66,8 @@ Spectator.describe Task::Fetch::Hashtag do
     subject do
       described_class.new(source: source, name: "hashtag").save
     end
+
+    let(spy) { FetchHashtagSpy.new(source: source, name: "hashtag").save }
 
     it "sets the next attempt at" do
       subject.perform
@@ -118,6 +128,11 @@ Spectator.describe Task::Fetch::Hashtag do
 
       it "does not change time of last success" do
         expect { subject.perform }.not_to change { node.last_success_at }
+      end
+
+      it "does not call the trigger" do
+        spy.perform
+        expect(spy.reconcile_calls).to be_empty
       end
     end
 
@@ -201,6 +216,11 @@ Spectator.describe Task::Fetch::Hashtag do
 
       it "changes time of last success" do
         expect { subject.perform(1) }.to change { node.last_success_at }
+      end
+
+      it "calls the trigger" do
+        spy.perform(1)
+        expect(spy.reconcile_calls).to eq([{source.iri, "hashtag"}])
       end
 
       it "sets the next attempt in the immediate future" do

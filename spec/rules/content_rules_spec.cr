@@ -356,92 +356,6 @@ Spectator.describe ContentRules do
         end
       end
 
-      context "object is tagged with hashtags" do
-        let_create!(:hashtag, named: nil, name: "foo", href: "https://test.test/tags/foo", subject: object)
-        let_create!(:hashtag, named: nil, name: "bar", href: "https://remote/tags/bar", subject: object)
-
-        context "where object is attributed to the owner" do
-          let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
-
-          before_each { object.assign(attributed_to: owner).save }
-
-          it "does not add the hashtag to the notifications" do
-            run(owner, create)
-            expect(owner.notifications.map(&.to_iri)).not_to have("foo")
-          end
-
-          it "does not add the hashtag to the notifications" do
-            run(owner, announce)
-            expect(owner.notifications.map(&.to_iri)).not_to have("foo")
-          end
-        end
-
-        context "where 'foo' is followed by the owner" do
-          let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
-
-          it "adds the hashtag to the notifications" do
-            run(owner, create)
-            expect(owner.notifications.map(&.to_iri)).to have("foo")
-          end
-
-          it "adds the hashtag to the notifications" do
-            run(owner, announce)
-            expect(owner.notifications.map(&.to_iri)).to have("foo")
-          end
-
-          context "and the activity's actor is blocked" do
-            before_each { other.assign(blocked_at: Time.utc).save }
-
-            it "does not add the hashtag to the notifications" do
-              run(owner, announce)
-              expect(owner.notifications.map(&.to_iri)).not_to have("foo")
-            end
-          end
-
-          context "and 'bar' is followed by the owner" do
-            let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "bar")
-
-            it "adds both hashtags to the notifications" do
-              run(owner, create)
-              expect(owner.notifications.map(&.to_iri)).to have("foo", "bar")
-            end
-
-            it "adds both hashtags to the notifications" do
-              run(owner, announce)
-              expect(owner.notifications.map(&.to_iri)).to have("foo", "bar")
-            end
-          end
-        end
-
-        context "where 'foo' is followed by another actor" do
-          let_create!(:follow_hashtag_relationship, named: nil, actor: other, name: "foo")
-
-          it "does not add the hashtag to the notifications" do
-            run(owner, create)
-            expect(owner.notifications).to be_empty
-          end
-
-          it "does not add the hashtag to the notifications" do
-            run(owner, announce)
-            expect(owner.notifications).to be_empty
-          end
-
-          context "and 'bar' is followed by another actor" do
-            let_create!(:follow_hashtag_relationship, named: nil, actor: other, name: "bar")
-
-            it "does not add the hashtag to the notifications" do
-              run(owner, create)
-              expect(owner.notifications).to be_empty
-            end
-
-            it "does not add the hashtag to the notifications" do
-              run(owner, announce)
-              expect(owner.notifications).to be_empty
-            end
-          end
-        end
-      end
-
       context "object is tagged with mentions" do
         let_create!(:mention, named: nil, name: "foo@remote.com", href: "https://remote.com/actors/foo", subject: object)
         let_create!(:mention, named: nil, name: "bar@remote.com", href: "https://remote.com/actors/bar", subject: object)
@@ -528,9 +442,8 @@ Spectator.describe ContentRules do
         end
       end
 
-      context "object is tagged with a hashtag and a mention and is a reply" do
+      context "object is tagged with a mention and is a reply" do
         let_build(:object, named: origin, attributed_to: other)
-        let_create!(:hashtag, named: nil, name: "foo", href: "https://remote/tags/foo", subject: object)
         let_create!(:mention, named: nil, name: "bar@remote.com", href: "https://remote.com/actors/bar", subject: object)
 
         before_each do
@@ -542,14 +455,13 @@ Spectator.describe ContentRules do
           expect(owner.notifications).to be_empty
         end
 
-        context "and all three are followed by owner" do
-          let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
+        context "and both are followed by owner" do
           let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/bar")
           let_create!(:follow_thread_relationship, actor: owner, thread: origin.iri)
 
-          it "adds three notifications" do
+          it "adds the mention and thread notifications" do
             run(owner, create)
-            expect(owner.notifications.map(&.to_iri)).to have("foo", "https://remote.com/actors/bar", origin.iri)
+            expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/bar", origin.iri)
           end
         end
       end
@@ -560,71 +472,6 @@ Spectator.describe ContentRules do
         it "does not add the follow to the notifications" do
           run(owner, follow)
           expect(owner.notifications).to be_empty
-        end
-      end
-    end
-
-    context "given notifications with a followed hashtag already added" do
-      let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "hashtag")
-      let_create!(:hashtag, name: "hashtag", href: "https://test.test/tags/hashtag", subject: object)
-
-      context "for the owner" do
-        let_create!(:notification_follow_hashtag, owner: owner, name: "hashtag")
-
-        pre_condition { expect(owner.notifications.map(&.to_iri)).to eq(["hashtag"]) }
-
-        it "removes the previous notification from the notifications" do
-          run(owner, create)
-          expect(owner.notifications).not_to have(notification_follow_hashtag)
-        end
-
-        it "does not add a duplicate hashtag to the notifications" do
-          run(owner, create)
-          expect(owner.notifications.map(&.to_iri)).to eq(["hashtag"])
-        end
-
-        it "removes the previous notification from the notifications" do
-          run(owner, announce)
-          expect(owner.notifications).not_to have(notification_follow_hashtag)
-        end
-
-        it "does not add a duplicate hashtag to the notifications" do
-          run(owner, announce)
-          expect(owner.notifications.map(&.to_iri)).to eq(["hashtag"])
-        end
-
-        context "and the new activity is from a blocked actor" do
-          before_each { other.assign(blocked_at: Time.utc).save }
-
-          it "does not remove the previous notification from the notifications" do
-            run(owner, announce)
-            expect(owner.notifications).to have(notification_follow_hashtag)
-          end
-        end
-      end
-
-      context "for other owner" do
-        let_create!(:notification_follow_hashtag, owner: other, name: "hashtag")
-
-        pre_condition { expect(owner.notifications.map(&.to_iri)).to be_empty }
-
-        it "adds the hashtag to the notifications" do
-          run(owner, create)
-          expect(owner.notifications.map(&.to_iri)).to have("hashtag")
-        end
-
-        it "adds the hashtag to the notifications" do
-          run(owner, announce)
-          expect(owner.notifications.map(&.to_iri)).to have("hashtag")
-        end
-      end
-
-      context "and an activity for the object already exists" do
-        before_each { create.save }
-
-        it "does not add the object to the notifications" do
-          run(owner, announce)
-          expect(owner.notifications.map(&.to_iri)).to be_empty
         end
       end
     end

@@ -198,14 +198,6 @@ rule "incoming activity for object"
   assert CheckFollowFor, actor, object
 end
 
-rule "notification exists for object 1"
-  condition CheckFollowFor, actor, object
-  condition Object, object, attributed_to: not actor
-  condition Hashtag, subject: object, name: name
-  condition NotificationFollowHashtag, owner: actor, name: name
-  retract NotificationFollowHashtag, owner: actor, name: name
-end
-
 rule "notification exists for object 2"
   condition CheckFollowFor, actor, object
   condition Object, object, attributed_to: not actor
@@ -220,14 +212,6 @@ rule "notification exists for object 3"
   condition Object, root, iri: thread
   condition NotificationFollowThread, owner: actor, object: root
   retract NotificationFollowThread, owner: actor, object: root
-end
-
-rule "follow/hashtag"
-  condition CheckFollowFor, actor, object
-  condition Object, object, attributed_to: not actor
-  condition Hashtag, subject: object, name: name
-  any FollowHashtag, actor: actor, name: name
-  assert NotificationFollowHashtag, owner: actor, name: name
 end
 
 rule "follow/mention"

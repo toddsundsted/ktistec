@@ -35,6 +35,12 @@ Spectator.describe InternalController do
         get "/_internal/authenticated", headers
         expect(response.cookies["__Host-RedirectPath"]?).to be_nil
       end
+
+      it "does not identify an account" do
+        get "/_internal/authenticated", headers
+        expect(response.status_code).to eq(401)
+        expect(response.headers["X-Username"]?).to be_nil
+      end
     end
 
     context "when authorized via session cookie" do
@@ -48,6 +54,11 @@ Spectator.describe InternalController do
       it "returns an empty body" do
         get "/_internal/authenticated", ACCEPT_JSON
         expect(response.body).to be_blank
+      end
+
+      it "identifies the account" do
+        get "/_internal/authenticated", ACCEPT_JSON
+        expect(response.headers["X-Username"]?).to eq(account.username)
       end
     end
 
@@ -71,6 +82,11 @@ Spectator.describe InternalController do
         get "/_internal/authenticated", headers
         expect(response.body).to be_blank
       end
+
+      it "identifies the account" do
+        get "/_internal/authenticated", headers
+        expect(response.headers["X-Username"]?).to eq(account.username)
+      end
     end
 
     context "with a bearer token not bound to an account" do
@@ -92,6 +108,12 @@ Spectator.describe InternalController do
       it "does not set redirect cookie" do
         get "/_internal/authenticated", headers
         expect(response.cookies["__Host-RedirectPath"]?).to be_nil
+      end
+
+      it "does not identify an account" do
+        get "/_internal/authenticated", headers
+        expect(response.status_code).to eq(401)
+        expect(response.headers["X-Username"]?).to be_nil
       end
     end
   end

@@ -22,10 +22,10 @@ Spectator.describe Relationship::Content::Follow::Mention do
       expect(new_relationship.errors.keys).to contain("actor")
     end
 
-    it "rejects blank name" do
+    it "rejects blank href" do
       new_relationship = described_class.new(**options.merge({to_iri: ""}))
       expect(new_relationship.valid?).to be_false
-      expect(new_relationship.errors.keys).to contain("name")
+      expect(new_relationship.errors.keys).to contain("href")
     end
 
     it "successfully validates instance" do
@@ -34,19 +34,19 @@ Spectator.describe Relationship::Content::Follow::Mention do
     end
   end
 
-  describe "#name=" do
+  describe "#href=" do
     subject { described_class.new(**options) }
 
     it "sets to_iri" do
-      expect { subject.assign(name: "mention@remote") }.to change { subject.to_iri }
+      expect { subject.assign(href: "https://remote/actors/mention") }.to change { subject.to_iri }
     end
   end
 
-  describe "#name" do
+  describe "#href" do
     subject { described_class.new(**options) }
 
     it "gets to_iri" do
-      expect(subject.name).to eq(subject.to_iri)
+      expect(subject.href).to eq(subject.to_iri)
     end
   end
 end

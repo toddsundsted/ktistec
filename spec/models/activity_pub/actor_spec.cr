@@ -2525,10 +2525,10 @@ Spectator.describe ActivityPub::Actor do
     end
 
     context "given a follow" do
-      let_create!(:follow_mention_relationship, actor: actor, name: "alice@example.com")
+      let_create!(:follow_mention_relationship, actor: actor, href: "https://example.com/actors/alice")
 
       it "returns set of followed mentions" do
-        expect(actor.followed_mentions).to contain("alice@example.com")
+        expect(actor.followed_mentions).to contain("https://example.com/actors/alice")
       end
     end
   end

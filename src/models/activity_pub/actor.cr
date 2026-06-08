@@ -1360,7 +1360,7 @@ module ActivityPub
           WHERE r.type = '#{Relationship::Content::Follow::Mention}'
             AND r.from_iri = ?
       QUERY
-      Ktistec.database.query_all(query, iri, as: String).map(&.downcase).to_set
+      Ktistec.database.query_all(query, iri, as: String).to_set
     end
 
     def make_delete_activity

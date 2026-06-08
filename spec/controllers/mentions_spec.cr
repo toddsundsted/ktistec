@@ -11,6 +11,11 @@ Spectator.describe MentionsController do
 
   let(author) { register.actor }
 
+  def mention_href(handle)
+    user, _, host = handle.partition("@")
+    "https://#{host}/users/#{user}"
+  end
+
   macro create_object_with_mentions(index, *mentions)
     let_create(
       :object, named: object{{index}},
@@ -21,6 +26,7 @@ Spectator.describe MentionsController do
       let_create!(
         :mention, named: nil,
         name: {{mention}},
+        href: mention_href({{mention}}),
         subject: object{{index}}
       )
     {% end %}
@@ -98,6 +104,68 @@ Spectator.describe MentionsController do
           expect(response.body).not_to contain("turbo-stream-source")
         end
       end
+
+      # a bare handle
+
+      it "redirects to the qualified handle" do
+        get "/mentions/foo", ACCEPT_HTML
+        expect(response.status_code).to eq(301)
+        expect(response.headers["Location"]).to eq("/mentions/foo%40remote")
+      end
+
+      it "redirects to the qualified handle" do
+        get "/mentions/foo", ACCEPT_JSON
+        expect(response.status_code).to eq(301)
+        expect(response.headers["Location"]).to eq("/mentions/foo%40remote")
+      end
+
+      it "returns 404 when nothing matches" do
+        get "/mentions/nobody", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 when nothing matches" do
+        get "/mentions/nobody", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      context "given another matching tag" do
+        create_object_with_mentions(2, "foo@other")
+
+        it "returns 404 when the match is ambiguous" do
+          get "/mentions/foo", ACCEPT_HTML
+          expect(response.status_code).to eq(404)
+        end
+
+        it "returns 404 when the match is ambiguous" do
+          get "/mentions/foo", ACCEPT_JSON
+          expect(response.status_code).to eq(404)
+        end
+      end
+
+      context "given a tag with no href" do
+        let_create(
+          :object,
+          attributed_to: author,
+          published: Time.utc(2016, 2, 15, 10, 20, 9),
+        )
+        let_create!(
+          :mention,
+          name: "ghost@remote",
+          href: nil,
+          subject: object,
+        )
+
+        it "returns 404" do
+          get "/mentions/ghost", ACCEPT_HTML
+          expect(response.status_code).to eq(404)
+        end
+
+        it "returns 404" do
+          get "/mentions/ghost", ACCEPT_JSON
+          expect(response.status_code).to eq(404)
+        end
+      end
     end
   end
 
@@ -124,7 +192,7 @@ Spectator.describe MentionsController do
 
       it "follows the mention" do
         post "/mentions/foo%40remote/follow"
-        expect(Relationship::Content::Follow::Mention.all.map(&.to_iri)).to contain_exactly("foo@remote")
+        expect(Relationship::Content::Follow::Mention.all.map(&.to_iri)).to contain_exactly(mention_href("foo@remote"))
       end
 
       context "within a turbo-frame" do
@@ -140,7 +208,7 @@ Spectator.describe MentionsController do
       end
 
       context "given an existing follow" do
-        let_create!(:follow_mention_relationship, named: nil, actor: author, name: "foo@remote")
+        let_create!(:follow_mention_relationship, named: nil, actor: author, href: mention_href("foo@remote"))
 
         it "succeeds" do
           post "/mentions/foo%40remote/follow"
@@ -149,7 +217,7 @@ Spectator.describe MentionsController do
 
         it "does not change the count of mention relationships" do
           expect { post "/mentions/foo%40remote/follow" }
-            .not_to change { Relationship::Content::Follow::Mention.count(name: "foo@remote") }
+            .not_to change { Relationship::Content::Follow::Mention.count(href: mention_href("foo@remote")) }
         end
 
         context "within a turbo-frame" do
@@ -202,7 +270,7 @@ Spectator.describe MentionsController do
       end
 
       context "given an existing follow" do
-        let_create!(:follow_mention_relationship, named: nil, actor: author, name: "foo@remote")
+        let_create!(:follow_mention_relationship, named: nil, actor: author, href: mention_href("foo@remote"))
 
         it "succeeds" do
           post "/mentions/foo%40remote/unfollow"

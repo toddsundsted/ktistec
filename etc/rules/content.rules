@@ -290,9 +290,9 @@ end
 rule "notification exists for object 2"
   condition CheckFollowFor, actor, object
   condition Object, object, attributed_to: not actor
-  condition Mention, subject: object, name: name
-  condition NotificationFollowMention, owner: actor, name: name
-  retract NotificationFollowMention, owner: actor, name: name
+  condition Mention, subject: object, href: href
+  condition NotificationFollowMention, owner: actor, href: href
+  retract NotificationFollowMention, owner: actor, href: href
 end
 
 rule "notification exists for object 3"
@@ -314,9 +314,9 @@ end
 rule "follow/mention"
   condition CheckFollowFor, actor, object
   condition Object, object, attributed_to: not actor
-  condition Mention, subject: object, name: name
-  any FollowMention, actor: actor, name: name
-  assert NotificationFollowMention, owner: actor, name: name
+  condition Mention, subject: object, href: href
+  any FollowMention, actor: actor, href: href
+  assert NotificationFollowMention, owner: actor, href: href
 end
 
 rule "follow/thread"

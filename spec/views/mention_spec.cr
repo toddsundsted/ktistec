@@ -39,7 +39,7 @@ Spectator.describe "index.html.slang" do
   end
 
   context "given a follow" do
-    let_create!(:follow_mention_relationship, named: follow, actor: account.actor, name: mention)
+    let_create!(:follow_mention_relationship, named: follow, actor: account.actor, href: mention)
 
     it "does not render a button to unfollow the mention" do
       expect(subject.xpath_nodes("//form//button")).to be_empty
@@ -54,7 +54,7 @@ Spectator.describe "index.html.slang" do
     end
 
     context "given a follow" do
-      let_create!(:follow_mention_relationship, named: follow, actor: account.actor, name: mention)
+      let_create!(:follow_mention_relationship, named: follow, actor: account.actor, href: mention)
 
       it "renders a button to unfollow the mention" do
         expect(subject.xpath_nodes("//form//button")).to have("Unfollow")

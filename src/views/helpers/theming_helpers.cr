@@ -76,12 +76,13 @@ module Ktistec::ViewHelper
           attrs["data-followed-hashtags"] = matched.join(" ")
         end
       end
-      object_mentions = object.mentions.map(&.name.downcase)
-      if object_mentions.presence
-        attrs["data-mentions"] = object_mentions.first(10).join(" ")
+      object_mentions = object.mentions
+      mention_names = object_mentions.map(&.name.downcase)
+      if mention_names.presence
+        attrs["data-mentions"] = mention_names.first(10).join(" ")
       end
       if followed_mentions
-        matched = object_mentions.select { |mention| followed_mentions.includes?(mention) }
+        matched = object_mentions.select { |mention| (href = mention.href) && followed_mentions.includes?(href) }.map(&.name.downcase)
         if matched.presence
           attrs["data-followed-mentions"] = matched.join(" ")
         end

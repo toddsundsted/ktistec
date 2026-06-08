@@ -11,15 +11,15 @@ Spectator.describe Relationship::Content::Notification::Follow::Mention do
   let(options) do
     {
       owner: owner,
-      name:  "foo@bar",
+      href:  "https://bar/actors/foo",
     }
   end
 
   context "validation" do
-    it "rejects blank name" do
-      new_relationship = described_class.new(**options.merge({name: ""}))
+    it "rejects blank href" do
+      new_relationship = described_class.new(**options.merge({href: ""}))
       expect(new_relationship.valid?).to be_false
-      expect(new_relationship.errors.keys).to contain("name")
+      expect(new_relationship.errors.keys).to contain("href")
     end
 
     it "successfully validates instance" do

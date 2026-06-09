@@ -6,10 +6,10 @@ class Relationship
     class Notification < Relationship
       class Follow < Notification
         class Mention < Notification
-          # Handle of the mentioned actor.
+          # Identity (`@id`) of the mentioned actor.
           #
-          derived name : String, aliased_to: to_iri
-          validates(name) { "must not be blank" if name.blank? }
+          derived href : String, aliased_to: to_iri
+          validates(href) { "must not be blank" if href.blank? }
         end
       end
     end

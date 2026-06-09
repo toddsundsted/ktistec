@@ -460,11 +460,11 @@ Spectator.describe ContentRules do
       end
 
       context "object is tagged with mentions" do
-        let_create!(:mention, named: nil, name: "foo@remote.com", subject: object)
-        let_create!(:mention, named: nil, name: "bar@remote.com", subject: object)
+        let_create!(:mention, named: nil, name: "foo@remote.com", href: "https://remote.com/actors/foo", subject: object)
+        let_create!(:mention, named: nil, name: "bar@remote.com", href: "https://remote.com/actors/bar", subject: object)
 
         context "where object is attributed to the owner" do
-          let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "foo@remote.com")
+          let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/foo")
 
           before_each { object.assign(attributed_to: owner).save }
 
@@ -480,16 +480,16 @@ Spectator.describe ContentRules do
         end
 
         context "where 'foo@remote.com' is followed by the owner" do
-          let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "foo@remote.com")
+          let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/foo")
 
           it "adds the object to the notifications" do
             run(owner, create)
-            expect(owner.notifications.map(&.to_iri)).to have("foo@remote.com")
+            expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/foo")
           end
 
           it "adds the object to the notifications" do
             run(owner, announce)
-            expect(owner.notifications.map(&.to_iri)).to have("foo@remote.com")
+            expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/foo")
           end
 
           context "and the activity's actor is blocked" do
@@ -497,27 +497,27 @@ Spectator.describe ContentRules do
 
             it "does not add the object to the notifications" do
               run(owner, announce)
-              expect(owner.notifications.map(&.to_iri)).not_to have("foo@remote.com")
+              expect(owner.notifications.map(&.to_iri)).not_to have("https://remote.com/actors/foo")
             end
           end
 
           context "and 'bar@remote.com' is followed by the owner" do
-            let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "bar@remote.com")
+            let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/bar")
 
             it "adds a single object to the notifications" do
               run(owner, create)
-              expect(owner.notifications.map(&.to_iri)).to have("foo@remote.com", "bar@remote.com")
+              expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/foo", "https://remote.com/actors/bar")
             end
 
             it "adds a single object to the notifications" do
               run(owner, announce)
-              expect(owner.notifications.map(&.to_iri)).to have("foo@remote.com", "bar@remote.com")
+              expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/foo", "https://remote.com/actors/bar")
             end
           end
         end
 
         context "where 'foo@remote.com' is followed by another actor" do
-          let_create!(:follow_mention_relationship, named: nil, actor: other, name: "foo@remote.com")
+          let_create!(:follow_mention_relationship, named: nil, actor: other, href: "https://remote.com/actors/foo")
 
           it "does not add the object to the notifications" do
             run(owner, create)
@@ -530,7 +530,7 @@ Spectator.describe ContentRules do
           end
 
           context "and 'bar@remote.com' is followed by another actor" do
-            let_create!(:follow_mention_relationship, named: nil, actor: other, name: "bar@remote.com")
+            let_create!(:follow_mention_relationship, named: nil, actor: other, href: "https://remote.com/actors/bar")
 
             it "does not add the object to the notifications" do
               run(owner, create)
@@ -548,7 +548,7 @@ Spectator.describe ContentRules do
       context "object is tagged with a hashtag and a mention and is a reply" do
         let_build(:object, named: origin, attributed_to: other)
         let_create!(:hashtag, named: nil, name: "foo", href: "https://remote/tags/foo", subject: object)
-        let_create!(:mention, named: nil, name: "bar@remote.com", subject: object)
+        let_create!(:mention, named: nil, name: "bar@remote.com", href: "https://remote.com/actors/bar", subject: object)
 
         before_each do
           object.assign(in_reply_to: origin).save
@@ -561,12 +561,12 @@ Spectator.describe ContentRules do
 
         context "and all three are followed by owner" do
           let_create!(:follow_hashtag_relationship, named: nil, actor: owner, name: "foo")
-          let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "bar@remote.com")
+          let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/bar")
           let_create!(:follow_thread_relationship, actor: owner, thread: origin.iri)
 
           it "adds three notifications" do
             run(owner, create)
-            expect(owner.notifications.map(&.to_iri)).to have("foo", "bar@remote.com", origin.iri)
+            expect(owner.notifications.map(&.to_iri)).to have("foo", "https://remote.com/actors/bar", origin.iri)
           end
         end
       end
@@ -704,13 +704,13 @@ Spectator.describe ContentRules do
     end
 
     context "given notifications with a followed mention already added" do
-      let_create!(:follow_mention_relationship, named: nil, actor: owner, name: "mention@remote.com")
-      let_create!(:mention, name: "mention@remote.com", subject: object)
+      let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/mention")
+      let_create!(:mention, name: "mention@remote.com", href: "https://remote.com/actors/mention", subject: object)
 
       context "for the owner" do
-        let_create!(:notification_follow_mention, owner: owner, name: "mention@remote.com")
+        let_create!(:notification_follow_mention, owner: owner, href: "https://remote.com/actors/mention")
 
-        pre_condition { expect(owner.notifications.map(&.to_iri)).to eq(["mention@remote.com"]) }
+        pre_condition { expect(owner.notifications.map(&.to_iri)).to eq(["https://remote.com/actors/mention"]) }
 
         it "removes the previous notification from the notifications" do
           run(owner, create)
@@ -719,7 +719,7 @@ Spectator.describe ContentRules do
 
         it "does not add a duplicate mention to the notifications" do
           run(owner, create)
-          expect(owner.notifications.map(&.to_iri)).to eq(["mention@remote.com"])
+          expect(owner.notifications.map(&.to_iri)).to eq(["https://remote.com/actors/mention"])
         end
 
         it "removes the previous notification from the notifications" do
@@ -729,7 +729,7 @@ Spectator.describe ContentRules do
 
         it "does not add a duplicate mention to the notifications" do
           run(owner, announce)
-          expect(owner.notifications.map(&.to_iri)).to eq(["mention@remote.com"])
+          expect(owner.notifications.map(&.to_iri)).to eq(["https://remote.com/actors/mention"])
         end
 
         context "and the new activity is from a blocked actor" do
@@ -743,18 +743,18 @@ Spectator.describe ContentRules do
       end
 
       context "for other owner" do
-        let_create!(:notification_follow_mention, owner: other, name: "mention@remote.com")
+        let_create!(:notification_follow_mention, owner: other, href: "https://remote.com/actors/mention")
 
         pre_condition { expect(owner.notifications.map(&.object_or_activity)).to be_empty }
 
         it "adds the object to the notifications" do
           run(owner, create)
-          expect(owner.notifications.map(&.to_iri)).to have("mention@remote.com")
+          expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/mention")
         end
 
         it "adds the object to the notifications" do
           run(owner, announce)
-          expect(owner.notifications.map(&.to_iri)).to have("mention@remote.com")
+          expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/mention")
         end
       end
 

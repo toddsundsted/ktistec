@@ -166,7 +166,7 @@ Spectator.describe "actor" do
     end
 
     context "given a follow mention notification" do
-      let_create!(:notification_follow_mention, owner: actor, name: "foo@bar")
+      let_create!(:notification_follow_mention, owner: actor, href: "https://bar/users/foo")
 
       it "renders content tooltip" do
         expect(tooltip).to eq("content 1")

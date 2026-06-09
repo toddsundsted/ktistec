@@ -344,11 +344,15 @@ module MCP
             {objects, hashtag_objects.cursor_start, hashtag_objects.cursor_end, hashtag_objects.has_prev?, hashtag_objects.has_next?}
           elsif name.starts_with?("mention@")
             mention = name.sub("mention@", "")
-            mention_objects = Tag::Mention.all_objects(mention, max_id: max_id, min_id: min_id, limit: limit)
-            objects = mention_objects.map do |obj|
-              JSON::Any.new(MCP::Resources.object_contents(obj))
+            if (href = Tag::Mention.dominant_href(mention))
+              mention_objects = Tag::Mention.all_objects(href, max_id: max_id, min_id: min_id, limit: limit)
+              objects = mention_objects.map do |obj|
+                JSON::Any.new(MCP::Resources.object_contents(obj))
+              end
+              {objects, mention_objects.cursor_start, mention_objects.cursor_end, mention_objects.has_prev?, mention_objects.has_next?}
+            else
+              {[] of JSON::Any, nil, nil, false, false}
             end
-            {objects, mention_objects.cursor_start, mention_objects.cursor_end, mention_objects.has_prev?, mention_objects.has_next?}
           else
             raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
           end
@@ -417,7 +421,11 @@ module MCP
             Tag::Hashtag.all_objects(hashtag, since)
           elsif name.starts_with?("mention@")
             mention = name.sub("mention@", "")
-            Tag::Mention.all_objects(mention, since)
+            if (href = Tag::Mention.dominant_href(mention))
+              Tag::Mention.all_objects(href, since)
+            else
+              0_i64
+            end
           else
             raise MCPError.new("`#{name}` unsupported", JSON::RPC::ErrorCodes::INVALID_PARAMS)
           end
@@ -976,13 +984,15 @@ module MCP
           end
         end
       in Relationship::Content::Notification::Follow::Mention
+        href = notification.href
+        handle = Tag::Mention.display_handle(href)
         JSON::Any.new({
           "type"       => JSON::Any.new("follow_mention"),
-          "mention"    => JSON::Any.new(notification.name),
-          "action_url" => JSON::Any.new("#{Ktistec.host}#{mention_path(notification.name)}"),
+          "mention"    => JSON::Any.new(handle),
+          "action_url" => JSON::Any.new("#{Ktistec.host}#{mention_path(handle)}"),
           "created_at" => JSON::Any.new(notification.created_at.to_rfc3339),
         }).tap do |json|
-          if (latest_object = Tag::Mention.most_recent_object(notification.name))
+          if (latest_object = Tag::Mention.most_recent_object(href))
             json.as_h["latest_object_id"] = JSON::Any.new(latest_object.id)
           end
         end

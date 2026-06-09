@@ -298,8 +298,8 @@ Spectator.describe "helpers" do
     let_build(:actor, named: :sharer, username: "bob")
     let_create!(:hashtag, named: nil, name: "ruby", subject: note)
     let_create!(:hashtag, named: nil, name: "crystal", subject: note)
-    let_create!(:mention, named: nil, name: "alice", subject: note)
-    let_create!(:mention, named: nil, name: "bob", subject: note)
+    let_create!(:mention, named: nil, name: "alice", href: "https://remote/actors/alice", subject: note)
+    let_create!(:mention, named: nil, name: "bob", href: "https://remote/actors/bob", subject: note)
     let(followed_hashtags) { nil }
     let(followed_mentions) { nil }
 
@@ -348,10 +348,10 @@ Spectator.describe "helpers" do
     end
 
     context "with followed mentions" do
-      let(followed_mentions) { Set{"alice", "charlie"} }
+      let(followed_mentions) { Set{"https://remote/actors/alice", "https://remote/actors/charlie"} }
 
       it "includes data-followed-mentions" do
-        expect(subject["data-followed-mentions"]).to eq("alice")
+        expect(subject["data-followed-mentions"]).to eq("alice@remote")
       end
     end
 
@@ -360,7 +360,7 @@ Spectator.describe "helpers" do
     end
 
     it "includes data-mentions" do
-      expect(subject["data-mentions"]).to eq("alice bob")
+      expect(subject["data-mentions"]).to eq("alice@remote bob@remote")
     end
   end
 

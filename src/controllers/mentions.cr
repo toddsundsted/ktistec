@@ -8,12 +8,21 @@ class MentionsController
   get "/mentions/:mention" do |env|
     mention = env.params.url["mention"]
 
-    collection = Tag::Mention.all_objects(mention, **cursor_pagination_params(env))
+    unless mention.includes?("@") # bare handle
+      handles = Tag::Mention.qualified_handles(mention)
+      not_found unless handles.size == 1
+      redirect mention_path(handles.first), 301
+    end
+
+    href = Tag::Mention.dominant_href(mention)
+    not_found unless href
+
+    collection = Tag::Mention.all_objects(href, **cursor_pagination_params(env))
     count = Tag::Mention.all_objects_count(mention)
 
     not_found if collection.empty?
 
-    follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
+    follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, href: href)
 
     ok "mentions/index", env: env, mention: mention, collection: collection, count: count, follow: follow
   end
@@ -21,12 +30,15 @@ class MentionsController
   post "/mentions/:mention/follow" do |env|
     mention = env.params.url["mention"]
 
-    collection = Tag::Mention.all_objects(mention)
+    href = Tag::Mention.dominant_href(mention)
+    not_found unless href
+
+    collection = Tag::Mention.all_objects(href)
     count = Tag::Mention.all_objects_count(mention)
 
     not_found if collection.empty?
 
-    follow = Relationship::Content::Follow::Mention.find_or_new(actor: env.account.actor, name: mention)
+    follow = Relationship::Content::Follow::Mention.find_or_new(actor: env.account.actor, href: href)
     follow.save if follow.new_record?
 
     if in_turbo_frame?
@@ -39,12 +51,15 @@ class MentionsController
   post "/mentions/:mention/unfollow" do |env|
     mention = env.params.url["mention"]
 
-    collection = Tag::Mention.all_objects(mention)
+    href = Tag::Mention.dominant_href(mention)
+    not_found unless href
+
+    collection = Tag::Mention.all_objects(href)
     count = Tag::Mention.all_objects_count(mention)
 
     not_found if collection.empty?
 
-    follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
+    follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, href: href)
     follow.destroy if follow
 
     if in_turbo_frame?

@@ -122,8 +122,9 @@
                 = … content, 150
         - in Relationship::Content::Notification::Follow::Mention
           crystal:
-            name = notification.name
-            object = Tag::Mention.most_recent_object(name)
+            href = notification.href
+            handle = Tag::Mention.display_handle(href)
+            object = Tag::Mention.most_recent_object(href)
             content = object ? object.preview : nil
             attributed_to = object.try(&.attributed_to)
           .label
@@ -131,7 +132,7 @@
           .content
             .summary
               | There are new posts that mention
-              a< href=mention_path(name) @#{name}
+              a< href=mention_path(handle) @#{handle}
               | .
             - if content
               .extra.meta.truncated

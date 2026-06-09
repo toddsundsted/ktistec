@@ -40,7 +40,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(NotificationAnnounce, Relationship::Content::Notification::Announce, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationFollow, Relationship::Content::Notification::Follow, associations: [:owner, :activity])
   Ktistec::Rule.make_pattern(NotificationFollowHashtag, Relationship::Content::Notification::Follow::Hashtag, associations: [:owner], properties: [:name])
-  Ktistec::Rule.make_pattern(NotificationFollowMention, Relationship::Content::Notification::Follow::Mention, associations: [:owner], properties: [:name])
+  Ktistec::Rule.make_pattern(NotificationFollowMention, Relationship::Content::Notification::Follow::Mention, associations: [:owner], properties: [:href])
   Ktistec::Rule.make_pattern(NotificationMention, Relationship::Content::Notification::Mention, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(NotificationReply, Relationship::Content::Notification::Reply, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(NotificationFollowThread, Relationship::Content::Notification::Follow::Thread, associations: [:owner, :object])
@@ -50,7 +50,7 @@ class ContentRules
   Ktistec::Rule.make_pattern(TimelineCreate, Relationship::Content::Timeline::Create, associations: [:owner, :object])
   Ktistec::Rule.make_pattern(Follow, Relationship::Social::Follow, associations: [:actor, :object])
   Ktistec::Rule.make_pattern(FollowHashtag, Relationship::Content::Follow::Hashtag, associations: [:actor], properties: [:name])
-  Ktistec::Rule.make_pattern(FollowMention, Relationship::Content::Follow::Mention, associations: [:actor], properties: [:name])
+  Ktistec::Rule.make_pattern(FollowMention, Relationship::Content::Follow::Mention, associations: [:actor], properties: [:href])
   Ktistec::Rule.make_pattern(FollowThread, Relationship::Content::Follow::Thread, associations: [:actor], properties: [:thread])
   Ktistec::Rule.make_pattern(Filter, FilterTerm, associations: [:actor], properties: [:term])
 

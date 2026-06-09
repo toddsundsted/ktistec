@@ -67,5 +67,7 @@ module Rules
         rows.map { |(owner, href)| {from_iri: owner, to_iri: href} }
       end
     end
+
+    register(FollowMention.instance)
   end
 end

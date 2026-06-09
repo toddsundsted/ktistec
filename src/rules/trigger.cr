@@ -1,5 +1,6 @@
 require "./maintainer"
 require "./view/follow_hashtag"
+require "./view/follow_mention"
 require "../models/activity_pub/activity"
 require "../models/activity_pub/activity/announce"
 require "../models/activity_pub/activity/dislike"
@@ -7,7 +8,9 @@ require "../models/activity_pub/activity/like"
 require "../models/activity_pub/activity/undo"
 require "../models/activity_pub/actor"
 require "../models/relationship/content/follow/hashtag"
+require "../models/relationship/content/follow/mention"
 require "../models/tag/hashtag"
+require "../models/tag/mention"
 
 module Rules
   # The trigger.
@@ -50,6 +53,13 @@ module Rules
           JOIN relationships f ON f.type = ? AND f.to_iri = t.name
          WHERE o.attributed_to_iri = ?
         SQL
+      object_iris += Ktistec.database.query_all(<<-SQL, Tag::Mention.to_s, Relationship::Content::Follow::Mention.to_s, actor.iri, as: String)
+        SELECT DISTINCT o.iri
+          FROM objects o
+          JOIN tags t ON t.subject_iri = o.iri AND t.type = ?
+          JOIN relationships f ON f.type = ? AND f.to_iri = t.href
+         WHERE o.attributed_to_iri = ?
+        SQL
       object_iris.uniq.each do |object_iri|
         Rules::Maintainer.reconcile_object(object_iri)
       end
@@ -67,6 +77,19 @@ module Rules
     def reconcile_for_hashtag_follow(follow : Relationship::Content::Follow::Hashtag) : Nil
       reconcile_for_hashtag(follow.from_iri, follow.name)
     end
+
+    # Re-evaluates the mention-follow notification for an `(owner, href)`
+    # key.
+    #
+    def reconcile_for_mention(owner_iri : String, href : String) : Nil
+      key = {from_iri: owner_iri, to_iri: href}
+      Rules::Maintainer.reconcile_for(Rules::View::FollowMention.instance, key)
+    end
+
+    # :ditto:
+    def reconcile_for_mention_follow(follow : Relationship::Content::Follow::Mention) : Nil
+      reconcile_for_mention(follow.from_iri, follow.href)
+    end
   end
 end
 
@@ -76,3 +99,6 @@ ActivityPub::Actor::OBSERVERS.observe(:unblock) { |actor| Rules::Trigger.reconci
 
 # evict the hashtag-follow notification when its follow is removed.
 Relationship::Content::Follow::Hashtag::OBSERVERS.observe(:destroy) { |follow| Rules::Trigger.reconcile_for_hashtag_follow(follow) }
+
+# evict the mention-follow notification when its follow is removed.
+Relationship::Content::Follow::Mention::OBSERVERS.observe(:destroy) { |follow| Rules::Trigger.reconcile_for_mention_follow(follow) }

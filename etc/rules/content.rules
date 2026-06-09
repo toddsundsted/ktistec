@@ -198,28 +198,12 @@ rule "incoming activity for object"
   assert CheckFollowFor, actor, object
 end
 
-rule "notification exists for object 2"
-  condition CheckFollowFor, actor, object
-  condition Object, object, attributed_to: not actor
-  condition Mention, subject: object, href: href
-  condition NotificationFollowMention, owner: actor, href: href
-  retract NotificationFollowMention, owner: actor, href: href
-end
-
 rule "notification exists for object 3"
   condition CheckFollowFor, actor, object
   condition Object, object, thread: thread
   condition Object, root, iri: thread
   condition NotificationFollowThread, owner: actor, object: root
   retract NotificationFollowThread, owner: actor, object: root
-end
-
-rule "follow/mention"
-  condition CheckFollowFor, actor, object
-  condition Object, object, attributed_to: not actor
-  condition Mention, subject: object, href: href
-  any FollowMention, actor: actor, href: href
-  assert NotificationFollowMention, owner: actor, href: href
 end
 
 rule "follow/thread"

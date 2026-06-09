@@ -356,112 +356,24 @@ Spectator.describe ContentRules do
         end
       end
 
-      context "object is tagged with mentions" do
-        let_create!(:mention, named: nil, name: "foo@remote.com", href: "https://remote.com/actors/foo", subject: object)
-        let_create!(:mention, named: nil, name: "bar@remote.com", href: "https://remote.com/actors/bar", subject: object)
-
-        context "where object is attributed to the owner" do
-          let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/foo")
-
-          before_each { object.assign(attributed_to: owner).save }
-
-          it "does not add the object to the notifications" do
-            run(owner, create)
-            expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
-          end
-
-          it "does not add the object to the notifications" do
-            run(owner, announce)
-            expect(owner.notifications.map(&.object_or_activity)).not_to have(object)
-          end
-        end
-
-        context "where 'foo@remote.com' is followed by the owner" do
-          let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/foo")
-
-          it "adds the object to the notifications" do
-            run(owner, create)
-            expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/foo")
-          end
-
-          it "adds the object to the notifications" do
-            run(owner, announce)
-            expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/foo")
-          end
-
-          context "and the activity's actor is blocked" do
-            before_each { other.assign(blocked_at: Time.utc).save }
-
-            it "does not add the object to the notifications" do
-              run(owner, announce)
-              expect(owner.notifications.map(&.to_iri)).not_to have("https://remote.com/actors/foo")
-            end
-          end
-
-          context "and 'bar@remote.com' is followed by the owner" do
-            let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/bar")
-
-            it "adds a single object to the notifications" do
-              run(owner, create)
-              expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/foo", "https://remote.com/actors/bar")
-            end
-
-            it "adds a single object to the notifications" do
-              run(owner, announce)
-              expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/foo", "https://remote.com/actors/bar")
-            end
-          end
-        end
-
-        context "where 'foo@remote.com' is followed by another actor" do
-          let_create!(:follow_mention_relationship, named: nil, actor: other, href: "https://remote.com/actors/foo")
-
-          it "does not add the object to the notifications" do
-            run(owner, create)
-            expect(owner.notifications).to be_empty
-          end
-
-          it "does not add the object to the notifications" do
-            run(owner, announce)
-            expect(owner.notifications).to be_empty
-          end
-
-          context "and 'bar@remote.com' is followed by another actor" do
-            let_create!(:follow_mention_relationship, named: nil, actor: other, href: "https://remote.com/actors/bar")
-
-            it "does not add the object to the notifications" do
-              run(owner, create)
-              expect(owner.notifications).to be_empty
-            end
-
-            it "does not add the object to the notifications" do
-              run(owner, announce)
-              expect(owner.notifications).to be_empty
-            end
-          end
-        end
-      end
-
-      context "object is tagged with a mention and is a reply" do
+      context "object is a reply" do
         let_build(:object, named: origin, attributed_to: other)
-        let_create!(:mention, named: nil, name: "bar@remote.com", href: "https://remote.com/actors/bar", subject: object)
 
         before_each do
           object.assign(in_reply_to: origin).save
         end
 
-        it "does add any notifications" do
+        it "does not add any notifications" do
           run(owner, create)
           expect(owner.notifications).to be_empty
         end
 
-        context "and both are followed by owner" do
-          let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/bar")
+        context "and the thread is followed by owner" do
           let_create!(:follow_thread_relationship, actor: owner, thread: origin.iri)
 
-          it "adds the mention and thread notifications" do
+          it "adds the thread notification" do
             run(owner, create)
-            expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/bar", origin.iri)
+            expect(owner.notifications.map(&.to_iri)).to have(origin.iri)
           end
         end
       end
@@ -472,71 +384,6 @@ Spectator.describe ContentRules do
         it "does not add the follow to the notifications" do
           run(owner, follow)
           expect(owner.notifications).to be_empty
-        end
-      end
-    end
-
-    context "given notifications with a followed mention already added" do
-      let_create!(:follow_mention_relationship, named: nil, actor: owner, href: "https://remote.com/actors/mention")
-      let_create!(:mention, name: "mention@remote.com", href: "https://remote.com/actors/mention", subject: object)
-
-      context "for the owner" do
-        let_create!(:notification_follow_mention, owner: owner, href: "https://remote.com/actors/mention")
-
-        pre_condition { expect(owner.notifications.map(&.to_iri)).to eq(["https://remote.com/actors/mention"]) }
-
-        it "removes the previous notification from the notifications" do
-          run(owner, create)
-          expect(owner.notifications).not_to have(notification_follow_mention)
-        end
-
-        it "does not add a duplicate mention to the notifications" do
-          run(owner, create)
-          expect(owner.notifications.map(&.to_iri)).to eq(["https://remote.com/actors/mention"])
-        end
-
-        it "removes the previous notification from the notifications" do
-          run(owner, announce)
-          expect(owner.notifications).not_to have(notification_follow_mention)
-        end
-
-        it "does not add a duplicate mention to the notifications" do
-          run(owner, announce)
-          expect(owner.notifications.map(&.to_iri)).to eq(["https://remote.com/actors/mention"])
-        end
-
-        context "and the new activity is from a blocked actor" do
-          before_each { other.assign(blocked_at: Time.utc).save }
-
-          it "does not remove the previous notification from the notifications" do
-            run(owner, announce)
-            expect(owner.notifications).to have(notification_follow_mention)
-          end
-        end
-      end
-
-      context "for other owner" do
-        let_create!(:notification_follow_mention, owner: other, href: "https://remote.com/actors/mention")
-
-        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to be_empty }
-
-        it "adds the object to the notifications" do
-          run(owner, create)
-          expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/mention")
-        end
-
-        it "adds the object to the notifications" do
-          run(owner, announce)
-          expect(owner.notifications.map(&.to_iri)).to have("https://remote.com/actors/mention")
-        end
-      end
-
-      context "and an activity for the object already exists" do
-        before_each { create.save }
-
-        it "does not add the object to the notifications" do
-          run(owner, announce)
-          expect(owner.notifications.map(&.to_iri)).to be_empty
         end
       end
     end

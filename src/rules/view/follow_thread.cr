@@ -64,5 +64,7 @@ module Rules
         rows.map { |(owner, thread)| {from_iri: owner, to_iri: thread} }
       end
     end
+
+    register(FollowThread.instance)
   end
 end

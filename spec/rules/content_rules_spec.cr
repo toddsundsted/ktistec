@@ -269,62 +269,6 @@ Spectator.describe ContentRules do
           run(owner, create)
           expect(owner.notifications).to be_empty
         end
-
-        context "in a thread being followed by the owner" do
-          let_create!(:follow_thread_relationship, actor: owner, thread: object.in_reply_to_iri)
-
-          it "adds the reply to the notifications" do
-            run(owner, create)
-            expect(owner.notifications.map(&.object_or_activity)).to eq([object.in_reply_to])
-          end
-
-          it "adds the reply to the notifications" do
-            run(owner, announce)
-            expect(owner.notifications.map(&.object_or_activity)).to eq([object.in_reply_to])
-          end
-
-          context "and the activity's actor is blocked" do
-            let_build(:actor, named: op)
-
-            before_each do
-              parent.assign(attributed_to: op).save
-              other.assign(blocked_at: Time.utc).save
-            end
-
-            it "does not add the reply to the notifications" do
-              run(owner, announce)
-              expect(owner.notifications.map(&.object_or_activity)).not_to have(object.in_reply_to)
-            end
-          end
-
-          context "but object is not the root of the thread" do
-            before_each { object.assign(in_reply_to_iri: "https://remote/uncached") }
-
-            it "does not add the reply to the notifications" do
-              run(owner, create)
-              expect(owner.notifications).to be_empty
-            end
-
-            it "does not add the reply to the notifications" do
-              run(owner, announce)
-              expect(owner.notifications).to be_empty
-            end
-          end
-        end
-
-        context "in a thread being followed by another actor" do
-          let_create!(:follow_thread_relationship, actor: other, thread: object.in_reply_to_iri)
-
-          it "does not add the reply to the notifications" do
-            run(owner, create)
-            expect(owner.notifications).to be_empty
-          end
-
-          it "does not add the reply to the notifications" do
-            run(owner, announce)
-            expect(owner.notifications).to be_empty
-          end
-        end
       end
 
       context "another object is in reply to an object attributed to the owner" do
@@ -367,15 +311,6 @@ Spectator.describe ContentRules do
           run(owner, create)
           expect(owner.notifications).to be_empty
         end
-
-        context "and the thread is followed by owner" do
-          let_create!(:follow_thread_relationship, actor: owner, thread: origin.iri)
-
-          it "adds the thread notification" do
-            run(owner, create)
-            expect(owner.notifications.map(&.to_iri)).to have(origin.iri)
-          end
-        end
       end
 
       context "follow does not follow the owner" do
@@ -384,78 +319,6 @@ Spectator.describe ContentRules do
         it "does not add the follow to the notifications" do
           run(owner, follow)
           expect(owner.notifications).to be_empty
-        end
-      end
-    end
-
-    context "given notifications with a followed thread reply already added" do
-      let_create!(:follow_thread_relationship, actor: owner, thread: origin.iri)
-      let_build(:object, named: origin, attributed_to: other)
-
-      before_each { object.assign(in_reply_to: origin).save }
-
-      context "for the owner" do
-        let_create!(:notification_follow_thread, owner: owner, object: origin)
-
-        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([origin]) }
-
-        it "removes the previous create from the notifications" do
-          run(owner, create)
-          expect(owner.notifications).not_to have(notification_follow_thread)
-        end
-
-        it "does not add another object to the notifications" do
-          run(owner, create)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
-        end
-
-        it "removes the previous announce from the notifications" do
-          run(owner, announce)
-          expect(owner.notifications).not_to have(notification_follow_thread)
-        end
-
-        it "does not add another object to the notifications" do
-          run(owner, announce)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
-        end
-
-        context "and the new activity is from a blocked actor" do
-          let_build(:actor, named: op)
-
-          before_each do
-            origin.assign(attributed_to: op).save
-            other.assign(blocked_at: Time.utc).save
-          end
-
-          it "does not remove the previous notification from the notifications" do
-            run(owner, announce)
-            expect(owner.notifications).to have(notification_follow_thread)
-          end
-        end
-      end
-
-      context "for other owner" do
-        let_create!(:notification_follow_thread, owner: other, object: origin)
-
-        pre_condition { expect(owner.notifications.map(&.object_or_activity)).to be_empty }
-
-        it "adds the object to the notifications" do
-          run(owner, create)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
-        end
-
-        it "adds the object to the notifications" do
-          run(owner, announce)
-          expect(owner.notifications.map(&.object_or_activity)).to eq([origin])
-        end
-      end
-
-      context "and an activity for the object already exists" do
-        before_each { create.save }
-
-        it "does not add the object to the notifications" do
-          run(owner, announce)
-          expect(owner.notifications.map(&.object_or_activity)).to be_empty
         end
       end
     end

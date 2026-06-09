@@ -6,6 +6,7 @@ require "../../relationship/content/follow/thread"
 require "../../../framework/topic"
 require "../../activity_pub/collection"
 require "../../../rules/content_rules"
+require "../../../rules/trigger"
 require "../../../views/view_helper"
 
 class Task
@@ -222,7 +223,12 @@ class Task
           Log.debug { "perform [#{id}] - complete - #{duration} seconds, #{count} fetched" }
         end
         set_next_attempt_at(maximum, count, continuation)
+        reconcile_thread(source.iri, thread) if count > 0
       end
+    end
+
+    protected def reconcile_thread(owner_iri : String, thread : String) : Nil
+      Rules::Trigger.reconcile_for_thread(owner_iri, thread)
     end
 
     def after_save

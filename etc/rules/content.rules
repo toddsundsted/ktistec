@@ -198,23 +198,6 @@ rule "incoming activity for object"
   assert CheckFollowFor, actor, object
 end
 
-rule "notification exists for object 3"
-  condition CheckFollowFor, actor, object
-  condition Object, object, thread: thread
-  condition Object, root, iri: thread
-  condition NotificationFollowThread, owner: actor, object: root
-  retract NotificationFollowThread, owner: actor, object: root
-end
-
-rule "follow/thread"
-  condition CheckFollowFor, actor, object
-  condition Object, object, thread: thread
-  condition FollowThread, actor: actor, thread: thread
-  condition Object, root, iri: thread
-  none NotificationFollowThread, owner: actor, object: root
-  assert NotificationFollowThread, owner: actor, object: root
-end
-
 ## Timeline
 
 # the first two rules would be one rule if "or" was supported.

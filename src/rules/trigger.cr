@@ -1,4 +1,5 @@
 require "./maintainer"
+require "./view/follow_thread"
 require "./view/follow_hashtag"
 require "./view/follow_mention"
 require "../models/activity_pub/activity"
@@ -7,6 +8,7 @@ require "../models/activity_pub/activity/dislike"
 require "../models/activity_pub/activity/like"
 require "../models/activity_pub/activity/undo"
 require "../models/activity_pub/actor"
+require "../models/relationship/content/follow/thread"
 require "../models/relationship/content/follow/hashtag"
 require "../models/relationship/content/follow/mention"
 require "../models/tag/hashtag"
@@ -46,6 +48,12 @@ module Rules
            AND undone_at IS NULL
            AND object_iri IS NOT NULL
         SQL
+      object_iris += Ktistec.database.query_all(<<-SQL, Relationship::Content::Follow::Thread.to_s, actor.iri, as: String)
+        SELECT DISTINCT o.iri
+          FROM objects o
+          JOIN relationships f ON f.type = ? AND f.to_iri = o.thread
+         WHERE o.attributed_to_iri = ?
+        SQL
       object_iris += Ktistec.database.query_all(<<-SQL, Tag::Hashtag.to_s, Relationship::Content::Follow::Hashtag.to_s, actor.iri, as: String)
         SELECT DISTINCT o.iri
           FROM objects o
@@ -63,6 +71,19 @@ module Rules
       object_iris.uniq.each do |object_iri|
         Rules::Maintainer.reconcile_object(object_iri)
       end
+    end
+
+    # Re-evaluates the thread-follow notification for an `(owner, thread)`
+    # key.
+    #
+    def reconcile_for_thread(owner_iri : String, thread : String) : Nil
+      key = {from_iri: owner_iri, to_iri: thread}
+      Rules::Maintainer.reconcile_for(Rules::View::FollowThread.instance, key)
+    end
+
+    # :ditto:
+    def reconcile_for_thread_follow(follow : Relationship::Content::Follow::Thread) : Nil
+      reconcile_for_thread(follow.from_iri, follow.thread)
     end
 
     # Re-evaluates the hashtag-follow notification for an `(owner, name)`
@@ -96,6 +117,9 @@ end
 # re-select representatives when a sender is blocked or unblocked.
 ActivityPub::Actor::OBSERVERS.observe(:block) { |actor| Rules::Trigger.reconcile_for_actor(actor) }
 ActivityPub::Actor::OBSERVERS.observe(:unblock) { |actor| Rules::Trigger.reconcile_for_actor(actor) }
+
+# evict the thread-follow notification when its follow is removed.
+Relationship::Content::Follow::Thread::OBSERVERS.observe(:destroy) { |follow| Rules::Trigger.reconcile_for_thread_follow(follow) }
 
 # evict the hashtag-follow notification when its follow is removed.
 Relationship::Content::Follow::Hashtag::OBSERVERS.observe(:destroy) { |follow| Rules::Trigger.reconcile_for_hashtag_follow(follow) }

@@ -12,10 +12,18 @@ Spectator.describe Rules::Trigger do
   let(mention_href) { "https://remote.com/actors/foo" }
 
   let_build(:actor, named: author)
+  # the root predates the follow, so it satisfies the root-existence
+  # requirement without itself contributing to the position.
+  let_create!(:object, named: thread_root, attributed_to: author, created_at: followed_at - 1.hour)
+  let_create!(:follow_thread_relationship, named: thread_follow, actor: actor, thread: thread_root.iri, created_at: followed_at)
   let_create!(:follow_hashtag_relationship, named: hashtag_follow, actor: actor, name: "foo", created_at: followed_at)
   let_create!(:follow_mention_relationship, named: mention_follow, actor: actor, href: mention_href, created_at: followed_at)
 
   alias Notification = ::Relationship::Content::Notification
+
+  def thread_notification_count(thread)
+    Notification::Follow::Thread.count(from_iri: actor.iri, to_iri: thread)
+  end
 
   def hashtag_notification_count(name)
     Notification::Follow::Hashtag.count(from_iri: actor.iri, to_iri: name)
@@ -41,6 +49,37 @@ Spectator.describe Rules::Trigger do
   # the observer wiring, conflating the method's logic with its
   # wiring, which is tested separately.
   describe ".reconcile_for_actor" do
+    context "given a followed thread" do
+      let_create!(:object, named: post, attributed_to: author, in_reply_to: thread_root, created_at: followed_at + 2.hours)
+
+      it "materializes the notification for the author's reply" do
+        expect { Rules::Trigger.reconcile_for_actor(author) }
+          .to change { thread_notification_count(thread_root.iri) }.from(0).to(1)
+      end
+
+      context "when a notification exists and the author is blocked" do
+        let_create!(:notification_follow_thread, owner: actor, object: thread_root, created_at: post.created_at)
+
+        before_each { author.assign(blocked_at: followed_at + 3.hours).save }
+
+        it "evicts the notification" do
+          expect { Rules::Trigger.reconcile_for_actor(author) }
+            .to change { thread_notification_count(thread_root.iri) }.from(1).to(0)
+        end
+
+        context "and an earlier reply from an unblocked author exists" do
+          let_create!(:actor, named: unblocked)
+          let_create!(:object, named: earlier, attributed_to: unblocked, in_reply_to: thread_root, created_at: followed_at + 1.hour)
+
+          it "falls back to the earlier author's reply" do
+            expect { Rules::Trigger.reconcile_for_actor(author) }
+              .to change { Notification::Follow::Thread.find?(from_iri: actor.iri, to_iri: thread_root.iri).try(&.created_at) }
+                .from(post.created_at).to(earlier.created_at)
+          end
+        end
+      end
+    end
+
     context "given a followed hashtag" do
       let_create!(:object, named: post, attributed_to: author, created_at: followed_at + 2.hours)
       let_create!(:hashtag, name: "foo", subject: post)
@@ -108,6 +147,25 @@ Spectator.describe Rules::Trigger do
     end
   end
 
+  describe ".reconcile_for_thread" do
+    let(appeared_at) { followed_at + 1.hour }
+    let_create!(:object, named: post, attributed_to: author, in_reply_to: thread_root, created_at: appeared_at)
+
+    it "materializes the thread-follow notification for a qualifying object" do
+      expect { Rules::Trigger.reconcile_for_thread(actor.iri, thread_root.iri) }
+        .to change { thread_notification_count(thread_root.iri) }.from(0).to(1)
+    end
+
+    context "when the object appeared before the follow" do
+      let(appeared_at) { followed_at - 1.hour }
+
+      it "does not materialize the notification" do
+        expect { Rules::Trigger.reconcile_for_thread(actor.iri, thread_root.iri) }
+          .not_to change { thread_notification_count(thread_root.iri) }
+      end
+    end
+  end
+
   describe ".reconcile_for_hashtag" do
     let(appeared_at) { followed_at + 1.hour }
     let_create!(:object, named: post, attributed_to: author, created_at: appeared_at)
@@ -145,6 +203,17 @@ Spectator.describe Rules::Trigger do
         expect { Rules::Trigger.reconcile_for_mention(actor.iri, mention_href) }
           .not_to change { mention_notification_count(mention_href) }
       end
+    end
+  end
+
+  describe "when a thread-follow is destroyed" do
+    let_create!(:notification_follow_thread, owner: actor, object: thread_root)
+
+    pre_condition { expect(thread_notification_count(thread_root.iri)).to eq(1) }
+
+    it "evicts the thread-follow notification" do
+      expect { thread_follow.destroy }
+        .to change { thread_notification_count(thread_root.iri) }.from(1).to(0)
     end
   end
 

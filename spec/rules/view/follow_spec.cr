@@ -13,8 +13,8 @@ Spectator.describe Rules::View::Follow do
   let_build(:actor, named: follower)
 
   describe "registry" do
-    it "is not registered" do
-      expect(Rules::View.registry).not_to contain(described_class.instance)
+    it "is registered" do
+      expect(Rules::View.registry).to contain(described_class.instance)
     end
   end
 

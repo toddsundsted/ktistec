@@ -600,5 +600,30 @@ Spectator.describe InboxActivityProcessor do
         end
       end
     end
+
+    # the maintainer trigger drives the registered `Follow` view; the
+    # follow is placed in the inbox by School's "inbox" rule during
+    # `run`, so by the time the trigger fires it qualifies for
+    # membership.
+    context "with a Follow of the account's actor" do
+      let_create!(:follow, named: follow_activity, actor: other, object: account.actor, to: [account.actor.iri])
+
+      it "materializes the follow notification" do
+        expect { InboxActivityProcessor.process(account, follow_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Follow.count(from_iri: account.actor.iri, to_iri: follow_activity.iri) }.from(0).to(1)
+      end
+
+      context "and the follow is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: follow_activity, to: [account.actor.iri])
+        let_create!(:notification_follow, owner: account.actor, activity: follow_activity)
+
+        pre_condition { expect(Relationship::Content::Notification::Follow.count(to_iri: follow_activity.iri)).to eq(1) }
+
+        it "evicts the follow notification" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Notification::Follow.count(to_iri: follow_activity.iri) }.from(1).to(0)
+        end
+      end
+    end
   end
 end

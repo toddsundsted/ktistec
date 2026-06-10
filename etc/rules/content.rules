@@ -172,20 +172,6 @@ rule "delete/mention"
   retract NotificationMention, owner: actor, object: object
 end
 
-rule "follow"
-  condition activity, InMailboxOf, actor
-  condition FollowActivity, activity, object: actor
-  none NotificationFollow, owner: actor, activity: activity
-  assert NotificationFollow, owner: actor, activity: activity
-end
-
-rule "undo/follow"
-  condition undo, InMailboxOf, actor
-  condition UndoActivity, undo, object: activity
-  any NotificationFollow, owner: actor, activity: activity
-  retract NotificationFollow, owner: actor, activity: activity
-end
-
 ## Follow Notifications
 
 # only notify on the *first* activity for an object!

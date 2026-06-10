@@ -60,5 +60,7 @@ module Rules
         rows.map { |(actor, activity)| {from_iri: actor, to_iri: activity} }
       end
     end
+
+    register(Follow.instance)
   end
 end

@@ -41,7 +41,6 @@ Spectator.describe ContentRules do
   let_create(:create, actor: other, object: object)
   let_create(:update, actor: other, object: object)
   let_create(:announce, actor: other, object: object)
-  let_create(:follow, actor: other, object: owner)
   let_create(:delete, actor: other, object: object)
   let_create(:undo, actor: other)
 
@@ -164,11 +163,6 @@ Spectator.describe ContentRules do
       it "does not add the create to the notifications" do
         run(owner, create)
         expect(owner.notifications).to be_empty
-      end
-
-      it "adds the follow to the notifications" do
-        run(owner, follow)
-        expect(owner.notifications.map(&.object_or_activity)).to eq([follow])
       end
 
       context "object mentions the owner" do
@@ -312,15 +306,6 @@ Spectator.describe ContentRules do
           expect(owner.notifications).to be_empty
         end
       end
-
-      context "follow does not follow the owner" do
-        before_each { follow.assign(object: other).save }
-
-        it "does not add the follow to the notifications" do
-          run(owner, follow)
-          expect(owner.notifications).to be_empty
-        end
-      end
     end
 
     context "given notifications with mention added via create" do
@@ -436,30 +421,6 @@ Spectator.describe ContentRules do
           run(owner, unrelated)
           expect(owner.notifications.map(&.object_or_activity)).to eq([object])
         end
-      end
-    end
-
-    context "given notifications with follow already added" do
-      before_each do
-        undo.assign(object: follow).save
-        put_in_notifications(owner, follow)
-      end
-
-      pre_condition { expect(owner.notifications.map(&.object_or_activity)).to eq([follow]) }
-
-      it "does not add the follow to the notifications" do
-        run(owner, follow)
-        expect(owner.notifications.map(&.object_or_activity)).to eq([follow])
-      end
-
-      it "removes the follow from the notifications" do
-        run(owner, undo)
-        expect(Notification.where(from_iri: owner.iri)).to be_empty
-      end
-
-      it "does not remove the follow from the notifications" do
-        run(owner, delete)
-        expect(owner.notifications.map(&.object_or_activity)).to eq([follow])
       end
     end
   end

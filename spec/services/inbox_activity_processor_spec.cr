@@ -625,5 +625,50 @@ Spectator.describe InboxActivityProcessor do
         end
       end
     end
+
+    # the maintainer trigger drives the registered `Reply` / `Mention`
+    # views; the activity is placed in the inbox by School's "inbox"
+    # rule during `run`, so by the time the trigger fires the object
+    # qualifies for membership.
+    context "with a reply to one of the account's posts" do
+      let_create!(:object, named: post, attributed_to: account.actor)
+      let_create!(:object, named: reply, attributed_to: other, in_reply_to: post)
+      let_create!(:create, named: reply_create, actor: other, object: reply, to: [account.actor.iri])
+
+      it "materializes the reply notification" do
+        expect { InboxActivityProcessor.process(account, reply_create, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Reply.count(to_iri: reply.iri) }.from(0).to(1)
+      end
+    end
+
+    context "with an object mentioning the account's actor" do
+      let_create!(:object, named: mentioning, attributed_to: other)
+      let_create!(:mention, named: nil, name: "actor", href: account.actor.iri, subject: mentioning)
+      let_create!(:create, named: mention_create, actor: other, object: mentioning, to: [account.actor.iri])
+
+      it "materializes the mention notification" do
+        expect { InboxActivityProcessor.process(account, mention_create, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Mention.count(to_iri: mentioning.iri) }.from(0).to(1)
+      end
+    end
+
+    # reply wins: an object that both replies to the actor's post and
+    # mentions the actor yields exactly one notification -- the reply.
+    context "with an object both replying to and mentioning the account's actor" do
+      let_create!(:object, named: post, attributed_to: account.actor)
+      let_create!(:object, named: dual, attributed_to: other, in_reply_to: post)
+      let_create!(:mention, named: nil, name: "actor", href: account.actor.iri, subject: dual)
+      let_create!(:create, named: dual_create, actor: other, object: dual, to: [account.actor.iri])
+
+      it "materializes the reply notification" do
+        expect { InboxActivityProcessor.process(account, dual_create, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Reply.count(to_iri: dual.iri) }.from(0).to(1)
+      end
+
+      it "does not materialize a mention notification" do
+        InboxActivityProcessor.process(account, dual_create, receive_task_class: MockReceiveTask)
+        expect(Relationship::Content::Notification::Mention.count(to_iri: dual.iri)).to eq(0)
+      end
+    end
   end
 end

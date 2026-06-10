@@ -15,8 +15,8 @@ Spectator.describe Rules::View::Mention do
   let(mention_name) { "actor@test.test" }
 
   describe "registry" do
-    it "is not registered" do
-      expect(Rules::View.registry).not_to contain(described_class.instance)
+    it "is registered" do
+      expect(Rules::View.registry).to contain(described_class.instance)
     end
   end
 

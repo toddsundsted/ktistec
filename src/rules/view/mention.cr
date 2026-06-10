@@ -86,5 +86,7 @@ module Rules
         rows.map { |(actor, object)| {from_iri: actor, to_iri: object} }
       end
     end
+
+    register(Mention.instance)
   end
 end

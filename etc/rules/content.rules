@@ -135,43 +135,6 @@ rule "inbox"
   assert activity, InMailboxOf, actor
 end
 
-## Mailbox Notifications
-
-rule "object activity/reply"
-  condition activity, InMailboxOf, actor
-  condition ObjectActivity, activity, object: object
-  condition Object, object, attributed_to: not actor
-  condition Object, object, in_reply_to: other
-  condition Object, other, attributed_to: actor
-  none NotificationMention, owner: actor, object: object
-  none NotificationReply, owner: actor, object: object
-  assert NotificationReply, owner: actor, object: object
-end
-
-rule "delete/reply"
-  condition delete, InMailboxOf, actor
-  condition DeleteActivity, delete, object: object
-  any NotificationReply, owner: actor, object: object
-  retract NotificationReply, owner: actor, object: object
-end
-
-rule "object activity/mention"
-  condition activity, InMailboxOf, actor
-  condition ObjectActivity, activity, object: object
-  condition Object, object, attributed_to: not actor
-  any Mention, mention, subject: object, href: actor.iri
-  none NotificationMention, owner: actor, object: object
-  none NotificationReply, owner: actor, object: object
-  assert NotificationMention, owner: actor, object: object
-end
-
-rule "delete/mention"
-  condition delete, InMailboxOf, actor
-  condition DeleteActivity, delete, object: object
-  any NotificationMention, owner: actor, object: object
-  retract NotificationMention, owner: actor, object: object
-end
-
 ## Follow Notifications
 
 # only notify on the *first* activity for an object!

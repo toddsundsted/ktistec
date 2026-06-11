@@ -208,7 +208,7 @@ Spectator.describe OutboxesController do
         end
 
         context "and the object's already in the timeline" do
-          let_create!(:timeline, owner: actor, object: object)
+          let_create!(:timeline_announce, owner: actor, object: object)
 
           it "does not put the object in the actor's timeline" do
             expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Announce&object=#{URI.encode_www_form(object.iri)}" }
@@ -1130,7 +1130,7 @@ Spectator.describe OutboxesController do
         end
 
         context "and the object's already in the timeline" do
-          let_create!(:timeline, owner: actor, object: object)
+          let_create!(:timeline_create, owner: actor, object: object)
 
           it "does not put the object in the actor's timeline" do
             expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Publish&content=test&object=#{URI.encode_www_form(object.iri)}" }

@@ -670,5 +670,55 @@ Spectator.describe InboxActivityProcessor do
         expect(Relationship::Content::Notification::Mention.count(to_iri: dual.iri)).to eq(0)
       end
     end
+
+    # the maintainer trigger drives the registered timeline views; the
+    # activity is placed in the inbox by School's "inbox" rule during
+    # `run`, so by the time the trigger fires the object qualifies for
+    # membership.
+    context "with a Create of an object in the owner's timeline" do
+      let_create!(:object, named: posted, attributed_to: other)
+      let_create!(:create, named: create_activity, actor: other, object: posted, to: [account.actor.iri])
+
+      it "materializes the timeline entry" do
+        expect { InboxActivityProcessor.process(account, create_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Timeline::Create.count(from_iri: account.actor.iri, to_iri: posted.iri) }.from(0).to(1)
+      end
+
+      context "and the object is deleted" do
+        let_create!(:delete, named: delete_activity, actor: other, object: posted, to: [account.actor.iri])
+
+        before_each { InboxActivityProcessor.process(account, create_activity, receive_task_class: MockReceiveTask) }
+
+        pre_condition { expect(Relationship::Content::Timeline::Create.count(to_iri: posted.iri)).to eq(1) }
+
+        it "evicts the timeline entry" do
+          expect { InboxActivityProcessor.process(account, delete_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Timeline::Create.count(to_iri: posted.iri) }.from(1).to(0)
+        end
+      end
+    end
+
+    context "with an Announce of an object in the owner's timeline" do
+      let_create!(:object, named: shared, attributed_to: other)
+      let_create!(:announce, named: announce_activity, actor: other, object: shared, to: [account.actor.iri])
+
+      it "materializes the timeline entry" do
+        expect { InboxActivityProcessor.process(account, announce_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Timeline::Announce.count(from_iri: account.actor.iri, to_iri: shared.iri) }.from(0).to(1)
+      end
+
+      context "and the announce is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: announce_activity, to: [account.actor.iri])
+
+        before_each { InboxActivityProcessor.process(account, announce_activity, receive_task_class: MockReceiveTask) }
+
+        pre_condition { expect(Relationship::Content::Timeline::Announce.count(to_iri: shared.iri)).to eq(1) }
+
+        it "evicts the timeline entry" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Timeline::Announce.count(to_iri: shared.iri) }.from(1).to(0)
+        end
+      end
+    end
   end
 end

@@ -13,8 +13,8 @@ Spectator.describe Rules::View::TimelineCreate do
   let_build(:actor, named: author)
 
   describe "registry" do
-    it "is not registered" do
-      expect(Rules::View.registry).not_to contain(described_class.instance)
+    it "is registered" do
+      expect(Rules::View.registry).to contain(described_class.instance)
     end
   end
 

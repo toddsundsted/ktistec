@@ -86,5 +86,7 @@ module Rules
         owners.map { |owner| {from_iri: owner, to_iri: object_iri} }
       end
     end
+
+    register(TimelineAnnounce.instance)
   end
 end

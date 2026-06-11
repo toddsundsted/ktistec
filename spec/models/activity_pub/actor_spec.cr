@@ -2217,6 +2217,19 @@ Spectator.describe ActivityPub::Actor do
       expect(result.cursor_end).to eq(object4.id)
     end
 
+    context "with a row positioned out of insertion order" do
+      # `timeline1` has the lowest id but the most recent created_at
+      before_each { timeline1.assign(created_at: Time.utc).save }
+
+      it "orders by created_at" do
+        expect(subject.timeline.first).to eq(timeline1)
+      end
+
+      it "pages correctly" do
+        expect(subject.timeline(max_id: object1.id, limit: 2)).to eq([timeline5, timeline4])
+      end
+    end
+
     context "with multiple timeline rows for the same object" do
       # the rule engine's "none Timeline, owner, object" precondition
       # prevents an actor from having two timeline rows for the same

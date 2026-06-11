@@ -1106,16 +1106,17 @@ module ActivityPub
 
     private alias Timeline = Relationship::Content::Timeline
 
-    # Translates an `Object.id` (external cursor) to the canonical
-    # timeline `relationships.id` (internal cursor). Returns nil for
-    # unknown ids or ids of objects that wouldn't appear in the result
-    # set.
+    # Translates an `Object.id` (external cursor) into the timeline
+    # row's `(created_at, id)` cursor pair. Selects the highest `id`
+    # row for the object, matching the `NOT EXISTS` canonicalization
+    # in `#timeline`. Returns nil for unknown ids or ids of objects
+    # that wouldn't appear in the result set.
     #
-    private def translate_object_id_to_timeline_id(o_id : Int64, type_list : String, exclude_replies : Bool) : Int64?
+    private def translate_object_id_to_timeline_created_at_and_id(o_id : Int64, type_list : String, exclude_replies : Bool) : {Time, Int64}?
       exclude_replies_clause =
         exclude_replies ? "AND o.in_reply_to_iri IS NULL" : ""
       query = <<-QUERY
-        SELECT MAX(t.id)
+        SELECT t.created_at, t.id
           FROM relationships AS t
           JOIN objects AS o
             ON o.iri = t.to_iri
@@ -1126,8 +1127,10 @@ module ActivityPub
            AND o.id = ?
            #{exclude_replies_clause}
            #{common_filters(objects: "o", actors: "c")}
+         ORDER BY t.id DESC
+         LIMIT 1
       QUERY
-      Timeline.scalar(query, self.iri, o_id).as(Int64?)
+      Ktistec.database.query_one?(query, self.iri, o_id, as: {Time, Int64})
     end
 
     # Returns entries in the actor's timeline.
@@ -1154,8 +1157,8 @@ module ActivityPub
       type_list = "'#{inclusion_types.join("','")}'"
       exclude_replies_clause =
         exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
-      max_id = translate_object_id_to_timeline_id(max_id, type_list, exclude_replies) if max_id
-      min_id = translate_object_id_to_timeline_id(min_id, type_list, exclude_replies) if min_id
+      max_cursor = translate_object_id_to_timeline_created_at_and_id(max_id, type_list, exclude_replies) if max_id
+      min_cursor = translate_object_id_to_timeline_created_at_and_id(min_id, type_list, exclude_replies) if min_id
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
             FROM relationships AS t
@@ -1177,7 +1180,7 @@ module ActivityPub
              )
              AND %{cursor_condition}
       QUERY
-      result = Timeline.query_with_cursor(query, self.iri, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
+      result = Timeline.query_with_keyset_cursor(query, self.iri, cursor_columns: {"t.created_at", "t.id"}, max_cursor: max_cursor, min_cursor: min_cursor, limit: limit)
       unless result.empty?
         result.cursor_start = result.first.object.id
         result.cursor_end = result.to_a.last.object.id

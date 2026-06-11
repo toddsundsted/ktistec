@@ -10,7 +10,7 @@ Spectator.describe "helpers" do
 
   describe ".actor_states" do
     let_build(:actor, named: :author)
-    let_build(:actor, named: :actor)
+    let_build(:actor)
     let_build(:note, attributed_to: author)
     let(followed_actors) { nil }
 
@@ -127,7 +127,7 @@ Spectator.describe "helpers" do
       end
 
       context "and actor is passed" do
-        let_build(:actor, named: :actor)
+        let_build(:actor)
 
         it "does not include has-deleted-actor or has-blocked-actor" do
           expect(self.class.object_states(note, author, actor)).not_to contain("has-deleted-actor", "has-blocked-actor")

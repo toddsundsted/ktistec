@@ -7,7 +7,7 @@ Spectator.describe API::V1::Serializers::Relationship do
   setup_spec
 
   describe ".from_actors" do
-    let_create(:actor, named: :actor, local: true, with_keys: true)
+    let_create(:actor, local: true, with_keys: true)
     let_create(:actor, named: :other, local: true, with_keys: true)
 
     subject { described_class.from_actors(actor, other) }

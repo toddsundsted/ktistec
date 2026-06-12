@@ -732,7 +732,7 @@ Spectator.describe InboxesController do
 
         context "and the actor follows other" do
           before_each do
-            actor.follow(other).save
+            actor.follow(other, confirmed: true).save
           end
 
           it "puts the activity in the actor's inbox" do
@@ -756,7 +756,7 @@ Spectator.describe InboxesController do
 
         context "and the actor follows other" do
           before_each do
-            actor.follow(other).save
+            actor.follow(other, confirmed: true).save
           end
 
           it "puts the activity in the actor's inbox" do
@@ -1009,7 +1009,7 @@ Spectator.describe InboxesController do
 
         context "and the actor follows other" do
           before_each do
-            actor.follow(other).save
+            actor.follow(other, confirmed: true).save
           end
 
           it "puts the activity in the actor's inbox" do
@@ -1033,7 +1033,7 @@ Spectator.describe InboxesController do
 
         context "and the actor follows other" do
           before_each do
-            actor.follow(other).save
+            actor.follow(other, confirmed: true).save
           end
 
           it "puts the activity in the actor's inbox" do

@@ -2,7 +2,7 @@ require "../models/activity_pub/activity"
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
 require "../models/account"
-require "../rules/content_rules"
+require "../models/filter_term"
 require "../rules/trigger"
 require "../models/task/handle_follow_request"
 require "../models/task/receive"
@@ -19,8 +19,9 @@ class InboxActivityProcessor
   # Processes an inbound activity that has already been received,
   # validated, and saved.
   #
-  # Processes the activity through content rules, handles
-  # activity-specific side-effects, and schedules receive task.
+  # Decides whether the activity is accepted into the recipient's
+  # inbox, handles activity-specific side-effects, re-evaluates the
+  # materialized views, and schedules receive task.
   #
   # Preconditions:
   # - activity must be saved
@@ -31,16 +32,15 @@ class InboxActivityProcessor
     account : Account,
     activity : ActivityPub::Activity,
     deliver_to : Array(String)? = nil,
-    content_rules : ContentRules = ContentRules.new,
     handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
     receive_task_class : Task::Receive.class = Task::Receive,
     deliver_task_class : Task::Deliver.class = Task::Deliver,
     processed : Set(String) = Set(String).new,
   )
-    content_rules.run do
-      recipients = [activity.to, activity.cc, deliver_to].flatten.compact.uniq!
-      recipients.each { |recipient| assert ContentRules::IsRecipient.new(recipient) }
-      assert ContentRules::Incoming.new(account.actor, activity)
+    if Ktistec::Recipients.recipient?(activity, account.actor, deliver_to) && !filtered?(account.actor, activity)
+      unless Relationship::Content::Inbox.find?(owner: account.actor, activity: activity)
+        Relationship::Content::Inbox.new(owner: account.actor, activity: activity).save
+      end
     end
 
     case activity
@@ -126,6 +126,19 @@ class InboxActivityProcessor
     actors_accounts.each do |actor, account|
       next if processed.includes?(actor.iri) || Relationship::Content::Inbox.find?(owner: actor, activity: activity)
       process(account, activity, deliver_to: [actor.iri], processed: processed)
+    end
+  end
+
+  private def self.filtered?(receiver : ActivityPub::Actor, activity : ActivityPub::Activity) : Bool
+    case activity
+    when ActivityPub::Activity::Create, ActivityPub::Activity::Announce
+      if (object = activity.object?) && activity.actor? != receiver
+        FilterTerm.match?(receiver, object.content)
+      else
+        false
+      end
+    else
+      false
     end
   end
 

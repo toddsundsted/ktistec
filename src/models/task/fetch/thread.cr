@@ -5,7 +5,6 @@ require "../../activity_pub/object"
 require "../../relationship/content/follow/thread"
 require "../../../framework/topic"
 require "../../activity_pub/collection"
-require "../../../rules/content_rules"
 require "../../../rules/trigger"
 require "../../../views/view_helper"
 
@@ -200,9 +199,6 @@ class Task
               fetch_out(state.prioritize!)
             end
           break unless object
-          ContentRules.new.run do
-            assert ContentRules::CheckFollowFor.new(source, object)
-          end
           Ktistec::Topic{thread}.notify_subscribers(object.id.to_s)
           count += 1
         end

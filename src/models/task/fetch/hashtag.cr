@@ -4,7 +4,6 @@ require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../relationship/content/follow/hashtag"
 require "../../../framework/topic"
-require "../../../rules/content_rules"
 require "../../../rules/trigger"
 require "../../../views/view_helper"
 
@@ -139,9 +138,6 @@ class Task
           Log.debug { "perform [#{id}] - hashtag: #{name}, iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
-          ContentRules.new.run do
-            assert ContentRules::CheckFollowFor.new(source, object)
-          end
           Ktistec::Topic{path_to.to_s}.notify_subscribers(object.id.to_s)
           count += 1
         end

@@ -29,21 +29,66 @@ Spectator.describe InboxActivityProcessor do
   end
 
   describe ".process" do
-    # proves a fix to an inbox infinite-recursion server-killer: a
-    # filtered incoming Create from a remote actor recurses until the
-    # fiber stack overflows. `process_locally` re-enters `process`
-    # (via `for_receive` echoing the recipient back).
-    context "with a filtered Create from a remote actor" do
+    context "given a filter term" do
       let_create!(:filter_term, actor: account.actor, term: "%content%")
-      let_create!(:create, named: :filtered_create, actor: other, object: object, to: [account.actor.iri])
 
       before_each do
         object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
       end
 
-      it "does not recurse until crash" do
-        InboxActivityProcessor.process(account, filtered_create, receive_task_class: MockReceiveTask)
-        expect(MockReceiveTask.schedule_called_count).to eq(1)
+      # also, proves a fix to an inbox infinite-recursion
+      # server-killer: a filtered incoming Create from a remote actor
+      # recurses until the fiber stack overflows. `process_locally`
+      # re-enters `process` (via `for_receive` echoing the recipient
+      # back).
+      context "and a matching Create from a remote actor" do
+        let_create!(:create, named: :filtered_create, actor: other, object: object, to: [account.actor.iri])
+
+        it "does not store the activity in the recipient's inbox" do
+          InboxActivityProcessor.process(account, filtered_create, receive_task_class: MockReceiveTask)
+          expect(account.actor.in_inbox(public: false)).to be_empty
+        end
+      end
+
+      context "and a matching Announce from a remote actor" do
+        let_create!(:announce, named: :filtered_announce, actor: other, object: object, to: [account.actor.iri])
+
+        it "does not store the activity in the recipient's inbox" do
+          InboxActivityProcessor.process(account, filtered_announce, receive_task_class: MockReceiveTask)
+          expect(account.actor.in_inbox(public: false)).to be_empty
+        end
+      end
+
+      context "and a matching Create by the author" do
+        let_create!(:object, attributed_to: account.actor)
+        let_create!(:create, named: :filtered_create, actor: account.actor, object: object, to: [account.actor.iri])
+
+        before_each do
+          object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
+        end
+
+        it "stores the activity in the recipient's inbox" do
+          InboxActivityProcessor.process(account, filtered_create, receive_task_class: MockReceiveTask)
+          expect(account.actor.in_inbox(public: false)).to eq([filtered_create])
+        end
+      end
+    end
+
+    context "with a Create addressed to the recipient" do
+      let_create!(:create, named: :addressed_create, actor: other, object: object, to: [account.actor.iri])
+
+      it "stores the activity in the recipient's inbox" do
+        InboxActivityProcessor.process(account, addressed_create, receive_task_class: MockReceiveTask)
+        expect(account.actor.in_inbox(public: false)).to eq([addressed_create])
+      end
+    end
+
+    context "with a Create not addressed to the recipient" do
+      let_create!(:create, named: :unaddressed_create, actor: other, object: object)
+
+      it "does not store the activity in the recipient's inbox" do
+        InboxActivityProcessor.process(account, unaddressed_create, receive_task_class: MockReceiveTask)
+        expect(account.actor.in_inbox(public: false)).to be_empty
       end
     end
 

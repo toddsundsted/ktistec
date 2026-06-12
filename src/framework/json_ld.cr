@@ -17,6 +17,13 @@ module Ktistec
     class Error < Exception
     end
 
+    # JSON-LD keywords that expansion acts on. Every other keyword
+    # (`@graph`, `@included`, `@reverse`, `@list`, `@nest`, …) is
+    # dropped and logged, rather than passed through unexpanded where
+    # no consumer reads it.
+    #
+    KEYWORDS = ["@context", "@id", "@type", "@value", "@language"]
+
     # Expands the JSON-LD document.
     #
     def self.expand(body : JSON::Any | String | IO, loader = Loader.new)
@@ -41,10 +48,14 @@ module Ktistec
       body.as_h.each do |term, value|
         original_term = term
         if term.starts_with?("@") || ((defn = term_definition(term, context)) && defn.starts_with?("@") && (term = defn))
-          if value.as_s?
-            result[term] = expand_iri(value.as_s, context)
+          if term.in?(KEYWORDS)
+            if value.as_s?
+              result[term] = expand_iri(value.as_s, context)
+            else
+              result[term] = value
+            end
           else
-            result[term] = value
+            Log.warn { "expand: dropping unsupported JSON-LD keyword: #{term}" }
           end
         else
           if term.includes?(":")

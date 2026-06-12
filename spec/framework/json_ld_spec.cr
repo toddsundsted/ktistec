@@ -31,6 +31,55 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
+  context "given JSON-LD document with unsupported keywords" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "@graph": [{"type": "Note"}],
+            "@included": [{"type": "Note"}],
+            "@reverse": {"https://attributedTo": "https://actor/"},
+            "name": "Foo Bar Baz"
+          }
+        JSON
+      ))
+    end
+
+    describe "#[]" do
+      it "drops unsupported keywords" do
+        expect(json.as_h.keys).to contain("@context")
+        expect(json.as_h.keys).not_to contain("@graph")
+        expect(json.as_h.keys).not_to contain("@included")
+        expect(json.as_h.keys).not_to contain("@reverse")
+      end
+
+      it "preserves non-keyword content" do
+        expect(json.as_h.keys).to contain("https://www.w3.org/ns/activitystreams#name")
+      end
+    end
+  end
+
+  context "given JSON-LD document with a term aliased to an unsupported keyword" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": {
+              "graph": "@graph"
+            },
+            "graph": [{"type": "Note"}],
+            "https://name": "Foo Bar Baz"
+          }
+        JSON
+      ))
+    end
+
+    describe "#[]" do
+      it "drops the aliased keyword" do
+        expect(json.as_h.keys).to match_array(["@context", "https://name"]).in_any_order
+      end
+    end
+  end
+
   context "given JSON document with vocabulary" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON

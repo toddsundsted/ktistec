@@ -80,7 +80,7 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
-  context "given JSON document with vocabulary" do
+  context "given JSON-LD document with vocabulary" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON
           {
@@ -514,22 +514,6 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
-  context "given a Link-valued property" do
-    let(json) do
-      described_class.expand(JSON.parse(<<-JSON
-          {
-            "@context": "https://www.w3.org/ns/activitystreams",
-            "url": {"type": "Link", "href": "https://test.test/video"}
-          }
-        JSON
-      ))
-    end
-
-    it "returns the href" do
-      expect(described_class.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")).to eq(["https://test.test/video"])
-    end
-  end
-
   context "given a context term without an id" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON
@@ -708,118 +692,90 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
+  def expand_as(body)
+    described_class.expand(JSON.parse(%<{"@context":"https://www.w3.org/ns/activitystreams",#{body}}>))
+  end
+
   describe ".dig_id?" do
-    context "given a nested object" do
-      let(json) { JSON.parse(%<{"foo":{"@id":"https://test.test/bar"}}>) }
+    context "given a value with an @id" do
+      let(json) { expand_as(%<"attributedTo":{"id":"https://test.test/bar"}>) }
 
-      it "returns the identifier" do
-        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      it "returns its identifier" do
+        expect(described_class.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo")).to eq("https://test.test/bar")
       end
     end
 
-    context "given a link" do
-      let(json) { JSON.parse(%<{"foo":{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}}>) }
+    context "given a Link value" do
+      let(json) { expand_as(%<"url":{"type":"Link","href":"https://test.test/bar"}>) }
 
-      it "returns the identifier" do
-        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      it "returns its identifier" do
+        expect(described_class.dig_id?(json, "https://www.w3.org/ns/activitystreams#url")).to eq("https://test.test/bar")
       end
     end
 
-    context "given an identifier" do
-      let(json) { JSON.parse(%<{"foo":"https://test.test/bar"}>) }
+    context "given a bare IRI value" do
+      let(json) { expand_as(%<"to":"https://test.test/bar">) }
 
-      it "returns the identifier" do
-        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      it "returns its identifier" do
+        expect(described_class.dig_id?(json, "https://www.w3.org/ns/activitystreams#to")).to eq("https://test.test/bar")
       end
     end
 
-    context "given an array of nested objects" do
-      let(json) { JSON.parse(%<{"foo":[{"@id":"https://test.test/bar"}]}>) }
+    context "given multiple values" do
+      let(json) { expand_as(%<"to":["https://test.test/a","https://test.test/b"]>) }
 
       it "returns the first identifier" do
-        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+        expect(described_class.dig_id?(json, "https://www.w3.org/ns/activitystreams#to")).to eq("https://test.test/a")
       end
     end
 
-    context "given an array of links" do
-      let(json) { JSON.parse(%<{"foo":[{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}]}>) }
+    context "given a value via a nested selector" do
+      let(json) { expand_as(%<"endpoints":{"sharedInbox":"https://test.test/shared"}>) }
 
-      it "returns the first identifier" do
-        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      it "returns its identifier" do
+        expect(described_class.dig_id?(json, "https://www.w3.org/ns/activitystreams#endpoints", "https://www.w3.org/ns/activitystreams#sharedInbox")).to eq("https://test.test/shared")
       end
     end
 
-    context "given an array of identifiers" do
-      let(json) { JSON.parse(%<{"foo":["https://test.test/bar"]}>) }
-
-      it "returns the first identifier" do
-        expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
-      end
-    end
-
-    context "given a set mid-selector" do
-      let(json) { JSON.parse(%<{"foo":[{"bar":"https://test.test/baz"}]}>) }
-
-      it "collapses the set and returns the identifier" do
-        expect(described_class.dig_id?(json, "foo", "bar")).to eq("https://test.test/baz")
-      end
-    end
-
-    context "given an empty set" do
-      let(json) { JSON.parse(%<{"foo":[]}>) }
+    context "given no values" do
+      let(json) { expand_as(%<"to":[]>) }
 
       it "returns nil" do
-        expect(described_class.dig_id?(json, "foo")).to be_nil
+        expect(described_class.dig_id?(json, "https://www.w3.org/ns/activitystreams#to")).to be_nil
       end
     end
   end
 
   describe ".dig_ids?" do
-    context "given a nested object" do
-      let(json) { JSON.parse(%<{"foo":{"@id":"https://test.test/bar"}}>) }
+    context "given a value with an @id" do
+      let(json) { expand_as(%<"attributedTo":{"id":"https://test.test/bar"}>) }
 
-      it "returns the identifier as an array" do
-        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      it "returns its identifier as an array" do
+        expect(described_class.dig_ids?(json, "https://www.w3.org/ns/activitystreams#attributedTo")).to eq(["https://test.test/bar"])
       end
     end
 
-    context "given a link" do
-      let(json) { JSON.parse(%<{"foo":{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}}>) }
+    context "given a Link value" do
+      let(json) { expand_as(%<"url":{"type":"Link","href":"https://test.test/bar"}>) }
 
-      it "returns the identifier as an array" do
-        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      it "returns its identifier as an array" do
+        expect(described_class.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")).to eq(["https://test.test/bar"])
       end
     end
 
-    context "given an identifier" do
-      let(json) { JSON.parse(%<{"foo":"https://test.test/bar"}>) }
-
-      it "returns the identifier as an array" do
-        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
-      end
-    end
-
-    context "given an array of nested objects" do
-      let(json) { JSON.parse(%<{"foo":[{"@id":"https://test.test/bar"}]}>) }
+    context "given multiple values" do
+      let(json) { expand_as(%<"to":["https://test.test/a","https://test.test/b"]>) }
 
       it "returns all the identifiers" do
-        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+        expect(described_class.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to")).to eq(["https://test.test/a", "https://test.test/b"])
       end
     end
 
-    context "given an array of links" do
-      let(json) { JSON.parse(%<{"foo":[{"@type":"https://www.w3.org/ns/activitystreams#Link","https://www.w3.org/ns/activitystreams#href":"https://test.test/bar"}]}>) }
+    context "given no values" do
+      let(json) { expand_as(%<"to":[]>) }
 
-      it "returns all the identifiers" do
-        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
-      end
-    end
-
-    context "given an array of identifiers" do
-      let(json) { JSON.parse(%<{"foo":["https://test.test/bar"]}>) }
-
-      it "returns all the identifiers" do
-        expect(described_class.dig_ids?(json, "foo")).to eq(["https://test.test/bar"])
+      it "returns an empty array" do
+        expect(described_class.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to")).to be_empty
       end
     end
   end

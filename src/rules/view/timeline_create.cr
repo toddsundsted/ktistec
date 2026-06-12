@@ -25,6 +25,8 @@ module Rules
     # create row, never also an announce (see `TimelineAnnounce`).
     #
     class TimelineCreate < View
+      include NotifiesTimeline
+
       TYPE    = Relationship::Content::Timeline::Create.to_s
       INBOX   = Relationship::Content::Inbox.to_s
       OUTBOX  = Relationship::Content::Outbox.to_s

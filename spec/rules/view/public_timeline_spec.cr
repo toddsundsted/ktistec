@@ -31,6 +31,12 @@ Spectator.describe Rules::View::PublicTimeline do
     end
   end
 
+  describe "#subjects" do
+    it "publishes nothing (the public timeline has no real-time push)" do
+      expect(subject.subjects("alice")).to be_empty
+    end
+  end
+
   describe "#project" do
     it "maps an object to its public-timeline key" do
       expect(subject.project("https://test.test/objects/foo"))

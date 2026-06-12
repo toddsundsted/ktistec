@@ -13,6 +13,8 @@ module Rules
     # recency of the newest qualifying object tagged with the hashtag.
     #
     class FollowHashtag < View
+      include NotifiesNotifications
+
       TYPE    = Relationship::Content::Notification::Follow::Hashtag.to_s
       FOLLOW  = Relationship::Content::Follow::Hashtag.to_s
       HASHTAG = Tag::Hashtag.to_s

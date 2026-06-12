@@ -32,6 +32,12 @@ Spectator.describe Rules::View::Mention do
     end
   end
 
+  describe "#subjects" do
+    it "publishes to the owner's notifications subject" do
+      expect(subject.subjects("alice")).to eq(["/actors/alice/notifications"])
+    end
+  end
+
   describe "#project" do
     let_create!(:object, attributed_to: author)
     let_create!(:mention, named: nil, name: mention_name, href: actor.iri, subject: object)

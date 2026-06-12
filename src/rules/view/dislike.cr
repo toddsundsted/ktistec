@@ -14,6 +14,8 @@ module Rules
     # qualifying dislike as the object's representative.
     #
     class Dislike < View
+      include NotifiesNotifications
+
       TYPE    = Relationship::Content::Notification::Dislike.to_s
       DISLIKE = ActivityPub::Activity::Dislike.to_s
       INBOX   = Relationship::Content::Inbox.to_s

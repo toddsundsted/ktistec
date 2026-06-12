@@ -340,6 +340,45 @@ Spectator.describe Rules::Maintainer do
     end
   end
 
+  describe "change reporting" do
+    let(view) { SyntheticIdentityKeyedView.new }
+
+    let_create!(:object)
+
+    it "reports a change when a key is inserted" do
+      expect(Rules::Maintainer.reconcile_for(view, key_for(object))).to be_true
+    end
+
+    context "given an inserted key" do
+      before_each { Rules::Maintainer.reconcile_for(view, key_for(object)) }
+
+      pre_condition { expect(materialized(view)).to contain(object.iri) }
+
+      it "reports no change" do
+        expect(Rules::Maintainer.reconcile_for(view, key_for(object))).to be_false
+      end
+    end
+
+    context "given a registered view" do
+      before_each { Rules::View.register(view) }
+      after_each { Rules::View.registry.delete(view) }
+
+      it "returns the changed pairs" do
+        expect(Rules::Maintainer.reconcile_object(object.iri)).to eq([{view, "owner"}])
+      end
+
+      context "given an inserted key" do
+        before_each { Rules::Maintainer.reconcile_object(object.iri) }
+
+        pre_condition { expect(materialized(view)).to contain(object.iri) }
+
+        it "returns no pairs" do
+          expect(Rules::Maintainer.reconcile_object(object.iri)).to be_empty
+        end
+      end
+    end
+  end
+
   describe "scoped reconcile converges to batch reconcile" do
     context "an identity-keyed view" do
       let(view) { SyntheticIdentityKeyedView.new }

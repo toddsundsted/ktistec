@@ -47,6 +47,33 @@ module Rules
       false
     end
 
+    # The pub/sub subjects to notify when one of `username`'s rows in
+    # this view changes.
+    #
+    # It's empty by default -- the view publishes no real-time
+    # updates. Views that do mix in `NotifiesNotifications` or
+    # `NotifiesTimeline`.
+    #
+    def subjects(username : String) : Array(String)
+      [] of String
+    end
+
+    # Mixed into views whose rows appear in an owner's notifications.
+    #
+    module NotifiesNotifications
+      def subjects(username : String) : Array(String)
+        ["/actors/#{username}/notifications"]
+      end
+    end
+
+    # Mixed into views whose rows appear in an owner's timeline.
+    #
+    module NotifiesTimeline
+      def subjects(username : String) : Array(String)
+        ["/actors/#{username}/timeline"]
+      end
+    end
+
     @@registry = [] of View
 
     # All registered views.

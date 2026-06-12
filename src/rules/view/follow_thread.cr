@@ -13,6 +13,8 @@ module Rules
     # thread.
     #
     class FollowThread < View
+      include NotifiesNotifications
+
       TYPE   = Relationship::Content::Notification::Follow::Thread.to_s
       FOLLOW = Relationship::Content::Follow::Thread.to_s
 

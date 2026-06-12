@@ -14,6 +14,8 @@ module Rules
     # actor.
     #
     class FollowMention < View
+      include NotifiesNotifications
+
       TYPE    = Relationship::Content::Notification::Follow::Mention.to_s
       FOLLOW  = Relationship::Content::Follow::Mention.to_s
       MENTION = Tag::Mention.to_s

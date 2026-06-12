@@ -30,6 +30,12 @@ Spectator.describe Rules::View::Dislike do
     end
   end
 
+  describe "#subjects" do
+    it "publishes to the owner's notifications subject" do
+      expect(subject.subjects("alice")).to eq(["/actors/alice/notifications"])
+    end
+  end
+
   describe "#project" do
     context "given a local object" do
       let_create!(:object, named: post, attributed_to: actor)

@@ -30,6 +30,12 @@ Spectator.describe Rules::View::Reply do
     end
   end
 
+  describe "#subjects" do
+    it "publishes to the owner's notifications subject" do
+      expect(subject.subjects("alice")).to eq(["/actors/alice/notifications"])
+    end
+  end
+
   describe "#project" do
     let_create!(:object, named: parent, attributed_to: actor)
     let_create!(:object, named: reply, attributed_to: author, in_reply_to: parent)

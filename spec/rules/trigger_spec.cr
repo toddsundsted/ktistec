@@ -206,6 +206,83 @@ Spectator.describe Rules::Trigger do
     end
   end
 
+  # each entry point that drives the maintainer must notify the
+  # owner's subject. the subject family (notifications vs. timeline)
+  # is incidental here: `notify` forwards `view.subjects`
+  # view-agnostically, so which family a subject belongs to is the
+  # view's concern, covered by the per-view `subjects` specs.
+  # notifications covers all the testable entry points.
+
+  describe "notifying" do
+    let(notified) { [] of String }
+    let(owner_subject) { "/actors/#{actor.username}/notifications" }
+    let(appeared_at) { followed_at + 1.hour }
+
+    before_each { Rules::Trigger.notifier = ->(subject : String) { notified << subject; nil } }
+    after_each { Rules::Trigger.notifier = Rules::Trigger::DEFAULT_NOTIFIER }
+
+    context "via reconcile_for_activity" do
+      let_create!(:object, named: post, attributed_to: author, created_at: appeared_at)
+      let_create!(:create, named: activity, actor: author, object: post)
+      let_create!(:hashtag, name: "foo", subject: post)
+
+      it "notifies the owner's notifications subject" do
+        Rules::Trigger.reconcile_for_activity(activity)
+        expect(notified).to eq([owner_subject])
+      end
+    end
+
+    context "via reconcile_for_actor" do
+      let_create!(:object, named: post, attributed_to: author, created_at: appeared_at)
+      let_create!(:hashtag, name: "foo", subject: post)
+
+      it "notifies the owner's notifications subject" do
+        Rules::Trigger.reconcile_for_actor(author)
+        expect(notified).to eq([owner_subject])
+      end
+    end
+
+    context "via reconcile_for_thread" do
+      let_create!(:object, named: post, attributed_to: author, in_reply_to: thread_root, created_at: appeared_at)
+
+      it "notifies the owner's notifications subject" do
+        Rules::Trigger.reconcile_for_thread(actor.iri, thread_root.iri)
+        expect(notified).to eq([owner_subject])
+      end
+    end
+
+    context "via reconcile_for_mention" do
+      let_create!(:object, named: post, attributed_to: author, created_at: appeared_at)
+      let_create!(:mention, name: mention_name, href: mention_href, subject: post)
+
+      it "notifies the owner's notifications subject" do
+        Rules::Trigger.reconcile_for_mention(actor.iri, mention_href)
+        expect(notified).to eq([owner_subject])
+      end
+    end
+
+    context "via reconcile_for_hashtag" do
+      let_create!(:object, named: post, attributed_to: author, created_at: appeared_at)
+      let_create!(:hashtag, name: "foo", subject: post)
+
+      it "notifies the owner's notifications subject" do
+        Rules::Trigger.reconcile_for_hashtag(actor.iri, "foo")
+        expect(notified).to eq([owner_subject])
+      end
+
+      context "when nothing materializes" do
+        let(appeared_at) { followed_at - 1.hour }
+
+        pre_condition { expect(hashtag_notification_count("foo")).to eq(0) }
+
+        it "does not notify" do
+          Rules::Trigger.reconcile_for_hashtag(actor.iri, "foo")
+          expect(notified).to be_empty
+        end
+      end
+    end
+  end
+
   describe "when a thread-follow is destroyed" do
     let_create!(:notification_follow_thread, owner: actor, object: thread_root)
 

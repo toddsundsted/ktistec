@@ -36,6 +36,12 @@ Spectator.describe Rules::View::FollowThread do
   # requirement without itself contributing to the position.
   let_create!(:object, named: root, attributed_to: author, created_at: followed_at - 1.hour)
 
+  describe "#subjects" do
+    it "publishes to the owner's notifications subject" do
+      expect(subject.subjects("alice")).to eq(["/actors/alice/notifications"])
+    end
+  end
+
   describe "#project" do
     let_create!(:object, named: post, attributed_to: author, in_reply_to: root, created_at: appeared_at)
 

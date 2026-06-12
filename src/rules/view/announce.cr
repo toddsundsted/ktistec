@@ -14,6 +14,8 @@ module Rules
     # qualifying announce as the object's representative.
     #
     class Announce < View
+      include NotifiesNotifications
+
       TYPE     = Relationship::Content::Notification::Announce.to_s
       ANNOUNCE = ActivityPub::Activity::Announce.to_s
       INBOX    = Relationship::Content::Inbox.to_s

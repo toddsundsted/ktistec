@@ -30,6 +30,12 @@ Spectator.describe Rules::View::Follow do
     end
   end
 
+  describe "#subjects" do
+    it "publishes to the owner's notifications subject" do
+      expect(subject.subjects("alice")).to eq(["/actors/alice/notifications"])
+    end
+  end
+
   describe "#project" do
     let_create!(:follow, named: activity, actor: follower, object: actor)
 

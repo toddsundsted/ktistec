@@ -12,6 +12,8 @@ module Rules
     # appended at the activity's arrival and never repositioned.
     #
     class Follow < View
+      include NotifiesNotifications
+
       TYPE   = Relationship::Content::Notification::Follow.to_s
       FOLLOW = ActivityPub::Activity::Follow.to_s
       INBOX  = Relationship::Content::Inbox.to_s

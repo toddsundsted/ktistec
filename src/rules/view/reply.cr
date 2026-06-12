@@ -17,6 +17,8 @@ module Rules
     # replied to.
     #
     class Reply < View
+      include NotifiesNotifications
+
       TYPE     = Relationship::Content::Notification::Reply.to_s
       INBOX    = Relationship::Content::Inbox.to_s
       CREATE   = ActivityPub::Activity::Create.to_s

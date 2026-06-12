@@ -31,6 +31,12 @@ Spectator.describe Rules::View::TimelineAnnounce do
     end
   end
 
+  describe "#subjects" do
+    it "publishes to the owner's timeline subject" do
+      expect(subject.subjects("alice")).to eq(["/actors/alice/timeline"])
+    end
+  end
+
   describe "#project" do
     let_create!(:object, attributed_to: author)
     let_create!(:announce, named: activity, actor: announcer, object: object)

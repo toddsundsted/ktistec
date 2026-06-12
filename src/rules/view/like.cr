@@ -14,6 +14,8 @@ module Rules
     # like as the object's representative.
     #
     class Like < View
+      include NotifiesNotifications
+
       TYPE   = Relationship::Content::Notification::Like.to_s
       LIKE   = ActivityPub::Activity::Like.to_s
       INBOX  = Relationship::Content::Inbox.to_s

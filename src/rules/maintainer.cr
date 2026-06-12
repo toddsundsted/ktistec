@@ -20,16 +20,19 @@ module Rules
 
     # Rebuilds a view's stored rows to exactly equal its membership query.
     #
-    def reconcile(view : View) : Nil
+    # Returns `true` if any rows changed, `false` otherwise.
+    #
+    def reconcile(view : View) : Bool
       query, args = view.membership
       apply(view.type, query, args, "1", Array(DB::Any).new, view.repositions?)
     end
 
     # Re-evaluates one key to an insert, delete, reposition, or no-op.
     #
-    # Fired after a base fact changes.
+    # Fired after a base fact changes. Returns `true` if any rows
+    # changed, `false` otherwise.
     #
-    def reconcile_for(view : View, key : View::Key) : Nil
+    def reconcile_for(view : View, key : View::Key) : Bool
       query, args = view.membership(key)
       scope, scope_args = view.stored_scope(key)
       apply(view.type, query, args, scope, scope_args, view.repositions?)
@@ -44,7 +47,7 @@ module Rules
     # delete to the rows owned by the reconciled key (the whole
     # collection, for the batch path).
     #
-    private def apply(type : String, query : String, query_args : Array(DB::Any), scope : String, scope_args : Array(DB::Any), repositions : Bool) : Nil
+    private def apply(type : String, query : String, query_args : Array(DB::Any), scope : String, scope_args : Array(DB::Any), repositions : Bool) : Bool
       now = Time.utc
       insert = <<-SQL
         INSERT INTO relationships (created_at, updated_at, type, from_iri, to_iri, confirmed, visible)
@@ -73,22 +76,29 @@ module Rules
            AND relationships.to_iri = m.to_iri
            AND relationships.created_at <> m.position
       SQL
+      changed = false
       transaction do
-        Ktistec.database.exec(insert, args: Array(DB::Any){now} + query_args)
-        Ktistec.database.exec(delete, args: scope_args + query_args)
-        Ktistec.database.exec(reposition, args: Array(DB::Any){now} + query_args) if repositions
+        inserted = Ktistec.database.exec(insert, args: Array(DB::Any){now} + query_args).rows_affected
+        deleted = Ktistec.database.exec(delete, args: scope_args + query_args).rows_affected
+        repositioned = repositions ? Ktistec.database.exec(reposition, args: Array(DB::Any){now} + query_args).rows_affected : 0_i64
+        changed = (inserted + deleted + repositioned) > 0
       end
+      changed
     end
 
     # Re-evaluates every registered view for a changed object,
     # projecting the object to each view's affected key(s).
     #
-    def reconcile_object(object_iri : String) : Nil
+    # Returns the `(view, owner)` pairs that changed.
+    #
+    def reconcile_object(object_iri : String) : Array({View, String})
+      changed = [] of {View, String}
       View.registry.each do |view|
         view.project(object_iri).each do |key|
-          reconcile_for(view, key)
+          changed << {view, key[:from_iri]} if reconcile_for(view, key)
         end
       end
+      changed
     end
 
     # Notifications produced imperatively. The batch reconcile leaves these

@@ -19,6 +19,8 @@ module Rules
     # are mutually exclusive.
     #
     class TimelineAnnounce < View
+      include NotifiesTimeline
+
       TYPE     = Relationship::Content::Timeline::Announce.to_s
       INBOX    = Relationship::Content::Inbox.to_s
       OUTBOX   = Relationship::Content::Outbox.to_s

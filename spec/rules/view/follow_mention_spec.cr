@@ -36,6 +36,12 @@ Spectator.describe Rules::View::FollowMention do
   let(appeared_at) { followed_at + 1.hour }
   let_build(:object, named: post, attributed_to: author, created_at: appeared_at)
 
+  describe "#subjects" do
+    it "publishes to the owner's notifications subject" do
+      expect(subject.subjects("alice")).to eq(["/actors/alice/notifications"])
+    end
+  end
+
   describe "#project" do
     let_create!(:mention, named: nil, name: mention_name, href: mention_href, subject: post)
 

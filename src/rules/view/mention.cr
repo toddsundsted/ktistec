@@ -22,6 +22,8 @@ module Rules
     # mention.
     #
     class Mention < View
+      include NotifiesNotifications
+
       TYPE     = Relationship::Content::Notification::Mention.to_s
       INBOX    = Relationship::Content::Inbox.to_s
       CREATE   = ActivityPub::Activity::Create.to_s

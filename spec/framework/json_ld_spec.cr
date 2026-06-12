@@ -376,7 +376,7 @@ Spectator.describe Ktistec::JSON_LD do
     describe "#[]" do
       it "returns merged values" do
         expect(json.as_h.keys).to match_array(["@context", "@type", "https://www.w3.org/ns/activitystreams#name"]).in_any_order
-        expect(json["https://www.w3.org/ns/activitystreams#name"]).to eq({"und" => "Foo Bar Baz", "fr" => "Foo Bàr Bàz"})
+        expect(json["https://www.w3.org/ns/activitystreams#name"]).to eq([{"und" => "Foo Bar Baz", "fr" => "Foo Bàr Bàz"}])
       end
     end
   end
@@ -400,9 +400,9 @@ Spectator.describe Ktistec::JSON_LD do
     end
 
     describe "#[]" do
-      it "returns value as a map" do
+      it "returns value as a set containing a map" do
         expect(json.as_h.keys).to match_array(["@context", "@type", "https://www.w3.org/ns/activitystreams#name"]).in_any_order
-        expect(json["https://www.w3.org/ns/activitystreams#name"]).to eq({"und" => "Foo Bar Baz"})
+        expect(json["https://www.w3.org/ns/activitystreams#name"]).to eq([{"und" => "Foo Bar Baz"}])
       end
     end
   end
@@ -425,6 +425,34 @@ Spectator.describe Ktistec::JSON_LD do
         cc_values = json["https://www.w3.org/ns/activitystreams#cc"].as_a.map(&.as_s)
         expect(to_values).to eq(["https://www.w3.org/ns/activitystreams#Public", "https://www.w3.org/ns/activitystreams#Public"])
         expect(cc_values).to eq(["https://www.w3.org/ns/activitystreams#Public", "https://www.w3.org/ns/activitystreams#Public"])
+      end
+    end
+  end
+
+  context "given JSON-LD document normalized to sets" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "@type": "Note",
+            "published": "2016-02-15T10:20:30Z",
+            "to": ["https://a/", "https://b/"]
+          }
+        JSON
+      ), double(loader))
+    end
+
+    describe "#[]" do
+      it "wraps a scalar property value in a set" do
+        expect(json["https://www.w3.org/ns/activitystreams#published"].as_a?.try(&.map(&.as_s))).to eq(["2016-02-15T10:20:30Z"])
+      end
+
+      it "leaves a keyword value scalar" do
+        expect(json["@type"].as_a?).to be_nil
+      end
+
+      it "does not double-wrap an array property value" do
+        expect(json["https://www.w3.org/ns/activitystreams#to"].as_a.size).to eq(2)
       end
     end
   end
@@ -483,6 +511,22 @@ Spectator.describe Ktistec::JSON_LD do
       it "falls back to activitystreams context" do
         expect(json.as_h.keys).to match_array(["@context", "@type", "https://www.w3.org/ns/activitystreams#name"]).in_any_order
       end
+    end
+  end
+
+  context "given a Link-valued property" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "url": {"type": "Link", "href": "https://test.test/video"}
+          }
+        JSON
+      ))
+    end
+
+    it "returns the href" do
+      expect(described_class.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url")).to eq(["https://test.test/video"])
     end
   end
 

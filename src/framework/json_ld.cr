@@ -78,7 +78,14 @@ module Ktistec
         end
       end
 
-      wrap(result)
+      # normalize every property value to a set. keywords stay scalar.
+      # an array value is not double-wrapped.
+      normalized = Hash(String, JSON::Any).new
+      result.each do |term, value|
+        normalized[term] = (term.starts_with?("@") || value.as_a?) ? value : wrap([value])
+      end
+
+      wrap(normalized)
     end
 
     private def self.context(context, loader, url = "https://www.w3.org/ns/activitystreams")
@@ -275,7 +282,7 @@ module Ktistec
     private def self.dig_identifier(json)
       if (hash = json.as_h?)
         if hash.dig?("@type") == "https://www.w3.org/ns/activitystreams#Link"
-          hash.dig?("https://www.w3.org/ns/activitystreams#href")
+          dig_first?(json, "https://www.w3.org/ns/activitystreams#href")
         else
           hash.dig?("@id")
         end

@@ -78,12 +78,3 @@
 # that actor. If this were part of a rule, the rule actions would be
 # executed for each such instance of class Object. Bound values for
 # actor and object would be available to each action invocation.
-
-## Outbox
-
-rule "outbox"
-  condition Outgoing, actor, activity
-  none Outbox, owner: actor, activity: activity
-  assert Outbox, owner: actor, activity: activity
-  assert activity, InMailboxOf, actor
-end

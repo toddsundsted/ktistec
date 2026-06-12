@@ -7,6 +7,7 @@ require "../../src/models/activity_pub/activity/delete"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/create"
 require "../../src/models/relationship/social/follow"
+require "../../src/models/relationship/content/outbox"
 require "../../src/models/relationship/content/public_timeline"
 
 require "../spec_helper/base"
@@ -25,6 +26,35 @@ Spectator.describe OutboxActivityProcessor do
   end
 
   describe ".process" do
+    let_create(:create, named: :activity, actor: account.actor, object: object)
+
+    it "adds the activity to the actor's outbox" do
+      expect { OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask) }
+        .to change { Relationship::Content::Outbox.find?(owner: account.actor, activity: activity) }
+    end
+
+    context "given an existing outbox record" do
+      before_each { put_in_outbox(account.actor, activity) }
+
+      it "does not add the activity to the actor's outbox" do
+        expect { OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask) }
+          .not_to change { Relationship::Content::Outbox.count(owner: account.actor, activity: activity) }
+      end
+    end
+
+    context "given a filter term matching the content" do
+      let_create!(:filter_term, actor: account.actor, term: "%content%")
+
+      before_each do
+        object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
+      end
+
+      it "adds the activity to the actor's outbox" do
+        expect { OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask) }
+          .to change { Relationship::Content::Outbox.find?(owner: account.actor, activity: activity) }
+      end
+    end
+
     context "with a Follow activity" do
       let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
 

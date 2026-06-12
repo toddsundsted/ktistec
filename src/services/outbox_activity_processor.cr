@@ -2,8 +2,8 @@ require "../models/activity_pub/activity"
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
 require "../models/account"
-require "../rules/content_rules"
 require "../rules/trigger"
+require "../models/relationship/content/outbox"
 require "../models/relationship/social/follow"
 require "../models/task/deliver"
 require "../models/task/distribute_poll_updates"
@@ -15,8 +15,9 @@ class OutboxActivityProcessor
   # Processes an outbound activity that has already been created,
   # validated, and saved.
   #
-  # Processes the activity through content rules, handles
-  # activity-specific side-effects, and schedules delivery task.
+  # Records the activity in the actor's outbox, handles
+  # activity-specific side-effects, re-evaluates the materialized
+  # views, and schedules delivery task.
   #
   # Preconditions:
   # - activity must be saved
@@ -29,11 +30,10 @@ class OutboxActivityProcessor
   def self.process(
     account : Account,
     activity : ActivityPub::Activity,
-    content_rules : ContentRules = ContentRules.new,
     deliver_task_class : Task::Deliver.class = Task::Deliver,
   )
-    content_rules.run do
-      assert ContentRules::Outgoing.new(account.actor, activity)
+    unless Relationship::Content::Outbox.find?(owner: account.actor, activity: activity)
+      Relationship::Content::Outbox.new(owner: account.actor, activity: activity).save
     end
 
     case activity

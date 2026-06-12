@@ -1243,7 +1243,7 @@ module ActivityPub
             Ktistec::JSON_LD.dig_id?(json, "https://misskey-hub.net/ns#_misskey_quote"),
           "quote_authorization_iri" => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quoteAuthorization"),
           # pick up the replies' id and the embedded replies if the hosts match
-          "replies_iri" => if (replies = json.dig?("https://www.w3.org/ns/activitystreams#replies"))
+          "replies_iri" => if (replies = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#replies"))
             replies.as_s? || replies.dig?("@id").try(&.as_s?)
           end,
           "replies" => if replies && replies.as_h?
@@ -1278,7 +1278,7 @@ module ActivityPub
           "emojis" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
             next unless tag.dig?("@type") == "http://joinmastodon.org/ns#Emoji"
             name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
-            icon_url = tag.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+            icon_url = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url")
             Tag::Emoji.new(name: name, href: icon_url) if name && icon_url
           end,
           "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
@@ -1303,9 +1303,9 @@ module ActivityPub
           # use addressing to establish visibility
           "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public"),
         }.tap do |map|
-          if (language = json.dig?("http://schema.org/inLanguage", "http://schema.org/identifier")) && (language = language.as_s?)
+          if (language = Ktistec::JSON_LD.dig?(json, "http://schema.org/inLanguage", "http://schema.org/identifier"))
             map["language"] = language
-          elsif (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
+          elsif (content = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
             content.each do |lang, ctnt|
               if lang && ctnt
                 if lang != "und" && lang =~ Ktistec::Constants::LANGUAGE_RE && ctnt == map["content"]?

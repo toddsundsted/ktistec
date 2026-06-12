@@ -112,7 +112,7 @@ module ActivityPub
           "_type"     => json.dig?("@type").try(&.as_s.split("#").last),
           "published" => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
           # pick up the actor's id and the embedded actor if the hosts match
-          "actor_iri" => if (actor = json.dig?("https://www.w3.org/ns/activitystreams#actor"))
+          "actor_iri" => if (actor = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#actor"))
             actor.as_s? || actor.dig?("@id").try(&.as_s?)
           end,
           "actor" => if actor && actor.as_h?
@@ -121,7 +121,7 @@ module ActivityPub
             end
           end,
           # pick up the object's id and the embedded object if the hosts match
-          "object_iri" => if (object = json.dig?("https://www.w3.org/ns/activitystreams#object"))
+          "object_iri" => if (object = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#object"))
             object.as_s? || object.dig?("@id").try(&.as_s?)
           end,
           "object" => if object && object.as_h?
@@ -130,7 +130,7 @@ module ActivityPub
             end
           end,
           # pick up the target's id and the embedded target if the hosts match
-          "target_iri" => if (target = json.dig?("https://www.w3.org/ns/activitystreams#target"))
+          "target_iri" => if (target = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#target"))
             target.as_s? || target.dig?("@id").try(&.as_s?)
           end,
           "target" => if target && target.as_h?
@@ -139,7 +139,7 @@ module ActivityPub
             end
           end,
           # pick up the instrument's id and the embedded instrument if the hosts match
-          "instrument_iri" => if (instrument = json.dig?("https://www.w3.org/ns/activitystreams#instrument"))
+          "instrument_iri" => if (instrument = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#instrument"))
             instrument.as_s? || instrument.dig?("@id").try(&.as_s?)
           end,
           "instrument" => if instrument && instrument.as_h?
@@ -148,7 +148,7 @@ module ActivityPub
             end
           end,
           # pick up the result's id and the embedded result if the hosts match
-          "result_iri" => if (result = json.dig?("https://www.w3.org/ns/activitystreams#result"))
+          "result_iri" => if (result = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#result"))
             result.as_s? || result.dig?("@id").try(&.as_s?)
           end,
           "result" => if result && result.as_h?

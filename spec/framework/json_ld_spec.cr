@@ -553,6 +553,11 @@ Spectator.describe Ktistec::JSON_LD do
         expect(described_class.dig?(json, "foo", as: Int64)).to eq(5)
       end
 
+      it "returns the value cast to the specified type" do
+        json = JSON.parse(%<{"foo":5}>)
+        expect(described_class.dig?(json, "foo", as: Int32)).to eq(5)
+      end
+
       it "returns nil if key does not exist" do
         json = JSON.parse(%<{"foo":5}>)
         expect(described_class.dig?(json, "bar", as: Int64)).to be_nil

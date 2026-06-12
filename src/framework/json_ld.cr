@@ -241,7 +241,13 @@ module Ktistec
     # See `dig_first?` for the set-collapse behavior.
     #
     def self.dig?(json : JSON::Any, *selector, as : T.class = String) forall T
-      dig_first?(json, *selector).try(&.raw.as?(T))
+      if (value = dig_first?(json, *selector))
+        {% if T == Int32 %}
+          value.as_i?
+        {% else %}
+          value.raw.as?(T)
+        {% end %}
+      end
     end
 
     def self.dig_values?(json, *selector, &)

@@ -1412,7 +1412,7 @@ private module ActorModelHelper
       "emojis" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
         next unless tag.dig?("@type") == "http://joinmastodon.org/ns#Emoji"
         name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
-        icon_url = tag.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+        icon_url = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url")
         Tag::Emoji.new(name: name, href: icon_url) if name && icon_url
       end,
     }.compact
@@ -1423,19 +1423,19 @@ private module ActorModelHelper
       if icons.as_a?
         icon =
           icons.as_a.map do |ico|
-            if (width = ico.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = ico.dig?("https://www.w3.org/ns/activitystreams#height"))
-              {width.as_i * height.as_i, ico}
+            if (width = Ktistec::JSON_LD.dig?(ico, "https://www.w3.org/ns/activitystreams#width", as: Int64)) && (height = Ktistec::JSON_LD.dig?(ico, "https://www.w3.org/ns/activitystreams#height", as: Int64))
+              {width * height, ico}
             else
-              {0, ico}
+              {0_i64, ico}
             end
           end.sort! do |(a, _), (b, _)|
             b <=> a
           end.first?
         if icon
-          icon[1].dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+          Ktistec::JSON_LD.dig?(icon[1], "https://www.w3.org/ns/activitystreams#url")
         end
       elsif icons
-        icons.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+        Ktistec::JSON_LD.dig?(icons, "https://www.w3.org/ns/activitystreams#url")
       end
     end
   end

@@ -210,8 +210,31 @@ module Ktistec
       end
     end
 
+    # Digs out a single scalar value, set-aware.
+    #
+    # Expansion normalizes every property value to a set; a scalar
+    # consumer wants one value, so the first member of a non-empty set
+    # is taken at each level of the selector, and an empty set yields
+    # `nil`.
+    #
     def self.dig?(json : JSON::Any, *selector, as : T.class = String) forall T
-      json.dig?(*selector).try(&.raw.as?(T))
+      current = json
+      selector.each do |key|
+        if (array = current.as_a?)
+          return if array.empty?
+          current = array.first
+        end
+        if (value = current.dig?(key))
+          current = value
+        else
+          return
+        end
+      end
+      if (array = current.as_a?)
+        return if array.empty?
+        current = array.first
+      end
+      current.raw.as?(T)
     end
 
     def self.dig_value?(json, *selector, &)

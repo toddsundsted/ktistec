@@ -547,14 +547,53 @@ Spectator.describe Ktistec::JSON_LD do
   end
 
   describe ".dig?" do
-    let(json) { JSON.parse(%<{"foo":5}>) }
+    context "given a scalar-valued (compacted) property" do
+      it "returns the value cast to the specified type" do
+        json = JSON.parse(%<{"foo":5}>)
+        expect(described_class.dig?(json, "foo", as: Int64)).to eq(5)
+      end
 
-    it "returns the value cast to the specified type" do
-      expect(described_class.dig?(json, "foo", as: Int64)).to eq(5)
+      it "returns nil if key does not exist" do
+        json = JSON.parse(%<{"foo":5}>)
+        expect(described_class.dig?(json, "bar", as: Int64)).to be_nil
+      end
     end
 
-    it "returns nil if key does not exist" do
-      expect(described_class.dig?(json, "bar", as: Int64)).to be_nil
+    context "given a set-valued (expanded) property" do
+      it "collapses a singleton set to its member" do
+        json = JSON.parse(%<{"foo":["bar"]}>)
+        expect(described_class.dig?(json, "foo")).to eq("bar")
+      end
+
+      it "takes the first member of a multi-valued set" do
+        json = JSON.parse(%<{"foo":["bar","baz"]}>)
+        expect(described_class.dig?(json, "foo")).to eq("bar")
+      end
+
+      it "returns nil for an empty set" do
+        json = JSON.parse(%<{"foo":[]}>)
+        expect(described_class.dig?(json, "foo")).to be_nil
+      end
+
+      it "collapses sets at each level of a multi-level selector" do
+        json = JSON.parse(%<{"foo":[{"bar":["baz"]}]}>)
+        expect(described_class.dig?(json, "foo", "bar")).to eq("baz")
+      end
+
+      it "takes the first member of a multi-valued set mid-selector" do
+        json = JSON.parse(%<{"foo":[{"bar":"a"},{"bar":"b"}]}>)
+        expect(described_class.dig?(json, "foo", "bar")).to eq("a")
+      end
+
+      it "returns nil for an empty set mid-selector" do
+        json = JSON.parse(%<{"foo":[]}>)
+        expect(described_class.dig?(json, "foo", "bar")).to be_nil
+      end
+
+      it "casts the collapsed member to the specified type" do
+        json = JSON.parse(%<{"foo":[true]}>)
+        expect(described_class.dig?(json, "foo", as: Bool)).to be_true
+      end
     end
   end
 

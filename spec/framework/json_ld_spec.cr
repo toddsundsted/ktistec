@@ -597,29 +597,45 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
-  def block(value)
-    if (bar = described_class.dig?(value, "bar", as: Int64)) && (baz = described_class.dig?(value, "baz", as: Int64))
-      bar + baz
+  describe ".dig_first?" do
+    context "given a scalar-valued (compacted) property" do
+      it "returns the value" do
+        json = JSON.parse(%<{"foo":"bar"}>)
+        expect(described_class.dig_first?(json, "foo")).to eq("bar")
+      end
+
+      it "returns nil if key does not exist" do
+        json = JSON.parse(%<{"foo":"bar"}>)
+        expect(described_class.dig_first?(json, "baz")).to be_nil
+      end
+    end
+
+    context "given a set-valued (expanded) property" do
+      it "returns the first member" do
+        json = JSON.parse(%<{"foo":["bar","baz"]}>)
+        expect(described_class.dig_first?(json, "foo")).to eq("bar")
+      end
+
+      it "returns an object member for the caller to inspect" do
+        json = JSON.parse(%<{"foo":[{"@id":"https://x/"}]}>)
+        expect(described_class.dig_first?(json, "foo").try(&.dig?("@id"))).to eq("https://x/")
+      end
+
+      it "returns nil for an empty set" do
+        json = JSON.parse(%<{"foo":[]}>)
+        expect(described_class.dig_first?(json, "foo")).to be_nil
+      end
+
+      it "collapses sets at each level" do
+        json = JSON.parse(%<{"foo":[{"bar":[{"@id":"https://x/"}]}]}>)
+        expect(described_class.dig_first?(json, "foo", "bar").try(&.dig?("@id"))).to eq("https://x/")
+      end
     end
   end
 
-  describe ".dig_value?" do
-    context "given a nested object" do
-      let(json) { JSON.parse(%<{"foo":{"bar":3,"baz":5}}>) }
-
-      it "returns the result of the block" do
-        result = described_class.dig_value?(json, "foo", &->block(JSON::Any))
-        expect(result).to eq(8)
-      end
-    end
-
-    context "given an array of nested objects" do
-      let(json) { JSON.parse(%<{"foo":[{"bar":3,"baz":5},{"bar":1,"baz":2}]}>) }
-
-      it "returns the result of the block on the first element" do
-        result = described_class.dig_value?(json, "foo", &->block(JSON::Any))
-        expect(result).to eq(8)
-      end
+  def block(value)
+    if (bar = described_class.dig?(value, "bar", as: Int64)) && (baz = described_class.dig?(value, "baz", as: Int64))
+      bar + baz
     end
   end
 
@@ -689,6 +705,22 @@ Spectator.describe Ktistec::JSON_LD do
 
       it "returns the first identifier" do
         expect(described_class.dig_id?(json, "foo")).to eq("https://test.test/bar")
+      end
+    end
+
+    context "given a set mid-selector" do
+      let(json) { JSON.parse(%<{"foo":[{"bar":"https://test.test/baz"}]}>) }
+
+      it "collapses the set and returns the identifier" do
+        expect(described_class.dig_id?(json, "foo", "bar")).to eq("https://test.test/baz")
+      end
+    end
+
+    context "given an empty set" do
+      let(json) { JSON.parse(%<{"foo":[]}>) }
+
+      it "returns nil" do
+        expect(described_class.dig_id?(json, "foo")).to be_nil
       end
     end
   end

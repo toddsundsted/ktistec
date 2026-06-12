@@ -210,14 +210,13 @@ module Ktistec
       end
     end
 
-    # Digs out a single scalar value, set-aware.
+    # Digs out the first member of a set.
     #
-    # Expansion normalizes every property value to a set; a scalar
-    # consumer wants one value, so the first member of a non-empty set
-    # is taken at each level of the selector, and an empty set yields
-    # `nil`.
+    # Expansion normalizes every property value to a set; a consumer
+    # that wants one value takes the first member of a non-empty set at
+    # each level of the selector (an empty set yields `nil`).
     #
-    def self.dig?(json : JSON::Any, *selector, as : T.class = String) forall T
+    def self.dig_first?(json : JSON::Any, *selector) : JSON::Any?
       current = json
       selector.each do |key|
         if (array = current.as_a?)
@@ -234,17 +233,15 @@ module Ktistec
         return if array.empty?
         current = array.first
       end
-      current.raw.as?(T)
+      current
     end
 
-    def self.dig_value?(json, *selector, &)
-      if (value = json.dig?(*selector))
-        if (values = value.as_a?)
-          values.map { |v| yield v }.first
-        else
-          yield value
-        end
-      end
+    # Digs out the first member of a set, cast to the given type.
+    #
+    # See `dig_first?` for the set-collapse behavior.
+    #
+    def self.dig?(json : JSON::Any, *selector, as : T.class = String) forall T
+      dig_first?(json, *selector).try(&.raw.as?(T))
     end
 
     def self.dig_values?(json, *selector, &)
@@ -258,7 +255,7 @@ module Ktistec
     end
 
     def self.dig_id?(json, *selector)
-      dig_value?(json, *selector) do |value|
+      if (value = dig_first?(json, *selector))
         dig_identifier(value).try(&.as_s?)
       end
     end

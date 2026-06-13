@@ -2,7 +2,13 @@ require "../framework/controller"
 require "../framework/topic"
 
 require "../models/relationship/content/follow/hashtag"
+require "../models/relationship/content/follow/thread"
+require "../models/relationship/content/notification/follow/hashtag"
+require "../models/relationship/content/notification/follow/mention"
+require "../models/relationship/content/notification/follow/thread"
+require "../models/relationship/content/notification/poll/expiry"
 require "../models/task/fetch/hashtag"
+require "../models/task/fetch/thread"
 
 Ktistec::Topic.configure_debounce(/\/actors\/[^\/]+\/notifications$/, 1.second)
 

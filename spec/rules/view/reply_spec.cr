@@ -1,4 +1,6 @@
 require "../../../src/rules/view/reply"
+require "../../../src/models/relationship/content/notification/reply"
+require "../../../src/models/activity_pub/activity/update"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"

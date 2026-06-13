@@ -1,12 +1,4 @@
 require "../view"
-require "../../models/relationship/content/timeline/create"
-require "../../models/relationship/content/inbox"
-require "../../models/relationship/content/outbox"
-require "../../models/activity_pub/activity/create"
-require "../../models/activity_pub/activity/update"
-require "../../models/tag/mention"
-require "../../models/activity_pub/object"
-require "../../models/activity_pub/actor"
 
 module Rules
   abstract class View
@@ -27,12 +19,12 @@ module Rules
     class TimelineCreate < View
       include NotifiesTimeline
 
-      TYPE    = Relationship::Content::Timeline::Create.to_s
-      INBOX   = Relationship::Content::Inbox.to_s
-      OUTBOX  = Relationship::Content::Outbox.to_s
-      CREATE  = ActivityPub::Activity::Create.to_s
-      UPDATE  = ActivityPub::Activity::Update.to_s
-      MENTION = Tag::Mention.to_s
+      TYPE    = "Relationship::Content::Timeline::Create"
+      INBOX   = "Relationship::Content::Inbox"
+      OUTBOX  = "Relationship::Content::Outbox"
+      CREATE  = "ActivityPub::Activity::Create"
+      UPDATE  = "ActivityPub::Activity::Update"
+      MENTION = "Tag::Mention"
 
       # The create-kept disjunction. `TimelineAnnounce` embeds it,
       # negated, so that the two timeline views are mutually exclusive

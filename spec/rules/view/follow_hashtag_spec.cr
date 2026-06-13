@@ -1,4 +1,5 @@
 require "../../../src/rules/view/follow_hashtag"
+require "../../../src/models/relationship/content/notification/follow/hashtag"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"

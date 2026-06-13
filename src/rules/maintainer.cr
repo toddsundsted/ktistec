@@ -2,8 +2,6 @@ require "db"
 require "../framework/database"
 require "./view"
 require "./view/**" # ameba:disable Ktistec/NoRequireGlob
-require "../models/relationship/content/notification/quote"
-require "../models/relationship/content/notification/poll/expiry"
 
 module Rules
   # The generic maintainer: one algorithm that keeps every view's
@@ -105,8 +103,8 @@ module Rules
     # untouched.
     #
     IMPERATIVE = [
-      Relationship::Content::Notification::Quote.to_s,
-      Relationship::Content::Notification::Poll::Expiry.to_s,
+      "Relationship::Content::Notification::Quote",
+      "Relationship::Content::Notification::Poll::Expiry",
     ]
 
     # Classifies a relationship `type` by who maintains it, partitioning the

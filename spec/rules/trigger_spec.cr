@@ -1,4 +1,7 @@
 require "../../src/rules/trigger"
+require "../../src/models/relationship/content/notification/follow/hashtag"
+require "../../src/models/relationship/content/notification/follow/mention"
+require "../../src/models/relationship/content/notification/follow/thread"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"

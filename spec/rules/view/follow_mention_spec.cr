@@ -1,4 +1,5 @@
 require "../../../src/rules/view/follow_mention"
+require "../../../src/models/relationship/content/notification/follow/mention"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"

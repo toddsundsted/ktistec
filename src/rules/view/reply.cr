@@ -1,11 +1,4 @@
 require "../view"
-require "../../models/relationship/content/notification/reply"
-require "../../models/relationship/content/inbox"
-require "../../models/activity_pub/activity/create"
-require "../../models/activity_pub/activity/announce"
-require "../../models/activity_pub/activity/update"
-require "../../models/activity_pub/object"
-require "../../models/activity_pub/actor"
 
 module Rules
   abstract class View
@@ -19,11 +12,11 @@ module Rules
     class Reply < View
       include NotifiesNotifications
 
-      TYPE     = Relationship::Content::Notification::Reply.to_s
-      INBOX    = Relationship::Content::Inbox.to_s
-      CREATE   = ActivityPub::Activity::Create.to_s
-      ANNOUNCE = ActivityPub::Activity::Announce.to_s
-      UPDATE   = ActivityPub::Activity::Update.to_s
+      TYPE     = "Relationship::Content::Notification::Reply"
+      INBOX    = "Relationship::Content::Inbox"
+      CREATE   = "ActivityPub::Activity::Create"
+      ANNOUNCE = "ActivityPub::Activity::Announce"
+      UPDATE   = "ActivityPub::Activity::Update"
 
       class_getter instance : Reply { new }
 

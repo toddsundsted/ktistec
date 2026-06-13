@@ -1,10 +1,4 @@
 require "../view"
-require "../../models/relationship/content/notification/dislike"
-require "../../models/relationship/content/inbox"
-require "../../models/relationship/content/outbox"
-require "../../models/activity_pub/activity/dislike"
-require "../../models/activity_pub/object"
-require "../../models/activity_pub/actor"
 
 module Rules
   abstract class View
@@ -16,10 +10,10 @@ module Rules
     class Dislike < View
       include NotifiesNotifications
 
-      TYPE    = Relationship::Content::Notification::Dislike.to_s
-      DISLIKE = ActivityPub::Activity::Dislike.to_s
-      INBOX   = Relationship::Content::Inbox.to_s
-      OUTBOX  = Relationship::Content::Outbox.to_s
+      TYPE    = "Relationship::Content::Notification::Dislike"
+      DISLIKE = "ActivityPub::Activity::Dislike"
+      INBOX   = "Relationship::Content::Inbox"
+      OUTBOX  = "Relationship::Content::Outbox"
 
       class_getter instance : Dislike { new }
 

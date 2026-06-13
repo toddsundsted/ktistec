@@ -1,4 +1,6 @@
 require "../../../src/rules/view/timeline_create"
+require "../../../src/models/relationship/content/timeline/create"
+require "../../../src/models/activity_pub/activity/update"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"

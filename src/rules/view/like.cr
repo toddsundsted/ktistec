@@ -1,10 +1,4 @@
 require "../view"
-require "../../models/relationship/content/notification/like"
-require "../../models/relationship/content/inbox"
-require "../../models/relationship/content/outbox"
-require "../../models/activity_pub/activity/like"
-require "../../models/activity_pub/object"
-require "../../models/activity_pub/actor"
 
 module Rules
   abstract class View
@@ -16,10 +10,10 @@ module Rules
     class Like < View
       include NotifiesNotifications
 
-      TYPE   = Relationship::Content::Notification::Like.to_s
-      LIKE   = ActivityPub::Activity::Like.to_s
-      INBOX  = Relationship::Content::Inbox.to_s
-      OUTBOX = Relationship::Content::Outbox.to_s
+      TYPE   = "Relationship::Content::Notification::Like"
+      LIKE   = "ActivityPub::Activity::Like"
+      INBOX  = "Relationship::Content::Inbox"
+      OUTBOX = "Relationship::Content::Outbox"
 
       class_getter instance : Like { new }
 

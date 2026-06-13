@@ -1,8 +1,4 @@
 require "../view"
-require "../../models/relationship/content/public_timeline"
-require "../../models/relationship/content/outbox"
-require "../../models/activity_pub/activity"
-require "../../models/activity_pub/object"
 require "../../ktistec/constants"
 
 module Rules
@@ -11,10 +7,10 @@ module Rules
     #
     class PublicTimeline < View
       PUBLIC   = Ktistec::Constants::PUBLIC
-      TYPE     = Relationship::Content::PublicTimeline.to_s
-      OUTBOX   = Relationship::Content::Outbox.to_s
-      CREATE   = ActivityPub::Activity::Create.to_s
-      ANNOUNCE = ActivityPub::Activity::Announce.to_s
+      TYPE     = "Relationship::Content::PublicTimeline"
+      OUTBOX   = "Relationship::Content::Outbox"
+      CREATE   = "ActivityPub::Activity::Create"
+      ANNOUNCE = "ActivityPub::Activity::Announce"
 
       class_getter instance : PublicTimeline { new }
 

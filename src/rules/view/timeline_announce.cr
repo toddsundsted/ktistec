@@ -1,11 +1,5 @@
 require "../view"
 require "./timeline_create"
-require "../../models/relationship/content/timeline/announce"
-require "../../models/relationship/content/inbox"
-require "../../models/relationship/content/outbox"
-require "../../models/activity_pub/activity/announce"
-require "../../models/activity_pub/object"
-require "../../models/activity_pub/actor"
 
 module Rules
   abstract class View
@@ -21,12 +15,12 @@ module Rules
     class TimelineAnnounce < View
       include NotifiesTimeline
 
-      TYPE     = Relationship::Content::Timeline::Announce.to_s
-      INBOX    = Relationship::Content::Inbox.to_s
-      OUTBOX   = Relationship::Content::Outbox.to_s
-      CREATE   = ActivityPub::Activity::Create.to_s
-      UPDATE   = ActivityPub::Activity::Update.to_s
-      ANNOUNCE = ActivityPub::Activity::Announce.to_s
+      TYPE     = "Relationship::Content::Timeline::Announce"
+      INBOX    = "Relationship::Content::Inbox"
+      OUTBOX   = "Relationship::Content::Outbox"
+      CREATE   = "ActivityPub::Activity::Create"
+      UPDATE   = "ActivityPub::Activity::Update"
+      ANNOUNCE = "ActivityPub::Activity::Announce"
 
       class_getter instance : TimelineAnnounce { new }
 

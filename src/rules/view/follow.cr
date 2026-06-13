@@ -1,8 +1,4 @@
 require "../view"
-require "../../models/relationship/content/notification/follow"
-require "../../models/relationship/content/inbox"
-require "../../models/activity_pub/activity/follow"
-require "../../models/activity_pub/actor"
 
 module Rules
   abstract class View
@@ -14,9 +10,9 @@ module Rules
     class Follow < View
       include NotifiesNotifications
 
-      TYPE   = Relationship::Content::Notification::Follow.to_s
-      FOLLOW = ActivityPub::Activity::Follow.to_s
-      INBOX  = Relationship::Content::Inbox.to_s
+      TYPE   = "Relationship::Content::Notification::Follow"
+      FOLLOW = "ActivityPub::Activity::Follow"
+      INBOX  = "Relationship::Content::Inbox"
 
       class_getter instance : Follow { new }
 

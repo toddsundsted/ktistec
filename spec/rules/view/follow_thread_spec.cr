@@ -1,4 +1,6 @@
 require "../../../src/rules/view/follow_thread"
+require "../../../src/models/relationship/content/notification/follow/thread"
+require "../../../src/models/relationship/content/follow/thread"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"

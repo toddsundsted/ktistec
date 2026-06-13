@@ -1,4 +1,6 @@
 require "../../../src/rules/view/mention"
+require "../../../src/models/relationship/content/notification/mention"
+require "../../../src/models/activity_pub/activity/update"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"

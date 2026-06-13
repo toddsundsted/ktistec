@@ -1,9 +1,4 @@
 require "../view"
-require "../../models/relationship/content/notification/follow/hashtag"
-require "../../models/relationship/content/follow/hashtag"
-require "../../models/tag/hashtag"
-require "../../models/activity_pub/object"
-require "../../models/activity_pub/actor"
 
 module Rules
   abstract class View
@@ -15,9 +10,9 @@ module Rules
     class FollowHashtag < View
       include NotifiesNotifications
 
-      TYPE    = Relationship::Content::Notification::Follow::Hashtag.to_s
-      FOLLOW  = Relationship::Content::Follow::Hashtag.to_s
-      HASHTAG = Tag::Hashtag.to_s
+      TYPE    = "Relationship::Content::Notification::Follow::Hashtag"
+      FOLLOW  = "Relationship::Content::Follow::Hashtag"
+      HASHTAG = "Tag::Hashtag"
 
       class_getter instance : FollowHashtag { new }
 

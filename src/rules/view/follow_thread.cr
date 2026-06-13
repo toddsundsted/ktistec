@@ -1,8 +1,4 @@
 require "../view"
-require "../../models/relationship/content/notification/follow/thread"
-require "../../models/relationship/content/follow/thread"
-require "../../models/activity_pub/object"
-require "../../models/activity_pub/actor"
 
 module Rules
   abstract class View
@@ -15,8 +11,8 @@ module Rules
     class FollowThread < View
       include NotifiesNotifications
 
-      TYPE   = Relationship::Content::Notification::Follow::Thread.to_s
-      FOLLOW = Relationship::Content::Follow::Thread.to_s
+      TYPE   = "Relationship::Content::Notification::Follow::Thread"
+      FOLLOW = "Relationship::Content::Follow::Thread"
 
       class_getter instance : FollowThread { new }
 

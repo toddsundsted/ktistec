@@ -1,9 +1,4 @@
 require "../view"
-require "../../models/relationship/content/notification/follow/mention"
-require "../../models/relationship/content/follow/mention"
-require "../../models/tag/mention"
-require "../../models/activity_pub/object"
-require "../../models/activity_pub/actor"
 
 module Rules
   abstract class View
@@ -16,9 +11,9 @@ module Rules
     class FollowMention < View
       include NotifiesNotifications
 
-      TYPE    = Relationship::Content::Notification::Follow::Mention.to_s
-      FOLLOW  = Relationship::Content::Follow::Mention.to_s
-      MENTION = Tag::Mention.to_s
+      TYPE    = "Relationship::Content::Notification::Follow::Mention"
+      FOLLOW  = "Relationship::Content::Follow::Mention"
+      MENTION = "Tag::Mention"
 
       class_getter instance : FollowMention { new }
 

@@ -571,9 +571,6 @@ Spectator.describe InboxActivityProcessor do
       end
     end
 
-    # the maintainer trigger drives the registered `Announce` view; the
-    # announce is placed in the mailbox by School's "inbox" rule during
-    # `run`, so by the time the trigger fires it qualifies for membership.
     context "with an Announce of the owner's object" do
       let_create!(:object, named: announced, attributed_to: account.actor)
       let_create!(:announce, named: announce_activity, actor: other, object: announced, to: [account.actor.iri])
@@ -596,9 +593,6 @@ Spectator.describe InboxActivityProcessor do
       end
     end
 
-    # the maintainer trigger drives the registered `Like` view; the like
-    # is placed in the mailbox by School's "inbox" rule during `run`, so
-    # by the time the trigger fires it qualifies for membership.
     context "with a Like of the owner's object" do
       let_create!(:object, named: liked, attributed_to: account.actor)
       let_create!(:like, named: like_activity, actor: other, object: liked, to: [account.actor.iri])
@@ -621,9 +615,6 @@ Spectator.describe InboxActivityProcessor do
       end
     end
 
-    # the maintainer trigger drives the registered `Dislike` view; the
-    # dislike is placed in the mailbox by School's "inbox" rule during
-    # `run`, so by the time the trigger fires it qualifies for membership.
     context "with a Dislike of the owner's object" do
       let_create!(:object, named: disliked, attributed_to: account.actor)
       let_create!(:dislike, named: dislike_activity, actor: other, object: disliked, to: [account.actor.iri])
@@ -646,10 +637,6 @@ Spectator.describe InboxActivityProcessor do
       end
     end
 
-    # the maintainer trigger drives the registered `Follow` view; the
-    # follow is placed in the inbox by School's "inbox" rule during
-    # `run`, so by the time the trigger fires it qualifies for
-    # membership.
     context "with a Follow of the account's actor" do
       let_create!(:follow, named: follow_activity, actor: other, object: account.actor, to: [account.actor.iri])
 
@@ -671,10 +658,6 @@ Spectator.describe InboxActivityProcessor do
       end
     end
 
-    # the maintainer trigger drives the registered `Reply` / `Mention`
-    # views; the activity is placed in the inbox by School's "inbox"
-    # rule during `run`, so by the time the trigger fires the object
-    # qualifies for membership.
     context "with a reply to one of the account's posts" do
       let_create!(:object, named: post, attributed_to: account.actor)
       let_create!(:object, named: reply, attributed_to: other, in_reply_to: post)
@@ -716,10 +699,6 @@ Spectator.describe InboxActivityProcessor do
       end
     end
 
-    # the maintainer trigger drives the registered timeline views; the
-    # activity is placed in the inbox by School's "inbox" rule during
-    # `run`, so by the time the trigger fires the object qualifies for
-    # membership.
     context "with a Create of an object in the owner's timeline" do
       let_create!(:object, named: posted, attributed_to: other)
       let_create!(:create, named: create_activity, actor: other, object: posted, to: [account.actor.iri])

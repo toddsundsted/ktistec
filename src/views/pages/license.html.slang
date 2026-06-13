@@ -72,9 +72,6 @@ h1.ui.header
       | openssl_ext
       .ui.horizontal.label< MIT
     .item
-      | school
-      .ui.horizontal.label< MIT
-    .item
       | sqlite3
       .ui.horizontal.label< MIT
     .item

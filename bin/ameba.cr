@@ -104,7 +104,7 @@ end
 
 module Ameba::Formatter::Util
   def affected_code(issue : ::Ameba::Issue, context_lines = 0, max_length = 120, ellipsis = " ...", prompt = "> ")
-    return unless location = issue.location
+    return unless (location = issue.location)
     filename = location.filename.as?(String)
     code =
       if filename && (filename.ends_with?(".slang") || filename.ends_with?(".ecr")) && File.exists?(filename)

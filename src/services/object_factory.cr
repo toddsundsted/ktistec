@@ -1,4 +1,4 @@
-require "./object_builder/**"
+require "./object_builder/**" # ameba:disable Ktistec/NoRequireGlob
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
 

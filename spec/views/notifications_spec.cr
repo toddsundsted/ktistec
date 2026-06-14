@@ -140,10 +140,10 @@ Spectator.describe "notifications partial" do
 
     context "given a follow mention notification" do
       let_build(:object, content: "This is the content.", published: Time.utc)
-      let_create!(:notification_follow_mention, owner: actor, name: "foo@bar")
-      let_create!(:follow_mention_relationship, named: nil, actor: actor, name: "foo@bar")
-      let_create!(:mention, named: nil, name: "foo@bar", subject: object)
-      let_create!(:mention, named: nil, name: "bar@foo", subject: object)
+      let_create!(:notification_follow_mention, owner: actor, href: "https://bar/users/foo")
+      let_create!(:follow_mention_relationship, named: nil, actor: actor, href: "https://bar/users/foo")
+      let_create!(:mention, named: nil, name: "foo@bar", href: "https://bar/users/foo", subject: object)
+      let_create!(:mention, named: nil, name: "bar@foo", href: "https://foo/users/bar", subject: object)
 
       it "renders a message" do
         expect(subject.xpath_nodes("//article[contains(@class,'event')]//text()"))

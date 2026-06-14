@@ -767,8 +767,8 @@ Spectator.describe MCP::Tools do
 
       context "with a new post to a followed mention in the notifications" do
         let_create!(:object, content: "Hello @alice@example.com how are you?", published: now)
-        let_create!(:mention, subject: object, name: "alice@example.com")
-        let_create!(:notification_follow_mention, owner: account.actor, name: "alice@example.com")
+        let_create!(:mention, subject: object, name: "alice@example.com", href: "https://example.com/users/alice")
+        let_create!(:notification_follow_mention, owner: account.actor, href: "https://example.com/users/alice")
 
         it "returns follow mention notification for valid request" do
           request = paginate_notifications_request("paginate-notifications-10")
@@ -1095,6 +1095,7 @@ Spectator.describe MCP::Tools do
           :mention,
           named: nil,
           name: "testuser@example.com",
+          href: "https://example.com/users/testuser",
           subject: mentioned_post,
         )
 
@@ -1133,6 +1134,7 @@ Spectator.describe MCP::Tools do
             :mention,
             named: nil,
             name: "testuser@example.com",
+            href: "https://example.com/users/testuser",
             subject: post2,
           )
 
@@ -1748,6 +1750,7 @@ Spectator.describe MCP::Tools do
         let_create!(
           :mention,
           name: "testuser@example.com",
+          href: "https://example.com/users/testuser",
           subject: mentioned_post,
           created_at: Time.utc(2024, 1, 1, 10, 0, 0),
         )

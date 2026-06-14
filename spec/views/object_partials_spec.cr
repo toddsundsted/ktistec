@@ -1241,7 +1241,7 @@ Spectator.describe "object partials" do
       let(account) { register }
       let(author) { account.actor }
       let_build(
-        :object, named: :object,
+        :object,
         attributed_to: author,
         published: Time.utc,
       )
@@ -1275,7 +1275,7 @@ Spectator.describe "object partials" do
     describe "given a remote object" do
       let_build(:actor, named: :author)
       let_build(
-        :object, named: :object,
+        :object,
         attributed_to: author,
         published: Time.utc,
       )

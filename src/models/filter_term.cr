@@ -1,5 +1,5 @@
 require "../framework/model"
-require "../framework/model/**"
+require "../framework/model/common"
 
 # Filter term.
 #

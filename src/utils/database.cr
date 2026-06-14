@@ -4,7 +4,7 @@ require "../models/relationship/content/outbox"
 require "../models/relationship/content/notification"
 require "../models/relationship/content/timeline"
 # all models must be loaded before rules are defined!
-require "../models/activity_pub/**"
+require "../models/activity_pub/**" # ameba:disable Ktistec/NoRequireGlob
 require "../rules/content_rules"
 
 module Ktistec

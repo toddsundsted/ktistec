@@ -1,5 +1,4 @@
 require "../framework/model"
-require "../framework/model/**"
 
 # Data point.
 #

@@ -6,7 +6,7 @@ require "../../framework/json_ld"
 require "../../framework/key_pair"
 require "../../framework/ext/sqlite3"
 require "../../framework/model"
-require "../../framework/model/**"
+require "../../framework/model/common"
 require "../../services/upload_service"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
@@ -15,8 +15,8 @@ require "../relationship/content/bookmark"
 require "../relationship/content/pin"
 require "../relationship/content/follow/hashtag"
 require "../relationship/content/follow/mention"
-require "../relationship/content/notification/*"
-require "../relationship/content/timeline/*"
+require "../relationship/content/notification/*" # ameba:disable Ktistec/NoRequireGlob
+require "../relationship/content/timeline/*"     # ameba:disable Ktistec/NoRequireGlob
 require "../relationship/content/inbox"
 require "../relationship/content/outbox"
 require "../relationship/social/follow"
@@ -1360,7 +1360,7 @@ module ActivityPub
           WHERE r.type = '#{Relationship::Content::Follow::Mention}'
             AND r.from_iri = ?
       QUERY
-      Ktistec.database.query_all(query, iri, as: String).map(&.downcase).to_set
+      Ktistec.database.query_all(query, iri, as: String).to_set
     end
 
     def make_delete_activity

@@ -8,10 +8,10 @@ class Relationship
         belongs_to actor, class_name: ActivityPub::Actor, foreign_key: from_iri, primary_key: iri
         validates(actor) { "missing: #{from_iri}" unless actor? }
 
-        # Identifies objects that mention the same entity.
+        # Identity (`@id`) of the mentioned actor.
         #
-        derived name : String, aliased_to: to_iri
-        validates(name) { "must not be blank" if name.blank? }
+        derived href : String, aliased_to: to_iri
+        validates(href) { "must not be blank" if href.blank? }
       end
     end
   end

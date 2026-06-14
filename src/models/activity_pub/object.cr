@@ -14,7 +14,7 @@ require "../translation"
 require "../tag/emoji"
 require "../../framework/json_ld"
 require "../../framework/model"
-require "../../framework/model/**"
+require "../../framework/model/common"
 require "../../framework/observable"
 require "../../utils/html"
 

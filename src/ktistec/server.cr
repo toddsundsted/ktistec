@@ -2,12 +2,12 @@
   {% raise "Crystal version >= 1.19.1 is required: #{Crystal::VERSION} is not supported" %}
 {% end %}
 
-require "../rules/**"
-require "../framework/**"
-require "../models/**"
-require "../controllers/**"
-require "../handlers/**"
-require "../workers/**"
+require "../rules/**"       # ameba:disable Ktistec/NoRequireGlob
+require "../framework/**"   # ameba:disable Ktistec/NoRequireGlob
+require "../models/**"      # ameba:disable Ktistec/NoRequireGlob
+require "../controllers/**" # ameba:disable Ktistec/NoRequireGlob
+require "../handlers/**"    # ameba:disable Ktistec/NoRequireGlob
+require "../workers/**"     # ameba:disable Ktistec/NoRequireGlob
 
 Ktistec::Server.run do
   Kemal.config.extra_options do |opts|

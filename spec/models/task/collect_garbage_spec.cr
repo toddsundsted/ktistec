@@ -239,7 +239,7 @@ Spectator.describe Task::CollectGarbage do
       end
 
       context "and user follows mention" do
-        let_create!(follow_mention_relationship, actor: actor, name: mention.href)
+        let_create!(follow_mention_relationship, actor: actor, href: mention.href)
 
         it "returns the object" do
           expect(results).to have(object.iri)
@@ -542,7 +542,7 @@ Spectator.describe Task::CollectGarbage do
         end
 
         context "and a mention follow" do
-          let_create!(follow_mention_relationship, actor: actor, name: mention.href)
+          let_create!(follow_mention_relationship, actor: actor, href: mention.href)
 
           it "returns all objects" do
             expect(results).to have(root.iri, reply1.iri, reply2.iri)
@@ -723,7 +723,7 @@ Spectator.describe Task::CollectGarbage do
         end
 
         context "and a mention follow" do
-          let_create!(follow_mention_relationship, actor: actor, name: mention.href)
+          let_create!(follow_mention_relationship, actor: actor, href: mention.href)
 
           it "preserves the object" do
             subject.perform

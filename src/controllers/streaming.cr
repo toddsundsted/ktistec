@@ -123,6 +123,7 @@ class StreamingController
     if Tag::Mention.all_objects_count(mention) < 1
       not_found
     end
+    href = Tag::Mention.dominant_href(mention)
     setup_response(env.response)
     subscribe "/actor/refresh", mention_path(mention).to_s do |subject, values|
       values.each do |value|
@@ -132,7 +133,7 @@ class StreamingController
             replace_actor_icon(env.response, id)
           end
         else
-          follow = Relationship::Content::Follow::Mention.find?(actor: env.account.actor, name: mention)
+          follow = href ? Relationship::Content::Follow::Mention.find?(actor: env.account.actor, href: href) : nil
           count = Tag::Mention.all_objects_count(mention)
           body = String.build { |io| mention_page_mention_banner(env, mention, follow, count, io) }
           stream_replace(env.response, target: "mention_page_mention_banner", body: body)

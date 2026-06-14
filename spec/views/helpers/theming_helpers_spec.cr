@@ -10,7 +10,7 @@ Spectator.describe "helpers" do
 
   describe ".actor_states" do
     let_build(:actor, named: :author)
-    let_build(:actor, named: :actor)
+    let_build(:actor)
     let_build(:note, attributed_to: author)
     let(followed_actors) { nil }
 
@@ -127,7 +127,7 @@ Spectator.describe "helpers" do
       end
 
       context "and actor is passed" do
-        let_build(:actor, named: :actor)
+        let_build(:actor)
 
         it "does not include has-deleted-actor or has-blocked-actor" do
           expect(self.class.object_states(note, author, actor)).not_to contain("has-deleted-actor", "has-blocked-actor")
@@ -298,8 +298,8 @@ Spectator.describe "helpers" do
     let_build(:actor, named: :sharer, username: "bob")
     let_create!(:hashtag, named: nil, name: "ruby", subject: note)
     let_create!(:hashtag, named: nil, name: "crystal", subject: note)
-    let_create!(:mention, named: nil, name: "alice", subject: note)
-    let_create!(:mention, named: nil, name: "bob", subject: note)
+    let_create!(:mention, named: nil, name: "alice", href: "https://remote/actors/alice", subject: note)
+    let_create!(:mention, named: nil, name: "bob", href: "https://remote/actors/bob", subject: note)
     let(followed_hashtags) { nil }
     let(followed_mentions) { nil }
 
@@ -348,10 +348,10 @@ Spectator.describe "helpers" do
     end
 
     context "with followed mentions" do
-      let(followed_mentions) { Set{"alice", "charlie"} }
+      let(followed_mentions) { Set{"https://remote/actors/alice", "https://remote/actors/charlie"} }
 
       it "includes data-followed-mentions" do
-        expect(subject["data-followed-mentions"]).to eq("alice")
+        expect(subject["data-followed-mentions"]).to eq("alice@remote")
       end
     end
 
@@ -360,7 +360,7 @@ Spectator.describe "helpers" do
     end
 
     it "includes data-mentions" do
-      expect(subject["data-mentions"]).to eq("alice bob")
+      expect(subject["data-mentions"]).to eq("alice@remote bob@remote")
     end
   end
 

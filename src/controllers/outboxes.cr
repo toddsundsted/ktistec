@@ -1,5 +1,5 @@
 require "../framework/controller"
-require "../models/activity_pub/activity/**"
+require "../models/activity_pub/activity/**" # ameba:disable Ktistec/NoRequireGlob
 require "../services/object_factory"
 require "../services/outbox_activity_processor"
 

@@ -1,5 +1,5 @@
 require "../../src/models/activity_pub/activity/follow"
-require "../../src/models/relationship/content/notification/**"
+require "../../src/models/relationship/content/notification/**" # ameba:disable Ktistec/NoRequireGlob
 require "../../src/views/view_helper"
 
 require "../spec_helper/factory"
@@ -166,7 +166,7 @@ Spectator.describe "actor" do
     end
 
     context "given a follow mention notification" do
-      let_create!(:notification_follow_mention, owner: actor, name: "foo@bar")
+      let_create!(:notification_follow_mention, owner: actor, href: "https://bar/users/foo")
 
       it "renders content tooltip" do
         expect(tooltip).to eq("content 1")

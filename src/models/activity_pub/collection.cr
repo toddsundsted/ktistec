@@ -3,7 +3,7 @@ require "json"
 require "../../framework/json_ld"
 require "../../framework/ext/sqlite3"
 require "../../framework/model"
-require "../../framework/model/**"
+require "../../framework/model/common"
 require "../activity_pub"
 
 require "../../views/view_helper"

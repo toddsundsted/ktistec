@@ -210,4 +210,4 @@ module Ktistec
   end
 end
 
-require "../database/migrations/**"
+require "../database/migrations/**" # ameba:disable Ktistec/NoRequireGlob

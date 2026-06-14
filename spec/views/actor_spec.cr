@@ -1,5 +1,5 @@
 require "../../src/models/activity_pub/activity/follow"
-require "../../src/models/relationship/content/notification/**"
+require "../../src/models/relationship/content/notification/**" # ameba:disable Ktistec/NoRequireGlob
 require "../../src/views/view_helper"
 
 require "../spec_helper/factory"

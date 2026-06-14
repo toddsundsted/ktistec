@@ -1,7 +1,7 @@
 require "../framework/rule"
 # include *every* model to ensure generated
 # queries include *all* subtypes.
-require "../models/**"
+require "../models/**" # ameba:disable Ktistec/NoRequireGlob
 require "../utils/compiler"
 
 # optionally count database operations.

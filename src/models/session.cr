@@ -2,7 +2,7 @@ require "json"
 
 require "../framework/jwt"
 require "../framework/model"
-require "../framework/model/**"
+require "../framework/model/common"
 require "./account"
 require "./oauth2/provider/access_token"
 

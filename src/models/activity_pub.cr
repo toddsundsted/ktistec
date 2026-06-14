@@ -2,7 +2,8 @@ require "json"
 
 require "../framework/json_ld"
 require "../framework/model"
-require "./activity_pub/mixins/*"
+require "./activity_pub/mixins/blockable"
+require "./activity_pub/mixins/linked"
 
 # An ActivityPub model.
 #

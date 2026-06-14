@@ -2,7 +2,7 @@ require "crypto/bcrypt/password"
 require "openssl_ext"
 
 require "../framework/model"
-require "../framework/model/**"
+require "../framework/model/common"
 require "../utils/paths"
 require "./oauth2/provider/access_token"
 require "./activity_pub/actor"

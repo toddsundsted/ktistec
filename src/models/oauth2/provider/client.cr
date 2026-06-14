@@ -1,5 +1,5 @@
 require "../../../framework/model"
-require "../../../framework/model/**"
+require "../../../framework/model/common"
 require "./access_token"
 
 module OAuth2

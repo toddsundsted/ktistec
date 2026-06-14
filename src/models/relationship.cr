@@ -1,5 +1,5 @@
 require "../framework/model"
-require "../framework/model/**"
+require "../framework/model/common"
 
 # Relationship between things.
 #

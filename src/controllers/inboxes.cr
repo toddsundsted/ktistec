@@ -3,7 +3,7 @@ require "../framework/json_ld"
 require "../utils/network"
 require "../framework/signature"
 require "../ktistec/constants"
-require "../models/activity_pub/activity/**"
+require "../models/activity_pub/activity/**" # ameba:disable Ktistec/NoRequireGlob
 require "../services/inbox_activity_processor"
 
 class InboxesController

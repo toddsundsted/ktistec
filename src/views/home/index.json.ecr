@@ -1,10 +1,10 @@
 {
   "@context":"https://www.w3.org/ns/activitystreams",
-  "id": "<%= host %>",
+  "id": <%= host.to_json %>,
   "type": "Collection",
   "items":[
     <%- accounts.each_with_index do |account, i| -%>
-      "<%= actor_path(account) %>"<%= comma(accounts, i) %>
+      <%= actor_path(account).to_json %><%= comma(accounts, i) %>
     <%- end -%>
   ]
 }

@@ -1,5 +1,6 @@
 require "../../../relationship"
 require "../../../activity_pub/actor"
+require "../../../../framework/observable"
 
 class Relationship
   class Content
@@ -12,6 +13,12 @@ class Relationship
         #
         derived name : String, aliased_to: to_iri
         validates(name) { "must not be blank" if name.blank? }
+
+        OBSERVERS = Ktistec::Observable::Registry(Relationship::Content::Follow::Hashtag).new
+
+        def after_destroy
+          Relationship::Content::Follow::Hashtag::OBSERVERS.notify(:destroy, self)
+        end
       end
     end
   end

@@ -36,6 +36,4 @@ Ktistec::Server.run do
   Session.clean_up_stale_sessions
   # track server starts
   Point.new(chart: "server-start", timestamp: Time.utc, value: 1).save
-  # check the rules when the server starts
-  ContentRules.domain
 end

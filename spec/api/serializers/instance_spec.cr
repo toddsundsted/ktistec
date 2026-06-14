@@ -95,10 +95,10 @@ Spectator.describe API::V1::Serializers::Instance do
     context "stats" do
       let(actor) { register.actor }
       let_create(:create, actor: actor, published: 15.days.ago)
+      let_create!(:public_timeline, object: create.object)
 
       before_each do
         WellKnownController.cached_posts_count = WellKnownController::CachedPostsCount.new(0, 0)
-        put_in_outbox(actor, create)
       end
 
       it "returns user count" do

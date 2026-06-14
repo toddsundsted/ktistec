@@ -5,6 +5,24 @@ require "../../../spec_helper/base"
 class BlockableModel
   include Ktistec::Model
   include Ktistec::Model::Blockable
+
+  getter hooks = [] of Symbol
+
+  def before_block
+    hooks << :before_block
+  end
+
+  def after_block
+    hooks << :after_block
+  end
+
+  def before_unblock
+    hooks << :before_unblock
+  end
+
+  def after_unblock
+    hooks << :after_unblock
+  end
 end
 
 Spectator.describe Ktistec::Model::Blockable do
@@ -38,6 +56,11 @@ Spectator.describe Ktistec::Model::Blockable do
     it "sets blocked_at" do
       expect { blockable.block! }.to change { blockable.reload!.blocked_at }
     end
+
+    it "invokes the_block hook" do
+      blockable.block!
+      expect(blockable.hooks).to contain_exactly(:before_block, :after_block)
+    end
   end
 
   describe "#unblock!" do
@@ -51,6 +74,11 @@ Spectator.describe Ktistec::Model::Blockable do
 
     it "clears blocked_at" do
       expect { blockable.unblock! }.to change { blockable.reload!.blocked_at }
+    end
+
+    it "invokes the hooks" do
+      blockable.unblock!
+      expect(blockable.hooks).to contain_exactly(:before_unblock, :after_unblock)
     end
   end
 end

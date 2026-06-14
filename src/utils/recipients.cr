@@ -79,6 +79,19 @@ module Ktistec
       end.compact.sort!.uniq!
     end
 
+    # Returns true if the receiver is a recipient of the inbound
+    # activity.
+    #
+    def self.recipient?(activity : ActivityPub::Activity, receiver : ActivityPub::Actor, deliver_to : Array(String)?) : Bool
+      recipients = [activity.to, activity.cc, deliver_to].flatten.compact
+      return true if recipients.includes?(receiver.iri)
+      if (sender = activity.actor?) && Relationship::Social::Follow.find?(actor: receiver, object: sender, confirmed: true)
+        return true if recipients.includes?(Ktistec::Constants::PUBLIC)
+        return true if (followers = sender.followers) && recipients.includes?(followers)
+      end
+      false
+    end
+
     # Splits IRIs into local recipients (paired with their `Account`)
     # and remote recipients.
     #

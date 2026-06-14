@@ -11,16 +11,26 @@ Spectator.describe "partials" do
   include Ktistec::ViewHelper::ClassMethods
 
   describe "collection.json.ecr" do
+    let(env) { make_env("GET", "/collection#{query}") }
+
+    subject { JSON.parse(render "./src/views/partials/collection.json.ecr") }
+
+    context "given an item iri that contains json-significant characters" do
+      let_build(:object, named: evil, iri: %q{https://remote/a"b\c})
+      let(collection) { Ktistec::Util::PaginatedArray{evil} }
+      let(query) { "" }
+
+      it "emits a properly escaped json string" do
+        expect(subject.dig("first", "orderedItems").as_a.map(&.as_s)).to eq([%q{https://remote/a"b\c}])
+      end
+    end
+
     let_build(:object, named: foo, iri: "foo")
     let_build(:object, named: bar, iri: "bar")
 
     let(collection) do
       Ktistec::Util::PaginatedArray{foo, bar}
     end
-
-    let(env) { make_env("GET", "/collection#{query}") }
-
-    subject { JSON.parse(render "./src/views/partials/collection.json.ecr") }
 
     context "when paginated" do
       let(query) { "?max_id=100" }

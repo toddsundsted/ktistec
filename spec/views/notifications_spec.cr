@@ -3,7 +3,9 @@ require "../../src/models/relationship/content/follow/mention"
 require "../../src/models/relationship/content/notification/follow/hashtag"
 require "../../src/models/relationship/content/notification/follow/mention"
 require "../../src/models/relationship/content/notification/follow/thread"
+require "../../src/models/relationship/content/notification/mention"
 require "../../src/models/relationship/content/notification/poll/expiry"
+require "../../src/models/relationship/content/notification/reply"
 require "../../src/models/relationship/content/notification/quote"
 require "../../src/models/activity_pub/activity/quote_request"
 
@@ -292,8 +294,97 @@ Spectator.describe "notifications partial" do
 
     let(notifications) { actor.notifications }
 
+    let(items) { subject["first"]["orderedItems"].as_a.map(&.as_s) }
+
     it "renders an empty collection" do
-      expect(subject["first"]["orderedItems"].as_a).to be_empty
+      expect(items).to be_empty
+    end
+
+    context "given an announce notification" do
+      let_build(:announce)
+      let_create!(:notification_announce, owner: actor, activity: announce)
+
+      it "emits the activity iri" do
+        expect(items).to eq([announce.iri])
+      end
+    end
+
+    context "given a reply notification" do
+      let_build(:object)
+      let_create!(:notification_reply, owner: actor, object: object)
+
+      it "emits the object iri" do
+        expect(items).to eq([object.iri])
+      end
+    end
+
+    context "given a mention notification" do
+      let_build(:object)
+      let_create!(:notification_mention, owner: actor, object: object)
+
+      it "emits the object iri" do
+        expect(items).to eq([object.iri])
+      end
+    end
+
+    context "given a poll expiry notification" do
+      let_create!(:question)
+      let_create!(:notification_poll_expiry, owner: actor, question: question)
+
+      it "emits the question iri" do
+        expect(items).to eq([question.iri])
+      end
+    end
+
+    context "given a thread follow notification" do
+      let_build(:object)
+      let_create!(:notification_follow_thread, owner: actor, object: object)
+
+      it "emits the object iri" do
+        expect(items).to eq([object.iri])
+      end
+    end
+
+    context "given a hashtag follow notification" do
+      let_create!(:notification_follow_hashtag, owner: actor, name: "foo")
+
+      it "falls back to the hashtag page iri" do
+        expect(items).to eq(["#{Ktistec.host}#{Utils::Paths.hashtag_path("foo")}"])
+      end
+
+      context "with a tagged object" do
+        let_build(:object, published: Time.utc)
+        let_create!(:hashtag, named: nil, name: "foo", subject: object)
+
+        it "emits the iri of the most recent tagged object" do
+          expect(items).to eq([object.iri])
+        end
+      end
+    end
+
+    context "given a mention follow notification" do
+      let_create!(:notification_follow_mention, owner: actor, href: "https://bar/users/foo")
+
+      it "falls back to the followed actor iri" do
+        expect(items).to eq(["https://bar/users/foo"])
+      end
+
+      context "with a mentioning object" do
+        let_build(:object, published: Time.utc)
+        let_create!(:mention, named: nil, name: "foo@bar", href: "https://bar/users/foo", subject: object)
+
+        it "emits the iri of the most recent mentioning object" do
+          expect(items).to eq([object.iri])
+        end
+      end
+    end
+
+    context "given an emitted iri with json-significant characters" do
+      let_create!(:notification_follow_mention, owner: actor, href: %q{https://bar/users/a"b\c})
+
+      it "emits a properly escaped json string" do
+        expect(items).to eq([%q{https://bar/users/a"b\c}])
+      end
     end
   end
 end

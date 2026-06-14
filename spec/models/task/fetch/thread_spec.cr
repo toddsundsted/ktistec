@@ -4,6 +4,14 @@ require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
 require "../../../spec_helper/network"
 
+class FetchThreadSpy < Task::Fetch::Thread
+  getter reconcile_calls = [] of {String, String}
+
+  protected def reconcile_thread(owner_iri : String, thread : String) : Nil
+    reconcile_calls << {owner_iri, thread}
+  end
+end
+
 Spectator.describe Task::Fetch::Thread do
   setup_spec
 
@@ -108,6 +116,8 @@ Spectator.describe Task::Fetch::Thread do
       described_class.new(source: source, thread: object.thread).save
     end
 
+    let(spy) { FetchThreadSpy.new(source: source, thread: object.thread).save }
+
     it "sets the next attempt at" do
       subject.perform
       expect(subject.next_attempt_at).not_to be_nil
@@ -150,6 +160,11 @@ Spectator.describe Task::Fetch::Thread do
 
       it "does not change time of last success" do
         expect { subject.perform }.not_to change { node.last_success_at }
+      end
+
+      it "does not call the trigger" do
+        spy.perform
+        expect(spy.reconcile_calls).to be_empty
       end
     end
 
@@ -342,6 +357,11 @@ Spectator.describe Task::Fetch::Thread do
       it "sets the next attempt in the immediate future" do
         subject.perform(1)
         expect(subject.next_attempt_at.not_nil!).to be < 1.minute.from_now
+      end
+
+      it "calls the trigger" do
+        spy.perform(1)
+        expect(spy.reconcile_calls).to eq([{source.iri, object.thread}])
       end
 
       it "fetches the object" do

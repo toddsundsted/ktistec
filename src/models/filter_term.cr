@@ -24,6 +24,17 @@ class FilterTerm
     end
   end
 
+  # Returns true if any of the actor's filter terms match the given
+  # content.
+  #
+  # The content is HTML-stripped before matching, and each term is a
+  # `SQL LIKE` pattern.
+  #
+  def self.match?(actor : ActivityPub::Actor, content : String?) : Bool
+    return false unless (actor_id = actor.id) && content
+    !where("actor_id = ? AND like(term, strip(?), '\\')", actor_id, content).empty?
+  end
+
   # for compatibility with the ActivityPub collection view
   def iri
     "#{Ktistec.host}/filters/#{@id}"

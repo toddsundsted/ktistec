@@ -29,21 +29,66 @@ Spectator.describe InboxActivityProcessor do
   end
 
   describe ".process" do
-    # proves a fix to an inbox infinite-recursion server-killer: a
-    # filtered incoming Create from a remote actor recurses until the
-    # fiber stack overflows. `process_locally` re-enters `process`
-    # (via `for_receive` echoing the recipient back).
-    context "with a filtered Create from a remote actor" do
+    context "given a filter term" do
       let_create!(:filter_term, actor: account.actor, term: "%content%")
-      let_create!(:create, named: :filtered_create, actor: other, object: object, to: [account.actor.iri])
 
       before_each do
         object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
       end
 
-      it "does not recurse until crash" do
-        InboxActivityProcessor.process(account, filtered_create, receive_task_class: MockReceiveTask)
-        expect(MockReceiveTask.schedule_called_count).to eq(1)
+      # also, proves a fix to an inbox infinite-recursion
+      # server-killer: a filtered incoming Create from a remote actor
+      # recurses until the fiber stack overflows. `process_locally`
+      # re-enters `process` (via `for_receive` echoing the recipient
+      # back).
+      context "and a matching Create from a remote actor" do
+        let_create!(:create, named: :filtered_create, actor: other, object: object, to: [account.actor.iri])
+
+        it "does not store the activity in the recipient's inbox" do
+          InboxActivityProcessor.process(account, filtered_create, receive_task_class: MockReceiveTask)
+          expect(account.actor.in_inbox(public: false)).to be_empty
+        end
+      end
+
+      context "and a matching Announce from a remote actor" do
+        let_create!(:announce, named: :filtered_announce, actor: other, object: object, to: [account.actor.iri])
+
+        it "does not store the activity in the recipient's inbox" do
+          InboxActivityProcessor.process(account, filtered_announce, receive_task_class: MockReceiveTask)
+          expect(account.actor.in_inbox(public: false)).to be_empty
+        end
+      end
+
+      context "and a matching Create by the author" do
+        let_create!(:object, attributed_to: account.actor)
+        let_create!(:create, named: :filtered_create, actor: account.actor, object: object, to: [account.actor.iri])
+
+        before_each do
+          object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
+        end
+
+        it "stores the activity in the recipient's inbox" do
+          InboxActivityProcessor.process(account, filtered_create, receive_task_class: MockReceiveTask)
+          expect(account.actor.in_inbox(public: false)).to eq([filtered_create])
+        end
+      end
+    end
+
+    context "with a Create addressed to the recipient" do
+      let_create!(:create, named: :addressed_create, actor: other, object: object, to: [account.actor.iri])
+
+      it "stores the activity in the recipient's inbox" do
+        InboxActivityProcessor.process(account, addressed_create, receive_task_class: MockReceiveTask)
+        expect(account.actor.in_inbox(public: false)).to eq([addressed_create])
+      end
+    end
+
+    context "with a Create not addressed to the recipient" do
+      let_create!(:create, named: :unaddressed_create, actor: other, object: object)
+
+      it "does not store the activity in the recipient's inbox" do
+        InboxActivityProcessor.process(account, unaddressed_create, receive_task_class: MockReceiveTask)
+        expect(account.actor.in_inbox(public: false)).to be_empty
       end
     end
 
@@ -522,6 +567,180 @@ Spectator.describe InboxActivityProcessor do
         it "does not add a duplicate inbox item" do
           expect { InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask) }
             .not_to change { Relationship::Content::Inbox.count(owner: local, activity: activity) }
+        end
+      end
+    end
+
+    context "with an Announce of the owner's object" do
+      let_create!(:object, named: announced, attributed_to: account.actor)
+      let_create!(:announce, named: announce_activity, actor: other, object: announced, to: [account.actor.iri])
+
+      it "materializes the announce notification" do
+        expect { InboxActivityProcessor.process(account, announce_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Announce.count(from_iri: account.actor.iri, to_iri: announce_activity.iri) }.from(0).to(1)
+      end
+
+      context "and the announce is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: announce_activity, to: [account.actor.iri])
+        let_create!(:notification_announce, owner: account.actor, activity: announce_activity)
+
+        pre_condition { expect(Relationship::Content::Notification::Announce.count(to_iri: announce_activity.iri)).to eq(1) }
+
+        it "evicts the announce notification" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Notification::Announce.count(to_iri: announce_activity.iri) }.from(1).to(0)
+        end
+      end
+    end
+
+    context "with a Like of the owner's object" do
+      let_create!(:object, named: liked, attributed_to: account.actor)
+      let_create!(:like, named: like_activity, actor: other, object: liked, to: [account.actor.iri])
+
+      it "materializes the like notification" do
+        expect { InboxActivityProcessor.process(account, like_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Like.count(from_iri: account.actor.iri, to_iri: like_activity.iri) }.from(0).to(1)
+      end
+
+      context "and the like is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: like_activity, to: [account.actor.iri])
+        let_create!(:notification_like, owner: account.actor, activity: like_activity)
+
+        pre_condition { expect(Relationship::Content::Notification::Like.count(to_iri: like_activity.iri)).to eq(1) }
+
+        it "evicts the like notification" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Notification::Like.count(to_iri: like_activity.iri) }.from(1).to(0)
+        end
+      end
+    end
+
+    context "with a Dislike of the owner's object" do
+      let_create!(:object, named: disliked, attributed_to: account.actor)
+      let_create!(:dislike, named: dislike_activity, actor: other, object: disliked, to: [account.actor.iri])
+
+      it "materializes the dislike notification" do
+        expect { InboxActivityProcessor.process(account, dislike_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Dislike.count(from_iri: account.actor.iri, to_iri: dislike_activity.iri) }.from(0).to(1)
+      end
+
+      context "and the dislike is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: dislike_activity, to: [account.actor.iri])
+        let_create!(:notification_dislike, owner: account.actor, activity: dislike_activity)
+
+        pre_condition { expect(Relationship::Content::Notification::Dislike.count(to_iri: dislike_activity.iri)).to eq(1) }
+
+        it "evicts the dislike notification" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Notification::Dislike.count(to_iri: dislike_activity.iri) }.from(1).to(0)
+        end
+      end
+    end
+
+    context "with a Follow of the account's actor" do
+      let_create!(:follow, named: follow_activity, actor: other, object: account.actor, to: [account.actor.iri])
+
+      it "materializes the follow notification" do
+        expect { InboxActivityProcessor.process(account, follow_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Follow.count(from_iri: account.actor.iri, to_iri: follow_activity.iri) }.from(0).to(1)
+      end
+
+      context "and the follow is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: follow_activity, to: [account.actor.iri])
+        let_create!(:notification_follow, owner: account.actor, activity: follow_activity)
+
+        pre_condition { expect(Relationship::Content::Notification::Follow.count(to_iri: follow_activity.iri)).to eq(1) }
+
+        it "evicts the follow notification" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Notification::Follow.count(to_iri: follow_activity.iri) }.from(1).to(0)
+        end
+      end
+    end
+
+    context "with a reply to one of the account's posts" do
+      let_create!(:object, named: post, attributed_to: account.actor)
+      let_create!(:object, named: reply, attributed_to: other, in_reply_to: post)
+      let_create!(:create, named: reply_create, actor: other, object: reply, to: [account.actor.iri])
+
+      it "materializes the reply notification" do
+        expect { InboxActivityProcessor.process(account, reply_create, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Reply.count(to_iri: reply.iri) }.from(0).to(1)
+      end
+    end
+
+    context "with an object mentioning the account's actor" do
+      let_create!(:object, named: mentioning, attributed_to: other)
+      let_create!(:mention, named: nil, name: "actor", href: account.actor.iri, subject: mentioning)
+      let_create!(:create, named: mention_create, actor: other, object: mentioning, to: [account.actor.iri])
+
+      it "materializes the mention notification" do
+        expect { InboxActivityProcessor.process(account, mention_create, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Mention.count(to_iri: mentioning.iri) }.from(0).to(1)
+      end
+    end
+
+    # reply wins: an object that both replies to the actor's post and
+    # mentions the actor yields exactly one notification -- the reply.
+    context "with an object both replying to and mentioning the account's actor" do
+      let_create!(:object, named: post, attributed_to: account.actor)
+      let_create!(:object, named: dual, attributed_to: other, in_reply_to: post)
+      let_create!(:mention, named: nil, name: "actor", href: account.actor.iri, subject: dual)
+      let_create!(:create, named: dual_create, actor: other, object: dual, to: [account.actor.iri])
+
+      it "materializes the reply notification" do
+        expect { InboxActivityProcessor.process(account, dual_create, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Notification::Reply.count(to_iri: dual.iri) }.from(0).to(1)
+      end
+
+      it "does not materialize a mention notification" do
+        InboxActivityProcessor.process(account, dual_create, receive_task_class: MockReceiveTask)
+        expect(Relationship::Content::Notification::Mention.count(to_iri: dual.iri)).to eq(0)
+      end
+    end
+
+    context "with a Create of an object in the owner's timeline" do
+      let_create!(:object, named: posted, attributed_to: other)
+      let_create!(:create, named: create_activity, actor: other, object: posted, to: [account.actor.iri])
+
+      it "materializes the timeline entry" do
+        expect { InboxActivityProcessor.process(account, create_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Timeline::Create.count(from_iri: account.actor.iri, to_iri: posted.iri) }.from(0).to(1)
+      end
+
+      context "and the object is deleted" do
+        let_create!(:delete, named: delete_activity, actor: other, object: posted, to: [account.actor.iri])
+
+        before_each { InboxActivityProcessor.process(account, create_activity, receive_task_class: MockReceiveTask) }
+
+        pre_condition { expect(Relationship::Content::Timeline::Create.count(to_iri: posted.iri)).to eq(1) }
+
+        it "evicts the timeline entry" do
+          expect { InboxActivityProcessor.process(account, delete_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Timeline::Create.count(to_iri: posted.iri) }.from(1).to(0)
+        end
+      end
+    end
+
+    context "with an Announce of an object in the owner's timeline" do
+      let_create!(:object, named: shared, attributed_to: other)
+      let_create!(:announce, named: announce_activity, actor: other, object: shared, to: [account.actor.iri])
+
+      it "materializes the timeline entry" do
+        expect { InboxActivityProcessor.process(account, announce_activity, receive_task_class: MockReceiveTask) }
+          .to change { Relationship::Content::Timeline::Announce.count(from_iri: account.actor.iri, to_iri: shared.iri) }.from(0).to(1)
+      end
+
+      context "and the announce is undone" do
+        let_create!(:undo, named: undo_activity, actor: other, object: announce_activity, to: [account.actor.iri])
+
+        before_each { InboxActivityProcessor.process(account, announce_activity, receive_task_class: MockReceiveTask) }
+
+        pre_condition { expect(Relationship::Content::Timeline::Announce.count(to_iri: shared.iri)).to eq(1) }
+
+        it "evicts the timeline entry" do
+          expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
+            .to change { Relationship::Content::Timeline::Announce.count(to_iri: shared.iri) }.from(1).to(0)
         end
       end
     end

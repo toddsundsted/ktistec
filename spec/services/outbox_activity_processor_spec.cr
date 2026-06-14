@@ -7,6 +7,8 @@ require "../../src/models/activity_pub/activity/delete"
 require "../../src/models/activity_pub/activity/announce"
 require "../../src/models/activity_pub/activity/create"
 require "../../src/models/relationship/social/follow"
+require "../../src/models/relationship/content/outbox"
+require "../../src/models/relationship/content/public_timeline"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
@@ -24,6 +26,35 @@ Spectator.describe OutboxActivityProcessor do
   end
 
   describe ".process" do
+    let_create(:create, named: :activity, actor: account.actor, object: object)
+
+    it "adds the activity to the actor's outbox" do
+      expect { OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask) }
+        .to change { Relationship::Content::Outbox.find?(owner: account.actor, activity: activity) }
+    end
+
+    context "given an existing outbox record" do
+      before_each { put_in_outbox(account.actor, activity) }
+
+      it "does not add the activity to the actor's outbox" do
+        expect { OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask) }
+          .not_to change { Relationship::Content::Outbox.count(owner: account.actor, activity: activity) }
+      end
+    end
+
+    context "given a filter term matching the content" do
+      let_create!(:filter_term, actor: account.actor, term: "%content%")
+
+      before_each do
+        object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
+      end
+
+      it "adds the activity to the actor's outbox" do
+        expect { OutboxActivityProcessor.process(account, activity, deliver_task_class: MockDeliverTask) }
+          .to change { Relationship::Content::Outbox.find?(owner: account.actor, activity: activity) }
+      end
+    end
+
     context "with a Follow activity" do
       let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
 
@@ -132,6 +163,17 @@ Spectator.describe OutboxActivityProcessor do
           expect(MockDeliverTask.last_sender).to eq(account.actor)
           expect(MockDeliverTask.last_activity).to eq(undo_activity)
         end
+
+        context "that is materialized in the public timeline" do
+          before_each { put_in_outbox(account.actor, announce_activity) }
+
+          let_create!(:public_timeline, object: object)
+
+          it "removes the announced object" do
+            expect { OutboxActivityProcessor.process(account, undo_activity) }
+              .to change { Relationship::Content::PublicTimeline.count(to_iri: object.iri) }.from(1).to(0)
+          end
+        end
       end
     end
 
@@ -178,6 +220,11 @@ Spectator.describe OutboxActivityProcessor do
         expect(MockDeliverTask.schedule_called_count).to eq(1)
         expect(MockDeliverTask.last_sender).to eq(account.actor)
         expect(MockDeliverTask.last_activity).to eq(create_activity)
+      end
+
+      it "adds the created object" do
+        expect { OutboxActivityProcessor.process(account, create_activity) }
+          .to change { Relationship::Content::PublicTimeline.count(to_iri: object.iri) }.from(0).to(1)
       end
 
       context "given vote Note object" do
@@ -375,6 +422,11 @@ Spectator.describe OutboxActivityProcessor do
         expect(MockDeliverTask.schedule_called_count).to eq(1)
         expect(MockDeliverTask.last_sender).to eq(account.actor)
         expect(MockDeliverTask.last_activity).to eq(announce_activity)
+      end
+
+      it "adds the announced object" do
+        expect { OutboxActivityProcessor.process(account, announce_activity) }
+          .to change { Relationship::Content::PublicTimeline.count(to_iri: object.iri) }.from(0).to(1)
       end
     end
 

@@ -2,10 +2,10 @@
   "status": {
     <%- if running_count > 0 -%>
       "type": "running",
-      "message": "<%= pluralize(running_count, "task") %> currently running."
+      "message": <%= "#{pluralize(running_count, "task")} currently running.".to_json %>
     <%- elsif scheduled_soon_count > 0 -%>
       "type": "scheduled",
-      "message": "<%= pluralize(scheduled_soon_count, "task") %> scheduled to run within one minute."
+      "message": <%= "#{pluralize(scheduled_soon_count, "task")} scheduled to run within one minute.".to_json %>
     <%- else -%>
       "type": "idle",
       "message": "No tasks are running or scheduled to start soon."

@@ -62,7 +62,7 @@ class ActivityPub::Object
       poll_options =
         if one_of || any_of
           Ktistec::JSON_LD.dig_values?(json, multiple_choice ? "https://www.w3.org/ns/activitystreams#anyOf" : "https://www.w3.org/ns/activitystreams#oneOf") do |option|
-            name = Ktistec::JSON_LD.dig?(option, "https://www.w3.org/ns/activitystreams#name", "und")
+            name = ActivityPub.dig_text?(option, "https://www.w3.org/ns/activitystreams#name")
             votes_count = Ktistec::JSON_LD.dig?(option, "https://www.w3.org/ns/activitystreams#replies", "https://www.w3.org/ns/activitystreams#totalItems", as: Int32) || 0
             Poll::Option.new(name, votes_count) if name
           end

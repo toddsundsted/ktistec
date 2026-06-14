@@ -75,4 +75,60 @@ Spectator.describe ActivityPub do
       expect(described_class.from_json_ld?(%q[{"@type":"FooBar"}])).to be_nil
     end
   end
+
+  def expand_as(body)
+    Ktistec::JSON_LD.expand(JSON.parse(%<{"@context":"https://www.w3.org/ns/activitystreams",#{body}}>))
+  end
+
+  describe ".dig_text?" do
+    let(name) { "https://www.w3.org/ns/activitystreams#name" }
+
+    context "given no value" do
+      let(json) { expand_as(%<"@type":"Note">) }
+
+      it "returns nil" do
+        expect(described_class.dig_text?(json, name)).to be_nil
+      end
+    end
+
+    context "given a plain string value" do
+      let(json) { expand_as(%<"name":"Foo Bar Baz">) }
+
+      it "returns the value" do
+        expect(described_class.dig_text?(json, name)).to eq("Foo Bar Baz")
+      end
+    end
+
+    context "given a language map without an undetermined entry" do
+      let(json) { expand_as(%<"nameMap":{"fr":"Foo Bàr Bàz"}>) }
+
+      it "returns a tagged entry" do
+        expect(described_class.dig_text?(json, name)).to eq("Foo Bàr Bàz")
+      end
+    end
+
+    context "given both a plain string and a language map" do
+      let(json) { expand_as(%<"name":"Foo Bar Baz","nameMap":{"fr":"Foo Bàr Bàz"}>) }
+
+      it "prefers the undetermined entry" do
+        expect(described_class.dig_text?(json, name)).to eq("Foo Bar Baz")
+      end
+    end
+
+    context "given a value object" do
+      let(json) { expand_as(%<"name":{"@value":"Foo Bar Baz","@language":"en"}>) }
+
+      it "returns the value" do
+        expect(described_class.dig_text?(json, name)).to eq("Foo Bar Baz")
+      end
+    end
+
+    context "given a sender-arrayed plain string" do
+      let(json) { expand_as(%<"name":["Foo Bar Baz"]>) }
+
+      it "returns the value" do
+        expect(described_class.dig_text?(json, name)).to eq("Foo Bar Baz")
+      end
+    end
+  end
 end

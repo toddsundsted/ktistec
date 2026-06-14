@@ -49,7 +49,10 @@ module Ktistec
         original_term = term
         if term.starts_with?("@") || ((defn = term_definition(term, context)) && defn.starts_with?("@") && (term = defn))
           if term.in?(KEYWORDS)
-            if value.as_s?
+            # `@id`/`@type` are IRI-valued; `@value`/`@language`/`@context`
+            # are literals and left raw. only a string `@type` is expanded --
+            # a multi-typed array is unsupported (ktistec is single-type).
+            if value.as_s? && term.in?("@id", "@type")
               result[term] = expand_iri(value.as_s, context)
             else
               result[term] = value
@@ -185,6 +188,8 @@ module Ktistec
     end
 
     private def self.expand_value(term, value, context, loader, id_valued = false)
+      # recognize natural-language properties: coin an "und" map for
+      # a plain string, pass everything else through unchanged.
       if term.in?(["https://www.w3.org/ns/activitystreams#content", "https://www.w3.org/ns/activitystreams#name", "https://www.w3.org/ns/activitystreams#summary"])
         value.as_s? ? wrap({"und" => value}) : value
       elsif value.as_a?

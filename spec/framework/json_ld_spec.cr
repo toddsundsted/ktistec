@@ -407,6 +407,25 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
+  context "given JSON-LD document with a value object" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "@type": "https://lock",
+            "mediaType": {"@value": "Note", "@language": "Person"}
+          }
+        JSON
+      ))
+    end
+
+    describe "#[]" do
+      it "does not IRI-expand the @value or @language literals" do
+        expect(json["https://www.w3.org/ns/activitystreams#mediaType"]).to eq([{"@value" => "Note", "@language" => "Person"}])
+      end
+    end
+  end
+
   context "given JSON-LD document with id-valued properties" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON

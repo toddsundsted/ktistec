@@ -94,6 +94,10 @@ class QueryModel
     super(*args_, **opts)
   end
 
+  def self.query_with_keyset_cursor(*args_, **opts)
+    super(*args_, **opts)
+  end
+
   def self.query_all(*args, **opts)
     super(*args, **opts)
   end
@@ -309,6 +313,149 @@ Spectator.describe Ktistec::Model do
 
       it "accepts arguments via `args`" do
         result = QueryModel.query_with_cursor(filtered_query, args: [3], cursor_column: "id")
+        expect(result.map(&.id)).to eq([5, 4, 2, 1])
+      end
+    end
+  end
+
+  describe ".query_with_keyset_cursor" do
+    before_each do
+      Ktistec.database.exec <<-SQL
+        CREATE TABLE IF NOT EXISTS query_models (
+          id integer PRIMARY KEY AUTOINCREMENT,
+          foo text,
+          bar text
+        )
+      SQL
+      # `foo` is the leading (non-unique) position column. `id` the unique tiebreak.
+      [{1, "a"}, {2, "a"}, {3, "b"}, {4, "b"}, {5, "c"}].each do |(id, foo)|
+        Ktistec.database.exec %Q|INSERT INTO query_models (id, foo) VALUES (?, ?)|, id, foo
+      end
+    end
+    after_each do
+      Ktistec.database.exec "DROP TABLE IF EXISTS query_models"
+    end
+
+    let(base_query) { "SELECT id FROM query_models WHERE %{cursor_condition}" }
+
+    context "first page" do
+      it "returns items in keyset order" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"})
+        expect(result.map(&.id)).to eq([5, 4, 3, 2, 1])
+      end
+
+      it "respects the limit" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, limit: 2)
+        expect(result.map(&.id)).to eq([5, 4])
+      end
+
+      it "sets `cursor_start` to the first item's id" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, limit: 2)
+        expect(result.cursor_start).to eq(5)
+      end
+
+      it "sets `cursor_end` to the last item's id" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, limit: 2)
+        expect(result.cursor_end).to eq(4)
+      end
+
+      it "sets `has_prev?` to false" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, limit: 2)
+        expect(result.has_prev?).to be_false
+      end
+
+      it "sets `has_next?` to true" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, limit: 2)
+        expect(result.has_next?).to be_true
+      end
+
+      it "sets `has_next?` to false" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, limit: 5)
+        expect(result.has_next?).to be_false
+      end
+    end
+
+    context "forward navigation" do
+      it "returns items less than `max_cursor`" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, max_cursor: {"b", 4_i64})
+        expect(result.map(&.id)).to eq([3, 2, 1])
+      end
+
+      it "respects the limit" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, max_cursor: {"b", 4_i64}, limit: 1)
+        expect(result.map(&.id)).to eq([3])
+      end
+
+      it "sets `has_prev?` to true" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, max_cursor: {"b", 4_i64})
+        expect(result.has_prev?).to be_true
+      end
+
+      it "sets `has_next?` to true" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, max_cursor: {"b", 4_i64}, limit: 1)
+        expect(result.has_next?).to be_true
+      end
+
+      it "sets `has_next?` to false" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, max_cursor: {"b", 4_i64}, limit: 5)
+        expect(result.has_next?).to be_false
+      end
+    end
+
+    context "backward navigation" do
+      it "returns items greater than `min_cursor`" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, min_cursor: {"a", 2_i64})
+        expect(result.map(&.id)).to eq([5, 4, 3])
+      end
+
+      it "respects the limit" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, min_cursor: {"a", 1_i64}, limit: 2)
+        expect(result.map(&.id)).to eq([3, 2])
+      end
+
+      it "sets `has_next?` to true" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, min_cursor: {"a", 2_i64})
+        expect(result.has_next?).to be_true
+      end
+
+      it "sets `has_prev?` to true" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, min_cursor: {"a", 1_i64}, limit: 2)
+        expect(result.has_prev?).to be_true
+      end
+
+      it "sets `has_prev?` to false" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"foo", "id"}, min_cursor: {"a", 2_i64}, limit: 5)
+        expect(result.has_prev?).to be_false
+      end
+    end
+
+    context "single-column keyset" do
+      it "orders by the single column" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"id"})
+        expect(result.map(&.id)).to eq([5, 4, 3, 2, 1])
+      end
+
+      it "pages with a single-element `max_cursor`" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"id"}, max_cursor: {4_i64})
+        expect(result.map(&.id)).to eq([3, 2, 1])
+      end
+
+      it "pages with a single-element `min_cursor`" do
+        result = QueryModel.query_with_keyset_cursor(base_query, cursor_columns: {"id"}, min_cursor: {2_i64})
+        expect(result.map(&.id)).to eq([5, 4, 3])
+      end
+    end
+
+    context "with bound arguments" do
+      let(filtered_query) { "SELECT id FROM query_models WHERE id <> ? AND %{cursor_condition}" }
+
+      it "accepts positional arguments" do
+        result = QueryModel.query_with_keyset_cursor(filtered_query, 3, cursor_columns: {"foo", "id"})
+        expect(result.map(&.id)).to eq([5, 4, 2, 1])
+      end
+
+      it "accepts arguments via `args`" do
+        result = QueryModel.query_with_keyset_cursor(filtered_query, args: [3], cursor_columns: {"foo", "id"})
         expect(result.map(&.id)).to eq([5, 4, 2, 1])
       end
     end

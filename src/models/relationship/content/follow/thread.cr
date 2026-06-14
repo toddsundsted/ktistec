@@ -1,6 +1,7 @@
 require "../../../relationship"
 require "../../../activity_pub/actor"
 require "../../../activity_pub/object"
+require "../../../../framework/observable"
 
 class Relationship
   class Content
@@ -61,6 +62,12 @@ class Relationship
               end
             end
           end
+        end
+
+        OBSERVERS = Ktistec::Observable::Registry(Relationship::Content::Follow::Thread).new
+
+        def after_destroy
+          Relationship::Content::Follow::Thread::OBSERVERS.notify(:destroy, self)
         end
       end
     end

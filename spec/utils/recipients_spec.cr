@@ -408,6 +408,84 @@ Spectator.describe Ktistec::Recipients do
     end
   end
 
+  describe ".recipient?" do
+    let(deliver_to) { nil }
+
+    let_build(:actor, named: :sender_actor)
+
+    before_each { activity.actor_iri = sender_actor.save.iri }
+
+    subject { described_class.recipient?(activity, receiver, deliver_to) }
+
+    it "rejects an activity" do
+      expect(subject).to be_false
+    end
+
+    context "addressed to the receiver via to" do
+      before_each { activity.to = [receiver.iri] }
+
+      it "accepts the activity" do
+        expect(subject).to be_true
+      end
+    end
+
+    context "addressed to the receiver via cc" do
+      before_each { activity.cc = [receiver.iri] }
+
+      it "accepts the activity" do
+        expect(subject).to be_true
+      end
+    end
+
+    context "delivered to the receiver via deliver_to" do
+      let(deliver_to) { [receiver.iri] }
+
+      it "accepts the activity" do
+        expect(subject).to be_true
+      end
+    end
+
+    context "addressed to the public collection" do
+      before_each { activity.to = [Ktistec::Constants::PUBLIC] }
+
+      it "rejects the activity" do
+        expect(subject).to be_false
+      end
+
+      context "and the receiver follows the sender" do
+        before_each { do_follow(receiver, sender_actor) }
+
+        it "accepts the activity" do
+          expect(subject).to be_true
+        end
+      end
+
+      context "but the follow is not confirmed" do
+        before_each { do_follow(receiver, sender_actor).assign(confirmed: false).save }
+
+        it "rejects the activity" do
+          expect(subject).to be_false
+        end
+      end
+    end
+
+    context "addressed to the sender's followers collection" do
+      before_each { activity.to = ["#{sender_actor.iri}/followers"] }
+
+      it "rejects the activity" do
+        expect(subject).to be_false
+      end
+
+      context "and the receiver follows the sender" do
+        before_each { do_follow(receiver, sender_actor) }
+
+        it "accepts the activity" do
+          expect(subject).to be_true
+        end
+      end
+    end
+  end
+
   describe ".partition" do
     subject { described_class.partition(iris) }
 

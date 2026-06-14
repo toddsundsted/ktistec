@@ -269,6 +269,8 @@ Spectator.describe HomeController do
         context "when author is local" do
           let(author) { actor }
 
+          let_create!(:public_timeline, object: object)
+
           pre_condition { expect(object.local?).to be_true }
 
           context "given a create" do
@@ -308,6 +310,8 @@ Spectator.describe HomeController do
 
         context "when author is remote" do
           let_build(:actor, named: :author)
+
+          let_create!(:public_timeline, object: object)
 
           pre_condition { expect(object.local?).to be_false }
 
@@ -374,11 +378,10 @@ Spectator.describe HomeController do
       expect(xml.xpath_node("//channel")).to_not be_nil
     end
 
-    let_build(:create)
+    let_build(:object)
+    let_create!(:public_timeline, object: object)
 
     it "includes public posts" do
-      put_in_outbox(account.actor, create)
-
       get "/feed.rss", HTML_HEADERS
       expect(response.status_code).to eq(200)
       xml = XML.parse(response.body)

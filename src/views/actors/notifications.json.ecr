@@ -1,5 +1,18 @@
 <%- activity_pub_collection(notifications) do |notification, i| -%>
-  <%- if notification.responds_to?(:activity) -%>
-  "<%= notification.activity.iri %>"<%= comma(notifications, i) %>
-  <%- end -%>
+<%-
+  # `to_iri` is the subject IRI for every notification except the two
+  # `aliased_to: to_iri` types handled below (Hashtag holds a name, Mention
+  # holds an href, neither an object IRI). A new aliased type should add
+  # its own `when` here rather than fall through to `else`.
+  iri =
+    case notification
+    when Relationship::Content::Notification::Follow::Hashtag
+      Tag::Hashtag.most_recent_object(notification.name).try(&.iri) || "#{host}#{hashtag_path(notification.name)}"
+    when Relationship::Content::Notification::Follow::Mention
+      Tag::Mention.most_recent_object(notification.href).try(&.iri) || notification.to_iri
+    else
+      notification.to_iri
+    end
+-%>
+  <%= iri.to_json %><%= comma(notifications, i) %>
 <%- end -%>

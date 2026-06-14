@@ -4,7 +4,7 @@ require "../../activity_pub/actor"
 require "../../activity_pub/object"
 require "../../relationship/content/follow/hashtag"
 require "../../../framework/topic"
-require "../../../rules/content_rules"
+require "../../../rules/trigger"
 require "../../../views/view_helper"
 
 class Task
@@ -138,9 +138,6 @@ class Task
           Log.debug { "perform [#{id}] - hashtag: #{name}, iteration: #{count + 1}, horizon: #{state.nodes.size} items" }
           object = fetch_one(state.prioritize!)
           break unless object
-          ContentRules.new.run do
-            assert ContentRules::CheckFollowFor.new(source, object)
-          end
           Ktistec::Topic{path_to.to_s}.notify_subscribers(object.id.to_s)
           count += 1
         end
@@ -161,7 +158,12 @@ class Task
           Log.debug { "perform [#{id}] - hashtag: #{name} - complete - #{duration} seconds, #{count} fetched" }
         end
         set_next_attempt_at(maximum, count, continuation)
+        reconcile_hashtag(source.iri, name) if count > 0
       end
+    end
+
+    protected def reconcile_hashtag(owner_iri : String, name : String) : Nil
+      Rules::Trigger.reconcile_for_hashtag(owner_iri, name)
     end
 
     def after_save

@@ -7,6 +7,7 @@ require "../../framework/key_pair"
 require "../../framework/ext/sqlite3"
 require "../../framework/model"
 require "../../framework/model/common"
+require "../../framework/observable"
 require "../../services/upload_service"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
@@ -221,6 +222,16 @@ module ActivityPub
           end
         end
       end
+    end
+
+    OBSERVERS = Ktistec::Observable::Registry(ActivityPub::Actor).new
+
+    def after_block
+      ActivityPub::Actor::OBSERVERS.notify(:block, self)
+    end
+
+    def after_unblock
+      ActivityPub::Actor::OBSERVERS.notify(:unblock, self)
     end
 
     def handle
@@ -895,21 +906,6 @@ module ActivityPub
       max_cursor = max_id ? translate_object_id_to_published_and_id(max_id, exclude_pinned: exclude_pinned) : nil
       min_cursor = min_id ? translate_object_id_to_published_and_id(min_id, exclude_pinned: exclude_pinned) : nil
 
-      cursor_predicates = [] of String
-      cursor_args = [] of ::DB::Any
-      if max_cursor
-        cursor_predicates << "(o.published, o.id) < (?, ?)"
-        cursor_args << max_cursor[0] << max_cursor[1]
-      end
-      if min_cursor
-        cursor_predicates << "(o.published, o.id) > (?, ?)"
-        cursor_args << min_cursor[0] << min_cursor[1]
-      end
-      cursor_condition = cursor_predicates.empty? ? "1" : cursor_predicates.join(" AND ")
-
-      ascending = min_cursor && !max_cursor
-      direction = ascending ? "ASC" : "DESC"
-
       pin_filter, pin_args = pin_exclusion_clause(exclude_pinned)
 
       query = <<-QUERY
@@ -920,40 +916,13 @@ module ActivityPub
             AND o.published IS NOT NULL
             AND o.visible = 1
             #{pin_filter}
-            AND #{cursor_condition}
-       ORDER BY o.published #{direction}, o.id #{direction} LIMIT ?
+            AND %{cursor_condition}
       QUERY
 
       args = [self.iri] of ::DB::Any
       args.concat(pin_args)
-      args.concat(cursor_args)
-      args << limit + 1
 
-      items = Object.sql(query, args: args)
-      main_more = items.size > limit
-      items.pop if main_more
-      items.reverse! if ascending
-
-      array = Ktistec::Util::PaginatedArray(Object).new(items)
-      if array.size > 0
-        array.cursor_start = array.first.id
-        array.cursor_end = array.last.id
-      end
-
-      # navigable-only contract: derive has_prev?/has_next? from
-      # max_id?, min_id?, main_more. hand-crafted cursors may result
-      # in undefined behavior.
-      if ascending
-        array.has_prev = main_more
-        array.has_next = true
-      elsif max_cursor
-        array.has_prev = true
-        array.has_next = main_more
-      else
-        array.has_prev = false
-        array.has_next = main_more
-      end
-      array
+      Object.query_with_keyset_cursor(query, cursor_columns: {"o.published", "o.id"}, max_cursor: max_cursor, min_cursor: min_cursor, limit: limit, args: args)
     end
 
     # Returns the actor's pinned posts.
@@ -1137,16 +1106,17 @@ module ActivityPub
 
     private alias Timeline = Relationship::Content::Timeline
 
-    # Translates an `Object.id` (external cursor) to the canonical
-    # timeline `relationships.id` (internal cursor). Returns nil for
-    # unknown ids or ids of objects that wouldn't appear in the result
-    # set.
+    # Translates an `Object.id` (external cursor) into the timeline
+    # row's `(created_at, id)` cursor pair. Selects the highest `id`
+    # row for the object, matching the `NOT EXISTS` canonicalization
+    # in `#timeline`. Returns nil for unknown ids or ids of objects
+    # that wouldn't appear in the result set.
     #
-    private def translate_object_id_to_timeline_id(o_id : Int64, type_list : String, exclude_replies : Bool) : Int64?
+    private def translate_object_id_to_timeline_created_at_and_id(o_id : Int64, type_list : String, exclude_replies : Bool) : {Time, Int64}?
       exclude_replies_clause =
         exclude_replies ? "AND o.in_reply_to_iri IS NULL" : ""
       query = <<-QUERY
-        SELECT MAX(t.id)
+        SELECT t.created_at, t.id
           FROM relationships AS t
           JOIN objects AS o
             ON o.iri = t.to_iri
@@ -1157,8 +1127,10 @@ module ActivityPub
            AND o.id = ?
            #{exclude_replies_clause}
            #{common_filters(objects: "o", actors: "c")}
+         ORDER BY t.id DESC
+         LIMIT 1
       QUERY
-      Timeline.scalar(query, self.iri, o_id).as(Int64?)
+      Ktistec.database.query_one?(query, self.iri, o_id, as: {Time, Int64})
     end
 
     # Returns entries in the actor's timeline.
@@ -1185,8 +1157,8 @@ module ActivityPub
       type_list = "'#{inclusion_types.join("','")}'"
       exclude_replies_clause =
         exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
-      max_id = translate_object_id_to_timeline_id(max_id, type_list, exclude_replies) if max_id
-      min_id = translate_object_id_to_timeline_id(min_id, type_list, exclude_replies) if min_id
+      max_cursor = translate_object_id_to_timeline_created_at_and_id(max_id, type_list, exclude_replies) if max_id
+      min_cursor = translate_object_id_to_timeline_created_at_and_id(min_id, type_list, exclude_replies) if min_id
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
             FROM relationships AS t
@@ -1208,7 +1180,7 @@ module ActivityPub
              )
              AND %{cursor_condition}
       QUERY
-      result = Timeline.query_with_cursor(query, self.iri, cursor_column: "t.id", max_id: max_id, min_id: min_id, limit: limit)
+      result = Timeline.query_with_keyset_cursor(query, self.iri, cursor_columns: {"t.created_at", "t.id"}, max_cursor: max_cursor, min_cursor: min_cursor, limit: limit)
       unless result.empty?
         result.cursor_start = result.first.object.id
         result.cursor_end = result.to_a.last.object.id
@@ -1251,11 +1223,28 @@ module ActivityPub
 
     private alias Notification = Relationship::Content::Notification
 
+    # Translates an externally-supplied notification id into the
+    # notification row's `(created_at, id)` cursor pair. Returns nil for
+    # unknown ids or ids not in the actor's notifications.
+    #
+    private def translate_notification_id_to_created_at_and_id(n_id : Int64) : {Time, Int64}?
+      query = <<-QUERY
+        SELECT n.created_at, n.id
+          FROM relationships AS n
+         WHERE n.from_iri = ?
+           AND n.id = ?
+           AND n.type IN ('#{Notification.all_subtypes.map(&.to_s).join("','")}')
+      QUERY
+      Ktistec.database.query_one?(query, iri, n_id, as: {Time, Int64})
+    end
+
     # Returns notifications for the actor.
     #
     # Meant to be called on local (not cached) actors.
     #
     def notifications(*, max_id = nil, min_id = nil, limit = 10)
+      max_cursor = translate_notification_id_to_created_at_and_id(max_id) if max_id
+      min_cursor = translate_notification_id_to_created_at_and_id(min_id) if min_id
       query = <<-QUERY
          SELECT #{Notification.columns(prefix: "n")}
            FROM relationships AS n
@@ -1275,7 +1264,7 @@ module ActivityPub
             #{common_filters(objects: "e", actors: "t")}
             AND %{cursor_condition}
       QUERY
-      Notification.query_with_cursor(query, iri, cursor_column: "n.id", max_id: max_id, min_id: min_id, limit: limit)
+      Notification.query_with_keyset_cursor(query, iri, cursor_columns: {"n.created_at", "n.id"}, max_cursor: max_cursor, min_cursor: min_cursor, limit: limit)
     end
 
     # Returns the count of notifications for the actor since the given

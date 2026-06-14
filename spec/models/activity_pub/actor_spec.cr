@@ -1,5 +1,6 @@
 require "../../../src/models/activity_pub/actor"
 require "../../../src/models/activity_pub/object/note"
+require "../../../src/rules/trigger"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -2216,6 +2217,19 @@ Spectator.describe ActivityPub::Actor do
       expect(result.cursor_end).to eq(object4.id)
     end
 
+    context "with a row positioned out of insertion order" do
+      # `timeline1` has the lowest id but the most recent created_at
+      before_each { timeline1.assign(created_at: Time.utc).save }
+
+      it "orders by created_at" do
+        expect(subject.timeline.first).to eq(timeline1)
+      end
+
+      it "pages correctly" do
+        expect(subject.timeline(max_id: object1.id, limit: 2)).to eq([timeline5, timeline4])
+      end
+    end
+
     context "with multiple timeline rows for the same object" do
       # the rule engine's "none Timeline, owner, object" precondition
       # prevents an actor from having two timeline rows for the same
@@ -2325,6 +2339,19 @@ Spectator.describe ActivityPub::Actor do
 
     it "reports no more results" do
       expect(subject.notifications(limit: 5).has_next?).not_to be_true
+    end
+
+    context "with a repositioned notification" do
+      # `notification1` has the lowest id but, once bumped, the newest created_at
+      before_each { notification1.assign(created_at: Time.utc(2030, 1, 1)).save }
+
+      it "orders by created_at" do
+        expect(subject.notifications.first).to eq(notification1)
+      end
+
+      it "pages correctly" do
+        expect(subject.notifications(max_id: notification1.id, limit: 2)).to eq([notification5, notification4])
+      end
     end
   end
 
@@ -2617,6 +2644,107 @@ Spectator.describe ActivityPub::Actor do
       it "does not attempt to delete" do
         expect { new_actor.save }.not_to raise_error
       end
+    end
+  end
+
+  describe "after_block" do
+    let(actor) { register.actor }
+    let_create!(:object, named: post, attributed_to: actor)
+    let_create!(:actor, named: actor1)
+    let_create!(:actor, named: actor2)
+
+    context "given an announce representative" do
+      let_create!(:announce, named: announce1, actor: actor1, object: post)
+      let_create!(:announce, named: announce2, actor: actor2, object: post)
+
+      before_each do
+        put_in_inbox(actor, announce1)
+        put_in_inbox(actor, announce2)
+      end
+
+      let_create!(:notification_announce, owner: actor, activity: announce2)
+
+      pre_condition { expect(Relationship::Content::Notification::Announce.count(from_iri: actor.iri, to_iri: announce2.iri)).to eq(1) }
+
+      it "evicts the blocked sender's announce" do
+        expect { actor2.block! }
+          .to change { Relationship::Content::Notification::Announce.find?(from_iri: actor.iri, to_iri: announce2.iri) }.to(nil)
+      end
+
+      it "promotes the earlier announce" do
+        expect { actor2.block! }
+          .to change { Relationship::Content::Notification::Announce.find?(from_iri: actor.iri, to_iri: announce1.iri) }.from(nil)
+      end
+
+      context "when a blocked actor has no announces" do
+        let_create!(:actor, named: other)
+
+        it "does not change the collection" do
+          expect { other.block! }
+            .not_to change { Relationship::Content::Notification::Announce.find?(from_iri: actor.iri, to_iri: announce2.iri) }
+        end
+      end
+    end
+
+    context "given a like representative" do
+      let_create!(:like, named: like1, actor: actor1, object: post)
+      let_create!(:like, named: like2, actor: actor2, object: post)
+
+      before_each do
+        put_in_inbox(actor, like1)
+        put_in_inbox(actor, like2)
+      end
+
+      let_create!(:notification_like, owner: actor, activity: like2)
+
+      pre_condition { expect(Relationship::Content::Notification::Like.count(from_iri: actor.iri, to_iri: like2.iri)).to eq(1) }
+
+      it "promotes the earlier like" do
+        expect { actor2.block! }
+          .to change { Relationship::Content::Notification::Like.find?(from_iri: actor.iri, to_iri: like1.iri) }.from(nil)
+      end
+    end
+
+    context "given a dislike representative" do
+      let_create!(:dislike, named: dislike1, actor: actor1, object: post)
+      let_create!(:dislike, named: dislike2, actor: actor2, object: post)
+
+      before_each do
+        put_in_inbox(actor, dislike1)
+        put_in_inbox(actor, dislike2)
+      end
+
+      let_create!(:notification_dislike, owner: actor, activity: dislike2)
+
+      pre_condition { expect(Relationship::Content::Notification::Dislike.count(from_iri: actor.iri, to_iri: dislike2.iri)).to eq(1) }
+
+      it "promotes the earlier dislike" do
+        expect { actor2.block! }
+          .to change { Relationship::Content::Notification::Dislike.find?(from_iri: actor.iri, to_iri: dislike1.iri) }.from(nil)
+      end
+    end
+  end
+
+  describe "after_unblock" do
+    let(actor) { register.actor }
+    let_create!(:object, named: post, attributed_to: actor)
+    let_create!(:actor, named: announcer1)
+    let_create!(:actor, named: announcer2, blocked_at: 1.hour.ago)
+    let_create!(:announce, named: announce1, actor: announcer1, object: post)
+    let_create!(:announce, named: announce2, actor: announcer2, object: post)
+
+    before_each do
+      put_in_inbox(actor, announce1)
+      put_in_inbox(actor, announce2)
+    end
+
+    let_create!(:notification_announce, owner: actor, activity: announce1)
+
+    pre_condition { expect(Relationship::Content::Notification::Announce.count(from_iri: actor.iri, to_iri: announce1.iri)).to eq(1) }
+
+    it "restores the unblocked sender's announce" do
+      expect { announcer2.unblock! }
+        .to change { Relationship::Content::Notification::Announce.find?(from_iri: actor.iri, to_iri: announce2.iri) }.from(nil)
     end
   end
 end

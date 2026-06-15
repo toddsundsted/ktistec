@@ -81,6 +81,25 @@ module ActivityPub
 
   # Helpers
 
+  # Digs out a natural-language string value.
+  #
+  # ActivityStreams natural-language properties may be sent as a plain
+  # string, a language map, or an expanded value object.
+  #
+  def self.dig_text?(json : JSON::Any, *selector) : String?
+    if (value = Ktistec::JSON_LD.dig_first?(json, *selector))
+      if (hash = value.as_h?)
+        if (text = hash["@value"]?)
+          text.as_s?
+        else
+          (hash["und"]? || hash.first_value?).try(&.as_s?)
+        end
+      else
+        value.as_s?
+      end
+    end
+  end
+
   # Adds common filters to a query.
   #
   macro common_filters(**options)

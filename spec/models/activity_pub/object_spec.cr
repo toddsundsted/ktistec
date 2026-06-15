@@ -504,6 +504,33 @@ Spectator.describe ActivityPub::Object do
       expect(object.urls).to eq(["url-link"])
     end
 
+    context "when natural-language properties are sent only as language maps" do
+      let(json) do
+        <<-JSON
+          {
+            "@context":"https://www.w3.org/ns/activitystreams",
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject",
+            "nameMap":{"fr":"le nom"},
+            "summaryMap":{"fr":"le résumé"},
+            "contentMap":{"fr":"le contenu"}
+          }
+        JSON
+      end
+
+      it "maps the name" do
+        expect(described_class.from_json_ld(json).name).to eq("le nom")
+      end
+
+      it "maps the summary" do
+        expect(described_class.from_json_ld(json).summary).to eq("le résumé")
+      end
+
+      it "maps the content" do
+        expect(described_class.from_json_ld(json).content).to eq("le contenu")
+      end
+    end
+
     context "when quoteUrl property (FEP-044f compat) is present" do
       let(json) { super.gsub(%q|"quote":"quote link"|, %q|"quoteUrl":"quoteUrl link"|) }
 
@@ -745,6 +772,33 @@ Spectator.describe ActivityPub::Object do
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
       expect(object.urls).to eq(["url-link"])
+    end
+
+    context "when natural-language properties are sent only as language maps" do
+      let(json) do
+        <<-JSON
+          {
+            "@context":"https://www.w3.org/ns/activitystreams",
+            "@id":"https://remote/foo_bar",
+            "@type":"FooBarObject",
+            "nameMap":{"fr":"le nom"},
+            "summaryMap":{"fr":"le résumé"},
+            "contentMap":{"fr":"le contenu"}
+          }
+        JSON
+      end
+
+      it "maps the name" do
+        expect(described_class.new.from_json_ld(json).name).to eq("le nom")
+      end
+
+      it "maps the summary" do
+        expect(described_class.new.from_json_ld(json).summary).to eq("le résumé")
+      end
+
+      it "maps the content" do
+        expect(described_class.new.from_json_ld(json).content).to eq("le contenu")
+      end
     end
 
     context "when quoteUrl property (FEP-044f compat) is present" do

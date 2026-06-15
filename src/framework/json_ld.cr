@@ -17,6 +17,13 @@ module Ktistec
     class Error < Exception
     end
 
+    # JSON-LD keywords that expansion acts on. Every other keyword
+    # (`@graph`, `@included`, `@reverse`, `@list`, `@nest`, …) is
+    # dropped and logged, rather than passed through unexpanded where
+    # no consumer reads it.
+    #
+    KEYWORDS = ["@context", "@id", "@type", "@value", "@language"]
+
     # Expands the JSON-LD document.
     #
     def self.expand(body : JSON::Any | String | IO, loader = Loader.new)
@@ -41,10 +48,17 @@ module Ktistec
       body.as_h.each do |term, value|
         original_term = term
         if term.starts_with?("@") || ((defn = term_definition(term, context)) && defn.starts_with?("@") && (term = defn))
-          if value.as_s?
-            result[term] = expand_iri(value.as_s, context)
+          if term.in?(KEYWORDS)
+            # `@id`/`@type` are IRI-valued; `@value`/`@language`/`@context`
+            # are literals and left raw. only a string `@type` is expanded --
+            # a multi-typed array is unsupported (ktistec is single-type).
+            if value.as_s? && term.in?("@id", "@type")
+              result[term] = expand_iri(value.as_s, context)
+            else
+              result[term] = value
+            end
           else
-            result[term] = value
+            Log.warn { "expand: dropping unsupported JSON-LD keyword: #{term}" }
           end
         else
           if term.includes?(":")
@@ -67,7 +81,14 @@ module Ktistec
         end
       end
 
-      wrap(result)
+      # normalize every property value to a set. keywords stay scalar.
+      # an array value is not double-wrapped.
+      normalized = Hash(String, JSON::Any).new
+      result.each do |term, value|
+        normalized[term] = (term.starts_with?("@") || value.as_a?) ? value : wrap([value])
+      end
+
+      wrap(normalized)
     end
 
     private def self.context(context, loader, url = "https://www.w3.org/ns/activitystreams")
@@ -167,6 +188,8 @@ module Ktistec
     end
 
     private def self.expand_value(term, value, context, loader, id_valued = false)
+      # recognize natural-language properties: coin an "und" map for
+      # a plain string, pass everything else through unchanged.
       if term.in?(["https://www.w3.org/ns/activitystreams#content", "https://www.w3.org/ns/activitystreams#name", "https://www.w3.org/ns/activitystreams#summary"])
         value.as_s? ? wrap({"und" => value}) : value
       elsif value.as_a?
@@ -199,17 +222,43 @@ module Ktistec
       end
     end
 
-    def self.dig?(json : JSON::Any, *selector, as : T.class = String) forall T
-      json.dig?(*selector).try(&.raw.as?(T))
+    # Digs out the first member of a set.
+    #
+    # Expansion normalizes every property value to a set; a consumer
+    # that wants one value takes the first member of a non-empty set at
+    # each level of the selector (an empty set yields `nil`).
+    #
+    def self.dig_first?(json : JSON::Any, *selector) : JSON::Any?
+      current = json
+      selector.each do |key|
+        if (array = current.as_a?)
+          return if array.empty?
+          current = array.first
+        end
+        if (value = current.dig?(key))
+          current = value
+        else
+          return
+        end
+      end
+      if (array = current.as_a?)
+        return if array.empty?
+        current = array.first
+      end
+      current
     end
 
-    def self.dig_value?(json, *selector, &)
-      if (value = json.dig?(*selector))
-        if (values = value.as_a?)
-          values.map { |v| yield v }.first
-        else
-          yield value
-        end
+    # Digs out the first member of a set, cast to the given type.
+    #
+    # See `dig_first?` for the set-collapse behavior.
+    #
+    def self.dig?(json : JSON::Any, *selector, as : T.class = String) forall T
+      if (value = dig_first?(json, *selector))
+        {% if T == Int32 %}
+          value.as_i?
+        {% else %}
+          value.raw.as?(T)
+        {% end %}
       end
     end
 
@@ -224,7 +273,7 @@ module Ktistec
     end
 
     def self.dig_id?(json, *selector)
-      dig_value?(json, *selector) do |value|
+      if (value = dig_first?(json, *selector))
         dig_identifier(value).try(&.as_s?)
       end
     end
@@ -238,7 +287,7 @@ module Ktistec
     private def self.dig_identifier(json)
       if (hash = json.as_h?)
         if hash.dig?("@type") == "https://www.w3.org/ns/activitystreams#Link"
-          hash.dig?("https://www.w3.org/ns/activitystreams#href")
+          dig_first?(json, "https://www.w3.org/ns/activitystreams#href")
         else
           hash.dig?("@id")
         end

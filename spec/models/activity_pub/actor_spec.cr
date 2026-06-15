@@ -424,6 +424,22 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
     end
 
+    context "when natural-language properties are sent only as language maps" do
+      let(json) do
+        super
+          .gsub(%q|"name":"Foo Bar",|, %q|"nameMap":{"fr":"le nom"},|)
+          .gsub(%q|"summary": "<p></p>",|, %q|"summaryMap":{"fr":"le résumé"},|)
+      end
+
+      it "maps the name" do
+        expect(described_class.from_json_ld(json).name).to eq("le nom")
+      end
+
+      it "maps the summary" do
+        expect(described_class.from_json_ld(json).summary).to eq("le résumé")
+      end
+    end
+
     context "given an array of URLs" do
       let(json) { super.gsub(/"url":"url-link"/, %q|"url":["url one","url two"]|) }
 
@@ -501,6 +517,22 @@ Spectator.describe ActivityPub::Actor do
     it "includes the public key" do
       actor = described_class.new.from_json_ld(json, include_key: true).save
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
+    end
+
+    context "when natural-language properties are sent only as language maps" do
+      let(json) do
+        super
+          .gsub(%q|"name":"Foo Bar",|, %q|"nameMap":{"fr":"le nom"},|)
+          .gsub(%q|"summary": "<p></p>",|, %q|"summaryMap":{"fr":"le résumé"},|)
+      end
+
+      it "maps the name" do
+        expect(described_class.new.from_json_ld(json).name).to eq("le nom")
+      end
+
+      it "maps the summary" do
+        expect(described_class.new.from_json_ld(json).summary).to eq("le résumé")
+      end
     end
 
     context "given an array of URLs" do

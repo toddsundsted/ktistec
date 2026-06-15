@@ -432,7 +432,7 @@ class InboxesController
     type = json_ld.dig?("@type").try(&.as_s)
     return json_ld unless type == "https://www.w3.org/ns/activitystreams#Announce"
 
-    object = json_ld["https://www.w3.org/ns/activitystreams#object"]?
+    object = Ktistec::JSON_LD.dig_first?(json_ld, "https://www.w3.org/ns/activitystreams#object")
     return json_ld unless object && object.as_h?
 
     supported_types = [

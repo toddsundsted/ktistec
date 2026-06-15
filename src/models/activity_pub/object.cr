@@ -1243,7 +1243,7 @@ module ActivityPub
             Ktistec::JSON_LD.dig_id?(json, "https://misskey-hub.net/ns#_misskey_quote"),
           "quote_authorization_iri" => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quoteAuthorization"),
           # pick up the replies' id and the embedded replies if the hosts match
-          "replies_iri" => if (replies = json.dig?("https://www.w3.org/ns/activitystreams#replies"))
+          "replies_iri" => if (replies = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#replies"))
             replies.as_s? || replies.dig?("@id").try(&.as_s?)
           end,
           "replies" => if replies && replies.as_h?
@@ -1258,33 +1258,33 @@ module ActivityPub
           "to"         => to = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#to"),
           "cc"         => cc = Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#cc"),
           "audience"   => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#audience"),
-          "name"       => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-          "summary"    => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+          "name"       => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#name"),
+          "summary"    => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#summary"),
           "sensitive"  => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool),
-          "content"    => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#content", "und"),
+          "content"    => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#content"),
           "media_type" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
           "hashtags"   => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
             next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Hashtag"
-            name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
+            name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").presence
             href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
             Tag::Hashtag.new(name: name, href: href) if name
           end,
           "mentions" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
             next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Mention"
-            name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
+            name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").presence
             href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
             Tag::Mention.new(name: name, href: href) if name
           end,
           "emojis" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
             next unless tag.dig?("@type") == "http://joinmastodon.org/ns#Emoji"
-            name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
-            icon_url = tag.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+            name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").presence
+            icon_url = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url")
             Tag::Emoji.new(name: name, href: icon_url) if name && icon_url
           end,
           "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
             url = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#url").presence
             media_type = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#mediaType").presence
-            name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
+            name = ActivityPub.dig_text?(attachment, "https://www.w3.org/ns/activitystreams#name").presence
             focal_point =
               if (fp = attachment.as_h["http://joinmastodon.org/ns#focalPoint"]?)
                 # parse as array and convert to tuple
@@ -1303,9 +1303,9 @@ module ActivityPub
           # use addressing to establish visibility
           "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public"),
         }.tap do |map|
-          if (language = json.dig?("http://schema.org/inLanguage", "http://schema.org/identifier")) && (language = language.as_s?)
+          if (language = Ktistec::JSON_LD.dig?(json, "http://schema.org/inLanguage", "http://schema.org/identifier"))
             map["language"] = language
-          elsif (content = json.dig?("https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
+          elsif (content = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#content")) && (content = content.as_h?)
             content.each do |lang, ctnt|
               if lang && ctnt
                 if lang != "und" && lang =~ Ktistec::Constants::LANGUAGE_RE && ctnt == map["content"]?

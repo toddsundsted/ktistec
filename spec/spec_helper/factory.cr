@@ -269,7 +269,7 @@ def relationship_factory(clazz = Relationship, from_iri = "https://from/#{random
   clazz.new({"from_iri" => from_iri, "to_iri" => to_iri}.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
-def notification_factory(clazz = Relationship::Content::Notification, activity_clazz = ActivityPub::Activity, owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
+def notification_factory(clazz, activity_clazz = ActivityPub::Activity, owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   activity = activity_factory(activity_clazz, actor_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, actor: owner) unless activity_iri || activity.nil? || activity
   relationship_factory(clazz, **{from_iri: owner_iri, owner: owner, to_iri: activity_iri, activity: activity}.merge(options))
@@ -323,7 +323,7 @@ def notification_quote_factory(**options)
   notification_factory(Relationship::Content::Notification::Quote, ActivityPub::Activity::QuoteRequest, **options)
 end
 
-def timeline_factory(clazz = Relationship::Content::Timeline, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
+def timeline_factory(clazz, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   object = object_factory(attributed_to_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, attributed_to: owner) unless object_iri || object.nil? || object
   relationship_factory(clazz, **{from_iri: owner_iri, owner: owner, to_iri: object_iri, object: object}.merge(options))

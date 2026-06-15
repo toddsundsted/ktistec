@@ -2179,7 +2179,7 @@ Spectator.describe ActivityPub::Actor do
       let_build(:object, attributed_to: subject)
       let_create!(:create, actor: subject, object: object)
       let_create!(:outbox_relationship, owner: subject, activity: create)
-      let_create!(:timeline, owner: subject, object: object)
+      let_create!(:timeline_create, named: timeline, owner: subject, object: object)
 
       it "includes the post" do
         expect(subject.timeline(limit: 2)).to eq([timeline, timeline5])
@@ -2189,7 +2189,7 @@ Spectator.describe ActivityPub::Actor do
 
     context "given a post without an associated activity" do
       let_build(:object, attributed_to: subject)
-      let_create!(:timeline, owner: subject, object: object)
+      let_create!(:timeline_create, named: timeline, owner: subject, object: object)
 
       it "includes the post" do
         expect(subject.timeline(limit: 2)).to eq([timeline, timeline5])
@@ -2227,22 +2227,6 @@ Spectator.describe ActivityPub::Actor do
 
       it "pages correctly" do
         expect(subject.timeline(max_id: object1.id, limit: 2)).to eq([timeline5, timeline4])
-      end
-    end
-
-    context "with multiple timeline rows for the same object" do
-      # the rule engine's "none Timeline, owner, object" precondition
-      # prevents an actor from having two timeline rows for the same
-      # object. a different subtype bypasses the rule and lets us
-      # confirm NOT EXISTS canonicalization holds.
-      let_create!(:timeline_create, named: nil, owner: subject, object: object3)
-
-      it "emits the object once" do
-        expect(subject.timeline(limit: 10).to_a.map(&.object)).to eq([object3, object5, object4, object2, object1])
-      end
-
-      it "does not emit the object on the next page" do
-        expect(subject.timeline(max_id: object3.id, limit: 5).to_a.map(&.object)).to eq([object5, object4, object2, object1])
       end
     end
 

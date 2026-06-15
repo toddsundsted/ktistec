@@ -274,7 +274,7 @@ Spectator.describe Task::CollectGarbage do
     # objects directly referenced by relationships
 
     context "given object in timeline relationship" do
-      let_create!(timeline, owner: actor, object: object)
+      let_create!(:timeline_create, named: timeline, owner: actor, object: object)
 
       it "returns the object" do
         expect(results).to have(object.iri)
@@ -356,7 +356,7 @@ Spectator.describe Task::CollectGarbage do
     # edge cases
 
     context "given object with multiple relationship types" do
-      let_create!(timeline, owner: actor, object: object)
+      let_create!(:timeline_create, named: timeline, owner: actor, object: object)
       let_create!(create, actor: actor, object: object)
       let_create!(outbox_relationship, owner: actor, activity: create)
       let_create!(inbox_relationship, owner: actor, activity: create)
@@ -559,7 +559,7 @@ Spectator.describe Task::CollectGarbage do
       end
 
       context "given object in timeline relationship" do
-        let_create!(timeline, owner: actor, object: reply1)
+        let_create!(:timeline_create, named: timeline, owner: actor, object: reply1)
 
         it "returns all objects" do
           expect(results).to have(root.iri, reply1.iri, reply2.iri)
@@ -774,7 +774,7 @@ Spectator.describe Task::CollectGarbage do
       end
 
       context "given object in timeline relationship" do
-        let_create!(timeline, owner: actor, object: object)
+        let_create!(:timeline_create, named: timeline, owner: actor, object: object)
 
         it "preserves the object" do
           subject.perform
@@ -861,7 +861,7 @@ Spectator.describe Task::CollectGarbage do
     end
 
     context "given relationships" do
-      let_create!(timeline, owner: actor, object: object)
+      let_create!(:timeline_create, named: timeline, owner: actor, object: object)
       let_create(:activity, named: inbox_activity, actor: actor, object: object)
       let_create!(inbox_relationship, owner: actor, activity: inbox_activity)
       let_create(:activity, named: outbox_activity, actor: actor, object: object)
@@ -917,7 +917,7 @@ Spectator.describe Task::CollectGarbage do
       let_create!(hashtag, name: "test", subject: object)
       let_create!(mention, name: "test", href: "https://example.com/@test", subject: object)
       let_create!(activity, actor: actor, object: object)
-      let_create!(timeline, owner: actor, object: object)
+      let_create!(:timeline_create, named: timeline, owner: actor, object: object)
       let_create!(translation, origin: object, language: "fr", content: "Bonjour")
       let_create!(object, named: reply, in_reply_to: object)
 

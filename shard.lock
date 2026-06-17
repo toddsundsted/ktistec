@@ -28,10 +28,6 @@ shards:
     git: https://github.com/icyleaf/markd.git
     version: 0.5.0
 
-  openssl_ext:
-    git: https://github.com/toddsundsted/openssl_ext.git
-    version: 0.1.6
-
   radix:
     git: https://github.com/luislavena/radix.git
     version: 0.4.1

@@ -1,6 +1,6 @@
 require "crypto/bcrypt/password"
-require "openssl_ext"
 
+require "../framework/ext/openssl"
 require "../framework/model"
 require "../framework/model/common"
 require "../utils/paths"

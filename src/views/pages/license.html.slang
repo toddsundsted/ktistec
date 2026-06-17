@@ -69,9 +69,6 @@ h1.ui.header
       | markd
       .ui.horizontal.label< MIT
     .item
-      | openssl_ext
-      .ui.horizontal.label< MIT
-    .item
       | sqlite3
       .ui.horizontal.label< MIT
     .item

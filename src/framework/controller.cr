@@ -72,7 +72,7 @@ module Ktistec
       %q(<turbo-stream action="refresh"><template></template></turbo-stream>)
     end
 
-    VIEWS = {} of String => { String, String, String? }
+    VIEWS = {} of String => {String, String, String?}
 
     macro register_view(key, view, layout = nil, **opts)
       {%

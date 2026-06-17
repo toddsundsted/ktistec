@@ -1015,7 +1015,6 @@ problems for Ktistec:
 |--|--|
 | 1.17.0 - 1.18.2 | libxml memory management [link](https://github.com/crystal-lang/crystal/pull/15906) |
 | 1.20.0 | macros changes [link](https://github.com/crystal-lang/crystal/issues/16891) |
-| 1.20.0 | OpenSSL changes [link](https://github.com/crystal-lang/crystal/pull/16640) |
 
 ### SQLite3 Compatibility
 

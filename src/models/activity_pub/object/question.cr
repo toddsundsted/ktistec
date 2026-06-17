@@ -62,8 +62,8 @@ class ActivityPub::Object
       poll_options =
         if one_of || any_of
           Ktistec::JSON_LD.dig_values?(json, multiple_choice ? "https://www.w3.org/ns/activitystreams#anyOf" : "https://www.w3.org/ns/activitystreams#oneOf") do |option|
-            name = Ktistec::JSON_LD.dig?(option, "https://www.w3.org/ns/activitystreams#name", "und")
-            votes_count = option.dig?("https://www.w3.org/ns/activitystreams#replies", "https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i) || 0
+            name = ActivityPub.dig_text?(option, "https://www.w3.org/ns/activitystreams#name")
+            votes_count = Ktistec::JSON_LD.dig?(option, "https://www.w3.org/ns/activitystreams#replies", "https://www.w3.org/ns/activitystreams#totalItems", as: Int32) || 0
             Poll::Option.new(name, votes_count) if name
           end
         end || [] of Poll::Option
@@ -72,14 +72,14 @@ class ActivityPub::Object
         "poll" => Poll.new(
           options: poll_options,
           multiple_choice: multiple_choice,
-          voters_count: json.dig?("http://joinmastodon.org/ns#votersCount").try(&.as_i),
+          voters_count: Ktistec::JSON_LD.dig?(json, "http://joinmastodon.org/ns#votersCount", as: Int32),
           closed_at: parse_closed_at(json),
         ),
       })
     end
 
     private def self.parse_closed_at(json)
-      if (closed = json["http://joinmastodon.org/ns#closed"]?)
+      if (closed = Ktistec::JSON_LD.dig_first?(json, "http://joinmastodon.org/ns#closed"))
         if (closed_str = closed.as_s?)
           Time.parse_rfc3339(closed_str)
         else

@@ -1107,14 +1107,13 @@ module ActivityPub
     private alias Timeline = Relationship::Content::Timeline
 
     # Translates an `Object.id` (external cursor) into the timeline
-    # row's `(created_at, id)` cursor pair. Selects the highest `id`
-    # row for the object, matching the `NOT EXISTS` canonicalization
-    # in `#timeline`. Returns nil for unknown ids or ids of objects
-    # that wouldn't appear in the result set.
+    # row's `(created_at, id)` cursor pair. There is at most one
+    # timeline row per object, so the `ORDER BY t.id DESC LIMIT 1` is
+    # defensive. Filters the same way as `#timeline` so the cursor
+    # lands on a row the result set would contain. Returns nil for
+    # unknown ids or ids of objects that wouldn't appear.
     #
-    private def translate_object_id_to_timeline_created_at_and_id(o_id : Int64, type_list : String, exclude_replies : Bool) : {Time, Int64}?
-      exclude_replies_clause =
-        exclude_replies ? "AND o.in_reply_to_iri IS NULL" : ""
+    private def translate_object_id_to_timeline_created_at_and_id(o_id : Int64, inclusion_clause : String, exclude_replies_clause : String) : {Time, Int64}?
       query = <<-QUERY
         SELECT t.created_at, t.id
           FROM relationships AS t
@@ -1123,7 +1122,8 @@ module ActivityPub
           JOIN actors AS c
             ON c.iri = o.attributed_to_iri
          WHERE t.from_iri = ?
-           AND t.type IN (#{type_list})
+           AND t.type IN (#{Timeline.type_in_list})
+           #{inclusion_clause}
            AND o.id = ?
            #{exclude_replies_clause}
            #{common_filters(objects: "o", actors: "c")}
@@ -1145,39 +1145,36 @@ module ActivityPub
     # relationships of the specified type (via `inclusion`).
     #
     def timeline(*, exclude_replies = false, inclusion = nil, max_id = nil, min_id = nil, limit = 10)
-      inclusion_types =
+      # the outer `type IN (...)` always lists the full leaf set so it
+      # binds the partial index; `inclusion` narrows via an additional
+      # predicate rather than shrinking the list, which would break
+      # the bind.
+      inclusion_clause =
         case inclusion
         when Class, String
-          [inclusion.to_s]
+          %Q|AND t.type = '#{inclusion}'|
         when Array
-          inclusion.map(&.to_s)
+          %Q|AND t.type IN ('#{inclusion.map(&.to_s).join("','")}')|
         else
-          Timeline.all_subtypes.map(&.to_s)
+          ""
         end
-      type_list = "'#{inclusion_types.join("','")}'"
       exclude_replies_clause =
-        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
-      max_cursor = translate_object_id_to_timeline_created_at_and_id(max_id, type_list, exclude_replies) if max_id
-      min_cursor = translate_object_id_to_timeline_created_at_and_id(min_id, type_list, exclude_replies) if min_id
+        exclude_replies ? "AND o.in_reply_to_iri IS NULL" : ""
+      max_cursor = translate_object_id_to_timeline_created_at_and_id(max_id, inclusion_clause, exclude_replies_clause) if max_id
+      min_cursor = translate_object_id_to_timeline_created_at_and_id(min_id, inclusion_clause, exclude_replies_clause) if min_id
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
             FROM relationships AS t
+            INDEXED BY idx_relationships_timeline_from_iri_created_at
             JOIN objects AS o
               ON o.iri = t.to_iri
             JOIN actors AS c
               ON c.iri = o.attributed_to_iri
-           WHERE +t.from_iri = ?
-             AND +t.type IN (#{type_list})
+           WHERE t.from_iri = ?
+             AND t.type IN (#{Timeline.type_in_list})
+             #{inclusion_clause}
              #{exclude_replies_clause}
              #{common_filters(objects: "o", actors: "c")}
-             AND NOT EXISTS (
-               SELECT 1
-                 FROM relationships AS t2
-                WHERE t2.from_iri = t.from_iri
-                  AND t2.type IN (#{type_list})
-                  AND t2.to_iri = t.to_iri
-                  AND t2.id > t.id
-             )
              AND %{cursor_condition}
       QUERY
       result = Timeline.query_with_keyset_cursor(query, self.iri, cursor_columns: {"t.created_at", "t.id"}, max_cursor: max_cursor, min_cursor: min_cursor, limit: limit)
@@ -1203,7 +1200,7 @@ module ActivityPub
         when Array
           %Q|AND +t.type IN ('#{inclusion.map(&.to_s).join("','")}')|
         else
-          %Q|AND +t.type IN ('#{Timeline.all_subtypes.map(&.to_s).join("','")}')|
+          %Q|AND +t.type IN (#{Timeline.type_in_list})|
         end
       query = <<-QUERY
           SELECT count(t.id)
@@ -1398,13 +1395,13 @@ private module ActorModelHelper
       "following"    => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
       "followers"    => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
       "featured"     => Ktistec::JSON_LD.dig_id?(json, "http://joinmastodon.org/ns#featured"),
-      "name"         => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#name", "und"),
-      "summary"      => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und"),
+      "name"         => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#name"),
+      "summary"      => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#summary"),
       "icon"         => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
       "image"        => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
       "urls"         => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
       "attachments"  => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
-        name = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#name", "und").presence
+        name = ActivityPub.dig_text?(attachment, "https://www.w3.org/ns/activitystreams#name").presence
         type = Ktistec::JSON_LD.dig?(attachment, "@type").presence
         value = (
           Ktistec::JSON_LD.dig?(attachment, "http://schema.org#value") || # Mastodon and our own output
@@ -1414,8 +1411,8 @@ private module ActorModelHelper
       end,
       "emojis" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
         next unless tag.dig?("@type") == "http://joinmastodon.org/ns#Emoji"
-        name = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#name", "und").presence
-        icon_url = tag.dig?("https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+        name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").presence
+        icon_url = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url")
         Tag::Emoji.new(name: name, href: icon_url) if name && icon_url
       end,
     }.compact
@@ -1426,19 +1423,19 @@ private module ActorModelHelper
       if icons.as_a?
         icon =
           icons.as_a.map do |ico|
-            if (width = ico.dig?("https://www.w3.org/ns/activitystreams#width")) && (height = ico.dig?("https://www.w3.org/ns/activitystreams#height"))
-              {width.as_i * height.as_i, ico}
+            if (width = Ktistec::JSON_LD.dig?(ico, "https://www.w3.org/ns/activitystreams#width", as: Int64)) && (height = Ktistec::JSON_LD.dig?(ico, "https://www.w3.org/ns/activitystreams#height", as: Int64))
+              {width * height, ico}
             else
-              {0, ico}
+              {0_i64, ico}
             end
           end.sort! do |(a, _), (b, _)|
             b <=> a
           end.first?
         if icon
-          icon[1].dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+          Ktistec::JSON_LD.dig?(icon[1], "https://www.w3.org/ns/activitystreams#url")
         end
       elsif icons
-        icons.dig?("https://www.w3.org/ns/activitystreams#url").try(&.as_s?)
+        Ktistec::JSON_LD.dig?(icons, "https://www.w3.org/ns/activitystreams#url")
       end
     end
   end

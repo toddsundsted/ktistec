@@ -141,9 +141,9 @@ module ActivityPub
           "items"      => if (items = json.dig?("https://www.w3.org/ns/activitystreams#items"))
             map_items(items, collection_host)
           end,
-          "total_items" => json.dig?("https://www.w3.org/ns/activitystreams#totalItems").try(&.as_i64),
+          "total_items" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#totalItems", as: Int64),
           # pick up the collection's id and the embedded collection if hosts match or anonymous
-          "first_iri" => if (first = json.dig?("https://www.w3.org/ns/activitystreams#first"))
+          "first_iri" => if (first = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#first"))
             first.as_s? || first.dig?("@id").try(&.as_s?)
           end,
           "first" => if first && first.as_h?
@@ -156,7 +156,7 @@ module ActivityPub
             end
           end,
           # pick up the collection's id and the embedded collection if hosts match or anonymous
-          "last_iri" => if (last = json.dig?("https://www.w3.org/ns/activitystreams#last"))
+          "last_iri" => if (last = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#last"))
             last.as_s? || last.dig?("@id").try(&.as_s?)
           end,
           "last" => if last && last.as_h?
@@ -169,7 +169,7 @@ module ActivityPub
             end
           end,
           # pick up the collection's id and the embedded collection if hosts match or anonymous
-          "prev_iri" => if (prev = json.dig?("https://www.w3.org/ns/activitystreams#prev"))
+          "prev_iri" => if (prev = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#prev"))
             prev.as_s? || prev.dig?("@id").try(&.as_s?)
           end,
           "prev" => if prev && prev.as_h?
@@ -182,7 +182,7 @@ module ActivityPub
             end
           end,
           # pick up the collection's id and the embedded collection if hosts match or anonymous
-          "next_iri" => if (_next = json.dig?("https://www.w3.org/ns/activitystreams#next"))
+          "next_iri" => if (_next = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#next"))
             _next.as_s? || _next.dig?("@id").try(&.as_s?)
           end,
           "next" => if _next && _next.as_h?
@@ -195,7 +195,7 @@ module ActivityPub
             end
           end,
           # pick up the collection's id and the embedded collection if hosts match or anonymous
-          "current_iri" => if (current = json.dig?("https://www.w3.org/ns/activitystreams#current"))
+          "current_iri" => if (current = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#current"))
             current.as_s? || current.dig?("@id").try(&.as_s?)
           end,
           "current" => if current && current.as_h?

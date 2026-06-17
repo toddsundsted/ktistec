@@ -1,4 +1,5 @@
 require "../../src/rules/trigger"
+require "../../src/models/relationship/content/public_tagged"
 require "../../src/models/relationship/content/notification/follow/hashtag"
 require "../../src/models/relationship/content/notification/follow/mention"
 require "../../src/models/relationship/content/notification/follow/thread"
@@ -316,6 +317,27 @@ Spectator.describe Rules::Trigger do
     it "evicts the mention-follow notification" do
       expect { mention_follow.destroy }
         .to change { mention_notification_count(mention_href) }.from(1).to(0)
+    end
+  end
+
+  describe "given a public-timeline member" do
+    let_create(:object, named: post, attributed_to: author)
+    let_create!(:public_timeline, object: post)
+
+    context "when a hashtag is added" do
+      it "materializes the public-tagged row" do
+        expect { Factory.create(:hashtag, name: "bar", subject: post) } # ameba:disable Ktistec/NoImperativeFactories
+          .to change { Relationship::Content::PublicTagged.count(to_iri: post.iri) }.from(0).to(1)
+      end
+    end
+
+    context "when a hashtag is removed" do
+      let_create!(:hashtag, named: tag, name: "bar", subject: post)
+
+      it "evicts the public-tagged row" do
+        expect { tag.destroy }
+          .to change { Relationship::Content::PublicTagged.count(to_iri: post.iri) }.from(1).to(0)
+      end
     end
   end
 end

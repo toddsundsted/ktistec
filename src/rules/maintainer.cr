@@ -92,9 +92,20 @@ module Rules
     def reconcile_object(object_iri : String) : Array({View, String})
       changed = [] of {View, String}
       View.registry.each do |view|
-        view.project(object_iri).each do |key|
-          changed << {view, key[:from_iri]} if reconcile_for(view, key)
-        end
+        changed.concat(reconcile_object_for(view, object_iri))
+      end
+      changed
+    end
+
+    # Re-evaluates a single view for a changed object, projecting the
+    # object to that view's affected key(s).
+    #
+    # Returns the `(view, owner)` pairs that changed.
+    #
+    def reconcile_object_for(view : View, object_iri : String) : Array({View, String})
+      changed = [] of {View, String}
+      view.project(object_iri).each do |key|
+        changed << {view, key[:from_iri]} if reconcile_for(view, key)
       end
       changed
     end

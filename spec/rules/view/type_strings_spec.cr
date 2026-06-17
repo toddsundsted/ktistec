@@ -16,6 +16,7 @@ require "../../../src/models/relationship/content/notification/follow/thread"
 require "../../../src/models/relationship/content/inbox"
 require "../../../src/models/relationship/content/outbox"
 require "../../../src/models/relationship/content/public_timeline"
+require "../../../src/models/relationship/content/public_tagged"
 require "../../../src/models/relationship/content/timeline/create"
 require "../../../src/models/relationship/content/timeline/announce"
 require "../../../src/models/relationship/content/follow/hashtag"
@@ -99,6 +100,12 @@ Spectator.describe "Rules::View type-string constants" do
     expect(Rules::View::PublicTimeline::OUTBOX).to eq(Relationship::Content::Outbox.to_s)
     expect(Rules::View::PublicTimeline::CREATE).to eq(ActivityPub::Activity::Create.to_s)
     expect(Rules::View::PublicTimeline::ANNOUNCE).to eq(ActivityPub::Activity::Announce.to_s)
+  end
+
+  it "PublicTagged" do
+    expect(Rules::View::PublicTagged::TYPE).to eq(Relationship::Content::PublicTagged.to_s)
+    expect(Rules::View::PublicTagged::PUBLIC_TIMELINE).to eq(Relationship::Content::PublicTimeline.to_s)
+    expect(Rules::View::PublicTagged::HASHTAG).to eq(Tag::Hashtag.to_s)
   end
 
   it "TimelineCreate" do

@@ -76,6 +76,14 @@ INSERT INTO migrations VALUES(20260211113333,'add-quote-authorization-iri-to-obj
 INSERT INTO migrations VALUES(20260217071152,'add-index-on-instrument-iri-to-activities');
 INSERT INTO migrations VALUES(20260217085347,'add-manually-approve-quotes-to-accounts');
 INSERT INTO migrations VALUES(20260310155831,'make-oauth-access-token-account-id-nullable');
+INSERT INTO migrations VALUES(20260420200808,'scrub-unsafe-url-schemes');
+INSERT INTO migrations VALUES(20260525131631,'add-index-to-objects');
+INSERT INTO migrations VALUES(20260531204813,'add-public-timeline-index');
+INSERT INTO migrations VALUES(20260601181742,'add-public-timeline-index');
+INSERT INTO migrations VALUES(20260607183501,'redesign-tag-indexes');
+INSERT INTO migrations VALUES(20260608073127,'rekey-follow-mention');
+INSERT INTO migrations VALUES(20260612215000,'reconcile-materialized-views');
+INSERT INTO migrations VALUES(20260615162507,'add-timeline-index');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -300,78 +308,90 @@ CREATE TABLE quote_decisions (
     "created_at" datetime NOT NULL,
     "updated_at" datetime NOT NULL
   );
-CREATE UNIQUE INDEX idx_accounts_username
-    ON accounts (username ASC);
 CREATE INDEX idx_accounts_iri
     ON accounts (iri ASC);
-CREATE INDEX idx_sessions_oauth_access_token_id
-    ON sessions (oauth_access_token_id ASC);
-CREATE UNIQUE INDEX idx_sessions_session_key
-    ON sessions (session_key ASC);
-CREATE UNIQUE INDEX idx_actors_iri
-    ON actors (iri ASC);
-CREATE INDEX idx_actors_username
-    ON actors (username ASC);
-CREATE UNIQUE INDEX idx_objects_iri
-    ON objects (iri ASC);
-CREATE INDEX idx_objects_in_reply_to_iri
-    ON objects (in_reply_to_iri ASC);
-CREATE INDEX idx_objects_attributed_to_iri
-    ON objects (attributed_to_iri ASC);
-CREATE INDEX idx_objects_thread
-    ON objects (thread ASC);
-CREATE INDEX idx_objects_quote_iri
-    ON objects (quote_iri ASC);
-CREATE UNIQUE INDEX idx_activities_iri
-    ON activities (iri ASC);
+CREATE UNIQUE INDEX idx_accounts_username
+    ON accounts (username ASC);
 CREATE INDEX idx_activities_actor_iri
     ON activities (actor_iri ASC);
+CREATE INDEX idx_activities_instrument_iri
+    ON activities (instrument_iri ASC);
+CREATE UNIQUE INDEX idx_activities_iri
+    ON activities (iri ASC);
 CREATE INDEX idx_activities_object_iri
     ON activities (object_iri ASC);
 CREATE INDEX idx_activities_target_iri
     ON activities (target_iri ASC);
-CREATE INDEX idx_activities_instrument_iri
-    ON activities (instrument_iri ASC);
+CREATE UNIQUE INDEX idx_actors_iri
+    ON actors (iri ASC);
+CREATE INDEX idx_actors_username
+    ON actors (username ASC);
 CREATE UNIQUE INDEX idx_collections_iri
     ON collections (iri ASC);
-CREATE INDEX idx_relationships_to_iri
-    ON relationships (to_iri ASC);
-CREATE INDEX idx_relationships_type
-    ON relationships (type ASC);
-CREATE INDEX idx_relationships_created_at
-    ON relationships (created_at DESC);
-CREATE INDEX idx_relationships_from_iri_type
-    ON relationships (from_iri ASC, type ASC);
-CREATE INDEX idx_tags_type_subject_iri
-    ON tags (type ASC, subject_iri ASC);
-CREATE INDEX idx_tags_type_name
-    ON tags (type ASC, name ASC);
-CREATE INDEX idx_tasks_running_complete_backtrace
-    ON tasks (running ASC, complete ASC, backtrace ASC);
-CREATE INDEX idx_tasks_subject_iri
-    ON tasks (subject_iri ASC);
-CREATE INDEX idx_points_chart_timestamp
-    ON points (chart ASC, timestamp ASC);
 CREATE INDEX idx_filter_terms_actor_id
     ON filter_terms (actor_id ASC);
 CREATE INDEX idx_last_times_name
     ON last_times (name ASC);
-CREATE INDEX idx_translations_origin_id
-    ON translations (origin_id ASC);
-CREATE UNIQUE INDEX idx_oauth_clients_client_id
-    ON oauth_clients (client_id ASC);
-CREATE UNIQUE INDEX idx_oauth_access_tokens_token
-    ON oauth_access_tokens (token ASC);
-CREATE INDEX idx_oauth_access_tokens_client_id
-    ON oauth_access_tokens (client_id ASC);
 CREATE INDEX idx_oauth_access_tokens_account_id
     ON oauth_access_tokens (account_id ASC);
+CREATE INDEX idx_oauth_access_tokens_client_id
+    ON oauth_access_tokens (client_id ASC);
+CREATE UNIQUE INDEX idx_oauth_access_tokens_token
+    ON oauth_access_tokens (token ASC);
+CREATE UNIQUE INDEX idx_oauth_clients_client_id
+    ON oauth_clients (client_id ASC);
+CREATE INDEX idx_objects_attributed_to_iri_published_id
+    ON objects (attributed_to_iri ASC, published DESC, id DESC);
+CREATE INDEX idx_objects_in_reply_to_iri
+    ON objects (in_reply_to_iri ASC);
+CREATE UNIQUE INDEX idx_objects_iri
+    ON objects (iri ASC);
+CREATE INDEX idx_objects_quote_iri
+    ON objects (quote_iri ASC);
+CREATE INDEX idx_objects_thread
+    ON objects (thread ASC);
+CREATE INDEX idx_points_chart_timestamp
+    ON points (chart ASC, timestamp ASC);
 CREATE UNIQUE INDEX idx_polls_question_iri
     ON polls (question_iri);
-CREATE UNIQUE INDEX idx_quote_decisions_quote_authorization_iri
-    ON quote_decisions (quote_authorization_iri);
-CREATE INDEX idx_quote_decisions_interaction_target_iri_interacting_object_iri
-    ON quote_decisions (interaction_target_iri, interacting_object_iri);
 CREATE INDEX idx_quote_decisions_interacting_object_iri
     ON quote_decisions (interacting_object_iri);
+CREATE INDEX idx_quote_decisions_interaction_target_iri_interacting_object_iri
+    ON quote_decisions (interaction_target_iri, interacting_object_iri);
+CREATE UNIQUE INDEX idx_quote_decisions_quote_authorization_iri
+    ON quote_decisions (quote_authorization_iri);
+CREATE INDEX idx_relationships_created_at
+    ON relationships (created_at DESC);
+CREATE INDEX idx_relationships_from_iri_type
+    ON relationships (from_iri ASC, type ASC);
+CREATE INDEX idx_relationships_public_timeline_created_at
+    ON relationships (created_at ASC)
+    WHERE type = 'Relationship::Content::PublicTimeline';
+CREATE UNIQUE INDEX idx_relationships_public_timeline_to_iri
+    ON relationships (to_iri ASC)
+    WHERE type = 'Relationship::Content::PublicTimeline';
+CREATE INDEX idx_relationships_timeline_from_iri_created_at
+    ON relationships (from_iri ASC, created_at DESC)
+    WHERE type IN ('Relationship::Content::Timeline::Announce','Relationship::Content::Timeline::Create');
+CREATE INDEX idx_relationships_to_iri
+    ON relationships (to_iri ASC);
+CREATE INDEX idx_relationships_type
+    ON relationships (type ASC);
+CREATE INDEX idx_sessions_oauth_access_token_id
+    ON sessions (oauth_access_token_id ASC);
+CREATE UNIQUE INDEX idx_sessions_session_key
+    ON sessions (session_key ASC);
+CREATE INDEX idx_tags_mention_href
+    ON tags (href ASC)
+    WHERE type = 'Tag::Mention';
+CREATE INDEX idx_tags_name
+    ON tags (name ASC);
+CREATE INDEX idx_tags_subject_iri
+    ON tags (subject_iri ASC);
+CREATE INDEX idx_tasks_running_complete_backtrace
+    ON tasks (running ASC, complete ASC, backtrace ASC);
+CREATE INDEX idx_tasks_subject_iri
+    ON tasks (subject_iri ASC);
+CREATE INDEX idx_translations_origin_id
+    ON translations (origin_id ASC);
 COMMIT;

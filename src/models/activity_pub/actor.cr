@@ -1,6 +1,6 @@
 require "json"
-require "openssl_ext"
 
+require "../../framework/ext/openssl"
 require "../../framework/util"
 require "../../framework/json_ld"
 require "../../framework/key_pair"
@@ -71,13 +71,13 @@ module ActivityPub
 
     def public_key
       if (key = pem_public_key)
-        OpenSSL::RSA.new(key, nil, false)
+        OpenSSL::RSA.new(key, false)
       end
     end
 
     def private_key
       if (key = pem_private_key)
-        OpenSSL::RSA.new(key, nil, true)
+        OpenSSL::RSA.new(key, true)
       end
     end
 

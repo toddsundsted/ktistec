@@ -1,3 +1,4 @@
+require "../framework/ext/openssl"
 require "../framework/controller"
 require "../framework/json_ld"
 require "../utils/network"
@@ -26,7 +27,7 @@ class InboxesController
     end
 
     def public_key
-      OpenSSL::RSA.new(@pem_public_key, nil, false)
+      OpenSSL::RSA.new(@pem_public_key, false)
     end
 
     def private_key

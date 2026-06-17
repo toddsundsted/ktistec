@@ -1,5 +1,7 @@
 {% if compare_versions(Crystal::VERSION, "1.19.1") < 0 %}
   {% raise "Crystal version >= 1.19.1 is required: #{Crystal::VERSION} is not supported" %}
+{% elsif compare_versions(Crystal::VERSION, "1.20.0") == 0 %}
+  {% raise "Crystal 1.20.0 is not supported (lexer regression in percent-literal macro interpolation): use 1.19.x or >= 1.20.1" %}
 {% end %}
 
 require "../rules/**"       # ameba:disable Ktistec/NoRequireGlob

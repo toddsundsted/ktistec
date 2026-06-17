@@ -1,5 +1,4 @@
-require "openssl_ext"
-
+require "../../src/framework/ext/openssl"
 require "../../src/framework/key_pair"
 
 class KeyPair

@@ -101,7 +101,7 @@ Spectator.describe Ktistec::Signature do
     end
 
     it "raises an error if the signing keys don't match" do
-      key_pair.public_key = OpenSSL::RSA.new("-----BEGIN PUBLIC KEY-----\nMFowDQYJKoZIhvcNAQEBBQADSQAwRgJBAJw6kBEQGSgQVt+T5/8Tq+8235TDi4wx\nziJ107KaI578uAIDoYg6U2ULSpfY4/lUnNH2W9hp6tPMTljY967+PacCARE=\n-----END PUBLIC KEY-----\n", nil, false)
+      key_pair.public_key = OpenSSL::RSA.new("-----BEGIN PUBLIC KEY-----\nMFowDQYJKoZIhvcNAQEBBQADSQAwRgJBAJw6kBEQGSgQVt+T5/8Tq+8235TDi4wx\nziJ107KaI578uAIDoYg6U2ULSpfY4/lUnNH2W9hp6tPMTljY967+PacCARE=\n-----END PUBLIC KEY-----\n", false)
       expect { described_class.verify(key_pair, "https://remote/inbox", headers) }
         .to raise_error(Ktistec::Signature::Error, /invalid signature/)
     end

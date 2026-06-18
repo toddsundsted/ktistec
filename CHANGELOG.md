@@ -1,6 +1,24 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.5.0]
+### Added
+- Lightweight probe endpoint for authenticated sessions.
+- `max-id` and `min-id` pagination links on web pages.
+
+### Fixed
+- Correct the notifications collection's JSON representation.
+- Accept both single-value and array forms of JSON-LD properties.
+- Handle variation in schema.org property mapping.
+
+### Changed
+- Faster timeline, public, hashtag, and notification collections.
+- Adjust the layout of actor profile properties.
+
+### Removed
+- The `school` dependency; replaced by activity processors and materialized views.
+- The `openssl_ext` dependency; vendored in.
+
 ## [v3.4.1]
 ### Fixed
 - Prevent runaway recursion when handling filtered posts.
@@ -810,6 +828,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.5.0]: https://github.com/toddsundsted/ktistec/compare/62d9cc84...319ca17a
 [v3.4.1]: https://github.com/toddsundsted/ktistec/compare/448a50e1...4bfd86d3
 [v3.4.0]: https://github.com/toddsundsted/ktistec/compare/e882df3b...7461a3e2
 [v3.3.9]: https://github.com/toddsundsted/ktistec/compare/d73c518c...5cd1c665

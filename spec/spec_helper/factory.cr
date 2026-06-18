@@ -342,6 +342,12 @@ def public_timeline_factory(object_iri = nil, object = false, **options)
   relationship_factory(Relationship::Content::PublicTimeline, **{from_iri: Ktistec::Constants::PUBLIC, to_iri: object_iri, object: object}.merge(options))
 end
 
+def public_tagged_factory(name = nil, from_iri = nil, object_iri = nil, object = false, **options)
+  from_iri = "#{Ktistec.host}/tags/#{name}" if name && from_iri.nil?
+  object = object_factory unless object_iri || object.nil? || object
+  relationship_factory(Relationship::Content::PublicTagged, **{from_iri: from_iri, to_iri: object_iri, object: object}.merge(options))
+end
+
 def inbox_relationship_factory(owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   activity = activity_factory(actor_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, actor: owner) unless activity_iri || activity.nil? || activity

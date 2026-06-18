@@ -402,7 +402,7 @@ module Ktistec
       def initialize(@array : Array(T))
       end
 
-      delegate :<<, :compact, :each, :each_with_index, :group_by, :empty?, :first, :first?, :last, :last?, :pop, :reverse!, :size, :to_a, :to_s, :inspect, :includes?, to: @array
+      delegate :<<, :compact, :each, :each_with_index, :group_by, :empty?, :first, :first?, :last, :last?, :pop, :reverse!, :size, :to_a, :to_set, :to_s, :inspect, :includes?, to: @array
 
       def map(& : T -> U) : PaginatedArray(U) forall U
         PaginatedArray(U).new(size).tap do |array|

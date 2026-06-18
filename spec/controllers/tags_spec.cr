@@ -47,6 +47,12 @@ Spectator.describe TagsController do
     create_tagged_object(4, :remote, "foo")
     create_tagged_object(5, :remote, "foo", "quux")
 
+    let_create!(:public_tagged, named: nil, name: "foo", object: object1)
+    let_create!(:public_tagged, named: nil, name: "bar", object: object1)
+    let_create!(:public_tagged, named: nil, name: "foo", object: object2)
+    let_create!(:public_tagged, named: nil, name: "foo", object: object3)
+    let_create!(:public_tagged, named: nil, name: "bar", object: object3)
+
     it "succeeds" do
       get "/tags/foo", ACCEPT_HTML
       expect(response.status_code).to eq(200)
@@ -81,10 +87,10 @@ Spectator.describe TagsController do
         .to contain_exactly(object3.iri, object2.iri, object1.iri)
     end
 
-    it "does not render the hashtag count" do
+    it "renders the hashtag count" do
       get "/tags/foo", ACCEPT_HTML
       expect(XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='tag_page_tag_controls']//span[contains(text(),'hashtag')]"))
-        .to be_empty
+        .not_to be_empty
     end
 
     context "if authenticated" do

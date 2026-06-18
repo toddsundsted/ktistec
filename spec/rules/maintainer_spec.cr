@@ -340,6 +340,28 @@ Spectator.describe Rules::Maintainer do
     end
   end
 
+  describe ".reconcile_object_for" do
+    let(view) { SyntheticIdentityKeyedView.new }
+    let(other) { SyntheticRepresentativeKeyedView.new }
+
+    let_create!(:object)
+
+    before_each do
+      Rules::View.register(view)
+      Rules::View.register(other)
+    end
+    after_each do
+      Rules::View.registry.delete(view)
+      Rules::View.registry.delete(other)
+    end
+
+    it "reconciles only the given view" do
+      Rules::Maintainer.reconcile_object_for(view, object.iri)
+      expect(materialized(view)).to contain(object.iri)
+      expect(materialized(other)).to be_empty
+    end
+  end
+
   describe "change reporting" do
     let(view) { SyntheticIdentityKeyedView.new }
 

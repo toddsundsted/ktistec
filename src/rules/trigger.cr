@@ -2,6 +2,7 @@ require "./maintainer"
 require "./view/follow_thread"
 require "./view/follow_hashtag"
 require "./view/follow_mention"
+require "./view/public_tagged"
 require "../models/activity_pub/activity"
 require "../models/activity_pub/activity/announce"
 require "../models/activity_pub/activity/dislike"
@@ -85,6 +86,17 @@ module Rules
       notify(changed)
     end
 
+    # Re-evaluates the materialized views affected by a hashtag being
+    # added to or removed from an object.
+    #
+    # A `Tag::Hashtag` create/destroy changes `PublicTagged` membership
+    # without changing `PublicTimeline`, so it must drive its own
+    # reconcile of the tagged object.
+    #
+    def reconcile_for_tag(tag : Tag::Hashtag) : Nil
+      notify(Rules::Maintainer.reconcile_object_for(Rules::View::PublicTagged.instance, tag.subject_iri))
+    end
+
     # Re-evaluates the thread-follow notification for an `(owner, thread)`
     # key.
     #
@@ -156,3 +168,7 @@ Relationship::Content::Follow::Hashtag::OBSERVERS.observe(:destroy) { |follow| R
 
 # evict the mention-follow notification when its follow is removed.
 Relationship::Content::Follow::Mention::OBSERVERS.observe(:destroy) { |follow| Rules::Trigger.reconcile_for_mention_follow(follow) }
+
+# re-evaluate the public hashtag feed when a hashtag is added or removed.
+Tag::OBSERVERS.observe(:create) { |tag| Rules::Trigger.reconcile_for_tag(tag) if tag.is_a?(Tag::Hashtag) }
+Tag::OBSERVERS.observe(:destroy) { |tag| Rules::Trigger.reconcile_for_tag(tag) if tag.is_a?(Tag::Hashtag) }

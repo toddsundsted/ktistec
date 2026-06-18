@@ -84,6 +84,8 @@ INSERT INTO migrations VALUES(20260607183501,'redesign-tag-indexes');
 INSERT INTO migrations VALUES(20260608073127,'rekey-follow-mention');
 INSERT INTO migrations VALUES(20260612215000,'reconcile-materialized-views');
 INSERT INTO migrations VALUES(20260615162507,'add-timeline-index');
+INSERT INTO migrations VALUES(20260616120000,'add-public-tagged-index');
+INSERT INTO migrations VALUES(20260616120100,'reconcile-public-tagged');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -364,6 +366,9 @@ CREATE INDEX idx_relationships_created_at
     ON relationships (created_at DESC);
 CREATE INDEX idx_relationships_from_iri_type
     ON relationships (from_iri ASC, type ASC);
+CREATE INDEX idx_relationships_public_tagged_from_iri_created_at
+    ON relationships (from_iri ASC, created_at ASC)
+    WHERE type = 'Relationship::Content::PublicTagged';
 CREATE INDEX idx_relationships_public_timeline_created_at
     ON relationships (created_at ASC)
     WHERE type = 'Relationship::Content::PublicTimeline';

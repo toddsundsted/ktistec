@@ -19,18 +19,26 @@ module Rules
 
       # the instance host, read straight from settings storage.
 
-      HOST     = "(SELECT value FROM options WHERE key = 'host')"
-      FROM_IRI = "(#{HOST} || '/tags/' || lower(t.name))"
+      HOST = "(SELECT value FROM options WHERE key = 'host')"
 
       class_getter instance : PublicTagged { new }
+
+      # Returns the SQL expression that derives a hashtag's `from_iri`
+      # identity from a name expression (a column reference such as
+      # `t.name`, or a `?` placeholder).
+      #
+      def self.from_iri_sql(name : String) : String
+        "(#{HOST} || '/tags/' || lower(#{name}))"
+      end
 
       def type : String
         TYPE
       end
 
       def membership(key : Key? = nil) : {String, Array(DB::Any)}
+        from_iri = self.class.from_iri_sql("t.name")
         if key
-          scope = "AND pt.to_iri = ? AND #{FROM_IRI} = ?"
+          scope = "AND pt.to_iri = ? AND #{from_iri} = ?"
           args = Array(DB::Any){key[:to_iri], key[:from_iri]}
         else
           scope = ""
@@ -38,7 +46,7 @@ module Rules
         end
         sql = <<-SQL
           SELECT DISTINCT
-              #{FROM_IRI} AS from_iri,
+              #{from_iri} AS from_iri,
                 pt.to_iri AS to_iri,
             pt.created_at AS position
             FROM relationships pt
@@ -54,7 +62,7 @@ module Rules
         # (b) keys for its currently-stored rows, so a removed tag's
         # stale row is re-evaluated (and deleted) rather than orphaned.
         from_iris = Ktistec.database.query_all(<<-SQL, object_iri, object_iri, as: String)
-          SELECT DISTINCT (#{HOST} || '/tags/' || lower(name)) AS from_iri
+          SELECT DISTINCT #{self.class.from_iri_sql("name")} AS from_iri
             FROM tags
            WHERE type = '#{HASHTAG}' AND subject_iri = ?
            UNION

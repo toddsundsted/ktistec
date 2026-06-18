@@ -1287,13 +1287,13 @@ Spectator.describe APIController do
     let_create(:actor, named: :remote_actor, local: false)
     let_create(:object, named: :local_post, attributed_to: local_actor, published: Time.utc, visible: true)
     let_create(:object, named: :remote_post, attributed_to: remote_actor, published: Time.utc, visible: true)
-    let_create(:create, named: :local_create, actor: local_actor, object: local_post)
 
     before_each do
-      put_in_outbox(local_actor, local_create)
       Tag::Hashtag.new(name: "test", subject: local_post).save
       Tag::Hashtag.new(name: "test", subject: remote_post).save
     end
+
+    let_create!(:public_tagged, from_iri: "https://test.test/tags/test", object: local_post)
 
     it "returns 200" do
       get "/api/v1/timelines/tag/test", headers: JSON_HEADERS
@@ -1365,13 +1365,14 @@ Spectator.describe APIController do
 
     context "given a hashtag requiring URL encoding" do
       let_create(:object, named: :other_local_post, attributed_to: local_actor, published: Time.utc, visible: true)
-      let_create(:create, named: :other_local_create, actor: local_actor, object: other_local_post)
 
       before_each do
-        put_in_outbox(local_actor, other_local_create)
         Tag::Hashtag.new(name: "café", subject: local_post).save
         Tag::Hashtag.new(name: "café", subject: other_local_post).save
       end
+
+      let_create!(:public_tagged, named: nil, from_iri: "https://test.test/tags/café", object: local_post)
+      let_create!(:public_tagged, named: nil, from_iri: "https://test.test/tags/café", object: other_local_post)
 
       it "encodes the hashtag" do
         get "/api/v1/timelines/tag/caf%C3%A9?limit=1", headers: JSON_HEADERS

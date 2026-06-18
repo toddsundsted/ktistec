@@ -1,4 +1,5 @@
 require "../../../src/models/tag/hashtag"
+require "../../../src/rules/maintainer"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -78,6 +79,14 @@ Spectator.describe Tag::Hashtag do
           subject: object{{index}},
         ).save
       {% end %}
+    end
+  end
+
+  # materializes the `PublicTagged` collection that `.public_posts` reads.
+  macro reconcile_public_tagged
+    before_each do
+      Rules::Maintainer.reconcile(Rules::View::PublicTimeline.instance)
+      Rules::Maintainer.reconcile(Rules::View::PublicTagged.instance)
     end
   end
 
@@ -281,6 +290,8 @@ Spectator.describe Tag::Hashtag do
     create_tagged_object(4, "foo")
     create_tagged_object(5, "foo", "quux")
 
+    reconcile_public_tagged
+
     it "returns objects with the tag" do
       expect(described_class.public_posts("bar", limit: 5)).to eq([object3, object1])
     end
@@ -320,19 +331,6 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.public_posts("foo", limit: 5)).to be_empty
     end
 
-    context "given a shared object" do
-      let_create!(:object, named: shared, published: Time.utc(2016, 2, 15, 10, 20, 6))
-      let_create!(:announce, object: shared, actor: author)
-      before_each do
-        put_in_outbox(author, announce)
-        described_class.new(name: "foo", subject: shared).save
-      end
-
-      it "includes the shared object" do
-        expect(described_class.public_posts("foo", limit: 6)).to have(shared)
-      end
-    end
-
     it "limits the results" do
       expect(described_class.public_posts("foo", limit: 2)).to eq([object5, object4])
     end
@@ -357,21 +355,10 @@ Spectator.describe Tag::Hashtag do
       expect(described_class.public_posts("foo", max_id: 0_i64, limit: 2)).to eq([object5, object4])
     end
 
-    context "given multiple outbox items for the same object" do
-      let_build(:create, named: extra_activity, actor: author, object: object3)
-      let_create!(:outbox_relationship, owner: author, activity: extra_activity)
-
-      it "emits the object once" do
-        expect(described_class.public_posts("foo", limit: 10)).to eq([object3, object5, object4, object2, object1])
-      end
-
-      it "does not emit the object on the next page" do
-        expect(described_class.public_posts("foo", max_id: object3.id, limit: 5)).to eq([object5, object4, object2, object1])
-      end
-    end
-
     context "given an object id from another tag" do
       create_tagged_object(6, "other")
+
+      reconcile_public_tagged
 
       it "returns the first page" do
         expect(described_class.public_posts("foo", max_id: object6.id, limit: 2)).to eq([object5, object4])

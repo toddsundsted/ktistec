@@ -713,7 +713,7 @@ module ActivityPub
              ON act.iri = a.actor_iri
       LEFT JOIN objects AS obj
              ON obj.iri = a.object_iri
-          WHERE r.from_iri LIKE ?
+          WHERE r.from_iri = ?
             #{mailbox}
             AND r.confirmed = 1
             #{Actor.common_filters(actors: "act", objects: "obj", activities: "a")}
@@ -741,7 +741,7 @@ module ActivityPub
              ON act.iri = a.actor_iri
       LEFT JOIN objects AS obj
              ON obj.iri = a.object_iri
-          WHERE r.from_iri LIKE ?
+          WHERE r.from_iri = ?
             AND a.id = ?
             #{mailbox}
             AND r.confirmed = 1

@@ -1293,7 +1293,7 @@ Spectator.describe APIController do
       Tag::Hashtag.new(name: "test", subject: remote_post).save
     end
 
-    let_create!(:public_tagged, from_iri: "https://test.test/tags/test", object: local_post)
+    let_create!(:public_tagged, name: "test", object: local_post)
 
     it "returns 200" do
       get "/api/v1/timelines/tag/test", headers: JSON_HEADERS
@@ -1371,8 +1371,8 @@ Spectator.describe APIController do
         Tag::Hashtag.new(name: "café", subject: other_local_post).save
       end
 
-      let_create!(:public_tagged, named: nil, from_iri: "https://test.test/tags/café", object: local_post)
-      let_create!(:public_tagged, named: nil, from_iri: "https://test.test/tags/café", object: other_local_post)
+      let_create!(:public_tagged, named: nil, name: "café", object: local_post)
+      let_create!(:public_tagged, named: nil, name: "café", object: other_local_post)
 
       it "encodes the hashtag" do
         get "/api/v1/timelines/tag/caf%C3%A9?limit=1", headers: JSON_HEADERS

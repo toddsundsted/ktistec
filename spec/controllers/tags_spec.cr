@@ -47,11 +47,11 @@ Spectator.describe TagsController do
     create_tagged_object(4, :remote, "foo")
     create_tagged_object(5, :remote, "foo", "quux")
 
-    let_create!(:public_tagged, named: nil, from_iri: "https://test.test/tags/foo", object: object1)
-    let_create!(:public_tagged, named: nil, from_iri: "https://test.test/tags/bar", object: object1)
-    let_create!(:public_tagged, named: nil, from_iri: "https://test.test/tags/foo", object: object2)
-    let_create!(:public_tagged, named: nil, from_iri: "https://test.test/tags/foo", object: object3)
-    let_create!(:public_tagged, named: nil, from_iri: "https://test.test/tags/bar", object: object3)
+    let_create!(:public_tagged, named: nil, name: "foo", object: object1)
+    let_create!(:public_tagged, named: nil, name: "bar", object: object1)
+    let_create!(:public_tagged, named: nil, name: "foo", object: object2)
+    let_create!(:public_tagged, named: nil, name: "foo", object: object3)
+    let_create!(:public_tagged, named: nil, name: "bar", object: object3)
 
     it "succeeds" do
       get "/tags/foo", ACCEPT_HTML

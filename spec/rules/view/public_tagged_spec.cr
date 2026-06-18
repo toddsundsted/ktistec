@@ -75,7 +75,7 @@ Spectator.describe Rules::View::PublicTagged do
 
     context "for a post with a hashtag that was removed" do
       let(gone_iri) { "#{Ktistec.host}/tags/gone" }
-      let_create!(:public_tagged, from_iri: gone_iri, object: post)
+      let_create!(:public_tagged, name: "gone", object: post)
 
       it "still maps it to its key" do
         expect(subject.project(post.iri)).to contain({from_iri: gone_iri, to_iri: post.iri})

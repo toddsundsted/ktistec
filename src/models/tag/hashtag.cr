@@ -188,5 +188,28 @@ class Tag
       QUERY
       ActivityPub::Object.query_with_keyset_cursor(query, name, cursor_columns: {"r.created_at", "r.id"}, max_cursor: max_cursor, min_cursor: min_cursor, limit: limit)
     end
+
+    # Returns the count of the site's public posts with the given
+    # hashtag.
+    #
+    # Does not include private (not visible) posts or
+    # replies. Includes other's posts that have been shared.
+    #
+    def self.public_posts_count(name)
+      query = <<-QUERY
+        SELECT COUNT(*)
+          FROM relationships AS r
+          JOIN objects AS o
+            ON o.iri = r.to_iri
+          JOIN actors AS t
+            ON t.iri = o.attributed_to_iri
+         WHERE r.type = '#{Relationship::Content::PublicTagged}'
+           AND r.from_iri = #{Rules::View::PublicTagged.from_iri_sql("?")}
+           AND o.visible = 1
+           AND o.published IS NOT NULL
+           #{common_filters(objects: "o", actors: "t")}
+      QUERY
+      ActivityPub::Object.scalar(query, name).as(Int64)
+    end
   end
 end

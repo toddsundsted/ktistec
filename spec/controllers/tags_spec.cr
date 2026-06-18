@@ -87,10 +87,10 @@ Spectator.describe TagsController do
         .to contain_exactly(object3.iri, object2.iri, object1.iri)
     end
 
-    it "does not render the hashtag count" do
+    it "renders the hashtag count" do
       get "/tags/foo", ACCEPT_HTML
       expect(XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='tag_page_tag_controls']//span[contains(text(),'hashtag')]"))
-        .to be_empty
+        .not_to be_empty
     end
 
     context "if authenticated" do

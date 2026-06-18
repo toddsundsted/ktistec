@@ -365,4 +365,62 @@ Spectator.describe Tag::Hashtag do
       end
     end
   end
+
+  describe ".public_posts_count" do
+    create_tagged_object(1, "foo", "bar")
+    create_tagged_object(2, "foo")
+    create_tagged_object(3, "foo", "bar")
+    create_tagged_object(4, "foo")
+    create_tagged_object(5, "foo", "quux")
+
+    reconcile_public_tagged
+
+    it "returns count of objects with the tag" do
+      expect(described_class.public_posts_count("bar")).to eq(2)
+    end
+
+    it "returns zero" do
+      expect(described_class.public_posts_count("thud")).to eq(0)
+    end
+
+    it "equals the size of the read" do
+      expect(described_class.public_posts_count("foo"))
+        .to eq(described_class.public_posts("foo", limit: 100).size)
+    end
+
+    it "filters out non-published objects" do
+      object5.assign(published: nil).save
+      expect(described_class.public_posts_count("foo")).to eq(4)
+    end
+
+    it "filters out non-visible objects" do
+      object5.assign(visible: false).save
+      expect(described_class.public_posts_count("foo")).to eq(4)
+    end
+
+    it "filters out deleted objects" do
+      object5.delete!
+      expect(described_class.public_posts_count("foo")).to eq(4)
+    end
+
+    it "filters out blocked objects" do
+      object5.block!
+      expect(described_class.public_posts_count("foo")).to eq(4)
+    end
+
+    it "filters out objects with deleted attributed to actors" do
+      author.delete!
+      expect(described_class.public_posts_count("foo")).to eq(0)
+    end
+
+    it "filters out objects with blocked attributed to actors" do
+      author.block!
+      expect(described_class.public_posts_count("foo")).to eq(0)
+    end
+
+    it "filters out objects with destroyed attributed to actors" do
+      author.destroy
+      expect(described_class.public_posts_count("foo")).to eq(0)
+    end
+  end
 end

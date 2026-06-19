@@ -84,7 +84,7 @@ class Tag
     query = <<-QUERY
       INSERT OR REPLACE INTO tag_statistics (type, name, count)
       VALUES (?, ?, (
-        SELECT count(*)
+        SELECT count(DISTINCT t.subject_iri)
           FROM tags AS t
           JOIN objects AS o
             ON o.iri = t.subject_iri
@@ -102,6 +102,35 @@ class Tag
       Ktistec.database.exec(
         query, *args,
       )
+    end
+  end
+
+  # Reconciles the cached statistics for every tag.
+  #
+  def self.reconcile_statistics
+    all_subtypes.sum(0) do |full_type|
+      short_type = full_type.split("::").last.underscore
+      query = <<-QUERY
+        UPDATE tag_statistics
+           SET count = (
+             SELECT count(DISTINCT t.subject_iri)
+               FROM tags AS t
+               JOIN objects AS o
+                 ON o.iri = t.subject_iri
+               JOIN actors AS a
+                 ON a.iri = o.attributed_to_iri
+              WHERE t.type = ?
+                AND t.name = tag_statistics.name COLLATE NOCASE
+                AND o.published IS NOT NULL
+                #{common_filters(objects: "o", actors: "a")}
+           )
+         WHERE tag_statistics.type = ?
+      QUERY
+      args = {full_type, short_type}
+      result = Internal.log_query(query, args) do
+        Ktistec.database.exec(query, *args)
+      end
+      result.rows_affected.to_i
     end
   end
 

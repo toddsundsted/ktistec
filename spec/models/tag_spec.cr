@@ -89,11 +89,7 @@ Spectator.describe Tag do
 
   describe "#full_recount" do
     let_create!(:object, published: Time.local)
-    let_build(:tag, subject_iri: object.iri, name: "foobar")
-
-    before_each { tag.save }
-
-    pre_condition { expect(Tag.match("foobar")).to eq([{"foobar", 1}]) }
+    let_create!(:tag, subject_iri: object.iri, name: "foobar")
 
     context "when the object isn't published" do
       before_each { object.assign(published: nil).save }
@@ -134,13 +130,27 @@ Spectator.describe Tag do
         expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
       end
     end
+
+    context "when the object is special" do
+      before_each { object.assign(special: "vote").save }
+
+      it "excludes it from the count" do
+        expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
+      end
+    end
+
+    context "when a post repeats the same tag" do
+      let_create!(:tag, named: nil, subject_iri: object.iri, name: "foobar")
+
+      it "counts the object once" do
+        expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 2}]).to([{"foobar", 1}])
+      end
+    end
   end
 
   describe "#update_count" do
     let_create!(:object, published: Time.local)
-    let_build(:tag, subject_iri: object.iri, name: "foobar")
-
-    before_each { tag.save }
+    let_create!(:tag, subject_iri: object.iri, name: "foobar")
 
     pre_condition { expect(Tag.match("foobar")).to eq([{"foobar", 1}]) }
 
@@ -185,6 +195,44 @@ Spectator.describe Tag do
 
       it "does not apply the delta" do
         expect { tag.update_count(1) }.not_to change { Tag.match("foobar") }
+      end
+    end
+
+    context "when the object is special" do
+      before_each { object.assign(special: "vote").save }
+
+      it "does not apply the delta" do
+        expect { tag.update_count(1) }.not_to change { Tag.match("foobar") }
+      end
+    end
+  end
+
+  describe ".reconcile_statistics" do
+    # synthetic `Tag` subtype. it is namespaced on purpose: reconcile
+    # bridges the full name stored in `tags.type` ("Tag::TestSubtype")
+    # to the short form stored in `tag_statistics.type`
+    # ("test_subtype").
+    class ::Tag::TestSubtype < ::Tag
+    end
+
+    let_create!(:object, published: Time.local)
+    let!(tag) { Tag::TestSubtype.new(subject_iri: object.iri, name: "foobar").save }
+
+    context "when a post repeats the same tag" do
+      before_each do
+        Tag::TestSubtype.new(subject_iri: object.iri, name: "foobar").save
+      end
+
+      it "reconciles the count" do
+        expect { Tag.reconcile_statistics }.to change { Tag::TestSubtype.match("foobar") }.from([{"foobar", 2}]).to([{"foobar", 1}])
+      end
+    end
+
+    context "when the actor is blocked" do
+      before_each { object.attributed_to.block! }
+
+      it "reconciles the count" do
+        expect { Tag.reconcile_statistics }.to change { Tag::TestSubtype.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
       end
     end
   end

@@ -1191,27 +1191,33 @@ module ActivityPub
     # See `#timeline(exclude_replies, inclusion, max_id, min_id, limit)` for further details.
     #
     def timeline(since : Time, exclude_replies = false, inclusion = nil)
-      exclude_replies =
-        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
-      inclusion =
+      # the outer `type IN (...)` always lists the full leaf set so it
+      # binds the partial index; `inclusion` narrows via an additional
+      # predicate rather than shrinking the list, which would break
+      # the bind.
+      inclusion_clause =
         case inclusion
         when Class, String
-          %Q|AND +t.type = '#{inclusion}'|
+          %Q|AND t.type = '#{inclusion}'|
         when Array
-          %Q|AND +t.type IN ('#{inclusion.map(&.to_s).join("','")}')|
+          %Q|AND t.type IN ('#{inclusion.map(&.to_s).join("','")}')|
         else
-          %Q|AND +t.type IN (#{Timeline.type_in_list})|
+          ""
         end
+      exclude_replies_clause =
+        exclude_replies ? "AND o.in_reply_to_iri IS NULL" : ""
       query = <<-QUERY
           SELECT count(t.id)
             FROM relationships AS t
+            INDEXED BY idx_relationships_timeline_from_iri_created_at
             JOIN objects AS o
               ON o.iri = t.to_iri
             JOIN actors AS c
               ON c.iri = o.attributed_to_iri
-           WHERE +t.from_iri = ?
-             #{inclusion}
-             #{exclude_replies}
+           WHERE t.from_iri = ?
+             AND t.type IN (#{Timeline.type_in_list})
+             #{inclusion_clause}
+             #{exclude_replies_clause}
              #{common_filters(objects: "o", actors: "c")}
              AND t.created_at > ?
       QUERY

@@ -257,6 +257,11 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
 
             &:has(.item:first-child:last-of-type + .menu) {
                 justify-content: flex-start;
+                > .right.menu {
+                    margin-left: auto !important;
+                    flex: 0 0 auto;
+                    justify-content: flex-end;
+                }
             }
 
             > .item {

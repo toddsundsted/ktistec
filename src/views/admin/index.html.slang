@@ -17,7 +17,7 @@
         .description
           | Configure logging levels for system components
     .item role="listitem"
-      i.large.chart.line.icon
+      i.large.chartline.icon
       .content
         a.header href=Ktistec::ViewHelper.metrics_path aria-label="Metrics - View system metrics" Metrics
         .description

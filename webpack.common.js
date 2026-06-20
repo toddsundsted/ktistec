@@ -18,6 +18,11 @@ module.exports = {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'public', 'dist'),
   },
+  resolve: {
+    alias: {
+      jquery$: false,
+    },
+  },
   module: {
     rules: [
       {

@@ -13,7 +13,6 @@
         <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
         <link rel="manifest" href="/site.webmanifest">
         <title><%= Ktistec.settings.site || "Ktistec" %><%= (__title = title.presence) && " | #{__title}" %></title>
-        <link rel="stylesheet" href="/3rd/semantic-2.4.1.min.css"/>
         <script>
           window.Ktistec = {
             <%- if env.session.account? -%>

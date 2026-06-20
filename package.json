@@ -30,6 +30,7 @@
     "filepond-plugin-image-preview": "^4.6.12",
     "filepond-plugin-image-resize": "^2.0.10",
     "filepond-plugin-image-transform": "^3.8.7",
+    "fomantic-ui-css": "^2.9.4",
     "trix": "^2.1.18"
   }
 }

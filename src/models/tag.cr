@@ -50,14 +50,29 @@ class Tag
     FILTERS
   end
 
+  ## Tag statistics
+  #
+  # `tag_statistics` caches, per (type, name), how many *distinct
+  # objects* carry that tag and are currently displayable. That count
+  # is exactly what `all_objects_count` returns.
+  #
+  # Maintained at two fidelities:
+  #
+  # `#full_recount` and `.reconcile_statistics` recompute the
+  # *precise* population.
+  #
+  # `#update_count` is the fast path between reconciles, so it drifts:
+  # e.g. an actor blocked after tagging is not decremented.
+
   # Matches on tag prefix.
   #
   # Returns results ordered by number of occurrences. Treats SQL LIKE
   # wildcards (% and _) as literal characters.
   #
-  # Count is intentionally not adjusted for subjects that are deleted,
-  # blocked, etc. making the value unsuitable for presentation, in
-  # most cases.
+  # Ranks by the cached count; approximate between reconciles, which is
+  # fine for ranking.
+  #
+  # See "Tag statistics".
   #
   def self.match(prefix, limit = 1)
     query = <<-QUERY
@@ -78,7 +93,9 @@ class Tag
     end
   end
 
-  # Updates tag statistics by recounting all posts with a tag.
+  # Exact recount of one key.
+  #
+  # See "Tag statistics".
   #
   private def full_recount
     query = <<-QUERY
@@ -105,7 +122,11 @@ class Tag
     end
   end
 
-  # Reconciles the cached statistics for every tag.
+  # Exact recount of every key.
+  #
+  # Heals `#update_count` drift.
+  #
+  # See "Tag statistics".
   #
   def self.reconcile_statistics
     all_subtypes.sum(0) do |full_type|
@@ -134,7 +155,9 @@ class Tag
     end
   end
 
-  # Updates tag statistics by applying a difference to the count.
+  # Approximate increment/decrement fast path.
+  #
+  # See "Tag statistics".
   #
   private def update_count(difference)
     query = <<-QUERY
@@ -164,12 +187,6 @@ class Tag
   private macro decrement_count
     update_count(-1)
   end
-
-  # handle two use cases: 1) rapidly fetching posts, 2) tags that are
-  # expensive to fully count. currently, do a full count only after a
-  # server restart. things (e.g. blocking/deleting actors) can affect
-  # the full count in the meantime, but hopefully the impact is not
-  # noticeable.
 
   record CacheEntry, type : String, name : String
 

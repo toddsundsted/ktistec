@@ -3,6 +3,21 @@ require "../../src/models/tag"
 require "../spec_helper/base"
 require "../spec_helper/factory"
 
+# expose the private methods for direct testing
+class Tag
+  def full_recount
+    previous_def
+  end
+
+  def update_count(difference)
+    previous_def(difference)
+  end
+
+  def statistics_row_exists?
+    previous_def
+  end
+end
+
 Spectator.describe Tag do
   setup_spec
 
@@ -15,45 +30,100 @@ Spectator.describe Tag do
       @@update_count_count = 0
     end
 
-    private def full_recount
+    def full_recount
       self.class.full_recount_count += 1
     end
 
-    private def update_count(difference)
+    def update_count(difference)
       self.class.update_count_count += 1
     end
   end
 
   before_each { TagDouble.reset_counts }
 
+  def insert_statistics_row(tag)
+    Ktistec.database.exec(
+      "INSERT INTO tag_statistics (type, name, count) VALUES (?, ?, ?)",
+      tag.short_type, tag.name, 0,
+    )
+  end
+
+  describe "#statistics_row_exists?" do
+    let(tag) { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar") }
+
+    it "matches the name" do
+      Ktistec.database.exec(
+        "INSERT INTO tag_statistics (type, name, count) VALUES (?, ?, ?)",
+        tag.short_type, "FOOBAR", 0,
+      )
+      expect(tag.statistics_row_exists?).to be_true
+    end
+
+    it "is scoped by short type" do
+      Ktistec.database.exec(
+        "INSERT INTO tag_statistics (type, name, count) VALUES (?, ?, ?)",
+        "other_type", tag.name, 0,
+      )
+      expect(tag.statistics_row_exists?).to be_false
+    end
+  end
+
   describe "#after_create" do
-    context "when called 10 times" do
-      before_each do
-        10.times { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar").after_create }
+    let(tag) { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar") }
+
+    context "when no statistics row exists" do
+      pre_condition { expect(tag.statistics_row_exists?).to be_false }
+
+      it "calls `full_recount`" do
+        expect { tag.after_create }.to change { TagDouble.full_recount_count }.by(1)
       end
 
-      it "calls `full_recount` once" do
-        expect(TagDouble.full_recount_count).to eq(1)
+      it "does not call `update_count`" do
+        expect { tag.after_create }.not_to change { TagDouble.update_count_count }
+      end
+    end
+
+    context "when a statistics row exists" do
+      before_each { insert_statistics_row(tag) }
+
+      pre_condition { expect(tag.statistics_row_exists?).to be_true }
+
+      it "calls `update_count`" do
+        expect { tag.after_create }.to change { TagDouble.update_count_count }.by(1)
       end
 
-      it "calls `update_count` 9 times" do
-        expect(TagDouble.update_count_count).to eq(9)
+      it "does not call `full_recount`" do
+        expect { tag.after_create }.not_to change { TagDouble.full_recount_count }
       end
     end
   end
 
   describe "#after_destroy" do
-    context "when called 10 times" do
-      before_each do
-        10.times { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar").after_destroy }
+    let(tag) { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar") }
+
+    context "when no statistics row exists" do
+      pre_condition { expect(tag.statistics_row_exists?).to be_false }
+
+      it "calls `full_recount`" do
+        expect { tag.after_destroy }.to change { TagDouble.full_recount_count }.by(1)
       end
 
-      it "calls `full_recount` once" do
-        expect(TagDouble.full_recount_count).to eq(1)
+      it "does not call `update_count`" do
+        expect { tag.after_destroy }.not_to change { TagDouble.update_count_count }
+      end
+    end
+
+    context "when a statistics row exists" do
+      before_each { insert_statistics_row(tag) }
+
+      pre_condition { expect(tag.statistics_row_exists?).to be_true }
+
+      it "calls `update_count`" do
+        expect { tag.after_destroy }.to change { TagDouble.update_count_count }.by(1)
       end
 
-      it "calls `update_count` 9 times" do
-        expect(TagDouble.update_count_count).to eq(9)
+      it "does not call `full_recount`" do
+        expect { tag.after_destroy }.not_to change { TagDouble.full_recount_count }
       end
     end
   end
@@ -71,6 +141,158 @@ Spectator.describe Tag do
 
     it "decrements the count" do
       expect { tag.destroy }.to change { described_class.count(name: "foobar") }.by(-1)
+    end
+  end
+
+  # the count is observable only through a read path, so `.match` is the oracle.
+
+  describe "#full_recount" do
+    let_create!(:object, published: Time.local)
+    let_create!(:tag, subject_iri: object.iri, name: "foobar")
+
+    context "when the object isn't published" do
+      before_each { object.assign(published: nil).save }
+
+      it "excludes it from the count" do
+        expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
+      end
+    end
+
+    context "when the object is deleted" do
+      before_each { object.delete! }
+
+      it "excludes it from the count" do
+        expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
+      end
+    end
+
+    context "when the object is blocked" do
+      before_each { object.block! }
+
+      it "excludes it from the count" do
+        expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
+      end
+    end
+
+    context "when the actor is deleted" do
+      before_each { object.attributed_to.delete! }
+
+      it "excludes it from the count" do
+        expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
+      end
+    end
+
+    context "when the actor is blocked" do
+      before_each { object.attributed_to.block! }
+
+      it "excludes it from the count" do
+        expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
+      end
+    end
+
+    context "when the object is special" do
+      before_each { object.assign(special: "vote").save }
+
+      it "excludes it from the count" do
+        expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
+      end
+    end
+
+    context "when a post repeats the same tag" do
+      let_create!(:tag, named: nil, subject_iri: object.iri, name: "foobar")
+
+      it "counts the object once" do
+        expect { tag.full_recount }.to change { Tag.match("foobar") }.from([{"foobar", 2}]).to([{"foobar", 1}])
+      end
+    end
+  end
+
+  describe "#update_count" do
+    let_create!(:object, published: Time.local)
+    let_create!(:tag, subject_iri: object.iri, name: "foobar")
+
+    pre_condition { expect(Tag.match("foobar")).to eq([{"foobar", 1}]) }
+
+    it "applies the delta" do
+      expect { tag.update_count(1) }.to change { Tag.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 2}])
+    end
+
+    context "when the object isn't published" do
+      before_each { object.assign(published: nil).save }
+
+      it "does not apply the delta" do
+        expect { tag.update_count(1) }.not_to change { Tag.match("foobar") }
+      end
+    end
+
+    context "when the object is deleted" do
+      before_each { object.delete! }
+
+      it "does not apply the delta" do
+        expect { tag.update_count(1) }.not_to change { Tag.match("foobar") }
+      end
+    end
+
+    context "when the object is blocked" do
+      before_each { object.block! }
+
+      it "does not apply the delta" do
+        expect { tag.update_count(1) }.not_to change { Tag.match("foobar") }
+      end
+    end
+
+    context "when the actor is deleted" do
+      before_each { object.attributed_to.delete! }
+
+      it "does not apply the delta" do
+        expect { tag.update_count(1) }.not_to change { Tag.match("foobar") }
+      end
+    end
+
+    context "when the actor is blocked" do
+      before_each { object.attributed_to.block! }
+
+      it "does not apply the delta" do
+        expect { tag.update_count(1) }.not_to change { Tag.match("foobar") }
+      end
+    end
+
+    context "when the object is special" do
+      before_each { object.assign(special: "vote").save }
+
+      it "does not apply the delta" do
+        expect { tag.update_count(1) }.not_to change { Tag.match("foobar") }
+      end
+    end
+  end
+
+  describe ".reconcile_statistics" do
+    # synthetic `Tag` subtype. it is namespaced on purpose: reconcile
+    # bridges the full name stored in `tags.type` ("Tag::TestSubtype")
+    # to the short form stored in `tag_statistics.type`
+    # ("test_subtype").
+    class ::Tag::TestSubtype < ::Tag
+    end
+
+    let_create!(:object, published: Time.local)
+    let!(tag) { Tag::TestSubtype.new(subject_iri: object.iri, name: "foobar").save }
+
+    context "when a post repeats the same tag" do
+      before_each do
+        Tag::TestSubtype.new(subject_iri: object.iri, name: "foobar").save
+      end
+
+      it "reconciles the count" do
+        expect { Tag.reconcile_statistics }.to change { Tag::TestSubtype.match("foobar") }.from([{"foobar", 2}]).to([{"foobar", 1}])
+      end
+    end
+
+    context "when the actor is blocked" do
+      before_each { object.attributed_to.block! }
+
+      it "reconciles the count" do
+        expect { Tag.reconcile_statistics }.to change { Tag::TestSubtype.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
+      end
     end
   end
 
@@ -105,130 +327,6 @@ Spectator.describe Tag do
       it "treats percent as literal character" do
         results = Tag.match("test%")
         expect(results).to contain({"test%special", 1})
-      end
-    end
-
-    let_create(:object, published: Time.local)
-    let_build(:tag, subject_iri: object.iri, name: "foobar")
-
-    context "full recount logic" do
-      # invalidate the cache after to ensure the test hits
-      # `#full_recount`
-
-      before_each { Tag.cache.clear }
-
-      context "an object isn't published" do
-        before_each do
-          object.assign(published: nil).save
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
-      end
-
-      context "an object is deleted" do
-        before_each do
-          object.delete!
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
-      end
-
-      context "an object is blocked" do
-        before_each do
-          object.block!
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
-      end
-
-      context "an actor is deleted" do
-        before_each do
-          object.attributed_to.delete!
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
-      end
-
-      context "an actor is blocked" do
-        before_each do
-          object.attributed_to.block!
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
-      end
-    end
-
-    context "update count logic" do
-      # tests hit `#update_count`
-
-      context "an object isn't published" do
-        before_each do
-          object.assign(published: nil).save
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
-      end
-
-      context "an object is deleted" do
-        before_each do
-          object.delete!
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
-      end
-
-      context "an object is blocked" do
-        before_each do
-          object.block!
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
-      end
-
-      context "an actor is deleted" do
-        before_each do
-          object.attributed_to.delete!
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
-      end
-
-      context "an actor is blocked" do
-        before_each do
-          object.attributed_to.block!
-          tag.save
-        end
-
-        it "returns the match" do
-          expect(Tag.match("foo", 2)).to have({"foobar", 2})
-        end
       end
     end
   end

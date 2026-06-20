@@ -222,12 +222,6 @@ AFTER_PROCS << -> do
   Ktistec.database.exec "ROLLBACK"
 end
 
-{% if @top_level.has_constant?("Tag") %}
-  BEFORE_PROCS << -> do
-    Tag.cache.clear
-  end
-{% end %}
-
 macro setup_spec
   before_each { BEFORE_PROCS.each(&.call) }
   after_each { AFTER_PROCS.each(&.call) }

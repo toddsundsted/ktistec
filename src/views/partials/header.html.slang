@@ -15,8 +15,7 @@ nav.ui.top.fixed.inverted.navigation.menu data-turbo-prefetch="false"
         span.text Admin
       .right.menu
         = form_tag(nil, sessions_path, method: "DELETE", class: "form") do
-          .ui.input
-            input.link.item type="submit" value="Sign Out"
+          input.link.item type="submit" value="Sign Out"
     - elsif Account.count > 0
       a.item href=home_path
         i.home.icon

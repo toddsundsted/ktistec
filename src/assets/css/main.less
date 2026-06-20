@@ -30,8 +30,9 @@ nav.ui.top.navigation.menu {
     .item .icon {
         margin-right: 0.5em;
     }
-    form input {
-        border-width: 0 !important;
+    form input.link.item {
+        border: none;
+        cursor: pointer;
     }
 }
 
@@ -43,6 +44,28 @@ nav.ui.top.navigation.menu {
         padding: .75em .50em;
         &:hover { .bg-hover(); }
         > a { color: inherit; }
+    }
+}
+
+/** radio checkboxes **/
+.ui.radio.checkbox {
+    label::after {
+        top: 5px;
+        left: 4px;
+        width: 7px;
+        height: 7px;
+        transform: none;
+    }
+}
+
+/** checkbox row **/
+.ui.form .fields:not(.grouped):not(.inline) .field:not(:only-child) .ui.checkbox {
+    margin-top: 0;
+}
+
+@media only screen and (max-width: 767.98px) {
+    .ui.form .inline.fields .field:last-child {
+        margin-bottom: 0;
     }
 }
 
@@ -244,6 +267,19 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
 
                 .text { display: none; }
                 .icon { margin: 0; }
+            }
+
+            > .right.menu {
+                display: flex;
+                margin-left: 0 !important;
+                flex: 25%;
+                justify-content: inherit;
+            }
+
+            > .right.menu > .item {
+                display: flex;
+                width: 100%;
+                justify-content: inherit;
             }
         }
     }
@@ -678,6 +714,9 @@ trix-editor {
 }
 
 /** transitions **/
+
+/* Fomantic's transition module is intentionally not imported. */
+.transition.hidden { display: none; }
 
 /* transitional elements */
 .transitional {

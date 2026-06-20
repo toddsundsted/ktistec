@@ -20,8 +20,7 @@
             span.text Admin
           .right.menu
             .form
-              .ui.input
-                input.link.item type="submit" value="Sign Out"
+              input.link.item type="submit" value="Sign Out"
       .variation-label Unauthenticated State
       nav.ui.top.inverted.navigation.menu
         .ui.text.container

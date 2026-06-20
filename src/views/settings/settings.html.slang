@@ -30,7 +30,7 @@ p
   crystal:
     is_rich_text = account.default_editor == "text/html; editor=trix"
     is_markdown = account.default_editor == "text/markdown"
-  .inline.fields
+  .inline.fields.unstackable
     label for="default_editor" Default Editor
     .field
       .ui.radio.checkbox
@@ -129,7 +129,7 @@ h1 Site Settings
     is_deepl = service == "deepl"
     is_libretranslate = service == "libretranslate"
   - if can_deepl || can_libretranslate
-    .inline.fields
+    .inline.fields.unstackable
       label for="translator_service" Use Translator Service
       - if can_deepl
         .field

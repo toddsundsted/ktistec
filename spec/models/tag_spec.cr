@@ -12,6 +12,10 @@ class Tag
   def update_count(difference)
     previous_def(difference)
   end
+
+  def statistics_row_exists?
+    previous_def
+  end
 end
 
 Spectator.describe Tag do
@@ -37,34 +41,89 @@ Spectator.describe Tag do
 
   before_each { TagDouble.reset_counts }
 
+  def insert_statistics_row(tag)
+    Ktistec.database.exec(
+      "INSERT INTO tag_statistics (type, name, count) VALUES (?, ?, ?)",
+      tag.short_type, tag.name, 0,
+    )
+  end
+
+  describe "#statistics_row_exists?" do
+    let(tag) { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar") }
+
+    it "matches the name" do
+      Ktistec.database.exec(
+        "INSERT INTO tag_statistics (type, name, count) VALUES (?, ?, ?)",
+        tag.short_type, "FOOBAR", 0,
+      )
+      expect(tag.statistics_row_exists?).to be_true
+    end
+
+    it "is scoped by short type" do
+      Ktistec.database.exec(
+        "INSERT INTO tag_statistics (type, name, count) VALUES (?, ?, ?)",
+        "other_type", tag.name, 0,
+      )
+      expect(tag.statistics_row_exists?).to be_false
+    end
+  end
+
   describe "#after_create" do
-    context "when called 10 times" do
-      before_each do
-        10.times { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar").after_create }
+    let(tag) { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar") }
+
+    context "when no statistics row exists" do
+      pre_condition { expect(tag.statistics_row_exists?).to be_false }
+
+      it "calls `full_recount`" do
+        expect { tag.after_create }.to change { TagDouble.full_recount_count }.by(1)
       end
 
-      it "calls `full_recount` once" do
-        expect(TagDouble.full_recount_count).to eq(1)
+      it "does not call `update_count`" do
+        expect { tag.after_create }.not_to change { TagDouble.update_count_count }
+      end
+    end
+
+    context "when a statistics row exists" do
+      before_each { insert_statistics_row(tag) }
+
+      pre_condition { expect(tag.statistics_row_exists?).to be_true }
+
+      it "calls `update_count`" do
+        expect { tag.after_create }.to change { TagDouble.update_count_count }.by(1)
       end
 
-      it "calls `update_count` 9 times" do
-        expect(TagDouble.update_count_count).to eq(9)
+      it "does not call `full_recount`" do
+        expect { tag.after_create }.not_to change { TagDouble.full_recount_count }
       end
     end
   end
 
   describe "#after_destroy" do
-    context "when called 10 times" do
-      before_each do
-        10.times { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar").after_destroy }
+    let(tag) { TagDouble.new(subject_iri: "http://remote/thing", name: "foobar") }
+
+    context "when no statistics row exists" do
+      pre_condition { expect(tag.statistics_row_exists?).to be_false }
+
+      it "calls `full_recount`" do
+        expect { tag.after_destroy }.to change { TagDouble.full_recount_count }.by(1)
       end
 
-      it "calls `full_recount` once" do
-        expect(TagDouble.full_recount_count).to eq(1)
+      it "does not call `update_count`" do
+        expect { tag.after_destroy }.not_to change { TagDouble.update_count_count }
+      end
+    end
+
+    context "when a statistics row exists" do
+      before_each { insert_statistics_row(tag) }
+
+      pre_condition { expect(tag.statistics_row_exists?).to be_true }
+
+      it "calls `update_count`" do
+        expect { tag.after_destroy }.to change { TagDouble.update_count_count }.by(1)
       end
 
-      it "calls `update_count` 9 times" do
-        expect(TagDouble.update_count_count).to eq(9)
+      it "does not call `full_recount`" do
+        expect { tag.after_destroy }.not_to change { TagDouble.full_recount_count }
       end
     end
   end

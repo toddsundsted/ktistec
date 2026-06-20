@@ -50,7 +50,7 @@ class Tag
     FILTERS
   end
 
-  ## Tag statistics
+  # # Tag statistics
   #
   # `tag_statistics` caches, per (type, name), how many *distinct
   # objects* carry that tag and are currently displayable. That count
@@ -188,18 +188,28 @@ class Tag
     update_count(-1)
   end
 
-  record CacheEntry, type : String, name : String
-
-  class_property cache = Set(CacheEntry).new
+  # Returns true if a `tag_statistics` row exists for this tag.
+  #
+  private def statistics_row_exists?
+    query = <<-QUERY
+      SELECT 1
+        FROM tag_statistics
+       WHERE type = ?
+         AND name = ?
+       LIMIT 1
+    QUERY
+    args = {short_type, name}
+    Internal.log_query(query, args) do
+      !Ktistec.database.query_one?(query, *args, as: Int64).nil?
+    end
+  end
 
   # Increments (or fully recounts) tag statistics for a created tag.
   #
   protected def increment_statistics
-    entry = CacheEntry.new(short_type, name.downcase)
-    if Tag.cache.includes?(entry)
+    if statistics_row_exists?
       increment_count
     else
-      Tag.cache.add(entry)
       full_recount
     end
   end
@@ -207,11 +217,9 @@ class Tag
   # Decrements (or fully recounts) tag statistics for a destroyed tag.
   #
   protected def decrement_statistics
-    entry = CacheEntry.new(short_type, name.downcase)
-    if Tag.cache.includes?(entry)
+    if statistics_row_exists?
       decrement_count
     else
-      Tag.cache.add(entry)
       full_recount
     end
   end

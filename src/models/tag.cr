@@ -50,14 +50,29 @@ class Tag
     FILTERS
   end
 
+  # # Tag statistics
+  #
+  # `tag_statistics` caches, per (type, name), how many *distinct
+  # objects* carry that tag and are currently displayable. That count
+  # is exactly what `all_objects_count` returns.
+  #
+  # Maintained at two fidelities:
+  #
+  # `#full_recount` and `.reconcile_statistics` recompute the
+  # *precise* population.
+  #
+  # `#update_count` is the fast path between reconciles, so it drifts:
+  # e.g. an actor blocked after tagging is not decremented.
+
   # Matches on tag prefix.
   #
   # Returns results ordered by number of occurrences. Treats SQL LIKE
   # wildcards (% and _) as literal characters.
   #
-  # Count is intentionally not adjusted for subjects that are deleted,
-  # blocked, etc. making the value unsuitable for presentation, in
-  # most cases.
+  # Ranks by the cached count; approximate between reconciles, which is
+  # fine for ranking.
+  #
+  # See "Tag statistics".
   #
   def self.match(prefix, limit = 1)
     query = <<-QUERY
@@ -78,13 +93,15 @@ class Tag
     end
   end
 
-  # Updates tag statistics by recounting all posts with a tag.
+  # Exact recount of one key.
+  #
+  # See "Tag statistics".
   #
   private def full_recount
     query = <<-QUERY
       INSERT OR REPLACE INTO tag_statistics (type, name, count)
       VALUES (?, ?, (
-        SELECT count(*)
+        SELECT count(DISTINCT t.subject_iri)
           FROM tags AS t
           JOIN objects AS o
             ON o.iri = t.subject_iri
@@ -105,7 +122,42 @@ class Tag
     end
   end
 
-  # Updates tag statistics by applying a difference to the count.
+  # Exact recount of every key.
+  #
+  # Heals `#update_count` drift.
+  #
+  # See "Tag statistics".
+  #
+  def self.reconcile_statistics
+    all_subtypes.sum(0) do |full_type|
+      short_type = full_type.split("::").last.underscore
+      query = <<-QUERY
+        UPDATE tag_statistics
+           SET count = (
+             SELECT count(DISTINCT t.subject_iri)
+               FROM tags AS t
+               JOIN objects AS o
+                 ON o.iri = t.subject_iri
+               JOIN actors AS a
+                 ON a.iri = o.attributed_to_iri
+              WHERE t.type = ?
+                AND t.name = tag_statistics.name COLLATE NOCASE
+                AND o.published IS NOT NULL
+                #{common_filters(objects: "o", actors: "a")}
+           )
+         WHERE tag_statistics.type = ?
+      QUERY
+      args = {full_type, short_type}
+      result = Internal.log_query(query, args) do
+        Ktistec.database.exec(query, *args)
+      end
+      result.rows_affected.to_i
+    end
+  end
+
+  # Approximate increment/decrement fast path.
+  #
+  # See "Tag statistics".
   #
   private def update_count(difference)
     query = <<-QUERY
@@ -136,24 +188,28 @@ class Tag
     update_count(-1)
   end
 
-  # handle two use cases: 1) rapidly fetching posts, 2) tags that are
-  # expensive to fully count. currently, do a full count only after a
-  # server restart. things (e.g. blocking/deleting actors) can affect
-  # the full count in the meantime, but hopefully the impact is not
-  # noticeable.
-
-  record CacheEntry, type : String, name : String
-
-  class_property cache = Set(CacheEntry).new
+  # Returns true if a `tag_statistics` row exists for this tag.
+  #
+  private def statistics_row_exists?
+    query = <<-QUERY
+      SELECT 1
+        FROM tag_statistics
+       WHERE type = ?
+         AND name = ?
+       LIMIT 1
+    QUERY
+    args = {short_type, name}
+    Internal.log_query(query, args) do
+      !Ktistec.database.query_one?(query, *args, as: Int64).nil?
+    end
+  end
 
   # Increments (or fully recounts) tag statistics for a created tag.
   #
   protected def increment_statistics
-    entry = CacheEntry.new(short_type, name.downcase)
-    if Tag.cache.includes?(entry)
+    if statistics_row_exists?
       increment_count
     else
-      Tag.cache.add(entry)
       full_recount
     end
   end
@@ -161,11 +217,9 @@ class Tag
   # Decrements (or fully recounts) tag statistics for a destroyed tag.
   #
   protected def decrement_statistics
-    entry = CacheEntry.new(short_type, name.downcase)
-    if Tag.cache.includes?(entry)
+    if statistics_row_exists?
       decrement_count
     else
-      Tag.cache.add(entry)
       full_recount
     end
   end

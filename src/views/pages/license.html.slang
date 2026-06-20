@@ -57,9 +57,6 @@ h1.ui.header
       | Crystal Dependencies
   .ui.list
     .item
-      | host_meta
-      .ui.horizontal.label< MIT
-    .item
       | kemal
       .ui.horizontal.label< MIT
     .item
@@ -70,9 +67,6 @@ h1.ui.header
       .ui.horizontal.label< MIT
     .item
       | sqlite3
-      .ui.horizontal.label< MIT
-    .item
-      | web_finger
       .ui.horizontal.label< MIT
 .ui.segment
   p

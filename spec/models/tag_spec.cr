@@ -1,4 +1,7 @@
 require "../../src/models/tag"
+require "../../src/models/tag/hashtag"
+require "../../src/models/tag/mention"
+require "../../src/models/tag/emoji"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
@@ -267,31 +270,145 @@ Spectator.describe Tag do
   end
 
   describe ".reconcile_statistics" do
-    # synthetic `Tag` subtype. it is namespaced on purpose: reconcile
-    # bridges the full name stored in `tags.type` ("Tag::TestSubtype")
-    # to the short form stored in `tag_statistics.type`
-    # ("test_subtype").
-    class ::Tag::TestSubtype < ::Tag
-    end
-
+    # a published object carrying one hashtag. its cache row is created
+    # by the fast path on tag creation, so the steady state is one
+    # `(hashtag, foobar)` row at the true count of 1.
     let_create!(:object, published: Time.local)
-    let!(tag) { Tag::TestSubtype.new(subject_iri: object.iri, name: "foobar").save }
+    let_create!(:hashtag, subject_iri: object.iri, name: "foobar")
 
-    context "when a post repeats the same tag" do
+    it "corrects nothing" do
+      expect(Tag::Hashtag.all_objects_count("foobar")).to eq(1)
+      expect(Tag.reconcile_statistics).to eq({inserted: 0, updated: 0, zeroed: 0})
+    end
+
+    context "when a cached count has drifted" do
       before_each do
-        Tag::TestSubtype.new(subject_iri: object.iri, name: "foobar").save
+        Ktistec.database.exec(
+          "UPDATE tag_statistics SET count = ? WHERE type = ? AND name = ?", 99, "hashtag", "foobar",
+        )
       end
 
-      it "reconciles the count" do
-        expect { Tag.reconcile_statistics }.to change { Tag::TestSubtype.match("foobar") }.from([{"foobar", 2}]).to([{"foobar", 1}])
+      it "corrects the count" do
+        expect { Tag.reconcile_statistics }.to change { Tag::Hashtag.all_objects_count("foobar") }.from(99).to(1)
+      end
+
+      it "counts it as updated" do
+        expect(Tag.reconcile_statistics).to eq({inserted: 0, updated: 1, zeroed: 0})
       end
     end
 
-    context "when the actor is blocked" do
+    context "when a qualifying key has no cache row" do
+      before_each do
+        Ktistec.database.exec(
+          "DELETE FROM tag_statistics WHERE type = ? AND name = ?", "hashtag", "foobar",
+        )
+      end
+
+      it "inserts the count" do
+        expect { Tag.reconcile_statistics }.to change { Tag::Hashtag.all_objects_count("foobar") }.from(0).to(1)
+      end
+
+      it "counts it as inserted" do
+        expect(Tag.reconcile_statistics).to eq({inserted: 1, updated: 0, zeroed: 0})
+      end
+    end
+
+    context "when a key no longer qualifies" do
       before_each { object.attributed_to.block! }
 
-      it "reconciles the count" do
-        expect { Tag.reconcile_statistics }.to change { Tag::TestSubtype.match("foobar") }.from([{"foobar", 1}]).to([{"foobar", 0}])
+      it "zeroes the count" do
+        expect { Tag.reconcile_statistics }.to change { Tag::Hashtag.all_objects_count("foobar") }.from(1).to(0)
+      end
+
+      it "counts it as zeroed" do
+        expect(Tag.reconcile_statistics).to eq({inserted: 0, updated: 0, zeroed: 1})
+      end
+    end
+
+    context "when an orphaned key is already at zero" do
+      before_each do
+        Ktistec.database.exec(
+          "INSERT INTO tag_statistics (type, name, count) VALUES (?, ?, ?)", "hashtag", "staletag", 0,
+        )
+      end
+
+      pre_condition { expect(Tag::Hashtag.match("staletag")).to eq([{"staletag", 0}]) }
+
+      it "skips it" do
+        expect(Tag.reconcile_statistics).to eq({inserted: 0, updated: 0, zeroed: 0})
+      end
+    end
+
+    context "given a mention without a cache row" do
+      let_create!(:mention, named: mention_tag, subject_iri: object.iri, name: "someone")
+
+      before_each do
+        Ktistec.database.exec(
+          "DELETE FROM tag_statistics WHERE type = ? AND name = ?", "mention", "someone",
+        )
+      end
+
+      it "reconciles the tracked type" do
+        expect { Tag.reconcile_statistics }.to change { Tag::Mention.all_objects_count("someone") }.from(0).to(1)
+      end
+    end
+
+    context "given an untracked type without a cache row" do
+      let_create!(:emoji, named: emoji_tag, subject_iri: object.iri, name: "smile", href: "https://test.test/smile.png")
+
+      before_each do
+        Ktistec.database.exec(
+          "DELETE FROM tag_statistics WHERE type = ? AND name = ?", "emoji", "smile",
+        )
+      end
+
+      pre_condition { expect(Tag::Emoji.match("smile")).to be_empty }
+
+      it "does not reconcile it" do
+        expect { Tag.reconcile_statistics }.not_to change { Tag::Emoji.match("smile") }
+      end
+    end
+
+    context "given two keys differing only by ASCII case" do
+      let_create!(:object, named: object2, published: Time.local)
+      let_create!(:hashtag, named: upper, subject_iri: object.iri, name: "Foobar")
+      let_create!(:hashtag, named: lower, subject_iri: object2.iri, name: "foobar")
+
+      before_each do
+        Ktistec.database.exec(
+          "DELETE FROM tag_statistics WHERE type = ? AND (name = ? OR name = ?)", "hashtag", "Foobar", "foobar",
+        )
+      end
+
+      pre_condition do
+        expect(Tag::Hashtag.match("Foobar")).to be_empty
+        expect(Tag::Hashtag.match("foobar")).to be_empty
+      end
+
+      it "reconciles them as the same key" do
+        expect(Tag.reconcile_statistics).to eq({inserted: 1, updated: 0, zeroed: 0})
+      end
+    end
+
+    context "given two keys differing only by non-ASCII case" do
+      # SQLite NOCASE folds ASCII only, so "Σ" and "σ" are distinct keys
+      let_create!(:object, named: object2, published: Time.local)
+      let_create!(:hashtag, named: upper, subject_iri: object.iri, name: "Σ")
+      let_create!(:hashtag, named: lower, subject_iri: object2.iri, name: "σ")
+
+      before_each do
+        Ktistec.database.exec(
+          "DELETE FROM tag_statistics WHERE type = ? AND (name = ? OR name = ?)", "hashtag", "Σ", "σ",
+        )
+      end
+
+      pre_condition do
+        expect(Tag::Hashtag.match("Σ")).to be_empty
+        expect(Tag::Hashtag.match("σ")).to be_empty
+      end
+
+      it "reconciles them as distinct keys" do
+        expect(Tag.reconcile_statistics).to eq({inserted: 2, updated: 0, zeroed: 0})
       end
     end
   end

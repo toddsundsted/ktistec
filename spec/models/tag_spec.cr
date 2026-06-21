@@ -368,6 +368,49 @@ Spectator.describe Tag do
         expect { Tag.reconcile_statistics }.not_to change { Tag::Emoji.match("smile") }
       end
     end
+
+    context "given two keys differing only by ASCII case" do
+      let_create!(:object, named: object2, published: Time.local)
+      let_create!(:hashtag, named: upper, subject_iri: object.iri, name: "Foobar")
+      let_create!(:hashtag, named: lower, subject_iri: object2.iri, name: "foobar")
+
+      before_each do
+        Ktistec.database.exec(
+          "DELETE FROM tag_statistics WHERE type = ? AND (name = ? OR name = ?)", "hashtag", "Foobar", "foobar",
+        )
+      end
+
+      pre_condition do
+        expect(Tag::Hashtag.match("Foobar")).to be_empty
+        expect(Tag::Hashtag.match("foobar")).to be_empty
+      end
+
+      it "reconciles them as the same key" do
+        expect(Tag.reconcile_statistics).to eq({inserted: 1, updated: 0, zeroed: 0})
+      end
+    end
+
+    context "given two keys differing only by non-ASCII case" do
+      # SQLite NOCASE folds ASCII only, so "Σ" and "σ" are distinct keys
+      let_create!(:object, named: object2, published: Time.local)
+      let_create!(:hashtag, named: upper, subject_iri: object.iri, name: "Σ")
+      let_create!(:hashtag, named: lower, subject_iri: object2.iri, name: "σ")
+
+      before_each do
+        Ktistec.database.exec(
+          "DELETE FROM tag_statistics WHERE type = ? AND (name = ? OR name = ?)", "hashtag", "Σ", "σ",
+        )
+      end
+
+      pre_condition do
+        expect(Tag::Hashtag.match("Σ")).to be_empty
+        expect(Tag::Hashtag.match("σ")).to be_empty
+      end
+
+      it "reconciles them as distinct keys" do
+        expect(Tag.reconcile_statistics).to eq({inserted: 2, updated: 0, zeroed: 0})
+      end
+    end
   end
 
   describe ".match" do

@@ -129,6 +129,19 @@ class Tag
   #
   TRACKED_TYPES = {"Tag::Hashtag" => "hashtag", "Tag::Mention" => "mention"}
 
+  # Fold table for `nocase_fold`.
+  #
+  private ASCII_UPPER = ("A".."Z").join
+  private ASCII_LOWER = ("a".."z").join
+
+  # Folds ASCII A-Z to lowercase, leaving every other character
+  # unchanged — an exact mirror of SQLite's NOCASE collation (which
+  # folds ASCII only).
+  #
+  private def self.nocase_fold(name : String) : String
+    name.tr(ASCII_UPPER, ASCII_LOWER)
+  end
+
   # Exact recount of every tracked key.
   #
   # Heals `#update_count` drift and closes the missing-key gap.
@@ -157,7 +170,7 @@ class Tag
       Ktistec.database.query(truth_query) do |rs|
         rs.each do
           full_type, name, count = rs.read(String, String, Int64)
-          truth[{TRACKED_TYPES[full_type], name.downcase}] = {name, count}
+          truth[{TRACKED_TYPES[full_type], nocase_fold(name)}] = {name, count}
         end
       end
     end
@@ -173,7 +186,7 @@ class Tag
       Ktistec.database.query(cache_query) do |rs|
         rs.each do
           short_type, name, count = rs.read(String, String, Int64)
-          cache[{short_type, name.downcase}] = {name, count}
+          cache[{short_type, nocase_fold(name)}] = {name, count}
         end
       end
     end

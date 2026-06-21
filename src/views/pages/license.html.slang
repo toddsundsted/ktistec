@@ -87,9 +87,9 @@ h1.ui.header
   table#jslicense-labels1.ui.celled.table
     tr
       td
-        a href="/dist/868.bundle.js"
+        a href="/dist/chart.bundle.js"
           i.file.code.icon
-          | 868.bundle.js
+          | chart.bundle.js
       td
         a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
           .ui.horizontal.label AGPL-3.0

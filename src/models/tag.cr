@@ -122,37 +122,101 @@ class Tag
     end
   end
 
-  # Exact recount of every key.
+  # Tag types with a count surface. Only these are cached and
+  # reconciled.
   #
-  # Heals `#update_count` drift.
+  # See "Tag statistics".
+  #
+  TRACKED_TYPES = {"Tag::Hashtag" => "hashtag", "Tag::Mention" => "mention"}
+
+  # Exact recount of every tracked key.
+  #
+  # Heals `#update_count` drift and closes the missing-key gap.
   #
   # See "Tag statistics".
   #
   def self.reconcile_statistics
-    all_subtypes.sum(0) do |full_type|
-      short_type = full_type.split("::").last.underscore
-      query = <<-QUERY
-        UPDATE tag_statistics
-           SET count = (
-             SELECT count(DISTINCT t.subject_iri)
-               FROM tags AS t
-               JOIN objects AS o
-                 ON o.iri = t.subject_iri
-               JOIN actors AS a
-                 ON a.iri = o.attributed_to_iri
-              WHERE t.type = ?
-                AND t.name = tag_statistics.name COLLATE NOCASE
-                AND o.published IS NOT NULL
-                #{common_filters(objects: "o", actors: "a")}
-           )
-         WHERE tag_statistics.type = ?
-      QUERY
-      args = {full_type, short_type}
-      result = Internal.log_query(query, args) do
-        Ktistec.database.exec(query, *args)
+    full_types = TRACKED_TYPES.keys.map { |t| "'#{t}'" }.join(", ")
+    short_types = TRACKED_TYPES.values.map { |t| "'#{t}'" }.join(", ")
+
+    # phase 1: compute truth
+    truth = {} of {String, String} => {String, Int64}
+    truth_query = <<-QUERY
+        SELECT t.type, t.name, count(DISTINCT t.subject_iri)
+          FROM tags AS t
+          JOIN objects AS o
+            ON o.iri = t.subject_iri
+          JOIN actors AS a
+            ON a.iri = o.attributed_to_iri
+         WHERE t.type IN (#{full_types})
+           AND o.published IS NOT NULL
+           #{common_filters(objects: "o", actors: "a")}
+      GROUP BY t.type, t.name
+    QUERY
+    Internal.log_query(truth_query) do
+      Ktistec.database.query(truth_query) do |rs|
+        rs.each do
+          full_type, name, count = rs.read(String, String, Int64)
+          truth[{TRACKED_TYPES[full_type], name.downcase}] = {name, count}
+        end
       end
-      result.rows_affected.to_i
     end
+
+    # phase 2: read the cache and diff
+    cache = {} of {String, String} => {String, Int64}
+    cache_query = <<-QUERY
+      SELECT type, name, count
+        FROM tag_statistics
+       WHERE type IN (#{short_types})
+    QUERY
+    Internal.log_query(cache_query) do
+      Ktistec.database.query(cache_query) do |rs|
+        rs.each do
+          short_type, name, count = rs.read(String, String, Int64)
+          cache[{short_type, name.downcase}] = {name, count}
+        end
+      end
+    end
+
+    upserts = [] of {String, String, Int64}
+    zeros = [] of {String, String}
+    inserted = updated = zeroed = 0
+    truth.each do |key, (name, count)|
+      if (existing = cache[key]?)
+        next if existing[1] == count
+        updated += 1
+      else
+        inserted += 1
+      end
+      upserts << {key[0], name, count}
+    end
+    cache.each do |key, (name, count)|
+      next if truth.has_key?(key) || count == 0
+      zeros << {key[0], name}
+      zeroed += 1
+    end
+
+    # phase 3: apply the delta
+    upsert_query = <<-QUERY
+      INSERT INTO tag_statistics (type, name, count)
+      VALUES (?, ?, ?)
+      ON CONFLICT (type, name) DO UPDATE SET count = excluded.count
+    QUERY
+    upserts.each do |args|
+      Internal.log_query(upsert_query, args) do
+        Ktistec.database.exec(upsert_query, *args)
+      end
+    end
+    zero_query = <<-QUERY
+      UPDATE tag_statistics SET count = 0 WHERE type = ? AND name = ?
+    QUERY
+    zeros.each do |args|
+      Internal.log_query(zero_query, args) do
+        Ktistec.database.exec(zero_query, *args)
+      end
+    end
+
+    {inserted: inserted, updated: updated, zeroed: zeroed}
   end
 
   # Approximate increment/decrement fast path.

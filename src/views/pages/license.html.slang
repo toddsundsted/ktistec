@@ -48,6 +48,9 @@ h1.ui.header
       | filepond-plugin-image-transform
       .ui.horizontal.label< MIT
     .item
+      | fomantic-ui-css
+      .ui.horizontal.label< MIT
+    .item
       | trix
       .ui.horizontal.label< MIT
 .ui.segment

@@ -10,8 +10,6 @@ module Ktistec
     module ReconcileMaterializedViews
       extend self
 
-      Log = ::Log.for(self)
-
       # Pre-typed base relationship types retired (long) before the
       # materialized-view cutover.
       #

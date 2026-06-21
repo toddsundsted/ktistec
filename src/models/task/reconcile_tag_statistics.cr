@@ -12,10 +12,10 @@ class Task
 
     def perform
       Log.debug { "Tag Statistics: Starting reconciliation" }
-      count = Tag.reconcile_statistics
-      Log.debug { "Tag Statistics: Reconciliation complete: #{count} keys" }
+      result = Tag.reconcile_statistics
+      Log.debug { "Tag Statistics: Reconciliation complete: #{result[:inserted]} inserted, #{result[:updated]} updated, #{result[:zeroed]} zeroed" }
     ensure
-      self.next_attempt_at = randomized_next_attempt_at(15.minutes)
+      self.next_attempt_at = randomized_next_attempt_at(12.hours)
     end
   end
 end

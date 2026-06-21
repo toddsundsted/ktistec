@@ -8,7 +8,7 @@ form.ui.form method="POST" action=system_path
   - sources.sort.each do |source|
     .field
       h2 = source
-    .inline.fields
+    .inline.fields.unstackable
       - severity = log_levels[source]?.try(&.severity)
       .field
         .ui.radio.checkbox

@@ -48,6 +48,9 @@ h1.ui.header
       | filepond-plugin-image-transform
       .ui.horizontal.label< MIT
     .item
+      | fomantic-ui-css
+      .ui.horizontal.label< MIT
+    .item
       | trix
       .ui.horizontal.label< MIT
 .ui.segment
@@ -84,9 +87,9 @@ h1.ui.header
   table#jslicense-labels1.ui.celled.table
     tr
       td
-        a href="/dist/349.bundle.js"
+        a href="/dist/chart.bundle.js"
           i.file.code.icon
-          | 349.bundle.js
+          | chart.bundle.js
       td
         a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
           .ui.horizontal.label AGPL-3.0

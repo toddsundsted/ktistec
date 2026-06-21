@@ -6,7 +6,7 @@ export default class extends Controller {
   }
 
   async connect() {
-    let Chart = (await import("chart.js/auto")).default
+    let Chart = (await import(/* webpackChunkName: "chart" */ "chart.js/auto")).default
 
     const verticalLinePlugin = {
       id: 'verticalLinePlugin',

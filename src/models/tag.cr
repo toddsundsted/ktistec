@@ -129,6 +129,12 @@ class Tag
   #
   TRACKED_TYPES = {"Tag::Hashtag" => "hashtag", "Tag::Mention" => "mention"}
 
+  # Number of tag rows scanned per `.reconcile_statistics` window.
+  #
+  # See "Tag statistics".
+  #
+  class_property reconcile_window_size : Int32 = 500
+
   # Fold table for `nocase_fold`.
   #
   private ASCII_UPPER = ("A".."Z").join
@@ -153,26 +159,69 @@ class Tag
     short_types = TRACKED_TYPES.values.map { |t| "'#{t}'" }.join(", ")
 
     # phase 1: compute truth
+
+    # `window_size` rows are read from a tags-only scan and the cursor
+    # rides that scan, so a scan holds the lock for a bounded number
+    # of tag reads regardless of how many are visible.
+    window_size = {reconcile_window_size, 1}.max
     truth = {} of {String, String} => {String, Int64}
-    truth_query = <<-QUERY
-        SELECT t.type, t.name, count(DISTINCT t.subject_iri)
-          FROM tags AS t
-          JOIN objects AS o
-            ON o.iri = t.subject_iri
-          JOIN actors AS a
-            ON a.iri = o.attributed_to_iri
-         WHERE t.type IN (#{full_types})
-           AND o.published IS NOT NULL
-           #{common_filters(objects: "o", actors: "a")}
-      GROUP BY t.type, t.name
-    QUERY
-    Internal.log_query(truth_query) do
-      Ktistec.database.query(truth_query) do |rs|
-        rs.each do
-          full_type, name, count = rs.read(String, String, Int64)
-          truth[{TRACKED_TYPES[full_type], nocase_fold(name)}] = {name, count}
+    open_name = ""
+    open_key : {String, String}? = nil
+    open_iris = Set(String).new
+    cursor_name : String? = nil
+    cursor_id : Int64? = nil
+    loop do
+      keyset = (cursor_name && cursor_id) ? "AND (name, id) > (?, ?)" : ""
+      window_query = <<-QUERY
+          SELECT t.type, t.name, t.id,
+                 CASE WHEN a.iri IS NOT NULL THEN t.subject_iri END
+            FROM (
+              SELECT id, type, name, subject_iri
+                FROM tags
+               WHERE type IN (#{full_types})
+                 #{keyset}
+            ORDER BY name, id
+               LIMIT ?
+            ) AS t
+            LEFT JOIN objects AS o
+              ON o.iri = t.subject_iri
+             AND o.published IS NOT NULL
+             #{common_filters(objects: "o")}
+            LEFT JOIN actors AS a
+              ON a.iri = o.attributed_to_iri
+             #{common_filters(actors: "a")}
+        ORDER BY t.name, t.id
+      QUERY
+      args = [] of DB::Any
+      if (cn = cursor_name) && (ci = cursor_id)
+        args << cn << ci
+      end
+      args << window_size
+      rows = 0
+      Internal.log_query(window_query, args) do
+        Ktistec.database.query(window_query, args: args) do |rs|
+          rs.each do
+            rows += 1
+            full_type, name, id, visible_iri = rs.read(String, String, Int64, String?)
+            key = {TRACKED_TYPES[full_type], nocase_fold(name)}
+            if open_key != key
+              if (closed = open_key) && open_iris.size > 0
+                truth[closed] = {open_name, open_iris.size.to_i64}
+              end
+              open_key = key
+              open_name = name
+              open_iris = Set(String).new
+            end
+            open_iris << visible_iri if visible_iri
+            cursor_name = name
+            cursor_id = id
+          end
         end
       end
+      break if rows < window_size
+    end
+    if (closed = open_key) && open_iris.size > 0
+      truth[closed] = {open_name, open_iris.size.to_i64}
     end
 
     # phase 2: read the cache and diff

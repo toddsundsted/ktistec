@@ -273,8 +273,8 @@ Spectator.describe Tag do
     # a published object carrying one hashtag. its cache row is created
     # by the fast path on tag creation, so the steady state is one
     # `(hashtag, foobar)` row at the true count of 1.
-    let_create!(:object, published: Time.local)
-    let_create!(:hashtag, subject_iri: object.iri, name: "foobar")
+    let_build(:object, published: Time.local)
+    let_create!(:hashtag, subject: object, name: "foobar")
 
     it "corrects nothing" do
       expect(Tag::Hashtag.all_objects_count("foobar")).to eq(1)
@@ -297,7 +297,7 @@ Spectator.describe Tag do
       end
     end
 
-    context "when a qualifying key has no cache row" do
+    context "when a qualifying name has no cache row" do
       before_each do
         Ktistec.database.exec(
           "DELETE FROM tag_statistics WHERE type = ? AND name = ?", "hashtag", "foobar",
@@ -313,7 +313,7 @@ Spectator.describe Tag do
       end
     end
 
-    context "when a key no longer qualifies" do
+    context "when a name no longer qualifies" do
       before_each { object.attributed_to.block! }
 
       it "zeroes the count" do
@@ -325,7 +325,7 @@ Spectator.describe Tag do
       end
     end
 
-    context "when an orphaned key is already at zero" do
+    context "when an orphaned name is already at zero" do
       before_each do
         Ktistec.database.exec(
           "INSERT INTO tag_statistics (type, name, count) VALUES (?, ?, ?)", "hashtag", "staletag", 0,
@@ -340,7 +340,7 @@ Spectator.describe Tag do
     end
 
     context "given a mention without a cache row" do
-      let_create!(:mention, named: mention_tag, subject_iri: object.iri, name: "someone")
+      let_create!(:mention, named: mention_tag, subject: object, name: "someone")
 
       before_each do
         Ktistec.database.exec(
@@ -354,7 +354,7 @@ Spectator.describe Tag do
     end
 
     context "given an untracked type without a cache row" do
-      let_create!(:emoji, named: emoji_tag, subject_iri: object.iri, name: "smile", href: "https://test.test/smile.png")
+      let_create!(:emoji, named: emoji_tag, subject: object, name: "smile", href: "https://test.test/smile.png")
 
       before_each do
         Ktistec.database.exec(
@@ -369,10 +369,10 @@ Spectator.describe Tag do
       end
     end
 
-    context "given two keys differing only by ASCII case" do
-      let_create!(:object, named: object2, published: Time.local)
-      let_create!(:hashtag, named: upper, subject_iri: object.iri, name: "Foobar")
-      let_create!(:hashtag, named: lower, subject_iri: object2.iri, name: "foobar")
+    context "given two names differing only by ASCII case" do
+      let_build(:object, named: object2, published: Time.local)
+      let_create!(:hashtag, named: nil, subject: object, name: "Foobar")
+      let_create!(:hashtag, named: nil, subject: object2, name: "foobar")
 
       before_each do
         Ktistec.database.exec(
@@ -385,16 +385,16 @@ Spectator.describe Tag do
         expect(Tag::Hashtag.match("foobar")).to be_empty
       end
 
-      it "reconciles them as the same key" do
+      it "reconciles them as the same name" do
         expect(Tag.reconcile_statistics).to eq({inserted: 1, updated: 0, zeroed: 0})
       end
     end
 
-    context "given two keys differing only by non-ASCII case" do
-      # SQLite NOCASE folds ASCII only, so "Σ" and "σ" are distinct keys
-      let_create!(:object, named: object2, published: Time.local)
-      let_create!(:hashtag, named: upper, subject_iri: object.iri, name: "Σ")
-      let_create!(:hashtag, named: lower, subject_iri: object2.iri, name: "σ")
+    context "given two names differing only by non-ASCII case" do
+      # SQLite NOCASE folds ASCII only, so "Σ" and "σ" are distinct names
+      let_build(:object, named: object2, published: Time.local)
+      let_create!(:hashtag, named: nil, subject: object, name: "Σ")
+      let_create!(:hashtag, named: nil, subject: object2, name: "σ")
 
       before_each do
         Ktistec.database.exec(
@@ -407,8 +407,82 @@ Spectator.describe Tag do
         expect(Tag::Hashtag.match("σ")).to be_empty
       end
 
-      it "reconciles them as distinct keys" do
+      it "reconciles them as distinct names" do
         expect(Tag.reconcile_statistics).to eq({inserted: 2, updated: 0, zeroed: 0})
+      end
+    end
+
+    context "with a small reconcile window" do
+      around_each do |example|
+        original = Tag.reconcile_window_size
+        Tag.reconcile_window_size = 1
+        begin
+          example.call
+        ensure
+          Tag.reconcile_window_size = original
+        end
+      end
+
+      # in each case, clear the cache after the tags (and their
+      # fast-path counts) exist
+
+      context "given more tags than fit in one window" do
+        let_create!(:hashtag, named: nil, subject: object, name: "zeta")
+        let_create!(:hashtag, named: nil, subject: object, name: "alpha")
+
+        before_each { Ktistec.database.exec("DELETE FROM tag_statistics") }
+
+        it "reconciles every tag" do
+          expect(Tag.reconcile_statistics).to eq({inserted: 3, updated: 0, zeroed: 0})
+        end
+      end
+
+      context "given a name whose tags span a window" do
+        let_build(:object, named: object2, published: Time.local)
+        let_create!(:hashtag, named: nil, subject: object2, name: "foobar")
+
+        before_each { Ktistec.database.exec("DELETE FROM tag_statistics") }
+
+        it "counts across windows" do
+          expect(Tag.reconcile_statistics).to eq({inserted: 1, updated: 0, zeroed: 0})
+          expect(Tag::Hashtag.all_objects_count("foobar")).to eq(2)
+        end
+      end
+
+      context "given case-variant names in different windows" do
+        let_build(:object, named: object2, published: Time.local)
+        let_create!(:hashtag, named: nil, subject: object2, name: "FOOBAR")
+
+        before_each { Ktistec.database.exec("DELETE FROM tag_statistics") }
+
+        it "collapses them to one name" do
+          expect(Tag.reconcile_statistics).to eq({inserted: 1, updated: 0, zeroed: 0})
+          expect(Tag::Hashtag.all_objects_count("foobar")).to eq(2)
+        end
+      end
+
+      context "given one object tagged with the same name twice" do
+        let_create!(:hashtag, named: nil, subject: object, name: "foobar")
+
+        before_each { Ktistec.database.exec("DELETE FROM tag_statistics") }
+
+        it "deduplicates across windows" do
+          expect(Tag.reconcile_statistics).to eq({inserted: 1, updated: 0, zeroed: 0})
+          expect(Tag::Hashtag.all_objects_count("foobar")).to eq(1)
+        end
+      end
+
+      context "given a window of entirely non-visible tags" do
+        before_each do
+          object.attributed_to.block!
+          Ktistec.database.exec("DELETE FROM tag_statistics")
+        end
+
+        pre_condition { expect(Tag::Hashtag.count(name: "foobar")).to eq(1) }
+
+        it "reconciles nothing" do
+          expect(Tag.reconcile_statistics).to eq({inserted: 0, updated: 0, zeroed: 0})
+        end
       end
     end
   end

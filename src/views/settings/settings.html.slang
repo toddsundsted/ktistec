@@ -162,4 +162,3 @@ h1 Site Settings
         depending on the service) and restart the server. Configuration
         options will replace this text.
   = submit_button("Update")
-br.transition.hidden

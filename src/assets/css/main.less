@@ -22,6 +22,9 @@ html { scroll-padding-top: var(--header-height); }
 body { display: flex; flex-direction: column; }
 .ui.forced.menu { border-radius: 0 !important; margin-top: auto; margin-bottom: 0; white-space: pre-wrap; }
 
+/* space between content and the sticky footer */
+body > .ui.container > :last-child { margin-bottom: 1rem; }
+
 /* remove visible outlines on focused menu items */
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 

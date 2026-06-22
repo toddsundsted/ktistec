@@ -77,4 +77,3 @@ crystal:
     = select_tag("Range", nil, :begin, ranges, range.first.try(&.to_s("%Y-%m-%d")))
     = select_tag("Granularity", nil, :granularity, granularities, granularity.to_s.split("::").last.downcase)
   = submit_button("Update", class: "ui mini primary button")
-br.transition.hidden

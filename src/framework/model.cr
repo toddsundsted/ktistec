@@ -1026,24 +1026,28 @@ module Ktistec
       {% end %}
     end
 
-    private macro with_callbacks(before, after, skip_associated = false, &block)
-      %nodes = [] of Node
-      # iteratively run lifecycle callbacks, which can add new
-      # associated models, which must be processed and added to
-      # nodes, in turn
-      loop do
-        %new = serialize_graph(skip_associated: skip_associated)
-        %delta = %new - %nodes
-        %nodes = %new
-        break if %delta.empty?
-        %delta.each do |%node|
-          %model = %node.model
-          next unless %model == self || %model.changed?
-          if %model.responds_to?({{before.symbolize}})
-            %model.{{before.id}}
+    private macro collect_graph(before, skip_associated)
+      begin
+        %nodes = [] of Node
+        loop do
+          %new = serialize_graph(skip_associated: {{skip_associated}})
+          %delta = %new - %nodes
+          %nodes = %new
+          break if %delta.empty?
+          %delta.each do |%node|
+            %model = %node.model
+            next unless %model == self || %model.changed?
+            if %model.responds_to?({{before.symbolize}})
+              %model.{{before.id}}
+            end
           end
         end
+        %nodes
       end
+    end
+
+    private macro with_callbacks(before, after, skip_associated = false, &block)
+      %nodes = collect_graph({{before}}, {{skip_associated}})
       %nodes.each do |%node|
         %model = %node.model
         next unless %model == self || %model.changed?
@@ -1128,19 +1132,34 @@ module Ktistec
     #
     def save(skip_validation = false, skip_associated = false)
       raise Invalid.new(errors) unless skip_validation || valid?(skip_associated: skip_associated)
-      with_callbacks(before_save, after_save, skip_associated: skip_associated) do |node|
+      # phase: before_save
+      pending = collect_graph(before_save, skip_associated).compact_map do |node|
         model = node.model
-        if (new_record = model.new_record?) && model.responds_to?(:before_create)
-          model.before_create
-        elsif !new_record && model.responds_to?(:before_update)
-          model.before_update
+        {model, model.new_record?} if model == self || model.changed?
+      end
+      # phase: before_create / before_update
+      pending.each do |model, new_record|
+        if new_record
+          model.before_create if model.responds_to?(:before_create)
+        else
+          model.before_update if model.responds_to?(:before_update)
         end
+      end
+      # phase: save
+      pending.each do |model, _|
         model._save_model(skip_validation: skip_validation)
-        if new_record && model.responds_to?(:after_create)
-          model.after_create
-        elsif !new_record && model.responds_to?(:after_update)
-          model.after_update
+      end
+      # phase: after_create / after_update
+      pending.each do |model, new_record|
+        if new_record
+          model.after_create if model.responds_to?(:after_create)
+        else
+          model.after_update if model.responds_to?(:after_update)
         end
+      end
+      # phase: after_save
+      pending.each do |model, _|
+        model.after_save if model.responds_to?(:after_save)
       end
       self
     end

@@ -57,4 +57,3 @@ h1 Tasks
             td = fetch_task_status_line(task, detail: true)
           - else
             td = task_status_line(task, detail: true)
-br.transition.hidden

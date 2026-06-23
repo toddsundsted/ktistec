@@ -12,4 +12,3 @@ form.ui.form class=(message ? "error" : "") method="GET"
   .field
     input type="text" name="query" value=query
   input.ui.primary.button type="submit" value="Search"
-br.transition.hidden

@@ -1406,6 +1406,100 @@ Spectator.describe Ktistec::Model do
         expect { FooBarModel.new(not_nil_model: all_caps_model).save }.not_to change { all_caps_model.after_save_called }
       end
     end
+
+    describe "before phase callbacks" do
+      # records, at callback time, whether its associated parent is
+      # already persisted. the before phases must precede every save.
+
+      class BeforePhaseModel < NotNilModel
+        @@table_name = "not_nil_models"
+
+        getter parent_persisted_in_before_create : Bool? = nil
+        getter parent_persisted_in_before_update : Bool? = nil
+
+        def before_create
+          @parent_persisted_in_before_create = !!FooBarModel.find?(bar: "Parent")
+        end
+
+        def before_update
+          @parent_persisted_in_before_update = !!FooBarModel.find?(bar: "Parent")
+        end
+      end
+
+      subject { FooBarModel.new(bar: "Parent", not_nil_model: child) }
+
+      pre_condition { expect(FooBarModel.find?(bar: "Parent")).to be_nil }
+
+      context "saving the child while creating its parent" do
+        let(child) { BeforePhaseModel.new(val: "Child") }
+
+        it "runs before_create before any node is saved" do
+          subject.save
+          expect(child.parent_persisted_in_before_create).to be_false
+        end
+      end
+
+      context "updating the child while creating its parent" do
+        let(child) { BeforePhaseModel.new(val: "Child").save.assign(val: "Changed") }
+
+        it "runs before_update before any node is saved" do
+          subject.save
+          expect(child.parent_persisted_in_before_update).to be_false
+        end
+      end
+    end
+
+    describe "after phase callbacks" do
+      # records, at callback time, whether its associated sibling is
+      # already persisted. the after phases must follow every save.
+
+      class AfterPhaseModel < FooBarModel
+        @@table_name = "foo_bar_models"
+
+        getter sibling_persisted_in_after_create : Bool? = nil
+        getter sibling_persisted_in_after_update : Bool? = nil
+        getter sibling_persisted_in_after_save : Bool? = nil
+
+        def after_create
+          @sibling_persisted_in_after_create = !!NotNilModel.find?(val: "Sibling")
+        end
+
+        def after_update
+          @sibling_persisted_in_after_update = !!NotNilModel.find?(val: "Sibling")
+        end
+
+        def after_save
+          @sibling_persisted_in_after_save = !!NotNilModel.find?(val: "Sibling")
+        end
+      end
+
+      let(sibling) { NotNilModel.new(val: "Sibling") }
+
+      pre_condition { expect(NotNilModel.find?(val: "Sibling")).to be_nil }
+
+      context "saving a graph with a new associated instance" do
+        subject { AfterPhaseModel.new(not_nil_model: sibling) }
+
+        it "persists the whole graph before running after_create" do
+          subject.save
+          expect(subject.sibling_persisted_in_after_create).to be_true
+        end
+
+        it "persists the whole graph before running after_save" do
+          subject.save
+          expect(subject.sibling_persisted_in_after_save).to be_true
+        end
+      end
+
+      context "updating a graph with a new associated instance" do
+        subject { AfterPhaseModel.new.save }
+
+        it "persists the whole graph before running after_update" do
+          subject.assign(not_nil_model: sibling).save
+          expect(subject.sibling_persisted_in_after_update).to be_true
+        end
+      end
+    end
   end
 
   describe "#update_property" do

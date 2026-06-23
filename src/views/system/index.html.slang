@@ -44,4 +44,3 @@ form.ui.form method="POST" action=system_path
           label for="#{source}-fatal" Fatal
   .field
     = submit_button
-br.transition.hidden

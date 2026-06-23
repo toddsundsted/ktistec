@@ -9,4 +9,3 @@
   h1 Table of Contents
   .ui.list
     - partial TableOfContentsController.render_toc_html(tree, "")
-br.transition.hidden

@@ -43,6 +43,31 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
       end
     end
 
+    context "with the context referenced by URL" do
+      let(json_string) do
+        <<-JSON
+        {
+          "@context": [
+            "https://gotosocial.org/ns",
+            "https://www.w3.org/ns/activitystreams"
+          ],
+          "type": "QuoteAuthorization",
+          "id": "https://remote/stamps/123",
+          "interactingObject": "https://remote/posts/456",
+          "interactionTarget": "https://test.test/objects/789"
+        }
+        JSON
+      end
+
+      it "extracts interacting_object_iri" do
+        expect(quote_decision.interacting_object_iri).to eq("https://remote/posts/456")
+      end
+
+      it "extracts interaction_target_iri" do
+        expect(quote_decision.interaction_target_iri).to eq("https://test.test/objects/789")
+      end
+    end
+
     context "without quote-specific fields" do
       let(json_string) do
         <<-JSON

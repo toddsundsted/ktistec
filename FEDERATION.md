@@ -97,7 +97,7 @@ Ktistec uses [HTTP Signatures](https://datatracker.ietf.org/doc/html/draft-cavag
 
 ### JSON-LD processing
 
-Ktistec performs **full JSON-LD expansion** using cached contexts. The server caches standard ActivityStreams and security contexts locally for performance and reliability.
+Ktistec performs **full JSON-LD expansion** using cached contexts. The server caches standard and commonly-encountered third-party contexts (e.g. ActivityStreams, PURL) locally for performance and reliability.
 
 ### Supported objects
 

@@ -1,6 +1,23 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.6.0]
+### Added
+- Background task to reconcile tag statistics.
+
+### Fixed
+- Prevent model hook callbacks from interleaving.
+- Add spacing between content and the sticky footer.
+
+### Changed
+- Replace Semantic UI with Fomantic UI.
+- Cache the PURL and GoToSocial JSON-LD contexts.
+- Reduce database lock time when reconciling tags.
+- Block npm dependency install scripts.
+
+### Removed
+- The unused `idx_relationships_type` database index.
+
 ## [v3.5.0]
 ### Added
 - Lightweight probe endpoint for authenticated sessions.
@@ -828,6 +845,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.6.0]: https://github.com/toddsundsted/ktistec/compare/63adac41...066f0237
 [v3.5.0]: https://github.com/toddsundsted/ktistec/compare/62d9cc84...319ca17a
 [v3.4.1]: https://github.com/toddsundsted/ktistec/compare/448a50e1...4bfd86d3
 [v3.4.0]: https://github.com/toddsundsted/ktistec/compare/e882df3b...7461a3e2

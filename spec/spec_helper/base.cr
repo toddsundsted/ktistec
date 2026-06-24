@@ -5,6 +5,7 @@ require "json"
 
 require "../../src/framework"
 require "../../src/safe"
+require "../../src/api/status_id"
 
 # require specific classes for later redefinitions
 
@@ -43,6 +44,10 @@ class String
   def ==(other : Ktistec::SafeURI)
     other.to_s == self
   end
+
+  def ==(other : API::StatusID)
+    other.to_s == self
+  end
 end
 
 class Regex
@@ -67,6 +72,10 @@ class Regex
   end
 
   def ==(other : Ktistec::SafeURI)
+    !!(other.to_s =~ self)
+  end
+
+  def ==(other : API::StatusID)
     !!(other.to_s =~ self)
   end
 end

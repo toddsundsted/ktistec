@@ -10,6 +10,7 @@ require "../../models/relationship/content/bookmark"
 require "../../safe/safe_html"
 require "../../safe/safe_uri"
 require "../../views/view_helper"
+require "../status_id"
 require "./account"
 
 module API
@@ -21,7 +22,7 @@ module API
     class Status
       include JSON::Serializable
 
-      property id : String
+      property id : API::StatusID
       property uri : Ktistec::SafeURI
       property created_at : String
       property account : Account
@@ -40,7 +41,7 @@ module API
       @[JSON::Field(emit_null: true)]
       property url : Ktistec::SafeURI?
       @[JSON::Field(emit_null: true)]
-      property in_reply_to_id : String?
+      property in_reply_to_id : API::StatusID?
       @[JSON::Field(emit_null: true)]
       property in_reply_to_account_id : String?
       @[JSON::Field(emit_null: true)]
@@ -233,7 +234,7 @@ module API
       end
 
       def initialize(
-        @id : String,
+        @id : API::StatusID,
         @uri : Ktistec::SafeURI,
         @created_at : String,
         @account : Account,
@@ -250,7 +251,7 @@ module API
         @quotes_count : Int64,
         @replies_count : Int64,
         @url : Ktistec::SafeURI?,
-        @in_reply_to_id : String?,
+        @in_reply_to_id : API::StatusID?,
         @in_reply_to_account_id : String?,
         @reblog : Status?,
         @poll : Poll?,
@@ -282,7 +283,7 @@ module API
         quote = include_quote ? build_quote(object, actor) : nil
 
         if (in_reply_to = object.in_reply_to?)
-          in_reply_to_id = in_reply_to.id.to_s
+          in_reply_to_id = API::StatusID.from_object(in_reply_to)
           in_reply_to_account_id = in_reply_to.attributed_to.id.to_s
         end
 
@@ -297,7 +298,7 @@ module API
         end
 
         Status.new(
-          id: object.id.to_s,
+          id: API::StatusID.from_object(object),
           uri: Ktistec::SafeURI.from(object.iri),
           created_at: object.published.not_nil!.to_rfc3339,
           account: account,
@@ -350,7 +351,7 @@ module API
         reblog = from_object(announce.object, actor: actor)
 
         Status.new(
-          id: announce.object.id.to_s,
+          id: API::StatusID.from_announce(announce),
           uri: Ktistec::SafeURI.from(announce.iri),
           created_at: (announce.published || announce.object.published).not_nil!.to_rfc3339,
           account: account,

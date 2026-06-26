@@ -8,7 +8,7 @@ module Ktistec
   # attribute value.
   #
   struct SafeAttrValue
-    def initialize(@value : String)
+    protected def initialize(@value : String)
     end
 
     # Attribute-encodes the input.

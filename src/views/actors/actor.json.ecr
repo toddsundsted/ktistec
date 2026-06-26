@@ -2,6 +2,9 @@
   "@context":[
     "https://www.w3.org/ns/activitystreams",
     "https://w3id.org/security/v1",
+    <%- if actor.local? -%>
+    "https://purl.archive.org/socialweb/webfinger",
+    <%- end -%>
     {
       "manuallyApprovesFollowers":"as:manuallyApprovesFollowers",
       "featured":{"@id":"http://joinmastodon.org/ns#featured","@type":"@id"},
@@ -12,6 +15,9 @@
   ],
   <%- if (username = actor.username) -%>
   "preferredUsername":<%= username.to_json %>,
+  <%- if actor.local? && (handle_host = URI.parse(actor.iri).host) -%>
+  "webfinger":<%= "#{username}@#{handle_host}".to_json %>,
+  <%- end -%>
   <%- end -%>
   <%- if (pem_public_key = actor.pem_public_key) -%>
   "publicKey":{

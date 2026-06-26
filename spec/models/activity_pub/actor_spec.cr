@@ -569,6 +569,12 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.to_json_ld).to match(/"url":"url-link"/)
     end
 
+    it "does not render webfinger" do
+      parsed = JSON.parse(actor.to_json_ld).as_h
+      expect(parsed.has_key?("preferredUsername")).to be_true
+      expect(parsed.has_key?("webfinger")).to be_false
+    end
+
     it "escapes JSON-breaking characters in publicKey id and owner" do
       # the validator now rejects iris containing `"` etc., but the
       # template-side escape is defense in depth -- a future code
@@ -604,6 +610,15 @@ Spectator.describe ActivityPub::Actor do
 
       it "renders `proxyUrl`" do
         expect(actor.to_json_ld).to match(/"endpoints":\{[^}]*"proxyUrl":"https:\/\/test.test\/proxy"[^}]*\}/)
+      end
+
+      it "renders the webfinger context" do
+        expect(actor.to_json_ld).to match(%r{"https://purl.archive.org/socialweb/webfinger"})
+      end
+
+      it "renders webfinger" do
+        parsed = JSON.parse(actor.to_json_ld).as_h
+        expect(parsed["webfinger"].as_s).to eq("#{actor.username}@test.test")
       end
     end
 

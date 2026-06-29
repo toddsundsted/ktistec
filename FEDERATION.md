@@ -11,6 +11,7 @@
 
 - [FEP-67ff: FEDERATION.md](https://codeberg.org/fediverse/fep/src/branch/main/fep/67ff/fep-67ff.md)
 - [FEP-044f: Consent-Aware ActivityPub Quoting](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
+- [FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/2c59/fep-2c59.md)
 - [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
 - [FEP-0151: NodeInfo in Fediverse Software (2025 edition)](https://codeberg.org/fediverse/fep/src/branch/main/fep/0151/fep-0151.md)
 
@@ -31,6 +32,7 @@
 
 **Profile properties:**
 - `preferredUsername` - The actor's username
+- `webfinger` - Canonical WebFinger address (FEP-2c59)
 - `name` - Display name
 - `summary` - Bio/description (HTML supported)
 - `icon` - Profile picture
@@ -195,7 +197,7 @@ Media files are stored locally and served from the `/uploads` path.
 
 **Single-user architecture:**
 - Ktistec is designed for small numbers of users (typically one)
-- While shared inboxes are supported, since each instance typically has one actor, they typically doesn't provide much benefit
+- While shared inboxes are supported, since each instance typically has one actor, they typically don't provide much benefit
 
 **Compatibility:**
 - Tested with Mastodon, PeerTube, Lemmy, PixelFed, and other ActivityPub implementations

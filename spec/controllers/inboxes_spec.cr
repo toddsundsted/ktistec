@@ -1094,7 +1094,7 @@ Spectator.describe InboxesController do
       end
     end
 
-    context "on update" do
+    context "on update (object)" do
       let_build(:note, attributed_to: other)
       let_build(:update, actor: other, object: nil, to: [actor.iri])
 
@@ -1189,6 +1189,91 @@ Spectator.describe InboxesController do
           update.object = note
           expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
             .to change { Notification.count(from_iri: actor.iri) }.by(1)
+        end
+      end
+    end
+
+    context "on update (actor)" do
+      let_build(:update, actor: other, object: nil, to: [actor.iri])
+
+      let(json_ld) { update.to_json_ld(recursive: true) }
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", json_ld, "application/json") }
+
+      before_each { other.assign(name: "Updated Name") }
+
+      it "returns 400 if no actor is included" do
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      let_create(:actor, named: :third)
+
+      it "returns 400 if the actor is not the one being updated" do
+        update.object = third
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(response.status_code).to eq(400)
+      end
+
+      it "fetches actor if remote" do
+        update.object_iri = other.iri
+        headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(false), "application/json")
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(HTTP::Client.last?).to match("GET #{other.iri}")
+      end
+
+      it "doesn't fetch the actor if embedded" do
+        update.object = other
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "updates the actor" do
+        update.object = other
+        expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+          .to change { ActivityPub::Actor.find(other.iri).name }.to("Updated Name")
+      end
+
+      it "puts the activity in the actor's inbox" do
+        update.object = other
+        expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+          .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+      end
+
+      it "is successful" do
+        update.object = other
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(response.status_code).to eq(200)
+      end
+
+      context "and the embedded actor claims a handle" do
+        let(claimed) { "#{other.username}@remote" }
+
+        # `other` is remote, so our own serializer omits `webfinger`.
+        let(json_ld) do
+          doc = JSON.parse(update.to_json_ld(recursive: true)).as_h
+          doc["@context"] = JSON::Any.new(doc["@context"].as_a << JSON::Any.new("https://purl.archive.org/socialweb/webfinger"))
+          object = doc["object"].as_h
+          object["webfinger"] = JSON::Any.new(claimed)
+          doc["object"] = JSON::Any.new(object)
+          doc.to_json
+        end
+
+        it "stores the verified handle" do
+          update.object = other
+          expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+            .to change { ActivityPub::Actor.find?(other.iri).try(&.verified_handle) }
+              .from(nil).to(claimed)
+        end
+
+        context "that does not verify" do
+          let(claimed) { "#{other.username}@elsewhere" }
+
+          it "does not store the handle" do
+            update.object = other
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(ActivityPub::Actor.find(other.iri).verified_handle).to be_nil
+          end
         end
       end
     end

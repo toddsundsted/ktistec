@@ -3,6 +3,7 @@ require "../task/mixins/transfer"
 
 require "../../utils/recipients"
 require "../activity_pub/activity"
+require "../activity_pub/activity/update"
 require "../activity_pub/actor"
 require "../activity_pub/collection"
 require "../activity_pub/object"
@@ -58,7 +59,7 @@ class Task
     end
 
     def perform
-      if (activity = self.activity) && activity.is_a?(ActivityPub::Activity::ObjectActivity) && (object = activity.object?)
+      if (activity = self.activity) && (activity.is_a?(ActivityPub::Activity::ObjectActivity) || activity.is_a?(ActivityPub::Activity::Update)) && (object = activity.object?) && object.is_a?(ActivityPub::Object)
         if (quote = object.quote?(include_deleted: true) || object.quote?(receiver, dereference: true))
           if quote.attributed_to?(include_deleted: true) || quote.attributed_to?(receiver, dereference: true)
             quote.save

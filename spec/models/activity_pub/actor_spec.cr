@@ -4,6 +4,7 @@ require "../../../src/rules/trigger"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
+require "../../spec_helper/network"
 
 class FooBarActor < ActivityPub::Actor
 end
@@ -422,6 +423,31 @@ Spectator.describe ActivityPub::Actor do
     it "includes the public key" do
       actor = described_class.from_json_ld(json, include_key: true).save
       expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
+    end
+
+    context "given a webfinger property" do
+      let(json) do
+        super
+          .gsub(%q|"https://w3id.org/security/v1",|, %q|"https://w3id.org/security/v1","https://purl.archive.org/socialweb/webfinger",|)
+          .gsub(%q|"preferredUsername":"foo_bar",|, %q|"preferredUsername":"foo_bar","webfinger":"xyzzy@example.com",|)
+      end
+
+      it "parses the claimed handle" do
+        expect(described_class.from_json_ld(json).webfinger).to eq("xyzzy@example.com")
+      end
+
+      context "with an acct: prefix" do
+        let(json) { super.gsub(%q|"webfinger":"xyzzy@example.com"|, %q|"webfinger":"acct:xyzzy@example.com"|) }
+
+        it "strips the prefix" do
+          expect(described_class.from_json_ld(json).webfinger).to eq("xyzzy@example.com")
+        end
+      end
+
+      it "does not persist the claimed handle as a verified handle" do
+        actor = described_class.from_json_ld(json).save
+        expect(actor.reload!.verified_handle).to be_nil
+      end
     end
 
     context "when natural-language properties are sent only as language maps" do
@@ -2459,9 +2485,98 @@ Spectator.describe ActivityPub::Actor do
       expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar").handle).to eq("foobar@remote")
     end
 
+    it "returns the verified handle" do
+      expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar", verified_handle: "xyzzy@example.com").handle).to eq("xyzzy@example.com")
+      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar", verified_handle: "xyzzy@example.com").handle).to eq("xyzzy@example.com")
+    end
+
     it "returns '[blocked]' when actor is blocked" do
       expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar", blocked_at: Time.utc).handle).to eq("[blocked]")
       expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar", blocked_at: Time.utc).handle).to eq("[blocked]")
+    end
+
+    it "returns '[blocked]' even when a verified handle is present" do
+      expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar", verified_handle: "xyzzy@example.com", blocked_at: Time.utc).handle).to eq("[blocked]")
+      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar", verified_handle: "xyzzy@example.com", blocked_at: Time.utc).handle).to eq("[blocked]")
+    end
+  end
+
+  describe "#verify_handle!" do
+    context "when the claimed handle resolves to the actor" do
+      let(claimed) { "alice@example.com" }
+
+      let_build(:actor, iri: "https://activitypub.example.com/users/alice", username: "alice", webfinger: claimed)
+
+      before_each { Ktistec::WebFinger.resolve(claimed, to: actor.iri) }
+
+      pre_condition { expect(Ktistec::WebFinger.query("acct:#{claimed}").link("self").href).to eq(actor.iri) }
+
+      it "stores the verified handle" do
+        expect { actor.verify_handle! }.to change { actor.verified_handle }.from(nil).to(claimed)
+      end
+
+      context "but the claim has embedded whitespace" do
+        let(claimed) { "alice bob@example.com" }
+
+        it "does not store a verified handle" do
+          expect { actor.verify_handle! }.not_to change { actor.verified_handle }.from(nil)
+        end
+      end
+
+      context "but the claim has an embedded newline" do
+        let(claimed) { "alice@example.com\nevil@example.com" }
+
+        it "does not store a verified handle" do
+          expect { actor.verify_handle! }.not_to change { actor.verified_handle }.from(nil)
+        end
+      end
+    end
+
+    context "when the claimed handle resolves to a different actor" do
+      let_build(:actor, iri: "https://activitypub.example.com/users/alice", username: "alice", webfinger: "bob@example.com")
+
+      before_each { Ktistec::WebFinger.resolve("bob@example.com", to: "https://example.com/users/bob") }
+
+      it "does not store a verified handle" do
+        expect { actor.verify_handle! }.not_to change { actor.verified_handle }.from(nil)
+      end
+    end
+
+    context "when the WebFinger lookup fails" do
+      let_build(:actor, iri: "https://remote/foo", username: "foo", webfinger: "xyzzy@no-such-host.example")
+
+      it "does not store a verified handle" do
+        expect { actor.verify_handle! }.not_to change { actor.verified_handle }.from(nil)
+      end
+    end
+
+    context "when the WebFinger record has no self link" do
+      let_build(:actor, iri: "https://remote/foo", username: "foo", webfinger: "xyzzy@example.com")
+
+      before_each { Ktistec::WebFinger.resolve("xyzzy@example.com", to: nil) }
+
+      it "does not store a verified handle" do
+        expect { actor.verify_handle! }.not_to change { actor.verified_handle }.from(nil)
+      end
+    end
+
+    context "when no handle is claimed" do
+      let_build(:actor, iri: "https://remote/foo", username: "foo", webfinger: nil)
+
+      it "does not store a verified handle" do
+        expect { actor.verify_handle! }.not_to change { actor.verified_handle }.from(nil)
+      end
+    end
+
+    context "given an actor with a previously verified handle" do
+      let_create!(:actor, iri: "https://remote/foo", username: "foo", verified_handle: "original@example.com")
+
+      before_each { Ktistec::WebFinger.resolve("different@example.com", to: "https://example.com/users/bar") }
+
+      it "retains handle when re-verification does not confirm" do
+        actor.assign(webfinger: "different@example.com").verify_handle!
+        expect(actor.verified_handle).to eq("original@example.com")
+      end
     end
   end
 

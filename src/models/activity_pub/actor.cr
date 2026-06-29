@@ -9,6 +9,7 @@ require "../../framework/model"
 require "../../framework/model/common"
 require "../../framework/observable"
 require "../../services/upload_service"
+require "../../utils/web_finger"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
@@ -113,6 +114,15 @@ module ActivityPub
 
     @[Persistent]
     property urls : Array(String)?
+
+    # the `webfinger` address an actor claims, parsed but never
+    # persisted -- it is untrusted until WebFinger confirms it
+    @[Assignable]
+    property webfinger : String?
+
+    # the verified, persisted `webfinger` address
+    @[Persistent]
+    property verified_handle : String?
 
     has_many objects, class_name: ActivityPub::Object, foreign_key: attributed_to_iri, primary_key: iri
 
@@ -235,7 +245,29 @@ module ActivityPub
     end
 
     def handle
-      blocked? ? "[blocked]" : %Q|#{username}@#{URI.parse(iri).host}|
+      blocked? ? "[blocked]" : (verified_handle.presence || %Q|#{username}@#{URI.parse(iri).host}|)
+    end
+
+    VALID_HANDLE = /\A[a-zA-Z0-9_.~-]+@[a-zA-Z0-9.-]+\z/
+
+    def verify_handle!
+      if (claimed = webfinger.presence)
+        if claimed.matches?(VALID_HANDLE)
+          begin
+            href = Ktistec::WebFinger.query("acct:#{claimed}").link("self").href
+            if href == iri
+              self.verified_handle = claimed
+            else
+              Log.notice { "verify_handle! - #{iri} - claimed #{claimed.inspect} resolved to #{href.inspect}" }
+            end
+          rescue ex : Ktistec::WebFinger::Error | KeyError
+            Log.debug { "verify_handle! - #{iri} - #{claimed.inspect} - #{ex.message}" }
+          end
+        else
+          Log.notice { "verify_handle! - #{iri} - claimed #{claimed.inspect} is not a valid handle" }
+        end
+      end
+      self
     end
 
     def display_name
@@ -1392,6 +1424,7 @@ private module ActorModelHelper
       "iri"            => json.dig?("@id").try(&.as_s),
       "_type"          => json.dig?("@type").try(&.as_s.split("#").last),
       "username"       => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
+      "webfinger"      => Ktistec::JSON_LD.dig?(json, "https://purl.archive.org/socialweb/webfinger#webfinger").try(&.lchop("acct:")),
       "pem_public_key" => if include_key
         Ktistec::JSON_LD.dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
       end,

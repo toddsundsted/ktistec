@@ -308,6 +308,7 @@ end
 BEFORE_PROCS << -> do
   HTTP::Client.reset
   Ktistec::Network.reset_last_addrinfo
+  Ktistec::WebFinger.reset
 end
 
 # test override: records the passed `Addrinfo` so specs can verify it
@@ -341,16 +342,53 @@ module Ktistec
       ^(?<host>.+)$
     >mx
 
+    @@hrefs = {} of String => String?
+
+    def self.resolve(account : String, to href : String?)
+      @@hrefs[account.lchop("acct:")] = href
+    end
+
+    def self.reset
+      @@hrefs.clear
+    end
+
     def self.query(account)
       unless account =~ ACCOUNT_REGEX
         raise Ktistec::WebFinger::NotFoundError.new("Invalid account")
       end
       name = $~["name"]?
       host = $~["host"]
+      key = account.lchop("acct:")
       if name =~ /no-such-name/
         raise Ktistec::WebFinger::NotFoundError.new("No such name")
       elsif host =~ /no-such-host/
         raise Ktistec::WebFinger::NotFoundError.new("No such host")
+      elsif @@hrefs.has_key?(key)
+        if (href = @@hrefs[key])
+          Ktistec::WebFinger::Result.from_json(<<-JSON
+            {
+              "links":[
+                {
+                  "rel":"self",
+                  "href":#{href.to_json}
+                }
+              ]
+            }
+            JSON
+          )
+        else
+          Ktistec::WebFinger::Result.from_json(<<-JSON
+            {
+              "links":[
+                {
+                  "rel":"http://ostatus.org/schema/1.0/subscribe",
+                  "template":"https://#{host}/authorize-interaction?uri={uri}"
+                }
+              ]
+            }
+            JSON
+          )
+        end
       elsif name
         Ktistec::WebFinger::Result.from_json(<<-JSON
           {

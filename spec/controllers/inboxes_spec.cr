@@ -217,6 +217,28 @@ Spectator.describe InboxesController do
 
       let(headers) { Ktistec::Signature.sign(other, actor.inbox.not_nil!, json_ld, "application/json") }
 
+      context "and an actor claims a verifiable handle" do
+        # un-saved, so the inbox dereferences it (rather than using a
+        # cached instance) and thus runs `verify_handle!`.
+        let_build(:actor, named: :other, with_keys: true)
+
+        let(claimed) { "#{other.username}@remote" }
+
+        # `other` is remote, so our own serializer omits `webfinger`.
+        before_each do
+          doc = JSON.parse(other.to_json_ld).as_h
+          doc["@context"] = JSON::Any.new(doc["@context"].as_a << JSON::Any.new("https://purl.archive.org/socialweb/webfinger"))
+          doc["webfinger"] = JSON::Any.new(claimed)
+          HTTP::Client.cache[other.iri] = doc.to_json
+        end
+
+        it "verifies and stores the handle" do
+          expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+            .to change { ActivityPub::Actor.find?(other.iri).try(&.verified_handle) }
+              .from(nil).to(claimed)
+        end
+      end
+
       it "does not retrieve the activity from the origin" do
         post "/actors/#{actor.username}/inbox", headers, json_ld
         expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")

@@ -118,7 +118,7 @@ Spectator.describe Task::RefreshActor do
     end
 
     before_each do
-      HTTP::Client.actors << actor.assign(username: "foobar")
+      HTTP::Client.actors << actor.dup.assign(username: "foobar")
     end
 
     it "fetches the actor" do
@@ -129,6 +129,24 @@ Spectator.describe Task::RefreshActor do
     it "updates the actor" do
       expect { subject.perform }
         .to change { actor.reload!.username }
+    end
+
+    context "when the actor claims a verifiable handle" do
+      let(claimed) { "#{actor.username}@remote" }
+
+      # `actor` is remote, so our own serializer omits `webfinger`.
+      before_each do
+        doc = JSON.parse(actor.to_json_ld).as_h
+        doc["@context"] = JSON::Any.new(doc["@context"].as_a << JSON::Any.new("https://purl.archive.org/socialweb/webfinger"))
+        doc["webfinger"] = JSON::Any.new(claimed)
+        HTTP::Client.cache[actor.iri] = doc.to_json
+      end
+
+      it "verifies and stores the handle" do
+        expect { subject.perform }
+          .to change { ActivityPub::Actor.find?(actor.iri).try(&.verified_handle) }
+            .from(nil).to(claimed)
+      end
     end
 
     macro make_subscription(topic, &block)

@@ -58,6 +58,7 @@ class Task
 
     def perform
       if (instance = ActivityPub::Actor.dereference?(source, actor.iri, ignore_cached: true))
+        instance.verify_handle!
         instance.save.up!
         sync_featured_collection(instance) if state.sync_featured_collection
         Ktistec::Topic{"/actor/refresh"}.notify_subscribers(actor.id.to_s)

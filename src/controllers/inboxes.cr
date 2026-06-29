@@ -172,7 +172,10 @@ class InboxesController
 
     if (actor_iri = activity.actor_iri)
       unless (actor = ActivityPub::Actor.find?(actor_iri)) && (!signature || actor.pem_public_key)
-        actor = ActivityPub::Actor.dereference?(account.actor, actor_iri, ignore_cached: true, include_key: true).try(&.save)
+        actor = ActivityPub::Actor.dereference?(account.actor, actor_iri, ignore_cached: true, include_key: true).try do |dereferenced|
+          dereferenced.verify_handle!
+          dereferenced.save
+        end
       end
     end
 

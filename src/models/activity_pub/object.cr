@@ -1284,6 +1284,8 @@ module ActivityPub
           "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
             url = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#url").presence
             media_type = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#mediaType").presence
+            # some servers (e.g. Threads) omit `mediaType`
+            media_type ||= infer_media_type(url) if url
             name = ActivityPub.dig_text?(attachment, "https://www.w3.org/ns/activitystreams#name").presence
             focal_point =
               if (fp = attachment.as_h["http://joinmastodon.org/ns#focalPoint"]?)
@@ -1320,6 +1322,12 @@ module ActivityPub
 
       private def self.parse_host(uri)
         URI.parse(uri).host
+      rescue URI::Error
+      end
+
+      private def self.infer_media_type(url : String) : String?
+        ext = File.extname(URI.parse(url).path).downcase
+        Ktistec::Constants::SUPPORTED_MEDIA_TYPES_MAP[ext]? unless ext.empty?
       rescue URI::Error
       end
     end

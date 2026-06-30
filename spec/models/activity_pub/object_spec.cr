@@ -666,6 +666,34 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "when attachment media type is missing" do
+      # in a CDN url whose query string itself contains a dot, the
+      # extension must come from the path
+      let(json) do
+        super
+          .gsub(%q|"url":"attachment-link"|, %q|"url":"https://cdn.remote/730_n.jpg?stp=dst-jpg_e35.s640x640&oe=683F"|)
+          .gsub(%q|"mediaType":"type"|, %q|"mediaType":null|)
+      end
+
+      it "infers the media type from the url extension" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("https://cdn.remote/730_n.jpg?stp=dst-jpg_e35.s640x640&oe=683F", "image/jpeg", "caption")])
+      end
+    end
+
+    context "when attachment media type is missing and extension is not supported" do
+      let(json) do
+        super
+          .gsub(%q|"url":"attachment-link"|, %q|"url":"https://remote/file.xyz"|)
+          .gsub(%q|"mediaType":"type"|, %q|"mediaType":null|)
+      end
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to be_empty
+      end
+    end
+
     context "with focalPoint field" do
       let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.2,-0.4]|) }
 

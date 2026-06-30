@@ -84,5 +84,11 @@ module Ktistec
 
     SUPPORTED_MEDIA_TYPES =
       SUPPORTED_MEDIA_TYPES_TABLE.map { |e| e[:mime] }
+
+    # Maps a lowercase filename extension to its canonical media type.
+    SUPPORTED_MEDIA_TYPES_MAP =
+      SUPPORTED_MEDIA_TYPES_TABLE.each_with_object({} of String => String) do |e, map|
+        e[:extensions].each { |ext| map[ext] ||= e[:mime] }
+      end
   end
 end

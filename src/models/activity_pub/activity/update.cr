@@ -10,7 +10,9 @@ class ActivityPub::Activity
       valid?
       messages = [] of String
       messages << "actor must be local" unless actor?.try(&.local?)
-      unless (_object = object?).is_a?(ActivityPub::Actor)
+      if (_object = object?).is_a?(ActivityPub::Actor)
+        messages << "object must be the actor" unless _object.iri == actor?.try(&.iri)
+      else
         messages << "object must be attributed to actor" unless _object.try(&.attributed_to?) == actor?
       end
       unless messages.empty?

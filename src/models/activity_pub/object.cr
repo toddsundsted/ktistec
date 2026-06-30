@@ -184,15 +184,15 @@ module ActivityPub
       end
 
       def image?
-        media_type.in?(%w[image/bmp image/gif image/jpeg image/png image/svg+xml image/x-icon image/apng image/webp])
+        media_type.in?(Ktistec::Constants::SUPPORTED_IMAGE_TYPES)
       end
 
       def video?
-        media_type.in?(%w[video/mp4 video/webm video/ogg])
+        media_type.in?(Ktistec::Constants::SUPPORTED_VIDEO_TYPES)
       end
 
       def audio?
-        media_type.in?(%w[audio/mpeg audio/mp4 audio/webm audio/ogg audio/flac])
+        media_type.in?(Ktistec::Constants::SUPPORTED_AUDIO_TYPES)
       end
 
       def has_focal_point?

@@ -175,10 +175,7 @@ Spectator.describe API::V1::Serializers::Instance do
         end
       end
 
-      SUPPORTED_MEDIA_TYPES =
-        Ktistec::Constants::SUPPORTED_IMAGE_TYPES +
-          Ktistec::Constants::SUPPORTED_VIDEO_TYPES +
-          Ktistec::Constants::SUPPORTED_AUDIO_TYPES
+      SUPPORTED_MEDIA_TYPES = Ktistec::Constants::SUPPORTED_MEDIA_TYPES
 
       context "media_attachments" do
         it "returns supported mime types" do
@@ -400,10 +397,7 @@ Spectator.describe API::V2::Serializers::Instance do
         end
       end
 
-      SUPPORTED_MEDIA_TYPES =
-        Ktistec::Constants::SUPPORTED_IMAGE_TYPES +
-          Ktistec::Constants::SUPPORTED_VIDEO_TYPES +
-          Ktistec::Constants::SUPPORTED_AUDIO_TYPES
+      SUPPORTED_MEDIA_TYPES = Ktistec::Constants::SUPPORTED_MEDIA_TYPES
 
       context "media_attachments" do
         it "returns supported mime types" do

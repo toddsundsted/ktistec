@@ -5,7 +5,7 @@ module Ktistec
   # body of an inert `<script type="application/json">` block.
   #
   struct SafeJSON
-    def initialize(@value : String)
+    protected def initialize(@value : String)
     end
 
     # Serializes `value` as JSON.

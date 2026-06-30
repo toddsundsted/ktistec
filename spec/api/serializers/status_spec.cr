@@ -13,8 +13,8 @@ Spectator.describe API::V1::Serializers::Status do
 
     subject { described_class.from_object(object) }
 
-    it "returns id" do
-      expect(subject.id).to eq(object.id.to_s)
+    it "returns id that decodes to the object" do
+      expect(API::StatusID.decode(subject.id.to_s)).to eq({:object, object.id!})
     end
 
     it "returns uri" do
@@ -647,8 +647,8 @@ Spectator.describe API::V1::Serializers::Status do
 
     subject { described_class.from_announce(announce) }
 
-    it "returns id" do
-      expect(subject.id).to eq(object.id.to_s)
+    it "returns id that decodes to the announce" do
+      expect(API::StatusID.decode(subject.id.to_s)).to eq({:announce, announce.id!})
     end
 
     it "returns uri" do

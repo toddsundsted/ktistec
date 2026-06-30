@@ -168,6 +168,11 @@ Spectator.describe SettingsController do
           expect(response.status_code).to eq(302)
           expect(response.headers.to_a).to have({"Location", ["/sessions"]})
         end
+
+        it "does not federate an Update of the actor" do
+          expect { post "/settings/actor", headers, "password=foobarbaz1%21" }
+            .not_to change { ActivityPub::Activity::Update.count }
+        end
       end
 
       context "and posting urlencoded data" do
@@ -188,6 +193,11 @@ Spectator.describe SettingsController do
         it "succeeds" do
           post "/settings/actor", headers, query_string
           expect(response.status_code).to eq(302)
+        end
+
+        it "federates an Update of the actor" do
+          expect { post "/settings/actor", headers, "name=Foo+Bar" }
+            .to change { ActivityPub::Activity::Update.count }.by(1)
         end
 
         it "updates the name" do

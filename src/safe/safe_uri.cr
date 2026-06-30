@@ -13,7 +13,7 @@ module Ktistec
     #
     EMPTY_URI = assert_safe("") # ameba:disable Ktistec/AssertSafeWhitelist
 
-    def initialize(@value : String)
+    protected def initialize(@value : String)
     end
 
     # Validates and wraps the input.

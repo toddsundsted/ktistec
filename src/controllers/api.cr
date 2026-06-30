@@ -8,6 +8,7 @@ require "../models/relationship/content/outbox"
 require "../models/relationship/content/timeline/announce"
 require "../models/tag/hashtag"
 require "../models/poll"
+require "../services/actor_update_distributor"
 require "../services/oauth2/client_registration"
 require "../services/object_factory"
 require "../services/outbox_activity_processor"
@@ -17,6 +18,7 @@ require "../api/serializers/instance"
 require "../api/serializers/account"
 require "../api/serializers/status"
 require "../api/serializers/relationship"
+require "../api/status_id"
 require "./oauth2"
 
 class APIController
@@ -203,6 +205,7 @@ class APIController
 
     if account.valid?
       account.save
+      ActorUpdateDistributor.distribute(account)
       API::V1::Serializers::Account.from_account(account, actor, include_source: true).to_json
     else
       errors = account.errors.map { |field, messages| "#{field}: #{messages.join(", ")}" }.join("; ")
@@ -321,6 +324,23 @@ class APIController
     statuses.to_a.to_json
   end
 
+  # maps a pagination cursor to the object id the timeline expects.
+  # a reblog-wrapper (announce) id resolves to its underlying object's
+  # id; an object id passes through.
+
+  private def self.cursor_object_id?(value : Int64?) : Int64?
+    return unless value
+    if (decoded = API::StatusID.decode(value.to_s))
+      kind, id = decoded
+      case kind
+      when :announce
+        ActivityPub::Activity::Announce.find?(id).try(&.object?).try(&.id)
+      else
+        id
+      end
+    end
+  end
+
   get "/api/v1/timelines/home" do |env|
     unless (account = env.account?)
       unauthorized "api/error", error: "The access token is invalid"
@@ -328,7 +348,11 @@ class APIController
 
     actor = account.actor
     params = cursor_pagination_params(env)
-    params = params.merge(limit: params[:limit].clamp(1, 40))
+    params = params.merge(
+      max_id: cursor_object_id?(params[:max_id]),
+      min_id: cursor_object_id?(params[:min_id]),
+      limit: params[:limit].clamp(1, 40),
+    )
 
     timeline = actor.timeline(**params)
     statuses = timeline.map do |entry|
@@ -401,18 +425,53 @@ class APIController
     statuses.to_a.to_json
   end
 
+  # resolves a status id (an object id, or a reblog-wrapper announce
+  # id) to its underlying object.
+
+  private def self.resolve_status_object?(id : String) : ActivityPub::Object?
+    if (decoded = API::StatusID.decode(id))
+      kind, internal_id = decoded
+      case kind
+      when :object
+        ActivityPub::Object.find?(internal_id)
+      when :announce
+        ActivityPub::Activity::Announce.find?(internal_id).try(&.object?)
+      end
+    end
+  end
+
+  # serializes the status addressed by a status id: a reblog wrapper
+  # for an announce id, the object itself otherwise.
+
+  private def self.serialize_status?(id : String, actor : ActivityPub::Actor?) : API::V1::Serializers::Status?
+    if (decoded = API::StatusID.decode(id))
+      kind, internal_id = decoded
+      begin
+        case kind
+        when :object
+          if (object = ActivityPub::Object.find?(internal_id))
+            API::V1::Serializers::Status.from_object(object, actor: actor)
+          end
+        when :announce
+          if (announce = ActivityPub::Activity::Announce.find?(internal_id))
+            API::V1::Serializers::Status.from_announce(announce, actor: actor)
+          end
+        end
+      rescue Ktistec::Model::NotFound
+      end
+    end
+  end
+
   get "/api/v1/statuses/:id" do |env|
     unless (account = env.account?)
       unauthorized "api/error", error: "The access token is invalid"
     end
 
-    id = env.params.url["id"].to_i64
-
-    unless (object = ActivityPub::Object.find?(id))
+    unless (status = serialize_status?(env.params.url["id"], account.actor))
       not_found "api/error", error: "Object not found"
     end
 
-    API::V1::Serializers::Status.from_object(object, actor: account.actor).to_json
+    status.to_json
   end
 
   get "/api/v1/statuses/:id/context" do |env|
@@ -421,9 +480,8 @@ class APIController
     end
 
     actor = account.actor
-    id = env.params.url["id"].to_i64
 
-    unless (object = ActivityPub::Object.find?(id))
+    unless (object = resolve_status_object?(env.params.url["id"]))
       not_found "api/error", error: "Object not found"
     end
 
@@ -452,7 +510,7 @@ class APIController
     end
 
     if (in_reply_to_id = params["in_reply_to_id"]?.try(&.as(String)).presence)
-      unless (in_reply_to = ActivityPub::Object.find?(in_reply_to_id.to_i64))
+      unless (in_reply_to = resolve_status_object?(in_reply_to_id))
         unprocessable_entity "api/error", error: "Reply not found"
       end
       in_reply_to_iri = in_reply_to.iri
@@ -523,7 +581,7 @@ class APIController
     unless (account = env.account?)
       unauthorized "api/error", error: "The access token is invalid"
     end
-    unless (object = ActivityPub::Object.find?(id_param(env)))
+    unless (object = resolve_status_object?(env.params.url["id"]))
       not_found "api/error", error: "Object not found"
     end
 
@@ -551,7 +609,7 @@ class APIController
     unless (account = env.account?)
       unauthorized "api/error", error: "The access token is invalid"
     end
-    unless (object = ActivityPub::Object.find?(id_param(env)))
+    unless (object = resolve_status_object?(env.params.url["id"]))
       not_found "api/error", error: "Object not found"
     end
 
@@ -578,7 +636,7 @@ class APIController
     unless (account = env.account?)
       unauthorized "api/error", error: "The access token is invalid"
     end
-    unless (object = ActivityPub::Object.find?(id_param(env)))
+    unless (object = resolve_status_object?(env.params.url["id"]))
       not_found "api/error", error: "Object not found"
     end
 
@@ -609,7 +667,7 @@ class APIController
     unless (account = env.account?)
       unauthorized "api/error", error: "The access token is invalid"
     end
-    unless (object = ActivityPub::Object.find?(id_param(env)))
+    unless (object = resolve_status_object?(env.params.url["id"]))
       not_found "api/error", error: "Object not found"
     end
 
@@ -638,7 +696,7 @@ class APIController
     unless (account = env.account?)
       unauthorized "api/error", error: "The access token is invalid"
     end
-    unless (object = ActivityPub::Object.find?(id_param(env)))
+    unless (object = resolve_status_object?(env.params.url["id"]))
       not_found "api/error", error: "Object not found"
     end
 
@@ -654,7 +712,7 @@ class APIController
     unless (account = env.account?)
       unauthorized "api/error", error: "The access token is invalid"
     end
-    unless (object = ActivityPub::Object.find?(id_param(env)))
+    unless (object = resolve_status_object?(env.params.url["id"]))
       not_found "api/error", error: "Object not found"
     end
 

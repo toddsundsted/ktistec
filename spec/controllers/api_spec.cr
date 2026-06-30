@@ -541,6 +541,11 @@ Spectator.describe APIController do
             patch "/api/v1/accounts/update_credentials", headers: headers, body: body
             expect(JSON.parse(response.body)["source"]).to be_truthy
           end
+
+          it "federates an Update of the actor" do
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { ActivityPub::Activity::Update.count }.by(1)
+          end
         end
 
         it "updates the note" do
@@ -765,6 +770,12 @@ Spectator.describe APIController do
           patch "/api/v1/accounts/update_credentials", headers: headers, body: body
           expect(actor.reload!.attachments.try(&.empty?)).to be_truthy
         end
+
+        it "federates an Update of the actor" do
+          body = "display_name=Display+Name"
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { ActivityPub::Activity::Update.count }.by(1)
+        end
       end
 
       context "with a multipart body" do
@@ -806,6 +817,11 @@ Spectator.describe APIController do
         it "updates the image" do
           expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: form }
             .to change { actor.reload!.image }.from(nil)
+        end
+
+        it "federates an Update of the actor" do
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: form }
+            .to change { ActivityPub::Activity::Update.count }.by(1)
         end
       end
 
@@ -1188,10 +1204,41 @@ Spectator.describe APIController do
           expect(json.as_a.first.dig?("account", "id")).to eq(announce.actor.id.to_s)
         end
 
-        it "sets outer id to the boosted object's id" do
+        it "sets the id distinct from the reblog id" do
           get "/api/v1/timelines/home", headers: json_bearer_headers(access_token.token)
           json = JSON.parse(response.body)
-          expect(json.as_a.first.dig?("id")).to eq(post.id.to_s)
+          entry = json.as_a.first
+          expect(entry.dig?("id")).not_to eq(entry.dig?("reblog", "id"))
+        end
+
+        it "accepts both reblog wrapper id as well as reblogged object id for max_id" do
+          get "/api/v1/timelines/home?max_id=#{post.id}", headers: json_bearer_headers(access_token.token)
+          via_object_id = response.body
+          get "/api/v1/timelines/home?max_id=#{API::StatusID.from_announce(announce)}", headers: json_bearer_headers(access_token.token)
+          expect(response.body).to eq(via_object_id)
+        end
+
+        it "accepts both reblog wrapper id as well as reblogged object id for min_id" do
+          get "/api/v1/timelines/home?min_id=#{post.id}", headers: json_bearer_headers(access_token.token)
+          via_object_id = response.body
+          get "/api/v1/timelines/home?min_id=#{API::StatusID.from_announce(announce)}", headers: json_bearer_headers(access_token.token)
+          expect(response.body).to eq(via_object_id)
+        end
+
+        context "and the reblogged post is deleted" do
+          before_each { post.delete! }
+
+          pre_condition { expect(ActivityPub::Object.find?(post.id)).to be_nil }
+
+          it "returns 200 when max_id is the reblog wrapper id" do
+            get "/api/v1/timelines/home?max_id=#{API::StatusID.from_announce(announce)}", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "returns 200 when min_id is the reblog wrapper id" do
+            get "/api/v1/timelines/home?min_id=#{API::StatusID.from_announce(announce)}", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(200)
+          end
         end
       end
     end
@@ -1420,6 +1467,66 @@ Spectator.describe APIController do
         get "/api/v1/statuses/999999", headers: json_bearer_headers(access_token.token)
         expect(response.status_code).to eq(404)
       end
+
+      it "returns 404 for a malformed id" do
+        get "/api/v1/statuses/notanumber", headers: json_bearer_headers(access_token.token)
+        expect(response.status_code).to eq(404)
+      end
+
+      context "given a reblog" do
+        let_create(:announce, object: status)
+        let(wrapper_id) { API::StatusID.from_announce(announce).to_s }
+
+        it "succeeds" do
+          get "/api/v1/statuses/#{wrapper_id}", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "resolves the wrapper id to a reblog of the status" do
+          get "/api/v1/statuses/#{wrapper_id}", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.dig?("reblog", "id")).to eq(status.id.to_s)
+        end
+
+        it "sets the wrapper account to the reblogger" do
+          get "/api/v1/statuses/#{wrapper_id}", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json.dig?("account", "id")).to eq(announce.actor.id.to_s)
+        end
+
+        context "and the reblogged object is deleted" do
+          before_each { status.delete! }
+
+          pre_condition { expect(ActivityPub::Object.find?(status.id)).to be_nil }
+
+          it "returns 404" do
+            get "/api/v1/statuses/#{wrapper_id}", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(404)
+          end
+        end
+
+        context "and the reblogger is deleted" do
+          before_each { announce.actor.delete! }
+
+          pre_condition { expect(ActivityPub::Object.find?(status.id)).not_to be_nil }
+
+          it "returns 404" do
+            get "/api/v1/statuses/#{wrapper_id}", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(404)
+          end
+        end
+
+        context "and the author is deleted" do
+          before_each { other.delete! }
+
+          pre_condition { expect(ActivityPub::Object.find?(status.id)).not_to be_nil }
+
+          it "returns 404" do
+            get "/api/v1/statuses/#{wrapper_id}", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(404)
+          end
+        end
+      end
     end
   end
 
@@ -1569,6 +1676,11 @@ Spectator.describe APIController do
           post "/api/v1/statuses", headers: json_bearer_headers(access_token.token), body: {"status" => "Reply", "in_reply_to_id" => "999999"}.to_json
           expect(response.status_code).to eq(422)
         end
+
+        it "returns 422 for malformed in_reply_to_id" do
+          post "/api/v1/statuses", headers: json_bearer_headers(access_token.token), body: {"status" => "Reply", "in_reply_to_id" => "notanumber"}.to_json
+          expect(response.status_code).to eq(422)
+        end
       end
 
       context "with form-encoded body" do
@@ -1639,6 +1751,33 @@ Spectator.describe APIController do
       it "returns 404" do
         post "/api/v1/statuses/999999/favourite", headers: json_bearer_headers(access_token.token)
         expect(response.status_code).to eq(404)
+      end
+
+      context "given a reblog" do
+        let_create(:announce, object: object)
+        let(wrapper_id) { API::StatusID.from_announce(announce).to_s }
+
+        it "succeeds" do
+          post "/api/v1/statuses/#{wrapper_id}/favourite", headers: json_bearer_headers(access_token.token)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "favourites the underlying object" do
+          post "/api/v1/statuses/#{wrapper_id}/favourite", headers: json_bearer_headers(access_token.token)
+          json = JSON.parse(response.body)
+          expect(json["favourited"]).to be_true
+        end
+
+        context "and the reblogged object is deleted" do
+          before_each { object.delete! }
+
+          pre_condition { expect(ActivityPub::Object.find?(object.id)).to be_nil }
+
+          it "returns 404" do
+            post "/api/v1/statuses/#{wrapper_id}/favourite", headers: json_bearer_headers(access_token.token)
+            expect(response.status_code).to eq(404)
+          end
+        end
       end
 
       context "addressing of the activity" do

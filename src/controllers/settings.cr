@@ -2,6 +2,7 @@ require "../framework/controller"
 require "../models/oauth2/provider/access_token"
 require "../models/session"
 require "../models/task/terminate"
+require "../services/actor_update_distributor"
 require "../services/upload_service"
 
 class SettingsController
@@ -39,6 +40,8 @@ class SettingsController
 
     if account.valid?
       account.save
+
+      ActorUpdateDistributor.distribute(account) unless password_changed
 
       if password_changed
         Session.invalidate_for(account)

@@ -8,7 +8,7 @@ module Ktistec
   # attribute slots — `SafeAttrValue` covers that.
   #
   struct SafeHTML
-    def initialize(@value : String)
+    protected def initialize(@value : String)
     end
 
     # HTML-escapes the input.

@@ -150,7 +150,7 @@ module API
               language: account.language || "",
               follow_requests_count: ::Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: false),
               indexable: false,
-              quote_policy: account.manually_approve_quotes ? "approval" : "public",
+              quote_policy: account.manually_approve_quotes ? "nobody" : "public",
             )
           end
 

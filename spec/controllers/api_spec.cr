@@ -541,6 +541,11 @@ Spectator.describe APIController do
             patch "/api/v1/accounts/update_credentials", headers: headers, body: body
             expect(JSON.parse(response.body)["source"]).to be_truthy
           end
+
+          it "federates an Update of the actor" do
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { ActivityPub::Activity::Update.count }.by(1)
+          end
         end
 
         it "updates the note" do
@@ -765,6 +770,12 @@ Spectator.describe APIController do
           patch "/api/v1/accounts/update_credentials", headers: headers, body: body
           expect(actor.reload!.attachments.try(&.empty?)).to be_truthy
         end
+
+        it "federates an Update of the actor" do
+          body = "display_name=Display+Name"
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+            .to change { ActivityPub::Activity::Update.count }.by(1)
+        end
       end
 
       context "with a multipart body" do
@@ -806,6 +817,11 @@ Spectator.describe APIController do
         it "updates the image" do
           expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: form }
             .to change { actor.reload!.image }.from(nil)
+        end
+
+        it "federates an Update of the actor" do
+          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: form }
+            .to change { ActivityPub::Activity::Update.count }.by(1)
         end
       end
 

@@ -253,11 +253,11 @@ class OutboxesController
       end
       no_content
     else
-      if activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Update)
-        if activity.object.in_reply_to?
-          redirect remote_thread_path(activity.object.in_reply_to)
+      if (activity.is_a?(ActivityPub::Activity::Create) || activity.is_a?(ActivityPub::Activity::Update)) && (object = activity.object).is_a?(ActivityPub::Object)
+        if object.in_reply_to?
+          redirect remote_thread_path(object.in_reply_to)
         else
-          redirect remote_object_path(activity.object)
+          redirect remote_object_path(object)
         end
       elsif activity.is_a?(ActivityPub::Activity::Delete)
         if back_path =~ /\/remote\/objects|\/objects/

@@ -291,13 +291,22 @@ class InboxesController
       end
       object.attributed_to = activity.actor
     when ActivityPub::Activity::Update
-      unless (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
+      case (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
+      when ActivityPub::Actor
+        unless object.iri == activity.actor.iri
+          bad_request
+        end
+        object.verify_handle!
+        object.up!
+        activity.actor = activity.object = object
+      when ActivityPub::Object
+        unless activity.actor == object.attributed_to?(account.actor, dereference: true)
+          bad_request
+        end
+        object.attributed_to = activity.actor
+      else
         bad_request
       end
-      unless activity.actor == object.attributed_to?(account.actor, dereference: true)
-        bad_request
-      end
-      object.attributed_to = activity.actor
     when ActivityPub::Activity::Follow
       unless actor
         bad_request

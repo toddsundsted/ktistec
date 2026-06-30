@@ -178,9 +178,13 @@ Media files are stored locally and served from the `/uploads` path.
 ### Deletion, updates, and edits
 
 **Updates:**
-- `Update` activities modify existing objects
-- The updated object replaces the original
-- `updated` timestamp is set
+- Objects
+  - `Update(Object)` activities modify existing objects
+  - The updated object replaces the original
+  - `updated` timestamp is set
+- Actors
+  - Inbound: an `Update(Actor)` refreshes the actor's profile and re-verifies its FEP-2c59 WebFinger handle
+  - Outbound: a local actor's own profile edits are emitted as an `Update(Actor)`
 
 **Deletion:**
 - `Delete` activities remove objects

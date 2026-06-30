@@ -8,6 +8,7 @@ require "../models/relationship/content/outbox"
 require "../models/relationship/content/timeline/announce"
 require "../models/tag/hashtag"
 require "../models/poll"
+require "../services/actor_update_distributor"
 require "../services/oauth2/client_registration"
 require "../services/object_factory"
 require "../services/outbox_activity_processor"
@@ -204,6 +205,7 @@ class APIController
 
     if account.valid?
       account.save
+      ActorUpdateDistributor.distribute(account)
       API::V1::Serializers::Account.from_account(account, actor, include_source: true).to_json
     else
       errors = account.errors.map { |field, messages| "#{field}: #{messages.join(", ")}" }.join("; ")

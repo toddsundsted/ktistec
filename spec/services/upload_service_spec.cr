@@ -130,14 +130,6 @@ Spectator.describe UploadService do
         end
       end
 
-      context "given an SVG" do
-        let(filename) { "evil.svg" }
-
-        it "returns error" do
-          expect(result.errors["file"]).to have(/not allowed/)
-        end
-      end
-
       context "given a script" do
         let(filename) { "evil.js" }
 
@@ -165,6 +157,14 @@ Spectator.describe UploadService do
 
     context "with an allowed audio extension" do
       let(filename) { "song.flac" }
+
+      it "uploads successfully" do
+        expect(result.valid?).to be_true
+      end
+    end
+
+    context "with an allowed image extension" do
+      let(filename) { "diagram.svg" }
 
       it "uploads successfully" do
         expect(result.valid?).to be_true

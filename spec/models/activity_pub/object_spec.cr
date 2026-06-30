@@ -666,6 +666,34 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "when attachment media type is missing" do
+      # in a CDN url whose query string itself contains a dot, the
+      # extension must come from the path
+      let(json) do
+        super
+          .gsub(%q|"url":"attachment-link"|, %q|"url":"https://cdn.remote/730_n.jpg?stp=dst-jpg_e35.s640x640&oe=683F"|)
+          .gsub(%q|"mediaType":"type"|, %q|"mediaType":null|)
+      end
+
+      it "infers the media type from the url extension" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("https://cdn.remote/730_n.jpg?stp=dst-jpg_e35.s640x640&oe=683F", "image/jpeg", "caption")])
+      end
+    end
+
+    context "when attachment media type is missing and extension is not supported" do
+      let(json) do
+        super
+          .gsub(%q|"url":"attachment-link"|, %q|"url":"https://remote/file.xyz"|)
+          .gsub(%q|"mediaType":"type"|, %q|"mediaType":null|)
+      end
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.attachments).to be_empty
+      end
+    end
+
     context "with focalPoint field" do
       let(json) { super.gsub(%q|"name":"caption"|, %q|"name":"caption","toot:focalPoint":[0.2,-0.4]|) }
 
@@ -2638,6 +2666,64 @@ Spectator.describe ActivityPub::Object::Attachment do
 
       css = attachment.css_object_position
       expect(css).to eq("50% 50%")
+    end
+  end
+
+  def attachment(media_type)
+    ActivityPub::Object::Attachment.new("https://example.com/file", media_type)
+  end
+
+  describe "#image?" do
+    it "is true for an image type" do
+      expect(attachment("image/png").image?).to be_true
+    end
+
+    it "is true for an image type" do
+      expect(attachment("image/avif").image?).to be_true
+    end
+
+    it "is false for a non-image type" do
+      expect(attachment("video/mp4").image?).to be_false
+    end
+
+    it "is false for an unsupported type" do
+      expect(attachment("application/pdf").image?).to be_false
+    end
+  end
+
+  describe "#video?" do
+    it "is true for a video type" do
+      expect(attachment("video/webm").video?).to be_true
+    end
+
+    it "is true for a video type" do
+      expect(attachment("video/quicktime").video?).to be_true
+    end
+
+    it "is false for a non-video type" do
+      expect(attachment("image/png").video?).to be_false
+    end
+
+    it "is false for an unsupported type" do
+      expect(attachment("application/pdf").video?).to be_false
+    end
+  end
+
+  describe "#audio?" do
+    it "is true for an audio type" do
+      expect(attachment("audio/mpeg").audio?).to be_true
+    end
+
+    it "is true for an audio type" do
+      expect(attachment("audio/wav").audio?).to be_true
+    end
+
+    it "is false for a non-audio type" do
+      expect(attachment("image/png").audio?).to be_false
+    end
+
+    it "is false for an unsupported type" do
+      expect(attachment("application/pdf").audio?).to be_false
     end
   end
 end

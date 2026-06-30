@@ -172,8 +172,12 @@ Attachments are supported via the `attachment` property on objects.
 
 **Supported attachment types:**
 - Images
+- Video
+- Audio
 
-Media files are stored locally and served from the `/uploads` path.
+An attachment's type is taken from its `mediaType` property. When `mediaType` is absent, it is inferred from the file extension of the attachment's URL. Attachments whose type cannot be determined, or whose URL uses an unsafe scheme, are dropped.
+
+Locally uploaded media files are stored on the instance and served from the `/uploads` path.
 
 ### Deletion, updates, and edits
 

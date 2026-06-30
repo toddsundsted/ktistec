@@ -198,10 +198,7 @@ module API
         @@cached_instance.not_nil!
       end
 
-      SUPPORTED_MEDIA_TYPES =
-        Ktistec::Constants::SUPPORTED_IMAGE_TYPES +
-          Ktistec::Constants::SUPPORTED_VIDEO_TYPES +
-          Ktistec::Constants::SUPPORTED_AUDIO_TYPES
+      SUPPORTED_MEDIA_TYPES = Ktistec::Constants::SUPPORTED_MEDIA_TYPES
 
       private def self.build_instance : Instance
         domain = URI.parse(Ktistec.host).host.not_nil!
@@ -523,10 +520,7 @@ module API
         @@cached_instance.not_nil!
       end
 
-      SUPPORTED_MEDIA_TYPES =
-        Ktistec::Constants::SUPPORTED_IMAGE_TYPES +
-          Ktistec::Constants::SUPPORTED_VIDEO_TYPES +
-          Ktistec::Constants::SUPPORTED_AUDIO_TYPES
+      SUPPORTED_MEDIA_TYPES = Ktistec::Constants::SUPPORTED_MEDIA_TYPES
 
       private def self.build_instance : Instance
         domain = URI.parse(Ktistec.host).host.not_nil!

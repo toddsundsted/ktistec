@@ -1491,6 +1491,44 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe ".count_by_attributed_to" do
+    let_create!(:actor)
+    let_create!(:actor, named: :other)
+
+    it "returns an Int64" do
+      expect(described_class.count_by_attributed_to(actor.iri)).to be_a(Int64)
+    end
+
+    it "returns zero" do
+      expect(described_class.count_by_attributed_to(actor.iri)).to eq(0)
+    end
+
+    context "given objects attributed to actor and to other" do
+      let_create!(:object, named: :first, attributed_to: actor)
+      let_create!(:object, named: nil, attributed_to: actor)
+      let_create!(:object, named: nil, attributed_to: other)
+
+      it "counts only the actor's objects" do
+        expect(described_class.count_by_attributed_to(actor.iri)).to eq(2)
+      end
+
+      it "counts deleted objects" do
+        first.delete!
+        expect(described_class.count_by_attributed_to(actor.iri)).to eq(2)
+      end
+
+      it "counts blocked objects" do
+        first.block!
+        expect(described_class.count_by_attributed_to(actor.iri)).to eq(2)
+      end
+
+      it "counts non-visible objects" do
+        first.assign(visible: false).save
+        expect(described_class.count_by_attributed_to(actor.iri)).to eq(2)
+      end
+    end
+  end
+
   describe "#with_statistics!" do
     let(object) do
       described_class.new(

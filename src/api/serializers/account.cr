@@ -2,6 +2,7 @@ require "json"
 
 require "../../models/account"
 require "../../models/activity_pub/actor"
+require "../../models/activity_pub/object"
 require "../../models/relationship/social/follow"
 require "../../safe/safe_html"
 require "../../safe/safe_uri"
@@ -178,7 +179,7 @@ module API
           indexable: false,
           created_at: actor.created_at.not_nil!.to_rfc3339,
           last_status_at: last_status_at(actor),
-          statuses_count: actor.all_posts(Time.unix(0)),
+          statuses_count: approximate(ActivityPub::Object.count_by_attributed_to(actor.iri)),
           followers_count: ::Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: true),
           following_count: ::Relationship::Social::Follow.count(from_iri: actor.iri, confirmed: true),
           source: source,
@@ -216,7 +217,7 @@ module API
           indexable: false,
           created_at: actor.created_at.not_nil!.to_rfc3339,
           last_status_at: last_status_at(actor),
-          statuses_count: actor.all_posts(Time.unix(0)),
+          statuses_count: approximate(ActivityPub::Object.count_by_attributed_to(actor.iri)),
           followers_count: ::Relationship::Social::Follow.count(to_iri: actor.iri, confirmed: true),
           following_count: ::Relationship::Social::Follow.count(from_iri: actor.iri, confirmed: true),
           source: nil,
@@ -235,6 +236,17 @@ module API
         (actor.attachments || [] of ActivityPub::Actor::Attachment).map do |attachment|
           Source::Field.new(name: attachment.name, value: attachment.value)
         end
+      end
+
+      # Rounds a count down to a coarse approximation, signaling to
+      # clients that `statuses_count` is not exact.
+      #
+      private def self.approximate(count : Int64) : Int64
+        return count if count < 10
+        digits = count.to_s.size
+        significant = count < 1000 ? 1 : 2
+        magnitude = 10_i64 ** (digits - significant)
+        (count / magnitude.to_f).round.to_i64 * magnitude
       end
 
       private def self.last_status_at(actor : ActivityPub::Actor) : String?

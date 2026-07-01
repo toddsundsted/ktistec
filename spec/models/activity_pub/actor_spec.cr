@@ -65,6 +65,10 @@ Spectator.describe ActivityPub::Actor do
       expect(described_class.match?("foo@bar.com")).to eq(actor)
     end
 
+    it "returns the matched actor" do
+      expect(described_class.match?("Foo@bar.com")).to eq(actor)
+    end
+
     it "returns nil on failed match" do
       expect(described_class.match?("")).to be_nil
     end
@@ -94,6 +98,11 @@ Spectator.describe ActivityPub::Actor do
 
     it "returns actors matching the prefix" do
       results = described_class.search_by_username("al")
+      expect(results.map(&.username)).to contain_exactly("alice", "alicia")
+    end
+
+    it "returns actors matching the prefix" do
+      results = described_class.search_by_username("AL")
       expect(results.map(&.username)).to contain_exactly("alice", "alicia")
     end
 

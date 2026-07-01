@@ -19,9 +19,9 @@ module Ktistec::ViewHelper
       max_limit = env.account? ? 1000 : 20
       query = env.params.query
       {
-        max_id: cursor_param(query, "max").try(&.to_i64),
-        min_id: cursor_param(query, "min").try(&.to_i64),
-        limit:  Math.min(Math.max(query["limit"]?.try(&.to_i) || 10, 1), max_limit),
+        max_id: cursor_param(query, "max").try(&.to_i64?),
+        min_id: cursor_param(query, "min").try(&.to_i64?),
+        limit:  Math.min(Math.max(query["limit"]?.try(&.to_i?) || 10, 1), max_limit),
       }
     end
 

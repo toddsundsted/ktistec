@@ -110,11 +110,13 @@ class StreamingController
   @@sessions_pools = Hash(Session, ConnectionPool).new { |h, k| h[k] = ConnectionPool.new(5) }
 
   private macro subscribe(*subjects, &block)
-    Ktistec::Topic{{{subjects.splat}}}.tap do |topic|
+    Ktistec::Topic{{{subjects.splat}}}.tap do |%topic|
       @@sessions_pools[env.session].push(env.response.@io)
-      topic.subscribe(timeout: 1.minute) do |{{block.args.join(",").id}}|
+      %topic.subscribe(timeout: 1.minute) do |{{block.args.join(",").id}}|
         if {{block.args.first.id}}
-          {{block.body}}
+          Log.with_context(topic_id: %topic.object_id) do
+            {{block.body}}
+          end
         else # timeout
           stream_no_op(env.response)
         end

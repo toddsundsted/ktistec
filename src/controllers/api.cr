@@ -194,12 +194,14 @@ class APIController
     actor.assign(attachments: fields) if fields
     actor.assign(icon: icon_url) if icon_url
     actor.assign(image: image_url) if image_url
-    # ktistec only models the binary `manually_approve_quotes`, so map
-    # `public` to disabled and `approval` to enabled
+    # ktistec only models the binary `manually_approve_quotes`, which
+    # spans the `public` (anyone) and `nobody` (no one) ends of the
+    # mastodon quote policy. `followers` can't be represented, so
+    # treat it as `nobody`.
     case quote_policy
     when "public"
       account.assign(manually_approve_quotes: false)
-    when "approval"
+    when "nobody", "followers"
       account.assign(manually_approve_quotes: true)
     end
 

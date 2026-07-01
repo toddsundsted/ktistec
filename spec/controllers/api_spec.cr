@@ -569,23 +569,29 @@ Spectator.describe APIController do
         context "given an unrestricted account" do
           before_each { account.assign(manually_approve_quotes: false).save }
 
-          let(body) { {source: {quote_policy: "approval"}}.to_json }
+          it "restricts the quote policy when nobody" do
+            body = {source: {quote_policy: "nobody"}}.to_json
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { account.reload!.manually_approve_quotes }.to(true)
+          end
 
-          it "restricts the quote policy" do
+          it "restricts the quote policy when followers" do
+            body = {source: {quote_policy: "followers"}}.to_json
             expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
               .to change { account.reload!.manually_approve_quotes }.to(true)
           end
 
           it "reflects the policy in the response" do
+            body = {source: {quote_policy: "nobody"}}.to_json
             patch "/api/v1/accounts/update_credentials", headers: headers, body: body
-            expect(JSON.parse(response.body).dig?("source", "quote_policy")).to eq("approval")
+            expect(JSON.parse(response.body).dig?("source", "quote_policy")).to eq("nobody")
           end
-        end
 
-        it "ignores unmappable quote_policy values" do
-          body = {source: {quote_policy: "nobody"}}.to_json
-          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
-            .not_to change { account.reload!.manually_approve_quotes }
+          it "ignores unmappable quote_policy values" do
+            body = {source: {quote_policy: "garbage"}}.to_json
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .not_to change { account.reload!.manually_approve_quotes }
+          end
         end
 
         it "unlocks the account" do
@@ -725,18 +731,23 @@ Spectator.describe APIController do
         context "given an unrestricted account" do
           before_each { account.assign(manually_approve_quotes: false).save }
 
-          let(body) { "source%5Bquote_policy%5D=approval" }
-
-          it "restricts the quote policy" do
+          it "restricts the quote policy when nobody" do
+            body = "source%5Bquote_policy%5D=nobody"
             expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
               .to change { account.reload!.manually_approve_quotes }.to(true)
           end
-        end
 
-        it "ignores unmappable quote_policy values" do
-          body = "source%5Bquote_policy%5D=nobody"
-          expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
-            .not_to change { account.reload!.manually_approve_quotes }
+          it "restricts the quote policy when followers" do
+            body = "source%5Bquote_policy%5D=followers"
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .to change { account.reload!.manually_approve_quotes }.to(true)
+          end
+
+          it "ignores unmappable quote_policy values" do
+            body = "source%5Bquote_policy%5D=garbage"
+            expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: body }
+              .not_to change { account.reload!.manually_approve_quotes }
+          end
         end
 
         it "unlocks the account" do

@@ -288,7 +288,7 @@ module ActivityPub
 
     def self.match?(account)
       if account =~ /^@?([^@]+)@([^@]+)$/
-        where(username: $1).find do |actor|
+        where("username = ? COLLATE NOCASE", $1).find do |actor|
           urls = (actor.urls || [] of String) | [actor.iri]
           urls.any? do |url|
             uri = URI.parse(url)

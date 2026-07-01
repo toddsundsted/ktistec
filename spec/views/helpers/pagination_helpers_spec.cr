@@ -155,6 +155,60 @@ Spectator.describe "helpers" do
       expect(result[:min_id]).to eq(11111_i64)
     end
 
+    it "ignores a malformed max_id" do
+      env = make_env("GET", "/?max-id=12345abc")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:max_id]).to be_nil
+    end
+
+    it "ignores an empty max_id" do
+      env = make_env("GET", "/?max-id=")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:max_id]).to be_nil
+    end
+
+    it "ignores an out-of-range max_id" do
+      env = make_env("GET", "/?max-id=99999999999999999999999999")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:max_id]).to be_nil
+    end
+
+    it "ignores a malformed min_id" do
+      env = make_env("GET", "/?min-id=12345abc")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:min_id]).to be_nil
+    end
+
+    it "ignores an empty min_id" do
+      env = make_env("GET", "/?min-id=")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:min_id]).to be_nil
+    end
+
+    it "ignores an out-of-range min_id" do
+      env = make_env("GET", "/?min-id=99999999999999999999999999")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:min_id]).to be_nil
+    end
+
+    it "ignores a malformed limit" do
+      env = make_env("GET", "/?limit=12345abc")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:limit]).to eq(10)
+    end
+
+    it "ignores an empty limit" do
+      env = make_env("GET", "/?limit=")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:limit]).to eq(10)
+    end
+
+    it "ignores an out-of-range limit" do
+      env = make_env("GET", "/?limit=99999999999999999999999999")
+      result = self.class.cursor_pagination_params(env)
+      expect(result[:limit]).to eq(10)
+    end
+
     it "parses limit" do
       env = make_env("GET", "/?limit=20")
       result = self.class.cursor_pagination_params(env)

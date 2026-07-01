@@ -156,7 +156,7 @@ Spectator.describe API::V1::Serializers::Account do
       end
 
       it "returns quote_policy" do
-        expect(source.quote_policy).to eq("approval")
+        expect(source.quote_policy).to eq("nobody")
       end
     end
 
@@ -351,8 +351,8 @@ Spectator.describe API::V1::Serializers::Account do
 
       let(include_source) { true }
 
-      it "returns approval for quote_policy" do
-        expect(source.quote_policy).to eq("approval")
+      it "returns nobody for quote_policy" do
+        expect(source.quote_policy).to eq("nobody")
       end
     end
   end
@@ -682,7 +682,7 @@ Spectator.describe API::V1::Serializers::Account do
         expect(json["source"]["language"]).to eq(account.language)
         expect(json["source"]["follow_requests_count"]).to eq(0)
         expect(json["source"]["indexable"]).to be_false
-        expect(json["source"]["quote_policy"]).to eq("approval")
+        expect(json["source"]["quote_policy"]).to eq("nobody")
       end
     end
   end

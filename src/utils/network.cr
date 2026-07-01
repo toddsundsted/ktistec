@@ -3,6 +3,7 @@ require "socket"
 require "uri"
 
 require "../framework/signature"
+require "../ktistec/version"
 
 module Ktistec
   # Utilities for network operations.

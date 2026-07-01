@@ -1,5 +1,6 @@
 require "../framework/controller"
 require "../utils/network"
+require "../utils/web_finger"
 
 class InteractionsController
   include Ktistec::Controller
@@ -75,7 +76,7 @@ class InteractionsController
     unless (uri = env.params.query["uri"]?)
       bad_request("Missing URI")
     end
-    uri = Ktistec::Network.resolve(uri)
+    uri = Ktistec::WebFinger.resolve(uri)
     actor_or_object =
       if uri.starts_with?("#{host}/actors/")
         ActivityPub::Actor.find(uri)

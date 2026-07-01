@@ -192,6 +192,8 @@ class HTTP::Client
         raise OpenSSL::Error.new
       when /io-error/
         raise IO::Error.new
+      when /reconnect-error/
+        raise "This HTTP::Client cannot be reconnected"
       when /returns-([0-9]{3})/
         HTTP::Client::Response.new(
           $1.to_i,
@@ -257,6 +259,8 @@ class HTTP::Client
         raise OpenSSL::Error.new
       when /io-error/
         raise IO::Error.new
+      when /reconnect-error/
+        raise "This HTTP::Client cannot be reconnected"
       when /([^\/]+)\/inbox/
         HTTP::Client::Response.new(
           200,

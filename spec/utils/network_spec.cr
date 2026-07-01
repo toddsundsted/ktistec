@@ -107,6 +107,10 @@ Spectator.describe Ktistec::Network do
       expect { described_class.get(key_pair, "https://external/io-error") }.to raise_error(Ktistec::Network::Error, /I\/O error/)
     end
 
+    it "fails on errors" do
+      expect { described_class.get(key_pair, "https://external/reconnect-error") }.to raise_error(Ktistec::Network::Error, /Connection failure/)
+    end
+
     {% unless flag?(:allow_private_addresses) %}
       it "fails on errors" do
         expect { described_class.get(key_pair, "https://loopback.example/path") }.to raise_error(Ktistec::Network::Error, /Request to private address denied/)
@@ -296,6 +300,10 @@ Spectator.describe Ktistec::Network do
 
     it "fails on errors" do
       expect { described_class.post(key_pair, "https://external/io-error", body, content_type) }.to raise_error(Ktistec::Network::Error, /I\/O error/)
+    end
+
+    it "fails on errors" do
+      expect { described_class.post(key_pair, "https://external/reconnect-error", body, content_type) }.to raise_error(Ktistec::Network::Error, /Connection failure/)
     end
 
     {% unless flag?(:allow_private_addresses) %}

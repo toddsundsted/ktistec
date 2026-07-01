@@ -473,6 +473,14 @@ module Ktistec
         rescue Compress::Deflate::Error | Compress::Gzip::Error
           message = "Encoding error"
           break
+        rescue ex : Exception
+          # an HTTP::Client built on an existing IO cannot reconnect;
+          # when the peer drops the connection mid-request,
+          # HTTP::Client's internal one-shot retry raises a bare
+          # exception.
+          raise ex unless ex.message == "This HTTP::Client cannot be reconnected"
+          message = "Connection failure"
+          break
         ensure
           client.try(&.close)
         end
@@ -599,6 +607,13 @@ module Ktistec
         raise Error.new("I/O error: #{url}")
       rescue Compress::Deflate::Error | Compress::Gzip::Error
         raise Error.new("Encoding error: #{url}")
+      rescue ex : Exception
+        # an HTTP::Client built on an existing IO cannot reconnect;
+        # when the peer drops the connection mid-request,
+        # HTTP::Client's internal one-shot retry raises a bare
+        # exception.
+        raise ex unless ex.message == "This HTTP::Client cannot be reconnected"
+        raise Error.new("Connection failure: #{url}")
       ensure
         client.try(&.close)
       end

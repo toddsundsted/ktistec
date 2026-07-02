@@ -29,6 +29,7 @@
     - [Publishing an Object](#publishing-an-object)
     - [Sharing an Object (ActivityPub `Announce`)](#sharing-an-object-activitypub-announce)
     - [Liking an Object](#liking-an-object)
+    - [Quoting an Object (FEP-044f)](#quoting-an-object-fep-044f)
     - [Following an Actor](#following-an-actor)
     - [Undoing an Activity](#undoing-an-activity)
     - [Deleting](#deleting)
@@ -491,6 +492,7 @@ The table below contains a list of supported endpoints:
 | GET    | /actors/:username/inbox     | Retrieves a page of `activities` in your inbox as an ActivityPub collection. |
 | GET    | /actors/:username/outbox    | Retrieves a page of `activities` in your outbox as an ActivityPub collection. |
 | POST   | /actors/:username/outbox    | Puts an `activity` in your outbox for delivery. |
+| POST   | /remote/objects/:id/quote   | Creates a quote post referencing the object (by database ID). Implements FEP-044f consent. |
 | GET    | /actors/:username/posts     | Retrieves a page of `objects` you've published. |
 | GET    | /actors/:username/drafts    | Retrieves a page of `objects` you've saved as drafts. |
 | GET    | /actors/:username/followers | Retrieves a page of `actors` following you. |
@@ -765,6 +767,53 @@ curl -s \
   -d '{"type":"Dislike","object":"https://example.com/objects/123","visibility":"public"}' \
   "$KTISTEC_HOST/actors/$USERNAME/outbox"
 ```
+
+### Quoting an Object (FEP-044f)
+
+To create a quote post that references another post, `POST` a JSON
+request to the quote endpoint. Unlike the outbox endpoint, quotes use
+a dedicated endpoint that implements consent-respecting quote posts
+(FEP-044f).
+
+| Name        | Notes |
+|-|-|
+| content     | An HTML formatted string. |
+| quote       | The IRI of the `object` being quoted. |
+| name        | Optional. A plain text string often displayed as the title of a post. |
+| summary     | Optional. A plain text string often used as a summary of a longer post. |
+| object      | Optional. The IRI of an existing draft to convert to a quote post. |
+| to          | Optional. A comma-separate list of `actors` to address. Specified as IRIs. |
+| cc          | Optional. A comma-separate list of `actors` to CC. Specified as IRIs. |
+| audience    | Optional. A comma-separate list of `actors` in the audience. Specified as IRIs. |
+| visibility  | Optional. Controls post visibility. Values: "public", "private", "direct". |
+| sensitive   | Optional. May be `true` or `false`. Marks content as sensitive. |
+
+**Important:** The endpoint path includes the database ID of the
+object being quoted (not the IRI). The `quote` field in the request
+body should contain the IRI of the same object.
+
+By default, `cc` includes the publishing `actor`'s followers collection.
+
+Example:
+
+```bash
+# the object being quoted, in two forms (see the note above):
+QUOTED_ID=42                                # numeric database id, for the URL path
+QUOTED_IRI=https://example.com/objects/123  # full IRI, for the request body
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"content":"This is my commentary on this post","quote":"'"$QUOTED_IRI"'","visibility":"public"}' \
+  "$KTISTEC_HOST/remote/objects/$QUOTED_ID/quote"
+```
+
+**Consent Flow:**
+- **Self-quotes** (quoting your own posts): Immediately scheduled for delivery
+- **Quoting others**: Creates a `QuoteRequest` activity sent to the
+  quoted post's author. The quote is only published after the author
+  approves (or if they have auto-approval enabled)
 
 ### Following an Actor
 

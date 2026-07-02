@@ -514,6 +514,34 @@ def filter_term_factory(clazz = FilterTerm, actor_id = nil, actor = false, **opt
   clazz.new(**{actor_id: actor_id, actor: actor}.merge(options))
 end
 
+# feed factories
+
+def feed_factory(clazz = Feed, owner_iri = nil, owner = false, params = nil, **options)
+  owner = actor_factory(local: true) unless owner_iri || owner.nil? || owner
+  params ||= JSON.parse(%({"keywords": ["keyword"]})).as_h
+  clazz.new({
+    "owner_iri" => owner_iri,
+    "owner"     => owner || nil,
+    "name"      => random_string,
+    "backend"   => "keyword",
+    "params"    => params,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
+end
+
+def feed_verdict_factory(clazz = Feed::Verdict, feed_id = nil, feed = false, object_iri = nil, object = false, position = nil, **options)
+  feed = feed_factory unless feed_id || feed.nil? || feed
+  object = object_factory unless object_iri || object.nil? || object
+  position ||= KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second
+  clazz.new({
+    "feed_id"    => feed_id,
+    "feed"       => feed || nil,
+    "object_iri" => object_iri,
+    "object"     => object || nil,
+    "included"   => true,
+    "position"   => position,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
+end
+
 # translation factory
 
 def translation_factory(clazz = Translation, origin_id = nil, origin = false, **options)

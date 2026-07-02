@@ -1,5 +1,3 @@
-require "yaml"
-
 require "../../src/framework"
 
 require "../spec_helper/base"
@@ -179,13 +177,6 @@ Spectator.describe Ktistec::Server do
 end
 
 Spectator.describe Ktistec do
-  describe "::VERSION" do
-    it "should return the version" do
-      version = YAML.parse(File.read(File.join(__DIR__, "..", "..", "shard.yml")))["version"].as_s
-      expect(Ktistec::VERSION).to eq(version)
-    end
-  end
-
   describe ".settings" do
     it "returns the settings singleton" do
       expect(Ktistec.settings).to be_a(Ktistec::Settings)

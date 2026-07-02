@@ -552,6 +552,16 @@ module ActivityPub
       -1_i64
     end
 
+    # Returns the count of objects attributed to the actor.
+    #
+    # Intended as an approximate posts count, so it deliberately skips
+    # the visibility/deletion filtering that the exact post queries
+    # apply.
+    #
+    def self.count_by_attributed_to(iri : String)
+      Object.scalar("SELECT count(*) FROM objects WHERE attributed_to_iri = ?", iri).as(Int64)
+    end
+
     @[Assignable]
     property announces_count : Int64 = 0
 

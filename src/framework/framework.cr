@@ -2,6 +2,7 @@ require "kemal"
 require "sqlite3"
 require "uri"
 
+require "../ktistec/version"
 require "./ext/array"
 require "./ext/hash"
 require "./ext/log"
@@ -243,7 +244,4 @@ module Ktistec
       end
     end
   end
-
-  # :nodoc:
-  VERSION = {{ `shards version "#{__DIR__}"`.chomp.stringify }}
 end

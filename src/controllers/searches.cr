@@ -1,6 +1,7 @@
 require "../framework/controller"
 require "../ktistec/constants"
 require "../utils/network"
+require "../utils/web_finger"
 
 class SearchesController
   include Ktistec::Controller
@@ -25,7 +26,7 @@ class SearchesController
           end
         end
       else
-        url = Ktistec::Network.resolve(query)
+        url = Ktistec::WebFinger.resolve(query)
         actor_or_object =
           if url.starts_with?("#{host}/actors/")
             ActivityPub::Actor.find(url)

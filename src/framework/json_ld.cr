@@ -1,6 +1,9 @@
+require "digest/sha256"
 require "json"
 require "log"
 require "uri"
+
+require "../utils/network"
 
 private def wrap(value)
   JSON::Any.new(value)
@@ -29,6 +32,7 @@ module Ktistec
     def self.expand(body : JSON::Any | String | IO, loader = Loader.new)
       body = JSON.parse(body) if body.is_a?(String | IO)
       Log.debug { body }
+      loader.document_host = document_host(body)
       expand(
         body,
         context(body["@context"]?, loader),
@@ -89,6 +93,16 @@ module Ktistec
       end
 
       wrap(normalized)
+    end
+
+    # Returns the host of the document's own identifier.
+    #
+    private def self.document_host(body)
+      if (id = (body["@id"]? || body["id"]?).try(&.as_s?))
+        URI.parse(id).host
+      end
+    rescue URI::Error
+      nil
     end
 
     private def self.context(context, loader, url = "https://www.w3.org/ns/activitystreams")
@@ -301,6 +315,19 @@ module Ktistec
     # Exposed for testing. Should not be used directly.
     #
     class Loader
+      # whether to fetch uncached, same-origin contexts
+      class_property? fetch_contexts : Bool = true
+
+      class_property memo_ttl : Time::Span = 1.hour
+
+      MAX_MEMO_ENTRIES = 100
+
+      @@memo = {} of String => {String?, Time}
+
+      private ACCEPT_HEADER = HTTP::Headers{"Accept" => "application/ld+json, application/json"}
+
+      property document_host : String?
+
       def load(url)
         uri = URI.parse(url)
         if uri.path.ends_with?("litepub-0.1.jsonld")
@@ -309,22 +336,59 @@ module Ktistec
         end
         CONTEXTS.dig("#{uri.host}#{uri.path}/context.jsonld", "@context")
       rescue KeyError
-        Log.notice { "uncached external context not loaded: #{url}" }
-        empty
+        resolve_uncached(url, uri)
+      end
+
+      # Resolves an uncached context by fetching it.
+      #
+      # On a digest match against a bundled context, the *bundled
+      # copy* is served; the fetched bytes are never parsed.
+      #
+      private def resolve_uncached(url, uri)
+        key = digest = nil
+        if uri && Loader.fetch_contexts? && (host = document_host) && uri.host.try(&.downcase) == host.downcase
+          if (entry = @@memo[url]?) && entry[1] > Time.utc
+            key = entry[0]
+          else
+            if (response = Ktistec::Network.get?(nil, url, ACCEPT_HEADER, max_bytes: Ktistec::Network::MAX_DISCOVERY_RESPONSE_BYTES))
+              digest = Digest::SHA256.hexdigest(response.body)
+              key = DIGESTS[digest]?
+            end
+            memoize(url, key)
+          end
+        end
+        if key
+          CONTEXTS.dig(key, "@context")
+        else
+          Log.notice { %(uncached external context not loaded: #{url}#{digest ? " [sha256=#{digest}]" : ""}) }
+          empty
+        end
+      end
+
+      private def memoize(url, key)
+        if @@memo.size >= MAX_MEMO_ENTRIES
+          @@memo.reject! { |_, entry| entry[1] <= Time.utc }
+          @@memo.shift if @@memo.size >= MAX_MEMO_ENTRIES
+        end
+        @@memo[url] = {key, Time.utc + Loader.memo_ttl}
       end
     end
 
     {% begin %}
       # :nodoc:
-      CONTEXTS = {
+      CONTEXTS_RAW = {
         {% contexts = `find "#{__DIR__}/../../etc/contexts" -name '*.jsonld'`.chomp.split("\n").sort %}
         {% for context in (contexts) %}
           {% name = context.split("/etc/contexts/").last %}
-          {{name}} => JSON.parse(
-            {{read_file(context)}}
-          ),
+          {{name}} => {{read_file(context)}},
         {% end %}
       }
     {% end %}
+
+    # :nodoc:
+    CONTEXTS = CONTEXTS_RAW.transform_values { |raw| JSON.parse(raw) }
+
+    # :nodoc:
+    DIGESTS = CONTEXTS_RAW.map { |name, raw| {Digest::SHA256.hexdigest(raw), name} }.to_h
   end
 end

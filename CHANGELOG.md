@@ -1,6 +1,23 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.7.0]
+### Added
+- Support FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor.
+- Support ActivityPub `Update` activities for actor profile changes.
+
+### Fixed
+- Disambiguate reblog IDs from status IDs. (fixes [#151](https://github.com/toddsundsted/ktistec/issues/151))
+- Correct the `quote_policy` mapping to `public`/`nobody` values.
+- Ignore malformed pagination parameters instead of raising.
+- Treat "cannot be reconnected" errors as connection failures.
+- Infer a media attachment's type when `mediaType` is missing.
+- Faster, case-insensitive, actor username lookups.
+- Faster `statuses_count` using an approximate count.
+
+### Changed
+- Resolve JSON-LD contexts by matching their digest against a bundled copy.
+
 ## [v3.6.0]
 ### Added
 - Background task to reconcile tag statistics.
@@ -845,6 +862,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.7.0]: https://github.com/toddsundsted/ktistec/compare/731dd8cd...97b2168a
 [v3.6.0]: https://github.com/toddsundsted/ktistec/compare/63adac41...066f0237
 [v3.5.0]: https://github.com/toddsundsted/ktistec/compare/62d9cc84...319ca17a
 [v3.4.1]: https://github.com/toddsundsted/ktistec/compare/448a50e1...4bfd86d3

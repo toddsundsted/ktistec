@@ -3,8 +3,33 @@ require "../../../src/api/serializers/account"
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
+# expose the private rounding helper for testing
+module API::V1::Serializers
+  struct Account
+    def self.approximate(count : Int64) : Int64
+      previous_def
+    end
+  end
+end
+
 Spectator.describe API::V1::Serializers::Account do
   setup_spec
+
+  describe ".approximate" do
+    it "rounds to one significant digit below 1000, two above" do
+      {
+            0_i64 => 0_i64,
+            7_i64 => 7_i64,
+           42_i64 => 40_i64,
+          384_i64 => 400_i64,
+          999_i64 => 1000_i64,
+         1234_i64 => 1200_i64,
+        45678_i64 => 46000_i64,
+      }.each do |input, expected|
+        expect(described_class.approximate(input)).to eq(expected), "expected approximate(#{input}) to eq #{expected}"
+      end
+    end
+  end
 
   describe ".from_account" do
     let(account) { register }
@@ -290,6 +315,24 @@ Spectator.describe API::V1::Serializers::Account do
 
       it "returns last_status_at as date string" do
         expect(subject.last_status_at).to eq("2024-06-15")
+      end
+
+      context "and more posts" do
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+
+        it "returns an approximate statuses_count" do
+          expect(subject.statuses_count).to eq(10)
+        end
       end
     end
 
@@ -606,6 +649,24 @@ Spectator.describe API::V1::Serializers::Account do
 
       it "returns last_status_at as date string" do
         expect(subject.last_status_at).to eq("2024-06-15")
+      end
+
+      context "and more posts" do
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+        let_create!(:object, named: nil, attributed_to: actor)
+
+        it "returns an approximate statuses_count" do
+          expect(subject.statuses_count).to eq(10)
+        end
       end
     end
 

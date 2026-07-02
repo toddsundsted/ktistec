@@ -2,10 +2,27 @@ require "spectator"
 
 require "../../src/framework/json_ld"
 
+require "../spec_helper/network"
+
+class Ktistec::JSON_LD::Loader # ameba:disable Naming/TypeNames
+  # test-only accessor
+  def self.clear_memo
+    @@memo.clear
+  end
+end
+
 Spectator.describe Ktistec::JSON_LD do
+  setup_spec
+
   describe "::CONTEXTS" do
     it "loads stored contexts" do
       expect(Ktistec::JSON_LD::CONTEXTS).not_to be_empty
+    end
+  end
+
+  describe "::DIGESTS" do
+    it "indexes bundled contexts by the SHA-256 digest of their bytes" do
+      expect(Ktistec::JSON_LD::DIGESTS["bbd03e5c28f7a5516f06dcf701ef567027bea6968611ecc697c6e851e4210324"]?).to eq("mbin/contexts/context.jsonld")
     end
   end
 
@@ -101,6 +118,9 @@ Spectator.describe Ktistec::JSON_LD do
   end
 
   double loader do
+    stub def document_host=(host : String?)
+    end
+
     stub def load(url)
       case url
       when "https://vocab"
@@ -589,6 +609,144 @@ Spectator.describe Ktistec::JSON_LD do
     describe "#[]" do
       it "assumes a canonical litepub context applies" do
         expect(json.as_h.keys).to match_array(["@context", "@type", "@id"]).in_any_order
+      end
+    end
+  end
+
+  context "given a document referencing a self-hosted context by URL" do
+    let(context_url) { "https://threadbin.example/contexts" }
+
+    let(context_body) { Ktistec::JSON_LD::CONTEXTS_RAW["mbin/contexts/context.jsonld"] }
+
+    let(document) do
+      JSON.parse(<<-JSON
+        {
+          "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            "#{context_url}"
+          ],
+          "id": "https://threadbin.example/m/random/t/1",
+          "type": "Page",
+          "summary": "a summary",
+          "sensitive": true,
+          "tag": [{"type": "Hashtag", "name": "#random"}],
+          "attachment": [{"type": "PropertyValue", "name": "name", "value": "value"}]
+        }
+        JSON
+      )
+    end
+
+    let(json) { described_class.expand(document) }
+
+    before_each { HTTP::Client.cache[context_url] = context_body }
+
+    context "with fetching enabled" do
+      around_each do |proc|
+        Ktistec::JSON_LD::Loader.clear_memo
+        Ktistec::JSON_LD::Loader.fetch_contexts = true
+        proc.call
+        Ktistec::JSON_LD::Loader.fetch_contexts = false
+        Ktistec::JSON_LD::Loader.clear_memo
+      end
+
+      it "expands terms defined by the self-hosted context" do
+        expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_true
+      end
+
+      it "expands tag types defined by the self-hosted context" do
+        expect(described_class.dig_first?(json, "https://www.w3.org/ns/activitystreams#tag", "@type")).to eq("https://www.w3.org/ns/activitystreams#Hashtag")
+      end
+
+      it "expands attachment values defined by the self-hosted context" do
+        expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#attachment", "http://schema.org#value")).to eq("value")
+      end
+
+      it "fetches the context" do
+        json
+        expect(HTTP::Client.last?).to match("GET #{context_url}")
+      end
+
+      it "fetches the context once" do
+        described_class.expand(document)
+        described_class.expand(document)
+        expect(HTTP::Client.requests.size).to eq(1)
+      end
+
+      context "and the memo expires" do
+        around_each do |proc|
+          Ktistec::JSON_LD::Loader.memo_ttl = 0.seconds
+          proc.call
+          Ktistec::JSON_LD::Loader.memo_ttl = 1.hour
+        end
+
+        it "fetches the context twice" do
+          described_class.expand(document)
+          described_class.expand(document)
+          expect(HTTP::Client.requests.size).to eq(2)
+        end
+      end
+
+      context "and the served context is not byte-identical to the bundled copy" do
+        before_each { HTTP::Client.cache[context_url] = context_body + "\n" }
+
+        pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
+
+        it "does not expand terms defined by the self-hosted context" do
+          expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_nil
+        end
+
+        it "fetches the context once" do
+          described_class.expand(document)
+          described_class.expand(document)
+          expect(HTTP::Client.requests.size).to eq(1)
+        end
+      end
+
+      context "and the context cannot be fetched" do
+        before_each { HTTP::Client.cache.delete(context_url) }
+
+        pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
+
+        it "does not expand terms defined by the self-hosted context" do
+          expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_nil
+        end
+      end
+
+      context "and the document's id is on a different host" do
+        before_each { document.as_h["id"] = JSON::Any.new("https://elsewhere.example/m/random/t/1") }
+
+        pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
+
+        it "does not fetch the context" do
+          json
+          expect(HTTP::Client.requests).to be_empty
+        end
+      end
+
+      context "and the document has no id" do
+        before_each { document.as_h.delete("id") }
+
+        pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
+
+        it "does not fetch the context" do
+          json
+          expect(HTTP::Client.requests).to be_empty
+        end
+      end
+    end
+
+    context "with fetching disabled" do
+      # the test-suite default
+
+      pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
+
+      it "does not fetch the context" do
+        json
+        expect(HTTP::Client.requests).to be_empty
+      end
+
+      it "does not expand terms defined by the self-hosted context" do
+        expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_nil
       end
     end
   end

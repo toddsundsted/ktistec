@@ -160,6 +160,15 @@ class Task
   end
 end
 
+# NOTE: don't fetch uncached JSON-LD contexts when testing. specs that
+# exercise fetching turn this on locally.
+
+{% if @top_level.has_constant?("Ktistec") %}
+  {% if Ktistec.has_constant?("JSON_LD") %}
+    Ktistec::JSON_LD::Loader.fetch_contexts = false
+  {% end %}
+{% end %}
+
 # Test setup/teardown
 
 module Ktistec

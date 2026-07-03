@@ -10,8 +10,10 @@ require "../models/**"      # ameba:disable Ktistec/NoRequireGlob
 require "../controllers/**" # ameba:disable Ktistec/NoRequireGlob
 require "../handlers/**"    # ameba:disable Ktistec/NoRequireGlob
 require "../workers/**"     # ameba:disable Ktistec/NoRequireGlob
+require "../services/feed/backend/keyword"
 
 Ktistec::Server.run do
+  Rules::Feeds.register_all
   Kemal.config.extra_options do |opts|
     opts.on("--full-garbage-collection-on-startup", "Runs full garbage collection on startup") do
       puts "WARNING: Garbage collection can take a long time and cannot be safely interrupted."

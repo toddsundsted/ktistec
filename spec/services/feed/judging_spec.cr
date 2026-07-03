@@ -64,6 +64,14 @@ Spectator.describe Feed::Judging do
         expect(Feed::Judging.judge(feed)).to eq(0)
       end
 
+      it "judges candidates in batches ordered by arrival" do
+        expect(Feed::Judging.judge(feed, limit: 1)).to eq(1)
+        expect(Feed::Verdict.count(feed_id: feed.id, object_iri: miss.iri)).to eq(1)
+        expect(Feed::Judging.judge(feed, limit: 1)).to eq(1)
+        expect(Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri)).to eq(1)
+        expect(Feed::Judging.judge(feed, limit: 1)).to eq(0)
+      end
+
       context "when the policy is edited and the version bumped" do
         before_each do
           Feed::Judging.judge(feed)
@@ -92,6 +100,12 @@ Spectator.describe Feed::Judging do
 
       it "raises an error" do
         expect { Feed::Judging.judge(feed) }.to raise_error(/is not a registered backend/)
+      end
+    end
+
+    context "given a non-positive limit" do
+      it "raises an error" do
+        expect { Feed::Judging.judge(feed, limit: 0) }.to raise_error(ArgumentError, "limit must be positive")
       end
     end
   end

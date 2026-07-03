@@ -21,12 +21,12 @@ class Feed
     #
     # Returns the number of candidates judged.
     #
-    def judge(feed : ::Feed) : Int32
+    def judge(feed : ::Feed, limit : Int32? = nil) : Int32
       unless (backend = Backend.find?(feed.backend))
         raise "is not a registered backend: #{feed.backend}"
       end
       view = Rules::Feeds.view_for(feed)
-      candidates = Candidates.candidates_for(feed)
+      candidates = Candidates.candidates_for(feed, limit: limit)
       objects = candidates.map(&.first)
       judgments = backend.judge(feed, objects)
       candidates.zip(judgments) do |(object, arrival), judgment|

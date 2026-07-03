@@ -15,9 +15,15 @@ class Feed
 
     # Returns the feed's candidates, each with its arrival time.
     #
-    def candidates_for(feed : ::Feed) : Array({ActivityPub::Object, Time})
+    # `limit` bounds the candidates to the most recently arrived;
+    # `nil` (the default) means unbounded.
+    #
+    def candidates_for(feed : ::Feed, limit : Int32? = nil) : Array({ActivityPub::Object, Time})
+      if limit && limit < 1
+        raise ArgumentError.new("limit must be positive")
+      end
       query = <<-SQL
-        SELECT o.iri, MIN(m.created_at)
+        SELECT o.iri, MIN(m.created_at) AS arrival
           FROM relationships m
           JOIN activities a ON a.iri = m.to_iri
           JOIN objects o ON o.iri = a.object_iri
@@ -34,6 +40,8 @@ class Feed
                 AND v.version = ?
            )
          GROUP BY o.iri
+         ORDER BY arrival DESC
+         LIMIT ?
       SQL
       rows = Ktistec.database.query_all(
         query,
@@ -43,8 +51,8 @@ class Feed
         ActivityPub::Activity::Announce.to_s,
         feed.id,
         feed.version,
-        as: {String, Time},
-      )
+        limit || -1, # in SQLite, a negative limit means no limit
+        as: {String, Time})
       rows.map { |(iri, arrival)| {ActivityPub::Object.find(iri: iri), arrival} }
     end
   end

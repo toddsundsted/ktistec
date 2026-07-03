@@ -10,6 +10,7 @@ require "../models/**"      # ameba:disable Ktistec/NoRequireGlob
 require "../controllers/**" # ameba:disable Ktistec/NoRequireGlob
 require "../handlers/**"    # ameba:disable Ktistec/NoRequireGlob
 require "../workers/**"     # ameba:disable Ktistec/NoRequireGlob
+require "../services/feed/judging"
 require "../services/feed/backend/keyword"
 
 Ktistec::Server.run do

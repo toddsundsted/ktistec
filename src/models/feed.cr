@@ -74,4 +74,51 @@ class Feed
   def feed_type : String
     "Feed::#{id.not_nil!}"
   end
+
+  # Translates an `Object.id` (external cursor) into the feed row's
+  # `(created_at, id)` cursor pair. Returns nil for unknown ids or ids
+  # of objects that wouldn't appear in the collection.
+  #
+  private def translate_object_id_to_feed_created_at_and_id(o_id : Int64) : {Time, Int64}?
+    query = <<-QUERY
+      SELECT f.created_at, f.id
+        FROM relationships AS f
+        JOIN objects AS o
+          ON o.iri = f.to_iri
+        JOIN actors AS c
+          ON c.iri = o.attributed_to_iri
+       WHERE f.from_iri = ?
+         AND f.type = ?
+         AND o.id = ?
+         #{ActivityPub.common_filters(objects: "o", actors: "c")}
+       ORDER BY f.id DESC
+       LIMIT 1
+    QUERY
+    Ktistec.database.query_one?(query, owner_iri, feed_type, o_id, as: {Time, Int64})
+  end
+
+  # Returns the objects in the feed, most recently arrived first.
+  #
+  def contents(max_id : Int64? = nil, min_id : Int64? = nil, limit : Int32 = 10)
+    max_cursor = translate_object_id_to_feed_created_at_and_id(max_id) if max_id
+    min_cursor = translate_object_id_to_feed_created_at_and_id(min_id) if min_id
+    # the pinned index is the only one with a `(from_iri, type)`
+    # equality prefix; the broader composites over `created_at` were
+    # dropped because they regressed other queries' plans, and the
+    # timeline's `(from_iri, created_at)` index is partial over the
+    # timeline types.
+    query = <<-QUERY
+        SELECT #{ActivityPub::Object.columns(prefix: "o")}
+          FROM relationships AS f INDEXED BY idx_relationships_from_iri_type
+          JOIN objects AS o
+            ON o.iri = f.to_iri
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+         WHERE f.from_iri = ?
+           AND f.type = ?
+           #{ActivityPub.common_filters(objects: "o", actors: "c")}
+           AND %{cursor_condition}
+    QUERY
+    ActivityPub::Object.query_with_keyset_cursor(query, owner_iri, feed_type, cursor_columns: {"f.created_at", "f.id"}, max_cursor: max_cursor, min_cursor: min_cursor, limit: limit)
+  end
 end

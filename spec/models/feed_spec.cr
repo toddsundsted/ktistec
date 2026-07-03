@@ -111,4 +111,86 @@ Spectator.describe Feed do
       expect(feed.feed_type).to eq("Feed::#{feed.id}")
     end
   end
+
+  describe "#contents" do
+    let(actor) { register.actor }
+
+    let_create(:feed, owner: actor)
+
+    it "returns an empty collection" do
+      expect(feed.contents).to be_empty
+    end
+
+    context "given objects in the feed" do
+      macro post(index)
+        let_build(:actor, named: actor{{index}})
+        let_create(:object, named: object{{index}}, attributed_to: actor{{index}})
+        before_each { put_in_feed(feed, object{{index}}) }
+      end
+
+      post(1)
+      post(2)
+      post(3)
+      post(4)
+
+      it "returns the most recently objects first" do
+        expect(feed.contents).to eq([object4, object3, object2, object1])
+      end
+
+      it "filters out deleted objects" do
+        object4.delete!
+        expect(feed.contents).to eq([object3, object2, object1])
+      end
+
+      it "filters out blocked objects" do
+        object4.block!
+        expect(feed.contents).to eq([object3, object2, object1])
+      end
+
+      it "filters out objects by deleted actors" do
+        actor4.delete!
+        expect(feed.contents).to eq([object3, object2, object1])
+      end
+
+      it "filters out objects by blocked actors" do
+        actor4.block!
+        expect(feed.contents).to eq([object3, object2, object1])
+      end
+
+      context "given an object not in the feed" do
+        let_create!(:object, named: nil)
+
+        it "does not include the object" do
+          expect(feed.contents).to eq([object4, object3, object2, object1])
+        end
+      end
+
+      context "given an object in another feed" do
+        let_create(:feed, named: other, owner: actor)
+        let_create(:object, named: another)
+
+        before_each { put_in_feed(other, another) }
+
+        it "does not include the object" do
+          expect(feed.contents).to eq([object4, object3, object2, object1])
+        end
+      end
+
+      it "sets the cursors to object ids" do
+        contents = feed.contents(limit: 2)
+        expect(contents.cursor_start).to eq(object4.id)
+        expect(contents.cursor_end).to eq(object3.id)
+      end
+
+      it "paginates the results" do
+        expect(feed.contents(max_id: object3.id, limit: 2)).to eq([object2, object1])
+        expect(feed.contents(max_id: object3.id, limit: 2).has_next?).not_to be_true
+      end
+
+      it "paginates the results" do
+        expect(feed.contents(min_id: object1.id, limit: 2)).to eq([object3, object2])
+        expect(feed.contents(min_id: object1.id, limit: 2).has_prev?).to be_true
+      end
+    end
+  end
 end

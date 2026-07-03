@@ -636,6 +636,18 @@ def put_in_timeline_announce(owner : ActivityPub::Actor, object : ActivityPub::O
   Factory.create(:timeline_announce, owner: owner, object: object)
 end
 
+# Materializes an object in a feed, mirroring the rows
+# `Rules::Maintainer` writes. Raw SQL because the `type` is synthetic
+# (not a class).
+def put_in_feed(feed : Feed, object : ActivityPub::Object, at : Time = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second)
+  feed.save unless feed.id
+  object.save unless object.id
+  Ktistec.database.exec(
+    "INSERT INTO relationships (created_at, updated_at, type, from_iri, to_iri, confirmed, visible) VALUES (?, ?, ?, ?, ?, 1, 1)",
+    at, Time.utc, feed.feed_type, feed.owner_iri, object.iri,
+  )
+end
+
 def do_follow(actor : ActivityPub::Actor, object : ActivityPub::Actor)
   Factory.create(:follow_relationship, actor: actor, object: object)
 end

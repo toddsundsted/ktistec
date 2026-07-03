@@ -64,25 +64,6 @@ Spectator.describe Feed::Judging do
         expect(Feed::Judging.judge(feed)).to eq(0)
       end
 
-      context "when the invoker is swapped" do
-        around_each do |proc|
-          invoker = Feed::Backend.invoker
-          Feed::Backend.invoker = ->(_backend : Feed::Backend, _feed : Feed, objects : Array(ActivityPub::Object)) do
-            objects.map { Feed::Backend::Judgment.new(included: true, reason: "swapped") }
-          end
-          begin
-            proc.call
-          ensure
-            Feed::Backend.invoker = invoker
-          end
-        end
-
-        it "judges via the seam, not the backend" do
-          Feed::Judging.judge(feed)
-          expect(Feed::Verdict.where(feed_id: feed.id).map(&.reason)).to eq(["swapped", "swapped"])
-        end
-      end
-
       context "when the policy is edited and the version bumped" do
         before_each do
           Feed::Judging.judge(feed)

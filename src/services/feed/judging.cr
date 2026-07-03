@@ -28,7 +28,7 @@ class Feed
       view = Rules::Feeds.view_for(feed)
       candidates = Candidates.candidates_for(feed)
       objects = candidates.map(&.first)
-      judgments = Backend.invoker.call(backend, feed, objects)
+      judgments = backend.judge(feed, objects)
       candidates.zip(judgments) do |(object, arrival), judgment|
         verdict =
           Verdict.find?(feed_id: feed.id, object_iri: object.iri) ||

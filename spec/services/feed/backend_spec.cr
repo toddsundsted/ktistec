@@ -52,19 +52,4 @@ Spectator.describe Feed::Backend do
       expect(described_class.find?("missing")).to be_nil
     end
   end
-
-  describe ".invoker" do
-    let_build(:feed)
-    let_build(:object)
-
-    it "invokes the backend" do
-      described_class.invoker.call(backend, feed, [object])
-      expect(backend.calls).to eq([{feed, [object]}])
-    end
-
-    it "returns the backend's judgments" do
-      judgments = described_class.invoker.call(backend, feed, [object])
-      expect(judgments.map(&.included)).to eq([true])
-    end
-  end
 end

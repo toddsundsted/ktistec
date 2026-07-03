@@ -41,13 +41,5 @@ class Feed
     def self.find?(name : String) : Backend?
       @@registry[name]?
     end
-
-    # the sink that invokes a backend on a batch is isolated behind a
-    # swappable proc so the wiring can be tested synchronously, and so
-    # a future worker can drive the identical seam.
-
-    DEFAULT_INVOKER = ->(backend : Backend, feed : ::Feed, objects : Array(ActivityPub::Object)) { backend.judge(feed, objects) }
-
-    class_property invoker : Proc(Backend, ::Feed, Array(ActivityPub::Object), Array(Judgment)) = DEFAULT_INVOKER
   end
 end

@@ -112,6 +112,45 @@ Spectator.describe Feed do
     end
   end
 
+  describe "#destroy" do
+    def materialized_count(owner_iri, type)
+      Ktistec.database.scalar("SELECT count(*) FROM relationships WHERE from_iri = ? AND type = ?", owner_iri, type).as(Int64)
+    end
+
+    let_create(:feed)
+    let_build(:object)
+    let_create!(:feed_verdict, feed: feed, object: object)
+    before_each { put_in_feed(feed, object) }
+
+    let_create(:feed, named: other)
+    let_build(:object, named: another)
+    let_create!(:feed_verdict, named: nil, feed: other, object: another)
+    before_each { put_in_feed(other, another) }
+
+    it "deletes the feed's verdicts" do
+      feed_id = feed.id
+      expect { feed.destroy }.to change { Feed::Verdict.count(feed_id: feed_id) }.from(1).to(0)
+    end
+
+    it "deletes the feed's materialized rows" do
+      owner_iri, feed_type = feed.owner_iri, feed.feed_type
+      expect { feed.destroy }.to change { materialized_count(owner_iri, feed_type) }.from(1).to(0)
+    end
+
+    pre_condition do
+      expect(Feed::Verdict.count(feed_id: other.id)).to eq(1)
+      expect(materialized_count(other.owner_iri, other.feed_type)).to eq(1)
+    end
+
+    it "does not delete the other feed's verdicts" do
+      expect { feed.destroy }.not_to change { Feed::Verdict.count(feed_id: other.id) }
+    end
+
+    it "does not delete the other feed's materialized rows" do
+      expect { feed.destroy }.not_to change { materialized_count(other.owner_iri, other.feed_type) }
+    end
+  end
+
   describe "#contents" do
     let(actor) { register.actor }
 

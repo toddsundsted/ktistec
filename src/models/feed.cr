@@ -75,6 +75,16 @@ class Feed
     "Feed::#{id.not_nil!}"
   end
 
+  # Deletes the feed's verdicts and materialized rows.
+  #
+  # The materialized rows carry the synthetic feed `type` and must
+  # never pass through `Relationship`'s polymorphic loader.
+  #
+  def before_destroy
+    Ktistec.database.exec("DELETE FROM feed_verdicts WHERE feed_id = ?", id)
+    Ktistec.database.exec("DELETE FROM relationships WHERE from_iri = ? AND type = ?", owner_iri, feed_type)
+  end
+
   # Translates an `Object.id` (external cursor) into the feed row's
   # `(created_at, id)` cursor pair. Returns nil for unknown ids or ids
   # of objects that wouldn't appear in the collection.

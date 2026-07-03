@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../framework/util"
 require "../ktistec/constants"
 require "../utils/network"
 require "../utils/web_finger"
@@ -34,9 +35,7 @@ class SearchesController
             ActivityPub::Object.find(url)
           else
             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-            Ktistec::Network.get(env.account.actor, url, headers) do |response|
-              ActivityPub.from_json_ld(response.body, include_key: true)
-            end
+            fetch_activity_pub(env.account.actor, url, headers)
           end
       end
     end
@@ -62,6 +61,36 @@ class SearchesController
     end
   rescue ex : Errors
     bad_request "searches/form", env: env, message: ex.message, query: query
+  end
+
+  # Fetches and parses an ActivityPub resource from `url`.
+  #
+  # When the response is an HTML page (e.g. a human-facing permalink
+  # that doesn't content-negotiate to JSON-LD), follow `link` to the
+  # ActivityPub representation and fetch that instead.
+  #
+  private def self.fetch_activity_pub(key_pair, url, headers, *, follow_alternate = true)
+    response = Ktistec::Network.get(key_pair, url, headers)
+    return ActivityPub.from_json_ld(response.body, include_key: true) unless html_response?(response)
+    if follow_alternate && (href = discover_activity_pub_link(response.body, url))
+      fetch_activity_pub(key_pair, href, headers, follow_alternate: false)
+    else
+      raise Ktistec::Network::Error.new("Could not find an ActivityPub resource at #{url}")
+    end
+  end
+
+  private def self.html_response?(response) : Bool
+    response.headers["Content-Type"]?.try(&.downcase.includes?("html")) || false
+  end
+
+  private def self.discover_activity_pub_link(body, base) : String?
+    doc = XML.parse_html(body)
+    if (node = doc.xpath_nodes(%q(//link[@rel='alternate' and @type='application/activity+json']/@href)).first?)
+      href = URI.parse(base).resolve(node.text).to_s
+      href if Ktistec::Util.safe_iri?(href) && href != base
+    end
+  rescue XML::Error | URI::Error
+    nil
   end
 
   private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |

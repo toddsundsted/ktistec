@@ -1581,6 +1581,11 @@ Spectator.describe Ktistec::Model do
       before_each do
         foo_bar_model.assign(not_nil: not_nil_model).save
         not_nil_model.assign(foo_bar: foo_bar_model).save
+        # ensure associations are loaded
+        foo_bar_model.not_nil_model
+        foo_bar_model.not_nil
+        not_nil_model.foo_bar_models
+        not_nil_model.foo_bar
       end
 
       it "clears the model association" do
@@ -2029,6 +2034,52 @@ Spectator.describe Ktistec::Model do
       (not_nil.foo_bar_model_id = 999999) && not_nil.save
       expect(not_nil.foo_bar?).to be_nil
       expect(foo_bar.not_nil?).to be_nil
+    end
+  end
+
+  context "given a belongs_to association that is the inverse of a has_many association" do
+    let(not_nil) { NotNilModel.new(val: "Val").save }
+
+    let!(existing) { FooBarModel.new(not_nil_model_id: not_nil.id).save }
+
+    context "given a new instance" do
+      let!(foo_bar) { FooBarModel.new(not_nil: not_nil) }
+
+      it "does not automatically load the inverse association" do
+        expect(not_nil.@foo_bar_models).to be_nil
+      end
+
+      it "does not automatically add the instance to the inverse association" do
+        expect(not_nil.foo_bar_models).to contain_exactly(existing)
+      end
+    end
+
+    context "and the collection is loaded" do
+      before_each { not_nil.foo_bar_models }
+
+      let!(foo_bar) { FooBarModel.new(not_nil: not_nil) }
+
+      it "appends the instance to the collection" do
+        expect(not_nil.foo_bar_models).to contain_exactly(existing, foo_bar)
+      end
+    end
+
+    context "and the parent is a new record" do
+      let(not_nil) { NotNilModel.new(val: "Val") }
+
+      let!(foo_bar) { FooBarModel.new(not_nil: not_nil) }
+
+      it "adds the instance to the collection" do
+        expect(not_nil.@foo_bar_models).to eq([foo_bar])
+      end
+
+      it "assigns the foreign key when the parent is saved" do
+        expect { not_nil.save }.to change { foo_bar.not_nil_model_id }.from(nil)
+      end
+
+      it "saves the instance when the parent is saved" do
+        expect { not_nil.save }.to change { FooBarModel.count }.by(1)
+      end
     end
   end
 end

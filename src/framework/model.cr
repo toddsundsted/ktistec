@@ -876,8 +876,8 @@ module Ktistec
           if update_associations
             if {{name.id}}_.responds_to?(:_has_one_setter_for_{{inverse_of.id}})
               {{name.id}}_._has_one_setter_for_{{inverse_of.id}}(self, false)
-            elsif {{name.id}}_.responds_to?(:_has_many_setter_for_{{inverse_of.id}})
-              {{name.id}}_._has_many_setter_for_{{inverse_of.id}}({{name.id}}_.{{inverse_of.id}} << self, false)
+            elsif {{name.id}}_.responds_to?(:_append_to_{{inverse_of.id}})
+              {{name.id}}_._append_to_{{inverse_of.id}}(self)
             end
             {{name.id}}_.clear_changed!({{inverse_of.id.symbolize}})
           end
@@ -938,6 +938,13 @@ module Ktistec
         end
         @{{name.id}}.not_nil!
       end
+      def _append_to_{{name.id}}(model_ : {{class_name}}) : Nil
+        if ({{name.id}}_ = @{{name.id}})
+          {{name.id}}_ << model_
+        elsif self.{{primary_key.id}}.nil?
+          @{{name.id}} = [model_] of {{class_name}}
+        end
+      end
       def _association_{{name.id}}
         {:has_many, {{primary_key.id.symbolize}}, {{foreign_key.id.symbolize}}, Enumerable({{class_name}}), @{{name.id}}}
       end
@@ -989,7 +996,7 @@ module Ktistec
       end
     end
 
-    def _serialize_graph(nodes, association = nil, index = nil, skip_associated = false)
+    def _serialize_graph(nodes, seen = Set(UInt64).new, association = nil, index = nil, skip_associated = false)
       return if self.destroyed?
       {% if @type < Deletable %}
         return if self.deleted?
@@ -998,6 +1005,7 @@ module Ktistec
         return if self.undone?
       {% end %}
       nodes << Node.new(self, association, index)
+      seen << self.object_id
       {% begin %}
         {% ancestors = @type.ancestors << @type %}
         {% methods = ancestors.map(&.methods).reduce { |a, b| a + b } %}
@@ -1007,16 +1015,16 @@ module Ktistec
             if (%body = {{method.body.last}})
               if %body.responds_to?(:each_with_index)
                 %body.each_with_index do |model, i|
-                  unless nodes.any? { |node| model == node.model }
-                    if model.responds_to?(:_serialize_graph)
-                      model._serialize_graph(nodes, {{method.name[13..-1].stringify}}, i, skip_associated: false)
+                  if model.responds_to?(:_serialize_graph)
+                    unless seen.includes?(model.object_id)
+                      model._serialize_graph(nodes, seen, {{method.name[13..-1].stringify}}, i, skip_associated: false)
                     end
                   end
                 end
               else
-                unless nodes.any? { |node| %body == node.model }
-                  if %body.responds_to?(:_serialize_graph)
-                    %body._serialize_graph(nodes, {{method.name[13..-1].stringify}}, skip_associated: false)
+                if %body.responds_to?(:_serialize_graph)
+                  unless seen.includes?(%body.object_id)
+                    %body._serialize_graph(nodes, seen, {{method.name[13..-1].stringify}}, skip_associated: false)
                   end
                 end
               end

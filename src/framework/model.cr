@@ -1037,13 +1037,15 @@ module Ktistec
     private macro collect_graph(before, skip_associated)
       begin
         %nodes = [] of Node
+        %seen = Set(UInt64).new
         loop do
           %new = serialize_graph(skip_associated: {{skip_associated}})
-          %delta = %new - %nodes
+          %delta = %new.reject { |%node| %seen.includes?(%node.model.object_id) }
           %nodes = %new
           break if %delta.empty?
           %delta.each do |%node|
             %model = %node.model
+            %seen << %model.object_id
             next unless %model == self || %model.changed?
             if %model.responds_to?({{before.symbolize}})
               %model.{{before.id}}

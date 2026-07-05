@@ -128,6 +128,11 @@ def person_factory(**options)
   actor_factory(ActivityPub::Actor::Person, **options)
 end
 
+# `ActivityPub::Actor::Group` is a type alias, not a subclass
+def group_factory(**options)
+  actor_factory(**options).assign(type: "ActivityPub::Actor::Group")
+end
+
 # object factories
 
 def object_factory(clazz = ActivityPub::Object, iri = nil, attributed_to_iri = nil, attributed_to = false, visible = true, local = nil, **options)

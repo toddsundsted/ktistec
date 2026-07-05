@@ -194,6 +194,7 @@ Locally uploaded media files are stored on the instance and served from the `/up
 - `Delete` activities remove objects
 - A `Tombstone` object is created with the original object's ID
 - Remote servers are notified via `Delete` activity delivery
+- A `Delete` relayed inside a followed community's (`Group`) `Announce` is applied when the relaying community is in the object's `audience` (and is followed), or the object is already gone at its origin
 
 ### Blocks, reporting, and moderation
 

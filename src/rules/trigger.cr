@@ -29,7 +29,7 @@ module Rules
     # the sink that delivers one notification to a pub/sub subject is
     # isolated behind a swappable proc so the wiring can be tested
     # synchronously.
-    #
+
     DEFAULT_NOTIFIER = ->(subject : String) { Ktistec::Topic{subject}.notify_subscribers; nil }
 
     class_property notifier : Proc(String, Nil) = DEFAULT_NOTIFIER

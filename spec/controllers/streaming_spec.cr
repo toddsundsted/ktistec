@@ -51,6 +51,11 @@ Spectator.describe StreamingController do
         get "/stream/objects/999999"
         expect(response.status_code).to eq(404)
       end
+
+      it "returns 400 if the id is not a number" do
+        get "/stream/objects/foobar"
+        expect(response.status_code).to eq(400)
+      end
     end
   end
 
@@ -67,6 +72,11 @@ Spectator.describe StreamingController do
         get "/stream/objects/999999/thread"
         expect(response.status_code).to eq(404)
       end
+
+      it "returns 400 if the id is not a number" do
+        get "/stream/objects/foobar/thread"
+        expect(response.status_code).to eq(400)
+      end
     end
   end
 
@@ -82,6 +92,11 @@ Spectator.describe StreamingController do
       it "returns 404 if the actor does not exist" do
         get "/stream/actors/999999"
         expect(response.status_code).to eq(404)
+      end
+
+      it "returns 400 if the id is not a number" do
+        get "/stream/actors/foobar"
+        expect(response.status_code).to eq(400)
       end
     end
   end

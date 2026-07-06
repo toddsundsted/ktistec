@@ -1,5 +1,5 @@
 require "../../src/controllers/feeds"
-require "../../src/services/feed/backend/keyword"
+require "../../src/services/feed/backend/criteria"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"

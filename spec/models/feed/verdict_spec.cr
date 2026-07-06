@@ -1,5 +1,5 @@
 require "../../../src/models/feed/verdict"
-require "../../../src/services/feed/backend/keyword"
+require "../../../src/services/feed/backend/criteria"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"

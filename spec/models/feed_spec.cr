@@ -1,5 +1,5 @@
 require "../../src/models/feed"
-require "../../src/services/feed/backend/keyword"
+require "../../src/services/feed/backend/criteria"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
@@ -19,7 +19,7 @@ Spectator.describe Feed do
   setup_spec
 
   it "instantiates the class" do
-    expect(described_class.new(name: "name", backend: "keyword")).to be_a(Feed)
+    expect(described_class.new(name: "name", backend: "criteria")).to be_a(Feed)
   end
 
   describe "validation" do
@@ -84,12 +84,11 @@ Spectator.describe Feed do
   end
 
   describe "#params" do
-    let_create(:feed, params: JSON.parse(%({"keywords": ["alpha", "beta"], "threshold": 2})).as_h)
+    let_create(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}})).as_h)
 
     it "round-trips through the database" do
       params = Feed.find(feed.id).params
-      expect(params["keywords"].as_a.map(&.as_s)).to eq(["alpha", "beta"])
-      expect(params["threshold"].as_i).to eq(2)
+      expect(params["keywords"].as_h["any"].as_a.map(&.as_s)).to eq(["alpha", "beta"])
     end
   end
 

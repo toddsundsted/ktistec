@@ -518,12 +518,12 @@ end
 
 def feed_factory(clazz = Feed, owner_iri = nil, owner = false, params = nil, **options)
   owner = actor_factory(local: true) unless owner_iri || owner.nil? || owner
-  params ||= JSON.parse(%({"keywords": ["keyword"]})).as_h
+  params ||= JSON.parse(%({"keywords": {"any": ["keyword"]}})).as_h
   clazz.new({
     "owner_iri" => owner_iri,
     "owner"     => owner || nil,
     "name"      => random_string,
-    "backend"   => "keyword",
+    "backend"   => "criteria",
     "params"    => params,
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end

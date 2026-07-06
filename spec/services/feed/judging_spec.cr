@@ -1,5 +1,5 @@
 require "../../../src/services/feed/judging"
-require "../../../src/services/feed/backend/keyword"
+require "../../../src/services/feed/backend/criteria"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -9,7 +9,7 @@ Spectator.describe Feed::Judging do
 
   let(actor) { register.actor }
 
-  let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": ["alpha"]})).as_h)
+  let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
 
   def materialized
     Ktistec.database.query_all(
@@ -75,7 +75,7 @@ Spectator.describe Feed::Judging do
       context "when the policy is edited and the version bumped" do
         before_each do
           Feed::Judging.judge(feed)
-          feed.assign(version: 2, params: JSON.parse(%({"keywords": ["gamma"]})).as_h).save
+          feed.assign(version: 2, params: JSON.parse(%({"keywords": {"any": ["gamma"]}})).as_h).save
         end
 
         it "re-judges all candidates" do

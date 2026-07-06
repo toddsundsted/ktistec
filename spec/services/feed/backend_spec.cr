@@ -1,5 +1,5 @@
 require "../../../src/services/feed/backend"
-require "../../../src/services/feed/backend/keyword"
+require "../../../src/services/feed/backend/criteria"
 require "../../../src/models/feed"
 
 require "../../spec_helper/base"
@@ -44,8 +44,8 @@ Spectator.describe Feed::Backend do
       expect(described_class.find?("canned")).to eq(backend)
     end
 
-    it "returns the keyword backend" do
-      expect(described_class.find?("keyword")).to be_a(Feed::Backend::Keyword)
+    it "returns the criteria backend" do
+      expect(described_class.find?("criteria")).to be_a(Feed::Backend::Criteria)
     end
 
     it "returns nil" do

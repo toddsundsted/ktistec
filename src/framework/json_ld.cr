@@ -209,12 +209,7 @@ module Ktistec
       elsif value.as_a?
         array = value.as_a.map do |v|
           if v.as_h?
-            new_context = context
-            if v["@context"]?
-              c = context(v["@context"]?, loader)
-              new_context = wrap(new_context.as_h.merge(c.as_h))
-            end
-            expand(v, new_context, loader)
+            expand_embedded(v, context, loader)
           elsif id_valued && v.as_s?
             expand_iri(v.as_s, context)
           else
@@ -223,17 +218,28 @@ module Ktistec
         end
         wrap(array)
       elsif value.as_h?
-        new_context = context
-        if value["@context"]?
-          c = context(value["@context"]?, loader)
-          new_context = wrap(new_context.as_h.merge(c.as_h))
-        end
-        expand(value, new_context, loader)
+        expand_embedded(value, context, loader)
       elsif id_valued && value.as_s?
         expand_iri(value.as_s, context)
       else
         value
       end
+    end
+
+    # Expands an embedded node, merging any context it declares into
+    # the inherited context.
+    #
+    private def self.expand_embedded(node, context, loader)
+      saved = loader.document_host
+      loader.document_host = document_host(node) || saved
+      new_context = context
+      if node["@context"]?
+        c = context(node["@context"]?, loader)
+        new_context = wrap(new_context.as_h.merge(c.as_h))
+      end
+      expand(node, new_context, loader)
+    ensure
+      loader.document_host = saved
     end
 
     # Digs out the first member of a set.

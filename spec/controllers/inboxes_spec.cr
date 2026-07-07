@@ -1692,10 +1692,24 @@ Spectator.describe InboxesController do
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
-        it "returns 400 if the object does not exist" do
-          note.destroy
-          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-          expect(response.status_code).to eq(400)
+        context "and the object is not in the database" do
+          before_each { note.destroy }
+
+          it "accepts the delete without verifying" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+          end
+
+          it "makes no outbound requests" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+            expect(HTTP::Client.requests).to be_empty
+          end
+
+          it "does not save the delete" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { ActivityPub::Activity::Delete.count }
+          end
         end
 
         it "returns 400 if the object isn't from the activity's actor" do
@@ -1782,10 +1796,24 @@ Spectator.describe InboxesController do
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
-        it "returns 400 if the actor does not exist" do
-          other.destroy
-          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-          expect(response.status_code).to eq(400)
+        context "and the actor is not in the database" do
+          before_each { other.destroy }
+
+          it "accepts the delete without verifying" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+          end
+
+          it "makes no outbound requests" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+            expect(HTTP::Client.requests).to be_empty
+          end
+
+          it "does not save the delete" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { ActivityPub::Activity::Delete.count }
+          end
         end
 
         it "returns 400 if the actor isn't the activity's actor" do

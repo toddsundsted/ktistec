@@ -198,6 +198,7 @@ module Ktistec
 
     def_response_helper(ok, "OK", 200)
     def_response_helper(_created, "Created", 201) # requres a location
+    def_response_helper(accepted, "Accepted", 202)
     def_response_helper(no_content, "No Content", 204)
     def_response_helper(bad_request, "Bad Request", 400)
     def_response_helper(unauthorized, "Unauthorized", 401)

@@ -195,6 +195,18 @@ class InboxesController
       ok
     end
 
+    # a directly-delivered `Delete` for an uncached object or actor is
+    # a no-op: there is nothing to remove, and -- because there is
+    # nothing to remove -- nothing an unverified sender could spoof.
+
+    if !inner_ld && activity.is_a?(ActivityPub::Activity::Delete) &&
+       (object_iri = activity.object_iri) &&
+       ActivityPub::Object.find?(object_iri).nil? &&
+       ActivityPub::Actor.find?(object_iri).nil?
+      Log.trace { "[#{request_id}] delete of unknown target iri=#{object_iri}; accepting without verification" }
+      accepted
+    end
+
     # 1) resolve the keyId from the Signature header to the signer and
     # its verification key. 2) verify the signature against the raw
     # body. 3a) a relayed Delete is authenticated by the relaying

@@ -117,6 +117,14 @@ private class SyntheticStableKeyedView < Rules::View
   end
 end
 
+# An identity-keyed view whose `type` carries SQL metacharacters.
+#
+private class SyntheticInjectionKeyedView < SyntheticIdentityKeyedView
+  def type : String
+    "Relationship::Content::Synthetic' OR '1'='1"
+  end
+end
+
 private def materialized(view)
   Ktistec.database.query_all("SELECT to_iri FROM relationships WHERE type = ?", view.type, as: String).to_set
 end
@@ -197,6 +205,16 @@ Spectator.describe Rules::Maintainer do
           expect(rows.size).to eq(1)
           expect(rows.first[1]).to eq(third.iri)
         end
+      end
+    end
+
+    context "a view whose type carries SQL metacharacters" do
+      let(view) { SyntheticInjectionKeyedView.new }
+      let_create!(:object)
+
+      it "binds the type as data" do
+        Rules::Maintainer.reconcile(view)
+        expect(materialized(view)).to contain(object.iri)
       end
     end
   end

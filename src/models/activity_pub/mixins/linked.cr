@@ -53,6 +53,16 @@ module Ktistec
         iri.compare(requested_iri, case_insensitive: true) == 0
       end
 
+      # Returns `true` if the response carries an ActivityPub /
+      # JSON-LD / JSON content type.
+      #
+      def self.json_response?(response : HTTP::Client::Response) : Bool
+        content_type = response.headers["Content-Type"]?.presence
+        return true unless content_type
+        media_type = content_type.split(';', 2).first.strip.downcase
+        media_type.in?("application/activity+json", "application/ld+json", "application/json")
+      end
+
       macro included
         # permits models to have a missing/blank IRI. this is useful
         # for ActivityPub objects that are, for example, sometimes
@@ -105,10 +115,14 @@ module Ktistec
             else
               headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
               Ktistec::Network.get?(key_pair, iri, headers) do |response|
-                instance = self.from_json_ld(response.body, **options)
-                if instance && !instance.iri_matches?(iri)
-                  Log.warn { "#{self}.dereference? - #{iri} - IRI mismatch: requested #{iri}, got #{instance.iri}" }
-                  instance = nil
+                if Ktistec::Model::Linked.json_response?(response)
+                  instance = self.from_json_ld(response.body, **options)
+                  if instance && !instance.iri_matches?(iri)
+                    Log.warn { "#{self}.dereference? - #{iri} - IRI mismatch: requested #{iri}, got #{instance.iri}" }
+                    instance = nil
+                  end
+                else
+                  Log.debug { "#{self}.dereference? - #{iri} - non-JSON response (#{response.headers["Content-Type"]?})" }
                 end
               rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
                 Log.info { "#{self}.dereference? - #{iri} - #{ex.message}" }
@@ -142,12 +156,16 @@ module Ktistec
                           else
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
                             Ktistec::Network.get?(key_pair, {{foreign_key}}, headers) do |response|
-                              {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
-                              if {{name}}_ && !{{name}}_.iri_matches?({{foreign_key}})
-                                Log.warn { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - IRI mismatch: requested #{{{foreign_key}}}, got #{{{name}}_.iri}" }
-                                {{name}}_ = nil
+                              if Ktistec::Model::Linked.json_response?(response)
+                                {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
+                                if {{name}}_ && !{{name}}_.iri_matches?({{foreign_key}})
+                                  Log.warn { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - IRI mismatch: requested #{{{foreign_key}}}, got #{{{name}}_.iri}" }
+                                  {{name}}_ = nil
+                                else
+                                  self.{{name}} = {{name}}_
+                                end
                               else
-                                self.{{name}} = {{name}}_
+                                Log.debug { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} -- non-JSON response (#{response.headers["Content-Type"]?})" }
                               end
                             rescue ex : Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
                               Log.info { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} -- #{ex.message}" }

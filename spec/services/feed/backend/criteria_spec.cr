@@ -1,6 +1,7 @@
 require "../../../../src/services/feed/backend/criteria"
 require "../../../../src/models/feed"
 require "../../../../src/models/tag/hashtag"
+require "../../../../src/models/tag/mention"
 
 require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
@@ -237,6 +238,130 @@ Spectator.describe Feed::Backend::Criteria do
         expect(judgment.reason).to match(/spoiler/)
       end
     end
+
+    context "given a mentions group" do
+      let_create!(:object, content: "<p>plain</p>")
+      let_create!(:mention, subject: object, name: "alice@example.com", href: "https://example.com/actors/alice")
+
+      it "does not include an unmentioned object" do
+        expect(judgment.included).to be_false
+      end
+
+      context "and a mentions any group with a handle" do
+        let_build(:feed, params: JSON.parse(%({"mentions": {"any": ["alice@example.com"]}})).as_h)
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the handle in the reason" do
+          expect(judgment.reason).to match(/alice@example.com/)
+        end
+      end
+
+      context "and a mentions term with a leading at sign" do
+        let_build(:feed, params: JSON.parse(%({"mentions": {"any": ["@alice@example.com"]}})).as_h)
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the handle in the reason" do
+          expect(judgment.reason).to match(/alice@example.com/)
+        end
+      end
+
+      context "and a mentions term with mixed case" do
+        let_build(:feed, params: JSON.parse(%({"mentions": {"any": ["alice@EXAMPLE.com"]}})).as_h)
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the handle in the reason" do
+          expect(judgment.reason).to match(/alice@example.com/)
+        end
+      end
+
+      context "and a mentions term with a port" do
+        let_build(:feed, params: JSON.parse(%({"mentions": {"any": ["alice@example.com:3000"]}})).as_h)
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the handle in the reason" do
+          expect(judgment.reason).to match(/alice@example.com/)
+        end
+      end
+
+      context "and a mentions any group with an IRI" do
+        let_build(:feed, params: JSON.parse(%({"mentions": {"any": ["https://example.com/actors/alice"]}})).as_h)
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the IRI in the reason" do
+          expect(judgment.reason).to match(/https:\/\/example.com\/actors\/alice/)
+        end
+      end
+
+      context "and a mentions term with mixed case" do
+        let_build(:feed, params: JSON.parse(%({"mentions": {"any": ["https://EXAMPLE.com/actors/alice"]}})).as_h)
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the IRI in the reason" do
+          expect(judgment.reason).to match(/https:\/\/example.com\/actors\/alice/)
+        end
+      end
+
+      context "and a mentions term for a different actor" do
+        let_build(:feed, params: JSON.parse(%({"mentions": {"any": ["bob@example.com"]}})).as_h)
+
+        it "does not include the object" do
+          expect(judgment.included).to be_false
+        end
+      end
+    end
+
+    context "given a mentions all group" do
+      let_build(:feed, params: JSON.parse(%({"mentions": {"all": ["alice@example.com", "bob@example.com"]}})).as_h)
+      let_create!(:object, content: "<p>plain</p>")
+      let_create!(:mention, subject: object, name: "alice@example.com", href: "https://example.com/actors/alice")
+
+      it "does not include an object mentioning only one" do
+        expect(judgment.included).to be_false
+      end
+
+      context "and the object carries all mentions" do
+        let_create!(:mention, named: bob_mention, subject: object, name: "bob@example.com", href: "https://example.com/actors/bob")
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+      end
+    end
+
+    context "given a keyword any match and a mention none" do
+      let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}, "mentions": {"none": ["alice@example.com"]}})).as_h)
+      let_build(:feed, named: without_none, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+      let_create!(:object, content: "<p>alpha</p>")
+      let_create!(:mention, subject: object, name: "alice@example.com", href: "https://example.com/actors/alice")
+
+      pre_condition { expect(subject.judge(without_none, [object]).first.included).to be_true }
+
+      it "does not include the object" do
+        expect(judgment.included).to be_false
+      end
+
+      it "names the excluded handle in the reason" do
+        expect(judgment.reason).to match(/alice@example.com/)
+      end
+    end
   end
 
   describe "#validate_params" do
@@ -308,6 +433,16 @@ Spectator.describe Feed::Backend::Criteria do
     it "rejects params with no positive terms across groups" do
       params = JSON.parse(%({"hashtags": {"none": ["spoiler"]}})).as_h
       expect(subject.validate_params(params)).to contain("at least one any or all term is required")
+    end
+
+    it "accepts a mentions group" do
+      params = JSON.parse(%({"mentions": {"any": ["alice@example.com"]}})).as_h
+      expect(subject.validate_params(params)).to be_empty
+    end
+
+    it "accepts keywords, hashtags, and mentions together" do
+      params = JSON.parse(%({"keywords": {"any": ["alpha"]}, "hashtags": {"none": ["spoiler"]}, "mentions": {"none": ["alice@example.com"]}})).as_h
+      expect(subject.validate_params(params)).to be_empty
     end
   end
 end

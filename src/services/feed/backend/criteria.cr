@@ -10,11 +10,12 @@ class Feed
     # case-insensitive substring over the object's HTML-stripped
     # content and summary and its plain-text name) and `hashtags`
     # (matched by exact, case-insensitive equality against the
-    # object's hashtag names). Each group carries `any`/`all`/`none`
-    # term lists. Terms are evaluated together: an object is in when
-    # at least one positive term matches (and every `all` term
-    # matches) and no `none` term matches. Exclusion always wins,
-    # across groups.
+    # object's hashtag names) and `mentions` (matched by qualified,
+    # case-insensitive handle or by actor IRI). Each group carries
+    # `any`/`all`/`none` term lists. Terms are evaluated together: an
+    # object is in when at least one positive term matches (and every
+    # `all` term matches) and no `none` term matches. Exclusion always
+    # wins, across groups.
     #
     class Criteria < Backend
       SELECTORS = %w(any all none)
@@ -192,7 +193,50 @@ class Feed
         end
       end
 
-      GROUPS = [Keywords.new, Hashtags.new] of Group
+      # Matches mentions by case-insensitive, qualified handle or by
+      # actor IRI, against the object's mention names and hrefs.
+      #
+      private class Mentions < Group
+        def key : String
+          "mentions"
+        end
+
+        def label : String
+          "mention"
+        end
+
+        def normalize(term : String) : String
+          if term.starts_with?(/https?:\/\//i)
+            normalize_iri(term)
+          else
+            normalize_handle(term)
+          end
+        end
+
+        def matcher_for(object : ActivityPub::Object) : String -> Bool
+          identifiers = [] of String
+          object.mentions.each do |mention|
+            identifiers << normalize_handle(mention.name)
+            if (href = mention.href)
+              identifiers << normalize_iri(href)
+            end
+          end
+          ->(term : String) { identifiers.includes?(term) }
+        end
+
+        private def normalize_handle(handle : String) : String
+          handle = handle.lstrip('@').downcase
+          local, at, host = handle.rpartition('@')
+          return handle if at.empty?
+          "#{local}@#{host.partition(':').first}"
+        end
+
+        private def normalize_iri(iri : String) : String
+          iri.downcase
+        end
+      end
+
+      GROUPS = [Keywords.new, Hashtags.new, Mentions.new] of Group
     end
 
     register "criteria", Criteria.new

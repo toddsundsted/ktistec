@@ -239,6 +239,35 @@ Spectator.describe Feed::Backend::Criteria do
       end
     end
 
+    context "given any terms in keywords and hashtags" do
+      let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}, "hashtags": {"any": ["prusa"]}})).as_h)
+
+      context "and only the keyword any matches" do
+        let_create!(:object, content: "<p>alpha</p>")
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+      end
+
+      context "and only the hashtag any matches" do
+        let_create!(:object, content: "<p>plain</p>")
+        let_create!(:hashtag, subject: object, name: "prusa")
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+      end
+
+      context "and neither any matches" do
+        let_create!(:object, content: "<p>plain</p>")
+
+        it "does not include the object" do
+          expect(judgment.included).to be_false
+        end
+      end
+    end
+
     context "given a mentions group" do
       let_create!(:object, content: "<p>plain</p>")
       let_create!(:mention, subject: object, name: "alice@example.com", href: "https://example.com/actors/alice")
@@ -443,6 +472,16 @@ Spectator.describe Feed::Backend::Criteria do
     it "accepts keywords, hashtags, and mentions together" do
       params = JSON.parse(%({"keywords": {"any": ["alpha"]}, "hashtags": {"none": ["spoiler"]}, "mentions": {"none": ["alice@example.com"]}})).as_h
       expect(subject.validate_params(params)).to be_empty
+    end
+
+    it "rejects a hashtags term that normalizes to blank" do
+      params = JSON.parse(%({"hashtags": {"any": ["#"]}})).as_h
+      expect(subject.validate_params(params)).to contain("hashtags any must be an array of non-blank strings")
+    end
+
+    it "rejects a mentions term that normalizes to blank" do
+      params = JSON.parse(%({"mentions": {"any": ["@"]}})).as_h
+      expect(subject.validate_params(params)).to contain("mentions any must be an array of non-blank strings")
     end
   end
 end

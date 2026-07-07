@@ -41,7 +41,7 @@ class Feed
           errors << "#{group.key} has unknown selectors: #{unknown_selectors.join(", ")}" unless unknown_selectors.empty?
           SELECTORS.each do |selector|
             next unless (list = raw[selector]?)
-            if (array = list.as_a?) && array.all?(&.as_s?.try(&.presence))
+            if (array = list.as_a?) && array.all? { |element| element.as_s?.try(&.presence).try { |string| group.normalize(string).presence } }
               positive_terms += array.size if selector.in?(POSITIVE)
             else
               errors << "#{group.key} #{selector} must be an array of non-blank strings"

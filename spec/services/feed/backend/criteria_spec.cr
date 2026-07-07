@@ -1,5 +1,6 @@
 require "../../../../src/services/feed/backend/criteria"
 require "../../../../src/models/feed"
+require "../../../../src/models/tag/hashtag"
 
 require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
@@ -150,6 +151,92 @@ Spectator.describe Feed::Backend::Criteria do
         expect(subject.judge(feed, [miss, hit]).map(&.included)).to eq([false, true])
       end
     end
+
+    context "given a hashtags any group" do
+      let_build(:feed, params: JSON.parse(%({"hashtags": {"any": ["3dprinting"]}})).as_h)
+      let_create!(:object, content: "<p>plain</p>")
+
+      it "does not include an untagged object" do
+        expect(judgment.included).to be_false
+      end
+
+      context "and the object carries the tag" do
+        let_create!(:hashtag, subject: object, name: "3dprinting")
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the tag in the reason" do
+          expect(judgment.reason).to match(/3dprinting/)
+        end
+      end
+
+      context "and the object carries the tag in mixed case" do
+        let_create!(:hashtag, subject: object, name: "3DPrinting")
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the tag in the reason" do
+          expect(judgment.reason).to match(/3dprinting/)
+        end
+      end
+
+      context "and the term is a substring of the tag" do
+        let_create!(:hashtag, subject: object, name: "3dprintingtips")
+
+        it "does not include the object" do
+          expect(judgment.included).to be_false
+        end
+      end
+    end
+
+    context "given a hashtags all group" do
+      let_build(:feed, params: JSON.parse(%({"hashtags": {"all": ["3dprinting", "prusa"]}})).as_h)
+      let_create!(:object, content: "<p>plain</p>")
+      let_create!(:hashtag, subject: object, name: "3dprinting")
+
+      it "does not include an object carrying only one tag" do
+        expect(judgment.included).to be_false
+      end
+
+      context "and the object carries all tags" do
+        let_create!(:hashtag, named: prusa_tag, subject: object, name: "prusa")
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+      end
+    end
+
+    context "given a hashtags term with a leading hash" do
+      let_build(:feed, params: JSON.parse(%({"hashtags": {"any": ["#3dprinting"]}})).as_h)
+      let_create!(:object, content: "<p>plain</p>")
+      let_create!(:hashtag, subject: object, name: "3dprinting")
+
+      it "includes the object" do
+        expect(judgment.included).to be_true
+      end
+    end
+
+    context "given a keyword any match and a hashtag none" do
+      let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}, "hashtags": {"none": ["spoiler"]}})).as_h)
+      let_build(:feed, named: without_none, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+      let_create!(:object, content: "<p>alpha</p>")
+      let_create!(:hashtag, subject: object, name: "spoiler")
+
+      pre_condition { expect(subject.judge(without_none, [object]).first.included).to be_true }
+
+      it "does not include the object" do
+        expect(judgment.included).to be_false
+      end
+
+      it "names the excluded tag in the reason" do
+        expect(judgment.reason).to match(/spoiler/)
+      end
+    end
   end
 
   describe "#validate_params" do
@@ -195,6 +282,31 @@ Spectator.describe Feed::Backend::Criteria do
 
     it "rejects a group with only empty positive lists" do
       params = JSON.parse(%({"keywords": {"any": []}})).as_h
+      expect(subject.validate_params(params)).to contain("at least one any or all term is required")
+    end
+
+    it "accepts a hashtags group" do
+      params = JSON.parse(%({"hashtags": {"any": ["3dprinting"]}})).as_h
+      expect(subject.validate_params(params)).to be_empty
+    end
+
+    it "accepts combined keywords and hashtags groups" do
+      params = JSON.parse(%({"keywords": {"any": ["alpha"]}, "hashtags": {"none": ["spoiler"]}})).as_h
+      expect(subject.validate_params(params)).to be_empty
+    end
+
+    it "rejects an unknown selector in the hashtags group" do
+      params = JSON.parse(%({"hashtags": {"any": ["3dprinting"], "most": ["prusa"]}})).as_h
+      expect(subject.validate_params(params)).to contain("hashtags has unknown selectors: most")
+    end
+
+    it "rejects a hashtags array" do
+      params = JSON.parse(%({"hashtags": ["3dprinting"]})).as_h
+      expect(subject.validate_params(params)).to contain("hashtags must be an object with any, all, or none")
+    end
+
+    it "rejects params with no positive terms across groups" do
+      params = JSON.parse(%({"hashtags": {"none": ["spoiler"]}})).as_h
       expect(subject.validate_params(params)).to contain("at least one any or all term is required")
     end
   end

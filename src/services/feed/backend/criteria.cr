@@ -6,84 +6,193 @@ class Feed
     # A criteria judge.
     #
     # An object is judged against structured criteria carried in the
-    # feed's `params`. Criteria are organized into groups (only
-    # `keywords` for now); each group carries `any`/`all`/`none` term
-    # lists. A post is *in* when the group matches its positive terms
-    # -- at least one `any` term and every `all` term -- and no `none`
-    # term matches; exclusion always wins. Matching is
+    # feed's `params`, organized into groups: `keywords` (matched by
     # case-insensitive substring over the object's HTML-stripped
-    # content and summary and its plain-text name.
+    # content and summary and its plain-text name) and `hashtags`
+    # (matched by exact, case-insensitive equality against the
+    # object's hashtag names). Each group carries `any`/`all`/`none`
+    # term lists. Terms are evaluated together: an object is in when
+    # at least one positive term matches (and every `all` term
+    # matches) and no `none` term matches. Exclusion always wins,
+    # across groups.
     #
     class Criteria < Backend
-      GROUPS    = %w(keywords)
       SELECTORS = %w(any all none)
       POSITIVE  = %w(any all)
 
       def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
-        group = feed.params["keywords"]?.try(&.as_h?) || {} of String => JSON::Any
-        any = terms(group, "any")
-        all = terms(group, "all")
-        none = terms(group, "none")
-        objects.map do |object|
-          text = searchable_text(object)
-          excluded = none.select { |term| text.includes?(term.downcase) }
-          matched = any.select { |term| text.includes?(term.downcase) }
-          if !excluded.empty?
-            Judgment.new(included: false, reason: "excluded: #{excluded.join(", ")}")
-          elsif positive?(text, any, all, matched)
-            Judgment.new(included: true, reason: "matched: #{(matched + all).uniq.join(", ")}")
-          else
-            Judgment.new(included: false, reason: "no match")
-          end
-        end
+        active = active_groups(feed.params)
+        objects.map { |object| judge_one(object, active) }
       end
 
       def validate_params(params : Hash(String, JSON::Any)) : Array(String)
         errors = [] of String
-        unknown_groups = params.keys - GROUPS
+        unknown_groups = params.keys - GROUPS.map(&.key)
         errors << "unknown groups: #{unknown_groups.join(", ")}" unless unknown_groups.empty?
         positive_terms = 0
-        if (keywords = params["keywords"]?)
-          if (group = keywords.as_h?)
-            unknown_selectors = group.keys - SELECTORS
-            errors << "keywords has unknown selectors: #{unknown_selectors.join(", ")}" unless unknown_selectors.empty?
-            SELECTORS.each do |selector|
-              next unless (list = group[selector]?)
-              if (array = list.as_a?) && array.all?(&.as_s?.try(&.presence))
-                positive_terms += array.size if selector.in?(POSITIVE)
-              else
-                errors << "keywords #{selector} must be an array of non-blank strings"
-              end
+        GROUPS.each do |group|
+          next unless (value = params[group.key]?)
+          unless (raw = value.as_h?)
+            errors << "#{group.key} must be an object with any, all, or none"
+            next
+          end
+          unknown_selectors = raw.keys - SELECTORS
+          errors << "#{group.key} has unknown selectors: #{unknown_selectors.join(", ")}" unless unknown_selectors.empty?
+          SELECTORS.each do |selector|
+            next unless (list = raw[selector]?)
+            if (array = list.as_a?) && array.all?(&.as_s?.try(&.presence))
+              positive_terms += array.size if selector.in?(POSITIVE)
+            else
+              errors << "#{group.key} #{selector} must be an array of non-blank strings"
             end
-          else
-            errors << "keywords must be an object with any, all, or none"
           end
         end
         errors << "at least one any or all term is required" if positive_terms.zero?
         errors
       end
 
-      # Returns a group's non-blank string terms for a selector.
+      private record Active,
+        group : Group,
+        any : Array(String),
+        all : Array(String),
+        none : Array(String)
+
+      # Returns the active groups -- those present in `params` with at
+      # least one term.
       #
-      private def terms(group : Hash(String, JSON::Any), selector : String) : Array(String)
-        group[selector]?.try(&.as_a?).try(&.compact_map(&.as_s?.try(&.presence))) || [] of String
+      private def active_groups(params : Hash(String, JSON::Any)) : Array(Active)
+        GROUPS.compact_map do |group|
+          next unless (raw = params[group.key]?.try(&.as_h?))
+          any = group.terms(raw, "any")
+          all = group.terms(raw, "all")
+          none = group.terms(raw, "none")
+          next if any.empty? && all.empty? && none.empty?
+          Active.new(group, any, all, none)
+        end
       end
 
-      # A post matches positively when it carries at least one positive
-      # term and satisfies `any` and `all`.
+      # Judges a single object against the active groups.
       #
-      private def positive?(text, any, all, matched) : Bool
-        return false if any.empty? && all.empty?
-        (any.empty? || !matched.empty?) && all.all? { |term| text.includes?(term.downcase) }
+      # Pools every term across the groups -- each matched by its own
+      # group -- and applies the shared combinator: exclusion wins,
+      # then at least one positive term must match (with every `all`
+      # term matching).
+      #
+      private def judge_one(object : ActivityPub::Object, active : Array(Active)) : Judgment
+        excluded = [] of String
+        matched = [] of String
+        required = [] of String
+        any_present = false
+        positive_present = false
+        all_ok = true
+        active.each do |entry|
+          matches = entry.group.matcher_for(object)
+          any_present ||= !entry.any.empty?
+          positive_present ||= !(entry.any.empty? && entry.all.empty?)
+          entry.none.each { |term| excluded << entry.group.label_for(term) if matches.call(term) }
+          entry.any.each { |term| matched << entry.group.label_for(term) if matches.call(term) }
+          entry.all.each do |term|
+            required << entry.group.label_for(term)
+            all_ok = false unless matches.call(term)
+          end
+        end
+        if !excluded.empty?
+          Judgment.new(included: false, reason: "excluded: #{excluded.join(", ")}")
+        elsif positive_present && (!any_present || !matched.empty?) && all_ok
+          Judgment.new(included: true, reason: "matched: #{(matched + required).uniq.join(", ")}")
+        else
+          Judgment.new(included: false, reason: "no match")
+        end
       end
 
-      # Concatenates the object's searchable text.
+      # A criterion group: parses its term lists from `params` and
+      # decides whether a term matches an object.
       #
-      private def searchable_text(object : ActivityPub::Object) : String
-        content = Ktistec::Util.render_as_text(object.content)
-        summary = Ktistec::Util.render_as_text(object.summary)
-        "#{content} #{summary} #{object.name}".downcase
+      private abstract class Group
+        # The group's key in `params`.
+        #
+        abstract def key : String
+
+        # The label naming the group in a verdict reason.
+        #
+        abstract def label : String
+
+        # Normalizes a raw term into its matchable form.
+        #
+        abstract def normalize(term : String) : String
+
+        # Returns a predicate matching a normalized term against the
+        # object, computing any per-object state once.
+        #
+        abstract def matcher_for(object : ActivityPub::Object) : String -> Bool
+
+        # Returns the group's non-blank, normalized terms for a
+        # selector.
+        #
+        def terms(raw : Hash(String, JSON::Any), selector : String) : Array(String)
+          list = raw[selector]?.try(&.as_a?)
+          return [] of String unless list
+          list.compact_map do |value|
+            if (string = value.as_s?.try(&.presence))
+              normalize(string)
+            end
+          end
+        end
+
+        # Labels a term with its group for a verdict reason.
+        #
+        def label_for(term : String) : String
+          "#{term} [#{label}]"
+        end
       end
+
+      # Matches keywords by case-insensitive substring over the
+      # object's content, summary, and name.
+      #
+      private class Keywords < Group
+        def key : String
+          "keywords"
+        end
+
+        def label : String
+          "keyword"
+        end
+
+        def normalize(term : String) : String
+          term.downcase
+        end
+
+        def matcher_for(object : ActivityPub::Object) : String -> Bool
+          content = Ktistec::Util.render_as_text(object.content)
+          summary = Ktistec::Util.render_as_text(object.summary)
+          text = "#{content} #{summary} #{object.name}".downcase
+          ->(term : String) { text.includes?(term) }
+        end
+      end
+
+      # Matches hashtags by exact, case-insensitive equality against
+      # the object's hashtag names, with a leading `#` normalized away.
+      #
+      private class Hashtags < Group
+        def key : String
+          "hashtags"
+        end
+
+        def label : String
+          "hashtag"
+        end
+
+        def normalize(term : String) : String
+          term.lstrip('#').downcase
+        end
+
+        def matcher_for(object : ActivityPub::Object) : String -> Bool
+          names = object.hashtags.map { |hashtag| normalize(hashtag.name) }
+          ->(term : String) { names.includes?(term) }
+        end
+      end
+
+      GROUPS = [Keywords.new, Hashtags.new] of Group
     end
 
     register "criteria", Criteria.new

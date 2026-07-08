@@ -129,6 +129,22 @@ Spectator.describe Ktistec::Model::Linked do
       expect(HTTP::Client.last?).to match("GET #{object.iri}")
     end
 
+    context "when the response is an HTML page" do
+      # a valid JSON-LD body served with an HTML content type -- proves
+      # the guard skips on content type, not on unparseable bytes
+      before_each do
+        HTTP::Client.cache.set_response(
+          object.iri,
+          HTTP::Client::Response.new(200, headers: HTTP::Headers{"Content-Type" => "text/html"}, body: object.to_json_ld),
+        )
+      end
+
+      it "fetches but does not parse or return the object" do
+        expect(subject.linked_model?(key_pair, dereference: true)).to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+    end
+
     context "when linked object is local" do
       before_each do
         object.assign(iri: "https://test.test/objects/object").save
@@ -364,6 +380,22 @@ Spectator.describe Ktistec::Model::Linked do
       expect(HTTP::Client.last?).to match("GET #{object.iri}")
     end
 
+    context "when the response is an HTML page" do
+      # a valid JSON-LD body served with an HTML content type -- proves
+      # the guard skips on content type, not on unparseable bytes
+      before_each do
+        HTTP::Client.cache.set_response(
+          object.iri,
+          HTTP::Client::Response.new(200, headers: HTTP::Headers{"Content-Type" => "text/html"}, body: object.to_json_ld),
+        )
+      end
+
+      it "fetches but does not parse or return the object" do
+        expect(subject.dereference?(key_pair, object.iri)).to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+    end
+
     context "when linked IRI is based on the local host" do
       let(crafted_iri) { "https://test.test.evil.com/objects/object" }
 
@@ -591,6 +623,48 @@ Spectator.describe Ktistec::Model::Linked do
 
     it "treats a suffix domain as cached" do
       expect(LinkedModel.new(iri: "https://test.test.evil.com/foo").cached?).to be_true
+    end
+  end
+
+  describe ".json_response?" do
+    def response_with(content_type : String?)
+      headers = HTTP::Headers.new
+      headers["Content-Type"] = content_type if content_type
+      HTTP::Client::Response.new(200, headers: headers, body: "")
+    end
+
+    it "accepts JSON/JSON-LD/ActivityPub content types" do
+      [
+        %q|application/activity+json|,
+        %q|application/ld+json|,
+        %q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|,
+        %q|application/json|,
+        %q|application/json; charset=utf-8|,
+        %q|APPLICATION/ACTIVITY+JSON|,
+      ].each do |content_type|
+        expect(Ktistec::Model::Linked.json_response?(response_with(content_type)))
+          .to be_true, "expected #{content_type} to be accepted"
+      end
+    end
+
+    it "rejects non-JSON content types" do
+      [
+        %q|text/html|,
+        %q|text/html; charset=utf-8|,
+        %q|text/plain|,
+        %q|image/png|,
+      ].each do |content_type|
+        expect(Ktistec::Model::Linked.json_response?(response_with(content_type)))
+          .to be_false, "expected #{content_type} to be rejected"
+      end
+    end
+
+    it "accepts a response with a blank content type" do
+      expect(Ktistec::Model::Linked.json_response?(response_with(""))).to be_true
+    end
+
+    it "accepts a response with a nil content type" do
+      expect(Ktistec::Model::Linked.json_response?(response_with(nil))).to be_true
     end
   end
 end

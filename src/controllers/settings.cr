@@ -94,10 +94,10 @@ class SettingsController
 
     # check for the presense of uploaded files. `rescue` because the
     # `files` invocation will fail if called on anything other than
-    # form data.
+    # form data, or on malformed/truncated multipart form data.
     files = begin
       env.params.files.presence
-    rescue HTTP::FormData::Error
+    rescue HTTP::FormData::Error | MIME::Multipart::Error
     end
     if files
       ["image", "icon"].each do |name|
@@ -137,10 +137,10 @@ class SettingsController
 
     # check for the presense of uploaded files. `rescue` because the
     # `files` invocation will fail if called on anything other than
-    # form data.
+    # form data, or on malformed/truncated multipart form data.
     files = begin
       env.params.files.presence
-    rescue HTTP::FormData::Error
+    rescue HTTP::FormData::Error | MIME::Multipart::Error
     end
     if files
       ["image"].each do |name|

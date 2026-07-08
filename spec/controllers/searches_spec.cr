@@ -353,6 +353,122 @@ Spectator.describe SearchesController do
         end
       end
 
+      context "given a URL to a web page" do
+        let(permalink) { "https://remote/permalink" }
+
+        # the page links to its ActivityPub representation via the
+        # standard `<link rel="alternate">` discovery hook
+        let(page_body) do
+          <<-HTML
+            <html><head>
+            <link rel="alternate" type="application/activity+json" href="https://remote/objects/foo_bar">
+            </head></html>
+            HTML
+        end
+
+        before_each do
+          HTTP::Client.cache.set_response(
+            permalink,
+            HTTP::Client::Response.new(200, headers: HTTP::Headers{"Content-Type" => "text/html"}, body: page_body),
+          )
+        end
+
+        it "retrieves and saves the linked resource" do
+          expect { get "/search?query=#{permalink}", HTML_HEADERS }.to change { ActivityPub::Object.count }.by(1)
+          expect(response.status_code).to eq(200)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(text(),'foo bar')]")).not_to be_empty
+        end
+
+        it "retrieves and saves the linked resource" do
+          expect { get "/search?query=#{permalink}", JSON_HEADERS }.to change { ActivityPub::Object.count }.by(1)
+          expect(response.status_code).to eq(200)
+          expect(JSON.parse(response.body).as_h.dig("object", "content")).to eq("foo bar")
+        end
+
+        it "fetches the discovered activity+json url" do
+          get "/search?query=#{permalink}", HTML_HEADERS
+          expect(HTTP::Client.requests).to have("GET https://remote/objects/foo_bar")
+        end
+
+        it "fetches the discovered activity+json url" do
+          get "/search?query=#{permalink}", JSON_HEADERS
+          expect(HTTP::Client.requests).to have("GET https://remote/objects/foo_bar")
+        end
+
+        context "when the activity+json link is not rel=alternate" do
+          let(page_body) do
+            <<-HTML
+              <html><head>
+              <link type="application/activity+json" href="#{permalink}">
+              </head></html>
+              HTML
+          end
+
+          it "returns 400" do
+            get "/search?query=#{permalink}", HTML_HEADERS
+            expect(response.status_code).to eq(400)
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/Could not find an ActivityPub resource/)
+          end
+
+          it "returns 400" do
+            get "/search?query=#{permalink}", JSON_HEADERS
+            expect(response.status_code).to eq(400)
+            expect(JSON.parse(response.body).as_h["msg"]).to match(/Could not find an ActivityPub resource/)
+          end
+        end
+
+        context "when the page has no activity+json link" do
+          let(page_body) { "<html><head></head></html>" }
+
+          it "returns 400" do
+            get "/search?query=#{permalink}", HTML_HEADERS
+            expect(response.status_code).to eq(400)
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/Could not find an ActivityPub resource/)
+          end
+
+          it "returns 400" do
+            get "/search?query=#{permalink}", JSON_HEADERS
+            expect(response.status_code).to eq(400)
+            expect(JSON.parse(response.body).as_h["msg"]).to match(/Could not find an ActivityPub resource/)
+          end
+        end
+
+        context "when the linked page is itself html" do
+          before_each do
+            HTTP::Client.cache.set_response(
+              "https://remote/objects/foo_bar",
+              HTTP::Client::Response.new(
+                200,
+                headers: HTTP::Headers{"Content-Type" => "text/html"},
+                body: %Q(<html><head><link rel="alternate" type="application/activity+json" href="#{permalink}"></head></html>),
+              ),
+            )
+          end
+
+          it "returns 400" do
+            get "/search?query=#{permalink}", HTML_HEADERS
+            expect(response.status_code).to eq(400)
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/Could not find an ActivityPub resource/)
+          end
+
+          it "returns 400" do
+            get "/search?query=#{permalink}", JSON_HEADERS
+            expect(response.status_code).to eq(400)
+            expect(JSON.parse(response.body).as_h["msg"]).to match(/Could not find an ActivityPub resource/)
+          end
+
+          it "does not fetch beyond the second hop" do
+            get "/search?query=#{permalink}", HTML_HEADERS
+            expect(HTTP::Client.requests.count { |request| request === "GET https://remote/objects/foo_bar" }).to eq(1)
+          end
+
+          it "does not fetch beyond the second hop" do
+            get "/search?query=#{permalink}", JSON_HEADERS
+            expect(HTTP::Client.requests.count { |request| request === "GET https://remote/objects/foo_bar" }).to eq(1)
+          end
+        end
+      end
+
       context "given a non-existent host" do
         it "returns 400" do
           get "/search?query=foo_bar@no-such-host", HTML_HEADERS

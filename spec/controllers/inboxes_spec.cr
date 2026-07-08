@@ -1692,10 +1692,24 @@ Spectator.describe InboxesController do
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
-        it "returns 400 if the object does not exist" do
-          note.destroy
-          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-          expect(response.status_code).to eq(400)
+        context "and the object is not in the database" do
+          before_each { note.destroy }
+
+          it "accepts the delete without verifying" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+          end
+
+          it "makes no outbound requests" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+            expect(HTTP::Client.requests).to be_empty
+          end
+
+          it "does not save the delete" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { ActivityPub::Activity::Delete.count }
+          end
         end
 
         it "returns 400 if the object isn't from the activity's actor" do
@@ -1782,10 +1796,24 @@ Spectator.describe InboxesController do
 
         let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", delete.to_json_ld, "application/json") }
 
-        it "returns 400 if the actor does not exist" do
-          other.destroy
-          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-          expect(response.status_code).to eq(400)
+        context "and the actor is not in the database" do
+          before_each { other.destroy }
+
+          it "accepts the delete without verifying" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+          end
+
+          it "makes no outbound requests" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+            expect(HTTP::Client.requests).to be_empty
+          end
+
+          it "does not save the delete" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { ActivityPub::Activity::Delete.count }
+          end
         end
 
         it "returns 400 if the actor isn't the activity's actor" do
@@ -1826,7 +1854,7 @@ Spectator.describe InboxesController do
     end
 
     context "Lemmy compatibility" do
-      let_create(:actor, named: :community, iri: "https://lemmy.ml/c/opensource")
+      let_create(:group, named: :community, iri: "https://lemmy.ml/c/opensource", with_keys: true)
       let_create(:actor, named: :lemmy_user, iri: "https://lemmy.world/u/testuser")
 
       let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
@@ -1910,6 +1938,10 @@ Spectator.describe InboxesController do
         end
       end
 
+      # only `Delete` is relay-trusted: a social signal (like `Like`)
+      # must still be origin-verified, so the community's signature
+      # does not authenticate it.
+
       context "wrapped Like activity" do
         let_create(:object, attributed_to: actor)
         let_build(:like, actor: lemmy_user, object: object)
@@ -1925,23 +1957,42 @@ Spectator.describe InboxesController do
           }.to_json
         end
 
-        before_each do
-          HTTP::Client.activities << like
+        let(headers) { Ktistec::Signature.sign(community, "https://test.test/actors/#{actor.username}/inbox", wrapped_json, "application/json") }
+
+        context "served at its origin" do
+          before_each { HTTP::Client.activities << like }
+
+          it "saves the inner Like activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { ActivityPub::Activity::Like.count }.by(1)
+          end
+
+          it "does not save the Announce wrapper" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Announce.count }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(200)
+          end
         end
 
-        it "saves the inner Like activity" do
-          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-            .to change { ActivityPub::Activity::Like.count }.by(1)
-        end
+        context "not served at its origin" do
+          it "does not save the inner Like activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Like.count }
+          end
 
-        it "does not save the Announce wrapper" do
-          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-            .not_to change { ActivityPub::Activity::Announce.count }
-        end
+          it "does not save the Announce wrapper" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Announce.count }
+          end
 
-        it "is successful" do
-          post "/actors/#{actor.username}/inbox", headers, wrapped_json
-          expect(response.status_code).to eq(200)
+          it "returns 400" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(400)
+          end
         end
       end
 
@@ -2041,10 +2092,10 @@ Spectator.describe InboxesController do
         end
       end
 
-      context "wrapped Delete activity" do
-        let_create(:actor, named: :lemmy_user_with_keys, iri: "https://lemmy.world/u/testuser", with_keys: true)
-        let_create(:object, attributed_to: lemmy_user_with_keys)
-        let_build(:delete, actor: lemmy_user_with_keys, object: object)
+      context "wrapped Delete activity (community relay)" do
+        let_create(:actor, named: :moderator, iri: "https://lemmy.ml/u/mod")
+        let_create(:object, attributed_to: lemmy_user, audience: [community.iri])
+        let_build(:delete, actor: moderator, object: object)
         let_build(:announce, actor: community, object_iri: delete.iri)
 
         let(wrapped_json) do
@@ -2052,21 +2103,229 @@ Spectator.describe InboxesController do
             "@context" => "https://www.w3.org/ns/activitystreams",
             "type"     => "Announce",
             "id"       => announce.iri,
-            "actor"    => community.iri,
+            "actor"    => announce.actor.iri,
             "object"   => JSON.parse(delete.to_json_ld),
           }.to_json
         end
 
-        let(headers) { Ktistec::Signature.sign(lemmy_user_with_keys, "https://test.test/actors/#{actor.username}/inbox", wrapped_json, "application/json") }
+        let(headers) { Ktistec::Signature.sign(announce.actor, "https://test.test/actors/#{actor.username}/inbox", wrapped_json, "application/json") }
 
-        it "saves the inner Delete activity" do
-          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-            .to change { ActivityPub::Activity::Delete.count }.by(1)
+        before_each { HTTP::Client.objects << object }
+
+        context "when the community is in the audience but is not followed" do
+          it "does not save the Delete activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Delete.count }
+          end
+
+          it "does not delete the object" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { object.reload!.deleted_at }
+          end
+
+          it "returns 400" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(400)
+          end
         end
 
-        it "is successful" do
-          post "/actors/#{actor.username}/inbox", headers, wrapped_json
-          expect(response.status_code).to eq(200)
+        context "when community is in the audience and is followed" do
+          let_create!(:follow_relationship, actor: actor, object: community)
+
+          it "saves the Delete activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { ActivityPub::Activity::Delete.count }.by(1)
+          end
+
+          it "deletes the object" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { object.reload!.deleted_at }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "when the object is gone at its origin" do
+          before_each { HTTP::Client.objects.delete(object.iri) }
+
+          it "saves the Delete activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { ActivityPub::Activity::Delete.count }.by(1)
+          end
+
+          it "deletes the object" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { object.reload!.deleted_at }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(200)
+          end
+
+          context "and the moderator is unresolvable" do
+            # the moderator's instance is dead -- not cached, not
+            # fetchable. the community's signature is the authentication.
+            # resolving the inner actor must not gate the removal.
+            let_build(:actor, named: :ghost, iri: "https://dead.example/u/ghost")
+            let_build(:delete, actor: ghost, object: object)
+
+            it "saves the Delete activity" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { ActivityPub::Activity::Delete.count }.by(1)
+            end
+
+            it "deletes the object" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { object.reload!.deleted_at }
+            end
+
+            it "is successful" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(200)
+            end
+          end
+        end
+
+        context "when signed by an unrelated community" do
+          let_create(:group, named: :attacker, iri: "https://evil.example/c/attacker", with_keys: true)
+          let_build(:announce, actor: attacker, object_iri: delete.iri)
+          let_create!(:follow_relationship, actor: actor, object: attacker)
+
+          it "does not save the Delete activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Delete.count }
+          end
+
+          it "does not delete the object" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { object.reload!.deleted_at }
+          end
+
+          it "returns 400" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(400)
+          end
+        end
+
+        context "when the relayer is not a Group" do
+          let_create(:actor, named: :person, iri: "https://example.com/users/person", with_keys: true)
+          let_create(:object, attributed_to: lemmy_user, audience: [person.iri])
+          let_build(:announce, actor: person, object_iri: delete.iri)
+          let_create!(:follow_relationship, actor: actor, object: person)
+
+          it "does not save the Delete activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Delete.count }
+          end
+
+          it "does not delete the object" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { object.reload!.deleted_at }
+          end
+
+          it "returns 400" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(400)
+          end
+        end
+
+        context "without the community's signature" do
+          let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
+          it "does not save the Delete activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Delete.count }
+          end
+
+          it "does not delete the object" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { object.reload!.deleted_at }
+          end
+
+          it "returns 400" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(400)
+          end
+        end
+
+        context "with the community key as its own document" do
+          let_create!(:follow_relationship, actor: actor, object: community)
+
+          let(key_id) { "#{community.iri}/main-key" }
+
+          let(key_document) do
+            {
+              "@context"     => "https://w3id.org/security/v1",
+              "id"           => key_id,
+              "owner"        => community.iri,
+              "publicKeyPem" => community.pem_public_key,
+            }.to_json
+          end
+
+          let(headers) do
+            Ktistec::Signature.sign(community, "https://test.test/actors/#{actor.username}/inbox", wrapped_json, "application/json").tap do |hdrs|
+              hdrs["Signature"] = hdrs["Signature"].gsub(/keyId="[^"]*"/, %Q<keyId="#{key_id}">)
+            end
+          end
+
+          before_each { HTTP::Client.cache[key_id] = key_document }
+
+          it "retrieves the key document" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(HTTP::Client.requests).to have("GET #{key_id}")
+          end
+
+          it "saves the Delete activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { ActivityPub::Activity::Delete.count }.by(1)
+          end
+
+          it "deletes the object" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { object.reload!.deleted_at }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(200)
+          end
+
+          context "whose owner is not the announcing community" do
+            let_create(:actor, named: :other_owner, iri: "https://lemmy.ml/u/otheruser")
+
+            let(key_document) do
+              {
+                "@context"     => "https://w3id.org/security/v1",
+                "id"           => key_id,
+                "owner"        => other_owner.iri,
+                "publicKeyPem" => community.pem_public_key,
+              }.to_json
+            end
+
+            it "retrieves the key document" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(HTTP::Client.requests).to have("GET #{key_id}")
+            end
+
+            it "does not save the Delete activity" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .not_to change { ActivityPub::Activity::Delete.count }
+            end
+
+            it "does not delete the object" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .not_to change { object.reload!.deleted_at }
+            end
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(400)
+            end
+          end
         end
       end
 

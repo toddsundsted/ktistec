@@ -181,7 +181,7 @@ class StreamingController
   end
 
   get "/stream/objects/:id" do |env|
-    id = env.params.url["id"].to_i
+    id = id_param(env)
     unless ActivityPub::Object.find?(id)
       not_found
     end
@@ -199,7 +199,7 @@ class StreamingController
   end
 
   get "/stream/objects/:id/thread" do |env|
-    id = env.params.url["id"].to_i
+    id = id_param(env)
     unless (object = ActivityPub::Object.find?(id))
       not_found
     end
@@ -226,7 +226,7 @@ class StreamingController
   end
 
   get "/stream/actors/:id" do |env|
-    id = env.params.url["id"].to_i64
+    id = id_param(env)
     unless ActivityPub::Actor.find?(id)
       not_found
     end

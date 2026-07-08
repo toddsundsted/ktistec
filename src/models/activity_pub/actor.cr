@@ -883,6 +883,30 @@ module ActivityPub
       find_activity_for(object, ActivityPub::Activity::Like)
     end
 
+    # Returns the arrival time of the most recent activity from
+    # another actor in this actor's inbox.
+    #
+    # Returns `nil` if no activity has arrived.
+    #
+    def last_activity_from(other : ActivityPub::Actor) : Time?
+      query = <<-QUERY
+         SELECT a.created_at
+           FROM activities AS a
+           JOIN relationships AS r
+             ON r.to_iri = a.iri
+          WHERE r.from_iri = ?
+            AND r.type = '#{Relationship::Content::Inbox}'
+            AND r.confirmed = 1
+            AND a.actor_iri = ?
+            #{common_filters(activities: "a")}
+       ORDER BY a.id DESC
+          LIMIT 1
+      QUERY
+      Ktistec.database.query_one?(query, args: [self.iri, other.iri] of ::DB::Any) do |rs|
+        rs.read(Time)
+      end
+    end
+
     # Returns the SQL fragment and bound arguments for excluding
     # pinned objects. The SQL references `o` as the object alias; call
     # sites must alias `objects AS o`.
@@ -922,8 +946,6 @@ module ActivityPub
       end
     end
 
-    # Returns the actor's known posts.
-    #
     # Returns the actor's known posts.
     #
     # Meant to be called on both local and cached actors.

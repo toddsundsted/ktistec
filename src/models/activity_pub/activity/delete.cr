@@ -10,16 +10,5 @@ class ActivityPub::Activity
     end
 
     belongs_to object, class_name: ActivityPub::Object | ActivityPub::Actor, foreign_key: object_iri, primary_key: iri
-
-    def validate_model
-      unless object.deleted?
-        case (_object = object)
-        when ActivityPub::Object
-          errors["activity"] = ["the actor must be the object's actor"] unless actor == _object.attributed_to
-        when ActivityPub::Actor
-          errors["activity"] = ["the actors must match"] unless actor == _object
-        end
-      end
-    end
   end
 end

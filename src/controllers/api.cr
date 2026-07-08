@@ -156,7 +156,7 @@ class APIController
     files =
       begin
         env.params.files.presence
-      rescue HTTP::FormData::Error
+      rescue HTTP::FormData::Error | MIME::Multipart::Error
       end
 
     display_name = params["display_name"]?.as?(String)

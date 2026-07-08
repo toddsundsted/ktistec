@@ -9,6 +9,24 @@ Spectator.describe "helpers" do
     XML::HTMLParserOptions::NOIMPLIED |
       XML::HTMLParserOptions::NODEFDTD
 
+  describe ".activity_status" do
+    it "is :none" do
+      expect(self.class.activity_status(nil)).to eq(:none)
+    end
+
+    it "is :active" do
+      expect(self.class.activity_status(10.days.ago)).to eq(:active)
+    end
+
+    it "is :quiet" do
+      expect(self.class.activity_status(90.days.ago)).to eq(:quiet)
+    end
+
+    it "is :dormant" do
+      expect(self.class.activity_status(400.days.ago)).to eq(:dormant)
+    end
+  end
+
   describe ".addressing" do
     let_build(:actor, local: true)
 

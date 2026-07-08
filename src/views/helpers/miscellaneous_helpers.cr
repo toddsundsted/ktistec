@@ -4,6 +4,20 @@ module Ktistec::ViewHelper
   module ClassMethods
     PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
+    # Classifies an activity time into a liveness signal.
+    #
+    def activity_status(activity_at : Time?) : Symbol
+      return :none unless activity_at
+      age = Time.utc - activity_at
+      if age <= 30.days
+        :active
+      elsif age <= 365.days
+        :quiet
+      else
+        :dormant
+      end
+    end
+
     # Derives visibility and to/cc addressing from the "visibility"
     # param.
     #

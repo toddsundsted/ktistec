@@ -616,6 +616,28 @@ Spectator.describe "partials" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Follow")
         end
       end
+
+      context "on following" do
+        let(env) { make_env("GET", "/actors/foo_bar/following") }
+
+        it "does not render a status label" do
+          expect(subject.xpath_nodes("//a[contains(@class,'link')]")).not_to be_empty
+          expect(subject.xpath_nodes("//div[contains(@class,'activity')]//span[contains(@class,'label')]")).to be_empty
+        end
+      end
+
+      context "on followers" do
+        let(env) { make_env("GET", "/actors/foo_bar/followers") }
+
+        context "and the actor is down" do
+          before_each { actor.down! }
+
+          it "does not render a status label" do
+            expect(subject.xpath_nodes("//a[contains(@class,'link')]")).not_to be_empty
+            expect(subject.xpath_nodes("//div[contains(@class,'activity')]//span[contains(@class,'label')]")).to be_empty
+          end
+        end
+      end
     end
 
     context "if authenticated" do
@@ -738,6 +760,61 @@ Spectator.describe "partials" do
 
       it "renders a button to block" do
         expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+      end
+
+      context "on following" do
+        let(env) { make_env("GET", "/actors/foo_bar/following") }
+
+        it "renders a status label" do
+          expect(subject.xpath_nodes("//div[contains(@class,'activity')]//span[contains(@class,'label')]/text()")).to have("No activity")
+        end
+
+        context "given recent activity" do
+          let_create!(:activity, actor: actor, created_at: 1.day.ago)
+          let_create!(:inbox_relationship, owner: account.actor, activity: activity, confirmed: true)
+
+          it "does not render a status label" do
+            expect(subject.xpath_nodes("//div[contains(@class,'activity')]//span[contains(@class,'label')]")).to be_empty
+          end
+
+          it "renders the last-seen time" do
+            expect(subject.xpath_nodes("//span[contains(@class,'submeta') and contains(text(),'Last seen')]")).not_to be_empty
+          end
+        end
+
+        context "given old activity" do
+          let_create!(:activity, actor: actor, created_at: 90.days.ago)
+          let_create!(:inbox_relationship, owner: account.actor, activity: activity, confirmed: true)
+
+          it "renders a status label" do
+            expect(subject.xpath_nodes("//div[contains(@class,'activity')]//span[contains(@class,'label') and contains(@class,'stale')]")).not_to be_empty
+          end
+        end
+
+        context "given very old activity" do
+          let_create!(:activity, actor: actor, created_at: 2.years.ago)
+          let_create!(:inbox_relationship, owner: account.actor, activity: activity, confirmed: true)
+
+          it "renders a status label" do
+            expect(subject.xpath_nodes("//div[contains(@class,'activity')]//span[contains(@class,'label') and contains(@class,'broken')]")).not_to be_empty
+          end
+        end
+      end
+
+      context "on followers" do
+        let(env) { make_env("GET", "/actors/foo_bar/followers") }
+
+        it "does not render a status label" do
+          expect(subject.xpath_nodes("//div[contains(@class,'activity')]//span[contains(@class,'label')]")).to be_empty
+        end
+
+        context "given a down actor" do
+          before_each { actor.down! }
+
+          it "renders a status label" do
+            expect(subject.xpath_nodes("//div[contains(@class,'activity')]//span[contains(@class,'label') and contains(text(),'Down for')]")).not_to be_empty
+          end
+        end
       end
     end
   end

@@ -514,7 +514,49 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
         line-height: 3rem;
         font-size: 3rem;
     }
+    .extra.content > a.ui.link {
+        display: block;
+    }
+    .meta.activity {
+        margin-top: 0.35rem;
+        line-height: 1.5;
+        * {
+            margin: 0;
+        }
+        .submeta {
+            color: var(--text-secondary);
+            font-size: 0.82em;
+        }
+        time {
+            cursor: help;
+        }
+        .ui.label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4em;
+            padding: 0.16em 0.6em;
+            border-radius: 1em;
+            line-height: 1.5;
+            white-space: nowrap;
+            &::before {
+                content: "";
+                width: 0.5em;
+                height: 0.5em;
+                border-radius: 50%;
+                background: currentColor;
+            }
+            &.stale {
+                color: var(--semantic-warning);
+                background: color-mix(in srgb, var(--semantic-warning) 15%, var(--bg-primary));
+            }
+            &.broken {
+                color: var(--semantic-negative);
+                background: color-mix(in srgb, var(--semantic-negative) 15%, var(--bg-primary));
+            }
+        }
+    }
 }
+
 
 /* thread analysis */
 #thread_analysis .ui.list .content {

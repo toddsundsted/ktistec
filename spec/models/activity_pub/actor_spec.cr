@@ -1757,6 +1757,59 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#last_activity_from" do
+    subject { described_class.new(iri: "https://test.test/#{random_string}").save }
+
+    let_create(:actor, named: other)
+
+    it "returns nil" do
+      expect(subject.last_activity_from(other)).to be_nil
+    end
+
+    context "given an activity in the inbox" do
+      let_create!(:activity, named: older, actor: other, created_at: Time.utc(2025, 1, 1))
+      let_create!(:inbox_relationship, named: nil, owner: subject, activity: older, confirmed: true)
+
+      it "returns its arrival time" do
+        expect(subject.last_activity_from(other)).to eq(older.created_at)
+      end
+
+      context "and a more recent activity" do
+        let_create!(:activity, named: newer, actor: other, created_at: Time.utc(2026, 1, 1))
+        let_create!(:inbox_relationship, named: nil, owner: subject, activity: newer, confirmed: true)
+
+        it "returns the most recent arrival time" do
+          expect(subject.last_activity_from(other)).to eq(newer.created_at)
+        end
+
+        context "that was undone" do
+          before_each { newer.undo! }
+
+          it "ignores undone activity" do
+            expect(subject.last_activity_from(other)).to eq(older.created_at)
+          end
+        end
+      end
+
+      context "and a more recent activity from a different actor" do
+        let_create!(:activity, named: different, created_at: Time.utc(2026, 1, 1))
+        let_create!(:inbox_relationship, named: nil, owner: subject, activity: different, confirmed: true)
+
+        it "ignores the activity" do
+          expect(subject.last_activity_from(other)).to eq(older.created_at)
+        end
+      end
+
+      context "and a more recent activity that never reached the inbox" do
+        let_create!(:activity, named: nil, actor: other, created_at: Time.utc(2026, 1, 1))
+
+        it "ignores the activity" do
+          expect(subject.last_activity_from(other)).to eq(older.created_at)
+        end
+      end
+    end
+  end
+
   describe "#known_posts" do
     subject { described_class.new(iri: "https://test.test/#{random_string}").save }
 

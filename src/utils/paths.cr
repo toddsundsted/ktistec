@@ -333,6 +333,14 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_actor_path({{actor}})}/refresh")
   end
 
+  macro actor_feed_path(actor = nil, feed = nil)
+    {% if feed %}
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds/#{::URI.encode_path_segment({{feed}}.id.to_s)}")
+    {% else %}
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds/#{::URI.encode_path_segment(env.params.url["id"])}")
+    {% end %}
+  end
+
   macro actor_relationships_path(actor = nil, relationship = nil)
     {% if relationship %}
       ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/#{::URI.encode_path_segment({{relationship}})}")
@@ -365,7 +373,7 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/remote-follow")
   end
 
-  macro actor_feed_path(actor = nil)
+  macro actor_rss_feed_path(actor = nil)
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feed.rss")
   end
 

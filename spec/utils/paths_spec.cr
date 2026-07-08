@@ -648,6 +648,28 @@ Spectator.describe Utils::Paths do
     end
   end
 
+  describe "actor_feed_path" do
+    let(env) do
+      make_env("GET", "/actors/abc/feeds/17").tap do |env|
+        env.params.url["username"] = "abc"
+        env.params.url["id"] = "17"
+      end
+    end
+
+    context "given an actor and a feed" do
+      let(actor) { double(:path_double) }
+      let(feed) { double(:path_double) }
+
+      it "gets the actor feed path" do
+        expect((actor_feed_path(actor, feed)).to_s).to eq("/actors/xyz/feeds/42")
+      end
+    end
+
+    it "gets the actor feed path" do
+      expect((actor_feed_path).to_s).to eq("/actors/abc/feeds/17")
+    end
+  end
+
   describe "actor_relationships_path" do
     let(env) do
       make_env("GET", "/actors/abc/running").tap do |env|

@@ -1,0 +1,55 @@
+require "../../../src/services/feed/backend"
+require "../../../src/services/feed/backend/criteria"
+require "../../../src/models/feed"
+
+require "../../spec_helper/base"
+require "../../spec_helper/factory"
+require "../../spec_helper/feed/backend"
+
+private class CannedBackend < Feed::Backend
+  getter calls = [] of {Feed, Array(ActivityPub::Object)}
+
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
+    calls << {feed, objects}
+    objects.map { Judgment.new(included: true, reason: "canned") }
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
+
+Spectator.describe Feed::Backend do
+  setup_spec
+
+  let(backend) { CannedBackend.new }
+
+  around_each do |proc|
+    begin
+      proc.call
+    ensure
+      described_class.unregister("canned")
+    end
+  end
+
+  describe ".register" do
+    it "returns the backend" do
+      expect(described_class.register("canned", backend)).to eq(backend)
+    end
+  end
+
+  describe ".find?" do
+    it "returns the registered backend" do
+      described_class.register("canned", backend)
+      expect(described_class.find?("canned")).to eq(backend)
+    end
+
+    it "returns the criteria backend" do
+      expect(described_class.find?("criteria")).to be_a(Feed::Backend::Criteria)
+    end
+
+    it "returns nil" do
+      expect(described_class.find?("missing")).to be_nil
+    end
+  end
+end

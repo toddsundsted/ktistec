@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.8.0]
+### Added
+- Display activity status on actor cards.
+- Back-end support for user-defined algorithmic feeds.
+- Apply community-relayed moderator deletes received as a Group's wrapped `Announce`.
+- Follow a web page's `rel="alternate"` link when searching.
+
+### Fixed
+- Avoid loading entire `has_many` collections when constructing child records.
+- Evaluate the same-origin fetch gate against an embedded node's own identifier.
+- Accept a delete of an uncached object or actor without verification.
+- Catch `MIME::Multipart::Error` in local file-upload handling.
+- Map malformed request-body parse failures to `Bad Request`.
+
 ## [v3.7.0]
 ### Added
 - Support FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor.
@@ -862,6 +876,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.8.0]: https://github.com/toddsundsted/ktistec/compare/aec6139a...c3605dc6
 [v3.7.0]: https://github.com/toddsundsted/ktistec/compare/731dd8cd...97b2168a
 [v3.6.0]: https://github.com/toddsundsted/ktistec/compare/63adac41...066f0237
 [v3.5.0]: https://github.com/toddsundsted/ktistec/compare/62d9cc84...319ca17a

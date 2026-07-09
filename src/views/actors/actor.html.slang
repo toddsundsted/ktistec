@@ -1,6 +1,6 @@
 - if !actor.blocked?
   - content_for "head" do
-    link rel="alternate" type="application/rss+xml" title="#{actor.display_name}: RSS Feed" href=Utils::Paths.actor_feed_path(actor)
+    link rel="alternate" type="application/rss+xml" title="#{actor.display_name}: RSS Feed" href=Utils::Paths.actor_rss_feed_path(actor)
   - content_for "og_metadata" do
     crystal:
       og_title = actor.display_name.presence

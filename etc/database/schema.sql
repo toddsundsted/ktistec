@@ -86,6 +86,10 @@ INSERT INTO migrations VALUES(20260612215000,'reconcile-materialized-views');
 INSERT INTO migrations VALUES(20260615162507,'add-timeline-index');
 INSERT INTO migrations VALUES(20260616120000,'add-public-tagged-index');
 INSERT INTO migrations VALUES(20260616120100,'reconcile-public-tagged');
+INSERT INTO migrations VALUES(20260618140820,'drop-relationships-type-index');
+INSERT INTO migrations VALUES(20260626151347,'add-verified-handle-to-actors');
+INSERT INTO migrations VALUES(20260701041921,'recreate-actors-username-index-nocase');
+INSERT INTO migrations VALUES(20260702111403,'create-feeds-and-feed-verdicts');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -134,7 +138,8 @@ CREATE TABLE actors (
     "attachments" text,
     "down_at" datetime,
     "shared_inbox" text,
-    "featured" text
+    "featured" text,
+    "verified_handle" varchar(244) COLLATE NOCASE
   );
 CREATE TABLE objects (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -310,6 +315,29 @@ CREATE TABLE quote_decisions (
     "created_at" datetime NOT NULL,
     "updated_at" datetime NOT NULL
   );
+CREATE TABLE feeds (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "owner_iri" varchar(255) NOT NULL COLLATE NOCASE,
+    "name" varchar(255) NOT NULL,
+    "backend" varchar(63) NOT NULL,
+    "version" integer NOT NULL DEFAULT 1,
+    "description" text,
+    "examples" text,
+    "params" text
+  );
+CREATE TABLE feed_verdicts (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "feed_id" integer,
+    "object_iri" varchar(255) NOT NULL COLLATE NOCASE,
+    "included" boolean NOT NULL,
+    "reason" text,
+    "version" integer NOT NULL,
+    "position" datetime NOT NULL
+  );
 CREATE INDEX idx_accounts_iri
     ON accounts (iri ASC);
 CREATE UNIQUE INDEX idx_accounts_username
@@ -327,9 +355,13 @@ CREATE INDEX idx_activities_target_iri
 CREATE UNIQUE INDEX idx_actors_iri
     ON actors (iri ASC);
 CREATE INDEX idx_actors_username
-    ON actors (username ASC);
+    ON actors (username COLLATE NOCASE ASC);
 CREATE UNIQUE INDEX idx_collections_iri
     ON collections (iri ASC);
+CREATE UNIQUE INDEX idx_feed_verdicts_feed_id_object_iri
+    ON feed_verdicts (feed_id ASC, object_iri ASC);
+CREATE INDEX idx_feeds_owner_iri
+    ON feeds (owner_iri ASC);
 CREATE INDEX idx_filter_terms_actor_id
     ON filter_terms (actor_id ASC);
 CREATE INDEX idx_last_times_name
@@ -380,8 +412,6 @@ CREATE INDEX idx_relationships_timeline_from_iri_created_at
     WHERE type IN ('Relationship::Content::Timeline::Announce','Relationship::Content::Timeline::Create');
 CREATE INDEX idx_relationships_to_iri
     ON relationships (to_iri ASC);
-CREATE INDEX idx_relationships_type
-    ON relationships (type ASC);
 CREATE INDEX idx_sessions_oauth_access_token_id
     ON sessions (oauth_access_token_id ASC);
 CREATE UNIQUE INDEX idx_sessions_session_key

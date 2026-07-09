@@ -49,16 +49,16 @@ module Rules
       now = Time.utc
       insert = <<-SQL
         INSERT INTO relationships (created_at, updated_at, type, from_iri, to_iri, confirmed, visible)
-        SELECT m.position, ?, '#{type}', m.from_iri, m.to_iri, 1, 1
+        SELECT m.position, ?, ?, m.from_iri, m.to_iri, 1, 1
           FROM (#{query}) AS m
          WHERE NOT EXISTS (
            SELECT 1 FROM relationships x
-            WHERE x.type = '#{type}' AND x.from_iri = m.from_iri AND x.to_iri = m.to_iri
+            WHERE x.type = ? AND x.from_iri = m.from_iri AND x.to_iri = m.to_iri
          )
       SQL
       delete = <<-SQL
         DELETE FROM relationships
-         WHERE type = '#{type}'
+         WHERE type = ?
            AND (#{scope})
            AND NOT EXISTS (
              SELECT 1 FROM (#{query}) AS m
@@ -69,16 +69,16 @@ module Rules
         UPDATE relationships
            SET created_at = m.position, updated_at = ?
           FROM (#{query}) AS m
-         WHERE relationships.type = '#{type}'
+         WHERE relationships.type = ?
            AND relationships.from_iri = m.from_iri
            AND relationships.to_iri = m.to_iri
            AND relationships.created_at <> m.position
       SQL
       changed = false
       transaction do
-        inserted = Ktistec.database.exec(insert, args: Array(DB::Any){now} + query_args).rows_affected
-        deleted = Ktistec.database.exec(delete, args: scope_args + query_args).rows_affected
-        repositioned = repositions ? Ktistec.database.exec(reposition, args: Array(DB::Any){now} + query_args).rows_affected : 0_i64
+        inserted = Ktistec.database.exec(insert, args: Array(DB::Any){now, type} + query_args + Array(DB::Any){type}).rows_affected
+        deleted = Ktistec.database.exec(delete, args: Array(DB::Any){type} + scope_args + query_args).rows_affected
+        repositioned = repositions ? Ktistec.database.exec(reposition, args: Array(DB::Any){now} + query_args + Array(DB::Any){type}).rows_affected : 0_i64
         changed = (inserted + deleted + repositioned) > 0
       end
       changed

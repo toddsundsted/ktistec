@@ -514,6 +514,34 @@ def filter_term_factory(clazz = FilterTerm, actor_id = nil, actor = false, **opt
   clazz.new(**{actor_id: actor_id, actor: actor}.merge(options))
 end
 
+# feed factories
+
+def feed_factory(clazz = Feed, owner_iri = nil, owner = false, params = nil, **options)
+  owner = actor_factory(local: true) unless owner_iri || owner.nil? || owner
+  params ||= JSON.parse(%({"keywords": {"any": ["keyword"]}})).as_h
+  clazz.new({
+    "owner_iri" => owner_iri,
+    "owner"     => owner || nil,
+    "name"      => random_string,
+    "backend"   => "criteria",
+    "params"    => params,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
+end
+
+def feed_verdict_factory(clazz = Feed::Verdict, feed_id = nil, feed = false, object_iri = nil, object = false, position = nil, **options)
+  feed = feed_factory unless feed_id || feed.nil? || feed
+  object = object_factory unless object_iri || object.nil? || object
+  position ||= KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second
+  clazz.new({
+    "feed_id"    => feed_id,
+    "feed"       => feed || nil,
+    "object_iri" => object_iri,
+    "object"     => object || nil,
+    "included"   => true,
+    "position"   => position,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
+end
+
 # translation factory
 
 def translation_factory(clazz = Translation, origin_id = nil, origin = false, **options)
@@ -606,6 +634,18 @@ end
 
 def put_in_timeline_announce(owner : ActivityPub::Actor, object : ActivityPub::Object)
   Factory.create(:timeline_announce, owner: owner, object: object)
+end
+
+# Materializes an object in a feed, mirroring the rows
+# `Rules::Maintainer` writes. Raw SQL because the `type` is synthetic
+# (not a class).
+def put_in_feed(feed : Feed, object : ActivityPub::Object, at : Time = KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second)
+  feed.save unless feed.id
+  object.save unless object.id
+  Ktistec.database.exec(
+    "INSERT INTO relationships (created_at, updated_at, type, from_iri, to_iri, confirmed, visible) VALUES (?, ?, ?, ?, ?, 1, 1)",
+    at, Time.utc, feed.feed_type, feed.owner_iri, object.iri,
+  )
 end
 
 def do_follow(actor : ActivityPub::Actor, object : ActivityPub::Actor)

@@ -333,6 +333,18 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_actor_path({{actor}})}/refresh")
   end
 
+  macro actor_feeds_path(actor = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds")
+  end
+
+  macro new_actor_feed_path(actor = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_feeds_path({{actor}})}/new")
+  end
+
+  macro edit_actor_feed_path(actor = nil, feed = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_feed_path({{actor}}, {{feed}})}/edit")
+  end
+
   macro actor_feed_path(actor = nil, feed = nil)
     {% if feed %}
       ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds/#{::URI.encode_path_segment({{feed}}.id.to_s)}")

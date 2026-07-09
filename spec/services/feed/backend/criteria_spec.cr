@@ -484,4 +484,22 @@ Spectator.describe Feed::Backend::Criteria do
       expect(subject.validate_params(params)).to contain("mentions any must be an array of non-blank strings")
     end
   end
+
+  describe ".iri_term?" do
+    it "is true for an http IRI" do
+      expect(described_class.iri_term?("http://example.com/actors/bob")).to be_true
+    end
+
+    it "is true for an https IRI" do
+      expect(described_class.iri_term?("https://example.com/actors/bob")).to be_true
+    end
+
+    it "is true case-insensitively" do
+      expect(described_class.iri_term?("HTTP://example.com")).to be_true
+    end
+
+    it "is false for a handle" do
+      expect(described_class.iri_term?("@bob@example.com")).to be_false
+    end
+  end
 end

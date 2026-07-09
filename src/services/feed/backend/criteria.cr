@@ -21,6 +21,12 @@ class Feed
       SELECTORS = %w(any all none)
       POSITIVE  = %w(any all)
 
+      # Distinguishes an IRI term from a handle.
+      #
+      def self.iri_term?(term : String) : Bool
+        term.starts_with?(/https?:\/\//i)
+      end
+
       def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
         active = active_groups(feed.params)
         objects.map { |object| judge_one(object, active) }
@@ -206,7 +212,7 @@ class Feed
         end
 
         def normalize(term : String) : String
-          if term.starts_with?(/https?:\/\//i)
+          if Criteria.iri_term?(term)
             normalize_iri(term)
           else
             normalize_handle(term)

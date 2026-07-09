@@ -648,6 +648,68 @@ Spectator.describe Utils::Paths do
     end
   end
 
+  describe "actor_feeds_path" do
+    let(env) do
+      make_env("GET", "/actors/abc/feeds").tap do |env|
+        env.params.url["username"] = "abc"
+      end
+    end
+
+    context "given an actor" do
+      let(actor) { double(:path_double) }
+
+      it "gets the actor feeds path" do
+        expect((actor_feeds_path(actor)).to_s).to eq("/actors/xyz/feeds")
+      end
+    end
+
+    it "gets the actor feeds path" do
+      expect((actor_feeds_path).to_s).to eq("/actors/abc/feeds")
+    end
+  end
+
+  describe "new_actor_feed_path" do
+    let(env) do
+      make_env("GET", "/actors/abc/feeds/new").tap do |env|
+        env.params.url["username"] = "abc"
+      end
+    end
+
+    context "given an actor" do
+      let(actor) { double(:path_double) }
+
+      it "gets the new actor feed path" do
+        expect((new_actor_feed_path(actor)).to_s).to eq("/actors/xyz/feeds/new")
+      end
+    end
+
+    it "gets the new actor feed path" do
+      expect((new_actor_feed_path).to_s).to eq("/actors/abc/feeds/new")
+    end
+  end
+
+  describe "edit_actor_feed_path" do
+    let(env) do
+      make_env("GET", "/actors/abc/feeds/17/edit").tap do |env|
+        env.params.url["username"] = "abc"
+        env.params.url["id"] = "17"
+      end
+    end
+
+    context "given an actor and a feed" do
+      let(actor) { double(:path_double) }
+      let(feed) { double(:path_double) }
+
+      it "gets the edit actor feed path" do
+        expect((edit_actor_feed_path(actor, feed)).to_s).to eq("/actors/xyz/feeds/42/edit")
+      end
+    end
+
+    it "gets the edit actor feed path" do
+      expect((edit_actor_feed_path).to_s).to eq("/actors/abc/feeds/17/edit")
+    end
+  end
+
   describe "actor_feed_path" do
     let(env) do
       make_env("GET", "/actors/abc/feeds/17").tap do |env|

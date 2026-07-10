@@ -1,7 +1,6 @@
 require "../task"
 require "../task/mixins/transfer"
 
-require "../../utils/recipients"
 require "../activity_pub/activity"
 require "../activity_pub/activity/update"
 require "../activity_pub/actor"
@@ -50,8 +49,7 @@ class Task
     end
 
     def recipients
-      # fallback for in-flight tasks enqueued before the processor began
-      state.recipients || Ktistec::Recipients.for_receive(activity, receiver, deliver_to)
+      state.recipients || [] of String
     end
 
     def recipients=(@recipients : Array(String)?)

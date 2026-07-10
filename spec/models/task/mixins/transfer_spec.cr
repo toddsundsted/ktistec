@@ -102,6 +102,16 @@ Spectator.describe Task::Transfer do
       expect(HTTP::Client.requests).to be_empty
     end
 
+    context "when the activity's object has been deleted" do
+      let_build(:delete, named: :activity, actor_iri: transferer.iri, object_iri: "https://deleted")
+
+      it "serializes and delivers the activity without failing" do
+        subject.transfer(activity, from: transferer, to: [local_recipient.iri])
+        expect(HTTP::Client.requests).to have("POST #{local_recipient.inbox}")
+        expect(subject.failures).to be_empty
+      end
+    end
+
     context "given an OpenSSL error" do
       before_each do
         # simulate an OpenSSL error

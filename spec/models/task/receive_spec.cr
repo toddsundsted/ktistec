@@ -63,39 +63,17 @@ Spectator.describe Task::Receive do
   end
 
   describe "#recipients" do
-    context "when state.recipients is set" do
-      before_each { subject.state.recipients = ["https://example/recipient"] }
-
-      it "returns the state value without consulting the helper" do
-        expect(subject.recipients).to eq(["https://example/recipient"])
-      end
+    it "persists recipients across save and reload" do
+      task = described_class.new(receiver: receiver.save, activity: activity.save, recipients: ["https://example/recipient"]).save
+      expect(described_class.find(task.id).recipients).to eq(["https://example/recipient"])
     end
 
-    context "when state.recipients is nil" do
-      before_each { activity.to = [receiver.iri] }
-
-      it "falls back to the helper method" do
-        expect(subject.recipients).to eq([receiver.iri])
-      end
-    end
-  end
-
-  describe "#recipients=" do
-    it "stores the value in state" do
-      subject.recipients = ["https://example/recipient"]
-      expect(subject.state.recipients).to eq(["https://example/recipient"])
+    it "returns an empty array when no recipients are stored" do
+      expect(subject.recipients).to be_empty
     end
   end
 
   describe "#perform" do
-    context "when the object has already been deleted" do
-      let_build(:delete, named: :activity, actor_iri: receiver.iri, object_iri: "https://deleted", to: [receiver.iri])
-
-      it "does not fail" do
-        expect { subject.perform }.not_to change { subject.failures }
-      end
-    end
-
     context "when the activity object is local" do
       let(authorization_iri) { "https://remote/authorizations/#{random_string}" }
 

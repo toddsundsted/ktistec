@@ -48,9 +48,6 @@ Spectator.describe Task::Deliver do
     end
   end
 
-  let_build(:actor, named: :local_recipient, username: "local", local: true)
-  let_build(:actor, named: :remote_recipient, username: "remote")
-
   subject do
     described_class.new(
       sender: sender,
@@ -59,42 +56,13 @@ Spectator.describe Task::Deliver do
   end
 
   describe "#recipients" do
-    context "when state.recipients is set" do
-      before_each { subject.state.recipients = ["https://example/recipient"] }
-
-      it "returns the state value without consulting the helper" do
-        expect(subject.recipients).to eq(["https://example/recipient"])
-      end
+    it "persists recipients across save and reload" do
+      task = described_class.new(sender: sender.save, activity: activity.save, recipients: ["https://example/recipient"]).save
+      expect(described_class.find(task.id).recipients).to eq(["https://example/recipient"])
     end
 
-    context "when state.recipients is nil" do
-      before_each { activity.to = [remote_recipient.save.iri] }
-
-      it "falls back to the helper method" do
-        expect(subject.recipients).to eq([remote_recipient.iri])
-      end
-    end
-  end
-
-  describe "#recipients=" do
-    it "stores the value in state" do
-      subject.recipients = ["https://example/recipient"]
-      expect(subject.state.recipients).to eq(["https://example/recipient"])
-    end
-  end
-
-  describe "#perform" do
-    context "when the object has been deleted" do
-      let_build(:delete, named: :activity, actor_iri: sender.iri, object_iri: "https://deleted", to: [local_recipient.iri, remote_recipient.iri])
-
-      before_each do
-        local_recipient.save
-        remote_recipient.save
-      end
-
-      it "does not fail" do
-        expect { subject.perform }.not_to change { subject.failures }
-      end
+    it "returns an empty array when no recipients are stored" do
+      expect(subject.recipients).to be_empty
     end
   end
 end

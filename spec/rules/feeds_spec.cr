@@ -38,4 +38,22 @@ Spectator.describe Rules::Feeds do
           .from([] of String).to([feed.feed_type, other.feed_type].sort)
     end
   end
+
+  describe ".register" do
+    it "registers the feed's view" do
+      expect { Rules::Feeds.register(feed) }
+        .to change { Rules::View.registry.select(Rules::View::Feed).map(&.type) }
+          .from([] of String).to([feed.feed_type])
+    end
+  end
+
+  describe ".unregister" do
+    before_each { Rules::Feeds.register(feed) }
+
+    it "unregisters the feed's view" do
+      expect { Rules::Feeds.unregister(feed) }
+        .to change { Rules::View.registry.select(Rules::View::Feed).map(&.type) }
+          .from([feed.feed_type]).to([] of String)
+    end
+  end
 end

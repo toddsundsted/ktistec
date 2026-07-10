@@ -96,8 +96,9 @@ module Ktistec::ViewHelper
     # - `for_thread`: Collection of objects in thread; enables thread view rendering.
     # - `for_actor`: Actor for whom view is being rendered.
     # - `highlight`: Whether or not to highlight this object in the feed.
+    # - `themed`: Whether or not to emit custom-theme metadata (feed rendering only; ignored when `for_thread`/`with_detail` is set).
     #
-    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, as_context = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false, content_io)
+    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, as_context = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false, themed = true, content_io)
       partial "partials/object/wrapper"
     end
 

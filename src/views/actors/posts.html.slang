@@ -18,5 +18,5 @@
         end
         _actor = activity ? activity.actor : object.attributed_to
         _author = object.attributed_to
-      - partial object_partial(env, object, activity: activity, actor: _actor, author: _author)
+      - partial object_partial(env, object, activity: activity, actor: _actor, author: _author, themed: false)
   - partial paginate(env, objects)

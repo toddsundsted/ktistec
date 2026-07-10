@@ -422,7 +422,7 @@ class InboxesController
         bad_request
       end
       case (object = activity.object?(account.actor, dereference: true))
-      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like
+      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         unless object.actor == activity.actor
           bad_request
         end

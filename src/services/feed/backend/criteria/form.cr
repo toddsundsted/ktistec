@@ -50,7 +50,20 @@ class Feed
 
         # A single typed term.
         #
-        record Chip, type : String, term : String
+        record Chip, type : String, term : String do
+          # The term prefixed with its type's sigil.
+          #
+          def label : String
+            case type
+            when "hashtag"
+              "##{term}"
+            when "mention"
+              Criteria.iri_term?(term) ? term : "@#{term}"
+            else
+              term
+            end
+          end
+        end
 
         # The any/all/none typed-chip projection and a term count.
         #
@@ -89,11 +102,7 @@ class Feed
         # Prefixes a stored term with its group's sigil for display.
         #
         private def self.present(group : String, term : String) : String
-          case group
-          when "hashtags" then "##{term}"
-          when "mentions" then Criteria.iri_term?(term) ? term : "@#{term}"
-          else                 term
-          end
+          Chip.new(TYPES[group], term).label
         end
 
         # Yields every `(group, selector, term)` in `params`.

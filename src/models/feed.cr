@@ -75,6 +75,31 @@ class Feed
     "Feed::#{id.not_nil!}"
   end
 
+  # The size of a feed and the arrival time of its newest post.
+  #
+  record Stats, count : Int64, newest : Time?
+
+  # Returns the size of the feed and the arrival time of its newest post.
+  #
+  # Counts only posts the feed displays using the same objects/actors
+  # filters `#contents` applies.
+  #
+  def stats : Stats
+    query = <<-QUERY
+        SELECT COUNT(*), MAX(f.created_at)
+          FROM relationships AS f INDEXED BY idx_relationships_from_iri_type
+          JOIN objects AS o
+            ON o.iri = f.to_iri
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+         WHERE f.from_iri = ?
+           AND f.type = ?
+           #{ActivityPub.common_filters(objects: "o", actors: "c")}
+    QUERY
+    count, newest = Ktistec.database.query_one(query, owner_iri, feed_type, as: {Int64, Time?})
+    Stats.new(count, newest)
+  end
+
   # Deletes the feed's verdicts and materialized rows.
   #
   # The materialized rows carry the synthetic feed `type` and must

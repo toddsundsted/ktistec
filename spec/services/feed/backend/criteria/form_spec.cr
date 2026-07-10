@@ -128,3 +128,23 @@ Spectator.describe Feed::Backend::Criteria::Form do
     end
   end
 end
+
+Spectator.describe Feed::Backend::Criteria::Form::Chip do
+  describe "#label" do
+    it "leaves a keyword bare" do
+      expect(described_class.new("keyword", "llm").label).to eq("llm")
+    end
+
+    it "prefixes a hashtag with '#'" do
+      expect(described_class.new("hashtag", "ai").label).to eq("#ai")
+    end
+
+    it "prefixes a handle mention with '@'" do
+      expect(described_class.new("mention", "bob@host").label).to eq("@bob@host")
+    end
+
+    it "leaves an IRI mention verbatim" do
+      expect(described_class.new("mention", "https://x/bob").label).to eq("https://x/bob")
+    end
+  end
+end

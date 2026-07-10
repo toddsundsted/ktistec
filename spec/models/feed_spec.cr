@@ -111,6 +111,48 @@ Spectator.describe Feed do
     end
   end
 
+  describe "#stats" do
+    let_create(:feed)
+
+    it "reports zero" do
+      expect(feed.stats.count).to eq(0)
+    end
+
+    it "has no newest arrival" do
+      expect(feed.stats.newest).to be_nil
+    end
+
+    context "with objects" do
+      let_build(:object, named: earlier)
+      let_build(:object, named: later)
+
+      before_each do
+        put_in_feed(feed, earlier, at: Time.utc(2026, 1, 1))
+        put_in_feed(feed, later, at: Time.utc(2026, 1, 2))
+      end
+
+      it "returns the count" do
+        expect(feed.stats.count).to eq(2)
+      end
+
+      it "returns the newest arrival time" do
+        expect(feed.stats.newest).to eq(Time.utc(2026, 1, 2))
+      end
+
+      context "when an object is blocked" do
+        before_each { later.block! }
+
+        it "excludes it from the count" do
+          expect(feed.stats.count).to eq(1)
+        end
+
+        it "excludes it from the newest arrival time" do
+          expect(feed.stats.newest).to eq(Time.utc(2026, 1, 1))
+        end
+      end
+    end
+  end
+
   describe "#destroy" do
     def materialized_count(owner_iri, type)
       Ktistec.database.scalar("SELECT count(*) FROM relationships WHERE from_iri = ? AND type = ?", owner_iri, type).as(Int64)

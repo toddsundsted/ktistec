@@ -12,9 +12,155 @@ Spectator.describe FeedsController do
 
   let(actor) { register.actor }
 
-  let_create!(:feed, owner: actor)
+  describe "GET /actors/:username/feeds" do
+    it "returns 401 if not authorized" do
+      get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "returns 404 if the account does not exist" do
+        get "/actors/missing/feeds", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if the account does not exist" do
+        get "/actors/missing/feeds", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 for a different account" do
+        get "/actors/#{register.actor.username}/feeds", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 for a different account" do
+        get "/actors/#{register.actor.username}/feeds", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the empty page" do
+        get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+        expect(response.body).to contain("don't have any feeds")
+      end
+
+      it "renders the empty collection" do
+        get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+        expect(JSON.parse(response.body)["feeds"].as_a).to be_empty
+      end
+
+      context "given a feed" do
+        let_create!(
+          :feed,
+          named: mixed,
+          owner: actor,
+          name: "Robotics",
+          params: JSON.parse(%({"hashtags":{"any":["ai"]},"mentions":{"none":["bob@host"]}})).as_h,
+        )
+
+        macro entry
+          JSON.parse(response.body)["feeds"].as_a.find! { |f| f["id"].as_i64 == mixed.id }
+        end
+
+        it "links the feed name to the feed" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+          href = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'header')][text()='Robotics']/@href").first?
+          expect(href.try(&.text)).to eq("/actors/#{actor.username}/feeds/#{mixed.id}")
+        end
+
+        it "renders the feed id" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(entry["id"].as_i64).to eq(mixed.id)
+        end
+
+        it "renders the feed name" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(entry["name"].as_s).to eq("Robotics")
+        end
+
+        it "renders the feed href" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(entry["href"].as_s).to eq("/actors/#{actor.username}/feeds/#{mixed.id}")
+        end
+
+        macro chips(kind)
+          entry["summary"][{{kind}}].as_a.map { |chip| {chip["type"].as_s, chip["label"].as_s} }
+        end
+
+        it "renders the chips" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+          expect(response.body).to contain("#ai", "@bob@host")
+        end
+
+        it "renders the any-selector chips" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(chips("any")).to eq([{"hashtag", "#ai"}])
+        end
+
+        it "renders the none-selector chips" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(chips("none")).to eq([{"mention", "@bob@host"}])
+        end
+
+        it "renders the term count" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+          expect(response.body).to contain("2 terms")
+        end
+
+        it "renders the term count" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(entry["terms"].as_i).to eq(2)
+        end
+
+        it "renders no posts" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+          expect(response.body).to contain("no posts")
+        end
+
+        it "renders no posts" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(entry["posts"].as_i).to eq(0)
+        end
+
+        context "given posts" do
+          let_create(:object)
+
+          before_each { put_in_feed(mixed, object) }
+
+          it "renders the post count" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+            expect(response.body).to contain("1 post")
+          end
+
+          it "renders the post count" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+            expect(entry["posts"].as_i).to eq(1)
+          end
+        end
+      end
+    end
+  end
 
   describe "GET /actors/:username/feeds/:id" do
+    let_create!(:feed, owner: actor)
+
     it "returns 401 if not authorized" do
       get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_HTML
       expect(response.status_code).to eq(401)

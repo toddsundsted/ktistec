@@ -29,23 +29,19 @@ class MockReceiveTask < Task::Receive
   class_property schedule_called_count : Int32 = 0
   class_property last_receiver : ActivityPub::Actor?
   class_property last_activity : ActivityPub::Activity?
-  class_property last_deliver_to : Array(String)?
   class_property last_recipients : Array(String)?
 
   def self.reset!
     self.schedule_called_count = 0
     self.last_receiver = nil
     self.last_activity = nil
-    self.last_deliver_to = nil
     self.last_recipients = nil
   end
 
-  def initialize(receiver : ActivityPub::Actor, activity : ActivityPub::Activity, deliver_to : Array(String)? = nil, recipients : Array(String)? = nil)
+  def initialize(receiver : ActivityPub::Actor, activity : ActivityPub::Activity, recipients : Array(String)? = nil)
     super(receiver: receiver, activity: activity, recipients: recipients)
-    self.deliver_to = deliver_to if deliver_to
     self.class.last_receiver = receiver
     self.class.last_activity = activity
-    self.class.last_deliver_to = deliver_to
     self.class.last_recipients = recipients
   end
 

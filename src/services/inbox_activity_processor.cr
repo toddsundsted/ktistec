@@ -115,7 +115,6 @@ class InboxActivityProcessor
     receive_task_class.new(
       receiver: account.actor,
       activity: activity,
-      deliver_to: deliver_to,
       recipients: partition.remote,
     ).schedule
   end

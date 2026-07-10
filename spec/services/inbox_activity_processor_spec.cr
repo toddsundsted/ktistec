@@ -117,12 +117,6 @@ Spectator.describe InboxActivityProcessor do
         expect(follow.try(&.confirmed)).to be_false
       end
 
-      it "passes deliver_to to receive task" do
-        deliver_to = ["https://example.com/followers"]
-        InboxActivityProcessor.process(account, follow_activity, deliver_to, receive_task_class: MockReceiveTask)
-        expect(MockReceiveTask.last_deliver_to).to eq(deliver_to)
-      end
-
       it "schedules handle follow request task" do
         InboxActivityProcessor.process(account, follow_activity, handle_follow_request_task_class: MockHandleFollowRequestTask)
         expect(MockHandleFollowRequestTask.schedule_called_count).to eq(1)

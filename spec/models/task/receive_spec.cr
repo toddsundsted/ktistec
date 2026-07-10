@@ -43,25 +43,6 @@ Spectator.describe Task::Receive do
     )
   end
 
-  describe "#deliver_to" do
-    it "retrieves the deliver to value from the state" do
-      subject.state = Task::Receive::State.new([] of String)
-      expect(subject.deliver_to).to be_a(Array(String))
-    end
-
-    it "retrieves the deliver to value from the state" do
-      subject.state = Task::Receive::State.new([] of String)
-      expect(subject.deliver_to).to be_empty
-    end
-  end
-
-  describe "#deliver_to=" do
-    it "stores the deliver to value in the state" do
-      subject.deliver_to = ["https://recipient"]
-      expect(subject.state.deliver_to).to eq(["https://recipient"])
-    end
-  end
-
   describe "#recipients" do
     it "persists recipients across save and reload" do
       task = described_class.new(receiver: receiver.save, activity: activity.save, recipients: ["https://example/recipient"]).save

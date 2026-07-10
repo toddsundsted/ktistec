@@ -2,6 +2,7 @@ require "../../models/feed"
 require "../../models/feed/verdict"
 require "../../rules/feeds"
 require "../../rules/maintainer"
+require "../../rules/view/feed"
 require "./backend"
 require "./candidates"
 
@@ -42,6 +43,28 @@ class Feed
         Rules::Maintainer.reconcile_object_for(view, object.iri)
       end
       candidates.size
+    end
+
+    # Judges a single newly-arrived object against every registered
+    # feed, writing (or refreshing) each feed's verdict.
+    #
+    def judge_arrival(object : ActivityPub::Object) : Nil
+      Rules::View.registry.each do |view|
+        next unless view.is_a?(Rules::View::Feed)
+        next unless (feed = ::Feed.find?(view.feed_id))
+        next unless (backend = Backend.find?(feed.backend))
+        next unless (arrival = Candidates.arrival_for(feed, object))
+        judgment = backend.judge(feed, [object]).first
+        verdict =
+          Verdict.find?(feed_id: feed.id, object_iri: object.iri) ||
+            Verdict.new(feed: feed, object: object, included: judgment.included, position: arrival)
+        verdict.assign(
+          included: judgment.included,
+          reason: judgment.reason,
+          version: feed.version,
+          position: arrival,
+        ).save
+      end
     end
   end
 end

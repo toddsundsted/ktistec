@@ -178,4 +178,49 @@ Spectator.describe Feed::Candidates do
       expect { Feed::Candidates.candidates_for(feed, limit: -1) }.to raise_error(ArgumentError, "limit must be positive")
     end
   end
+
+  describe ".arrival_for" do
+    let_build(:object)
+
+    it "returns nil" do
+      expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+    end
+
+    context "given a create in the owner's inbox" do
+      let_create(:create, object: object)
+      let!(arrival) { put_in_inbox(actor, create).created_at }
+
+      it "returns the arrival time" do
+        expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
+      end
+
+      context "and a later announce of the same object" do
+        let_create(:announce, object: object)
+        before_each { put_in_inbox(actor, announce) }
+
+        it "returns the earliest arrival time" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
+        end
+      end
+
+      context "and the activity is undone" do
+        before_each { create.undo! }
+
+        it "returns nil" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+        end
+      end
+    end
+
+    context "given a create in the owner's outbox" do
+      let_create(:create, object: object)
+      before_each { put_in_outbox(actor, create) }
+
+      pre_condition { expect(Relationship::Content::Outbox.count(from_iri: actor.iri)).to eq(1) }
+
+      it "returns nil" do
+        expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+      end
+    end
+  end
 end

@@ -3,7 +3,9 @@ require "./view/follow_thread"
 require "./view/follow_hashtag"
 require "./view/follow_mention"
 require "./view/public_tagged"
+require "../services/feed/judging"
 require "../models/activity_pub/activity"
+require "../models/activity_pub/activity/create"
 require "../models/activity_pub/activity/announce"
 require "../models/activity_pub/activity/dislike"
 require "../models/activity_pub/activity/like"
@@ -44,7 +46,18 @@ module Rules
         else
           activity.object_iri
         end
-      notify(Rules::Maintainer.reconcile_object(object_iri)) if object_iri
+      if object_iri
+        # a `Create`/`Announce` delivers a new object; judge it
+        # against the registered feeds first, so their verdicts exist
+        # as base facts before the reconcile materializes them.
+        case activity
+        when ActivityPub::Activity::Create, ActivityPub::Activity::Announce
+          if (object = activity.object?)
+            Feed::Judging.judge_arrival(object)
+          end
+        end
+        notify(Rules::Maintainer.reconcile_object(object_iri))
+      end
     end
 
     # Re-evaluates the materialized views affected by a change to an

@@ -1,4 +1,7 @@
 require "../../src/rules/trigger"
+require "../../src/rules/feeds"
+require "../../src/models/feed"
+require "../../src/services/feed/backend/criteria"
 require "../../src/models/relationship/content/public_tagged"
 require "../../src/models/relationship/content/notification/follow/hashtag"
 require "../../src/models/relationship/content/notification/follow/mention"
@@ -39,6 +42,35 @@ Spectator.describe Rules::Trigger do
     it "materializes the hashtag-follow notification for the activity's tagged object" do
       expect { Rules::Trigger.reconcile_for_activity(activity) }
         .to change { hashtag_notification_count("foo") }.from(0).to(1)
+    end
+
+    context "given a registered feed and a matching object in the owner's inbox" do
+      around_each do |proc|
+        saved = Rules::View.registry.dup
+        begin
+          proc.call
+        ensure
+          Rules::View.registry.clear
+          Rules::View.registry.concat(saved)
+        end
+      end
+
+      let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+
+      before_each do
+        Rules::Feeds.register(feed)
+        post.assign(content: "<p>something alpha something</p>")
+        put_in_inbox(actor, activity)
+      end
+
+      def feed_row_count(feed)
+        Ktistec.database.query_one("SELECT COUNT(*) FROM relationships WHERE type = ?", feed.feed_type, as: Int64)
+      end
+
+      it "materializes the arriving object into the feed" do
+        expect { Rules::Trigger.reconcile_for_activity(activity) }
+          .to change { feed_row_count(feed) }.from(0).to(1)
+      end
     end
   end
 

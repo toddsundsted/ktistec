@@ -239,6 +239,16 @@ module Ktistec::ViewHelper
     Ktistec::Util.distance_of_time_in_words({{args.splat}})
   end
 
+  # Transforms a duration into words, adapting the unit to the
+  # magnitude of the duration.
+  #
+  # For use in views:
+  #     <%= duration_in_words(span) %>
+  #
+  macro duration_in_words(span)
+    Ktistec::Util.duration_in_words({{span}})
+  end
+
   # Wraps a string in a link if it is a URL.
   #
   # By default, matches the weird format used by Mastodon:

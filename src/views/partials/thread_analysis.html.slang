@@ -15,7 +15,6 @@ turbo-frame#thread_analysis
   - unless timeline_histogram.nil?
     crystal:
       time_range = {timeline_histogram.time_range[0], timeline_histogram.time_range[1]}
-      duration_hours = ((time_range[1] - time_range[0]).total_minutes / 60).round(1)
       total_posts = timeline_histogram.buckets.sum(&.object_count)
       # check if thread spans multiple days
       timezone = Time::Location.load(env.account.timezone)
@@ -39,7 +38,7 @@ turbo-frame#thread_analysis
         maintainAspectRatio: false
       }
     .timeline style="margin-top: 15px;" role="region" aria-label="Thread timeline visualization"
-      p: strong Thread Timeline (#{analysis.object_count} posts over #{duration_hours} hours)
+      p: strong Thread Timeline (#{analysis.object_count} posts over #{duration_in_words(time_range[1] - time_range[0])})
       canvas data-controller="chart" style="max-height: 150px; margin: 10px 0;" role="img" aria-label="Activity histogram showing #{total_posts} posts over time"
         script type="application/json" data-chart-target="labels"
           = Ktistec::SafeJSON.from(labels)

@@ -72,7 +72,7 @@ class FeedsController
       if accepts?("application/ld+json", "application/activity+json", "application/json")
         created actor_feed_path(account.actor, feed), "feeds/show", env: env, feed: feed, contents: feed.contents(**cursor_pagination_params(env))
       else
-        redirect actor_feed_path(account.actor, feed)
+        redirect actor_feeds_path(account.actor)
       end
     else
       buckets = form_buckets(env, feed)
@@ -113,7 +113,7 @@ class FeedsController
       if accepts?("application/ld+json", "application/activity+json", "application/json")
         ok "feeds/show", env: env, feed: feed, contents: feed.contents(**cursor_pagination_params(env))
       else
-        redirect actor_feed_path(feed.owner, feed)
+        redirect actor_feeds_path(feed.owner)
       end
     else
       buckets = form_buckets(env, feed)

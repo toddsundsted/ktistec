@@ -132,6 +132,28 @@ Spectator.describe Utils::Paths do
         expect((back_path).to_s).to eq("/")
       end
     end
+
+    context "with a fallback" do
+      let(fallback) { ::Ktistec::SafeURI.assert_safe("/feeds") }
+
+      context "and a missing Referer header" do
+        let(env) do
+          make_env("GET", "/filters/17")
+        end
+
+        it "returns the fallback" do
+          expect((back_path(fallback)).to_s).to eq("/feeds")
+        end
+      end
+
+      context "and a valid Referer" do
+        let(referer) { "/back" }
+
+        it "returns the Referer" do
+          expect((back_path(fallback)).to_s).to eq("/back")
+        end
+      end
+    end
   end
 
   describe "home_path" do

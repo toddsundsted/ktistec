@@ -2,11 +2,13 @@ crystal:
   if feed.new_record?
     action = actor_feeds_path(actor)
     submit_label = "Create Feed"
+    cancel_label = "Cancel"
     cancel_path = actor_feeds_path(actor)
   else
     action = actor_feed_path(actor, feed)
     submit_label = "Save"
-    cancel_path = actor_feed_path(actor, feed)
+    cancel_label = "Back"
+    cancel_path = back_path(actor_feeds_path(actor))
   end
 = form_tag(feed, action, method: "POST") do
   = error_messages(feed)
@@ -34,4 +36,4 @@ crystal:
         span.ui.mini.basic.label< optional
       textarea name="none" rows="2" = none
   = submit_button(submit_label)
-  a.ui.basic.button href=cancel_path Cancel
+  a.ui.basic.button href=cancel_path = cancel_label

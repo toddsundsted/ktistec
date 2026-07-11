@@ -432,9 +432,9 @@ Spectator.describe FeedsController do
         expect(response.status_code).to eq(201)
       end
 
-      it "returns the feed's location" do
+      it "redirects to the index" do
         post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc"
-        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{robotics_feed.id}")
+        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
       end
 
       it "returns the feed's location" do
@@ -656,9 +656,9 @@ Spectator.describe FeedsController do
         expect(response.status_code).to eq(200)
       end
 
-      it "returns the feed's location" do
+      it "redirects to the index" do
         post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{feed.id}")
+        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
       end
 
       it "returns the feed's location" do

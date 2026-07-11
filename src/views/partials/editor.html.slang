@@ -12,7 +12,7 @@ crystal:
       env.params.query.fetch_all("editor")
     end
   # activate "optional" editor when editing object with optional fields
-  if object.name.presence || object.summary.presence || object.sensitive
+  if object.optional_properties?
     selected_editors = selected_editors + ["optional"] unless selected_editors.includes?("optional")
   end
   warnings = [] of String

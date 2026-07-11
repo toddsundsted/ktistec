@@ -130,7 +130,7 @@ class ObjectsController
       else
         params.add("editor", "rich-text")
       end
-      if object.name.presence || object.summary.presence || object.canonical_path
+      if object.optional_properties?
         params.add("editor", "optional")
       end
       _object = object

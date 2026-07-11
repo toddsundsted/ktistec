@@ -226,6 +226,39 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#optional_properties?" do
+    let_build(:object)
+
+    it "returns false when none are set" do
+      expect(object.optional_properties?).to be_false
+    end
+
+    it "returns false when name and summary are blank" do
+      object.assign(name: "", summary: "")
+      expect(object.optional_properties?).to be_false
+    end
+
+    it "returns true when the name is set" do
+      object.assign(name: "Title")
+      expect(object.optional_properties?).to be_true
+    end
+
+    it "returns true when the summary is set" do
+      object.assign(summary: "A summary")
+      expect(object.optional_properties?).to be_true
+    end
+
+    it "returns true when sensitive is set" do
+      object.assign(sensitive: true)
+      expect(object.optional_properties?).to be_true
+    end
+
+    it "returns true when the canonical path is set" do
+      object.assign(canonical_path: "/foo/bar")
+      expect(object.optional_properties?).to be_true
+    end
+  end
+
   context "when validating" do
     subject { described_class.new(iri: "https://test.test/#{random_string}") }
 

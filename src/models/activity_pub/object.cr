@@ -162,6 +162,13 @@ module ActivityPub
       source_editors
     end
 
+    # Returns `true` if any of the object's optional properties are
+    # set.
+    #
+    def optional_properties?
+      !!(name.presence || summary.presence || sensitive || canonical_path.presence)
+    end
+
     struct Attachment
       include JSON::Serializable
 

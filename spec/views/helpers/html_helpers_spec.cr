@@ -218,6 +218,22 @@ Spectator.describe "helpers" do
       expect(subject.xpath_nodes("/div/div/text()")).to contain_exactly("field is wrong")
     end
 
+    context "given an error with an empty key" do
+      before_each { model.errors = {"" => ["Add at least one keyword."]} }
+
+      it "renders the message without a field prefix" do
+        expect(subject.xpath_nodes("/div/div/text()")).to contain_exactly("Add at least one keyword.")
+      end
+    end
+
+    context "given an empty-keyed error value with HTML" do
+      before_each { model.errors = {"" => [%["#<img src=x onerror=alert(1)>" isn't a single hashtag.]]} }
+
+      it "does not render an img element" do
+        expect(subject.xpath_nodes("//img")).to be_empty
+      end
+    end
+
     context "given an error value containing HTML" do
       before_each { model.errors = {"field" => [%[<img src=x onerror="alert(1)">]]} }
 

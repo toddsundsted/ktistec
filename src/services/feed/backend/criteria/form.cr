@@ -54,14 +54,7 @@ class Feed
           # The term prefixed with its type's sigil.
           #
           def label : String
-            case type
-            when "hashtag"
-              "##{term}"
-            when "mention"
-              Criteria.iri_term?(term) ? term : "@#{term}"
-            else
-              term
-            end
+            Criteria::GROUPS.find(&.label.==(type)).try(&.present(term)) || term
           end
         end
 

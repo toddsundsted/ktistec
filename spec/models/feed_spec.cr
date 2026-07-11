@@ -11,7 +11,7 @@ private class RejectingBackend < Feed::Backend
   end
 
   def validate_params(params : Hash(String, JSON::Any)) : Array(String)
-    ["is rejected"]
+    ["These criteria can't be used."]
   end
 end
 
@@ -70,7 +70,7 @@ Spectator.describe Feed do
 
       it "is invalid" do
         expect(feed.valid?).to be_false
-        expect(feed.errors["params"]?).to contain("is rejected")
+        expect(feed.errors[""]?).to contain("These criteria can't be used.")
       end
     end
   end

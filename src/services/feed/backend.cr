@@ -24,7 +24,8 @@ class Feed
 
     # Validates a feed's backend-owned params.
     #
-    # Returns error messages -- empty if the params are valid.
+    # Returns error messages -- empty if the params are valid. Each
+    # message should be a complete sentence and is rendered verbatim.
     #
     abstract def validate_params(params : Hash(String, JSON::Any)) : Array(String)
 

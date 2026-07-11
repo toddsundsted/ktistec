@@ -58,10 +58,15 @@ class Feed
   #
   @[Persistent]
   property params : Hash(String, JSON::Any) { {} of String => JSON::Any }
-  validates(params) do
+
+  # Validates the backend's params.
+  #
+  # The messages are complete sentences, so they're keyed to no field.
+  #
+  def validate_model
     if (backend = Backend.find?(self.backend))
-      errors = backend.validate_params(params)
-      errors.join(", ") unless errors.empty?
+      messages = backend.validate_params(params)
+      errors[""] = [messages.join(" ")] unless messages.empty?
     end
   end
 

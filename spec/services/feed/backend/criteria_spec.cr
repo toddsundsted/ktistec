@@ -11,6 +11,10 @@ Spectator.describe Feed::Backend::Criteria do
 
   subject { described_class.new }
 
+  def one(group : String, selector : String, term : String) : Hash(String, JSON::Any)
+    {group => JSON::Any.new({selector => JSON::Any.new([JSON::Any.new(term)])})}
+  end
+
   describe "#judge" do
     let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}})).as_h)
     let_build(:object, content: "<p>something alpha something</p>")
@@ -195,7 +199,7 @@ Spectator.describe Feed::Backend::Criteria do
     end
 
     context "given a hashtags all group" do
-      let_build(:feed, params: JSON.parse(%({"hashtags": {"all": ["3dprinting", "prusa"]}})).as_h)
+      let_build(:feed, params: JSON.parse(%({"hashtags": {"all": ["3dprinting", "filament"]}})).as_h)
       let_create!(:object, content: "<p>plain</p>")
       let_create!(:hashtag, subject: object, name: "3dprinting")
 
@@ -204,7 +208,7 @@ Spectator.describe Feed::Backend::Criteria do
       end
 
       context "and the object carries all tags" do
-        let_create!(:hashtag, named: prusa_tag, subject: object, name: "prusa")
+        let_create!(:hashtag, named: filament_tag, subject: object, name: "filament")
 
         it "includes the object" do
           expect(judgment.included).to be_true
@@ -240,7 +244,7 @@ Spectator.describe Feed::Backend::Criteria do
     end
 
     context "given any terms in keywords and hashtags" do
-      let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}, "hashtags": {"any": ["prusa"]}})).as_h)
+      let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}, "hashtags": {"any": ["filament"]}})).as_h)
 
       context "and only the keyword any matches" do
         let_create!(:object, content: "<p>alpha</p>")
@@ -252,7 +256,7 @@ Spectator.describe Feed::Backend::Criteria do
 
       context "and only the hashtag any matches" do
         let_create!(:object, content: "<p>plain</p>")
-        let_create!(:hashtag, subject: object, name: "prusa")
+        let_create!(:hashtag, subject: object, name: "filament")
 
         it "includes the object" do
           expect(judgment.included).to be_true
@@ -431,12 +435,12 @@ Spectator.describe Feed::Backend::Criteria do
 
     it "rejects a group with no positive terms" do
       params = JSON.parse(%({"keywords": {"none": ["gamma"]}})).as_h
-      expect(subject.validate_params(params)).to contain("at least one any or all term is required")
+      expect(subject.validate_params(params)).to contain("Add at least one keyword, #hashtag, or @mention.")
     end
 
     it "rejects a group with only empty positive lists" do
       params = JSON.parse(%({"keywords": {"any": []}})).as_h
-      expect(subject.validate_params(params)).to contain("at least one any or all term is required")
+      expect(subject.validate_params(params)).to contain("Add at least one keyword, #hashtag, or @mention.")
     end
 
     it "accepts a hashtags group" do
@@ -450,7 +454,7 @@ Spectator.describe Feed::Backend::Criteria do
     end
 
     it "rejects an unknown selector in the hashtags group" do
-      params = JSON.parse(%({"hashtags": {"any": ["3dprinting"], "most": ["prusa"]}})).as_h
+      params = JSON.parse(%({"hashtags": {"any": ["3dprinting"], "most": ["filament"]}})).as_h
       expect(subject.validate_params(params)).to contain("hashtags has unknown selectors: most")
     end
 
@@ -461,7 +465,7 @@ Spectator.describe Feed::Backend::Criteria do
 
     it "rejects params with no positive terms across groups" do
       params = JSON.parse(%({"hashtags": {"none": ["spoiler"]}})).as_h
-      expect(subject.validate_params(params)).to contain("at least one any or all term is required")
+      expect(subject.validate_params(params)).to contain("Add at least one keyword, #hashtag, or @mention.")
     end
 
     it "accepts a mentions group" do
@@ -474,14 +478,81 @@ Spectator.describe Feed::Backend::Criteria do
       expect(subject.validate_params(params)).to be_empty
     end
 
-    it "rejects a hashtags term that normalizes to blank" do
-      params = JSON.parse(%({"hashtags": {"any": ["#"]}})).as_h
-      expect(subject.validate_params(params)).to contain("hashtags any must be an array of non-blank strings")
+    # NOTE: terms below are the *stored form* (after `classify` strips the sigil)
+
+    context "given a hashtag" do
+      it "quotes an empty hashtag and names the fix" do
+        expect(subject.validate_params(one("hashtags", "any", ""))).to contain(%(Remove the stray "#". It can't be used as a keyword.))
+      end
+
+      it "quotes an embedded '#' and names the fix" do
+        expect(subject.validate_params(one("hashtags", "any", "cnc #resin"))).to contain(%("#cnc #resin" isn't a single hashtag. Put each "#tag" on its own line, or drop the "#" to match it as a keyword.))
+      end
+
+      it "rejects terms that can never match a name" do
+        {"" => "stray", "   " => "stray", "##" => "stray", "cnc #resin" => "single hashtag", "cnc,#resin" => "single hashtag"}.each do |term, fragment|
+          errors = subject.validate_params(one("hashtags", "any", term))
+          expect(errors.join(" ")).to contain(fragment), "expected hashtag #{term.inspect} to be rejected (#{fragment})"
+        end
+      end
+
+      it "accepts terms that can match a name" do
+        [" resin", "3d print", "#cnc", "wood"].each do |term|
+          expect(subject.validate_params(one("hashtags", "any", term))).to be_empty, "expected hashtag #{term.inspect} to be accepted"
+        end
+      end
     end
 
-    it "rejects a mentions term that normalizes to blank" do
-      params = JSON.parse(%({"mentions": {"any": ["@"]}})).as_h
-      expect(subject.validate_params(params)).to contain("mentions any must be an array of non-blank strings")
+    context "given a mention handle" do
+      it "quotes an empty mention and names the fix" do
+        expect(subject.validate_params(one("mentions", "any", ""))).to contain(%(Remove the stray "@". It can't be used as a keyword.))
+      end
+
+      it "quotes a mention with a blank host and names the fix" do
+        expect(subject.validate_params(one("mentions", "any", "bob@"))).to contain(%("@bob@" is missing a domain. Mentions look like @user@host.com.))
+      end
+
+      it "quotes a mention with more than one '@' and names the fix" do
+        expect(subject.validate_params(one("mentions", "any", "a@h@x"))).to contain(%("@a@h@x" isn't a single mention. Put each @user@host.com on its own line, or drop the "@" to match it as a keyword.))
+      end
+
+      it "rejects terms that can never match a name" do
+        {"" => "stray", "   " => "stray", "bob@" => "missing a domain", "bob@   " => "missing a domain", "bob@h@x" => "single mention"}.each do |term, fragment|
+          errors = subject.validate_params(one("mentions", "any", term))
+          expect(errors.join(" ")).to contain(fragment), "expected handle #{term.inspect} to be rejected (#{fragment})"
+        end
+      end
+
+      it "accepts terms that can match a name" do
+        [" bob@host", "bob smith@h", "bob", "@bob", "bob@host"].each do |term|
+          expect(subject.validate_params(one("mentions", "any", term))).to be_empty, "expected handle #{term.inspect} to be accepted"
+        end
+      end
+    end
+
+    context "given a mention URL" do
+      it "quotes an invalid link and names the fix" do
+        expect(subject.validate_params(one("mentions", "any", "https://"))).to contain(%("https://" isn't a valid link.))
+      end
+
+      it "rejects terms that can never match an href" do
+        ["https://", "http://", "https:///path", "https:// example.com/a", "https://example.com /a", "https://example.com\t/a", "https://x:abc", "https://x:9999999999999999999"].each do |term|
+          errors = subject.validate_params(one("mentions", "any", term))
+          expect(errors.join(" ")).to contain("valid link"), "expected URL #{term.inspect} to be rejected"
+        end
+      end
+
+      it "accepts terms that can match an href" do
+        expect(subject.validate_params(one("mentions", "any", "https://example.com/actors/bob"))).to be_empty
+      end
+    end
+
+    context "given a keyword" do
+      it "never rejects a keyword however unusual" do
+        ["3d printing", "bob@host", "htp://example.com"].each do |term|
+          expect(subject.validate_params(one("keywords", "any", term))).to be_empty, "expected keyword #{term.inspect} to be accepted"
+        end
+      end
     end
   end
 

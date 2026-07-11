@@ -1,3 +1,5 @@
+require "uri"
+
 require "../backend"
 require "../../../framework/util"
 
@@ -47,14 +49,22 @@ class Feed
           errors << "#{group.key} has unknown selectors: #{unknown_selectors.join(", ")}" unless unknown_selectors.empty?
           SELECTORS.each do |selector|
             next unless (list = raw[selector]?)
-            if (array = list.as_a?) && array.all? { |element| element.as_s?.try(&.presence).try { |string| group.normalize(string).presence } }
-              positive_terms += array.size if selector.in?(POSITIVE)
-            else
+            unless (array = list.as_a?) && array.all?(&.as_s?)
               errors << "#{group.key} #{selector} must be an array of non-blank strings"
+              next
             end
+            array.each do |element|
+              term = element.as_s
+              if (message = group.validate_term(term))
+                errors << message
+              elsif group.normalize(term).blank?
+                errors << "#{group.key} #{selector} must be an array of non-blank strings"
+              end
+            end
+            positive_terms += array.count { |element| !group.normalize(element.as_s).blank? } if selector.in?(POSITIVE)
           end
         end
-        errors << "at least one any or all term is required" if positive_terms.zero?
+        errors << "Add at least one keyword, #hashtag, or @mention." if positive_terms.zero?
         errors
       end
 
@@ -128,6 +138,19 @@ class Feed
         #
         abstract def normalize(term : String) : String
 
+        # Presents a stored term with its type's sigil.
+        #
+        def present(term : String) : String
+          term
+        end
+
+        # Returns a message explaining why the term can never match
+        # its declared type, or `nil` when the term is well-formed.
+        #
+        def validate_term(term : String) : String?
+          nil
+        end
+
         # Returns a predicate matching a normalized term against the
         # object, computing any per-object state once.
         #
@@ -193,6 +216,19 @@ class Feed
           term.lstrip('#').downcase
         end
 
+        def present(term : String) : String
+          "##{term}"
+        end
+
+        def validate_term(term : String) : String?
+          normalized = normalize(term)
+          if normalized.blank?
+            %(Remove the stray "#". It can't be used as a keyword.)
+          elsif normalized.includes?('#')
+            %("#{present(term)}" isn't a single hashtag. Put each "#tag" on its own line, or drop the "#" to match it as a keyword.)
+          end
+        end
+
         def matcher_for(object : ActivityPub::Object) : String -> Bool
           names = object.hashtags.map { |hashtag| normalize(hashtag.name) }
           ->(term : String) { names.includes?(term) }
@@ -216,6 +252,45 @@ class Feed
             normalize_iri(term)
           else
             normalize_handle(term)
+          end
+        end
+
+        def present(term : String) : String
+          if Criteria.iri_term?(term)
+            term
+          else
+            "@#{term}"
+          end
+        end
+
+        def validate_term(term : String) : String?
+          if Criteria.iri_term?(term)
+            validate_url(term)
+          else
+            validate_handle(term)
+          end
+        end
+
+        private def validate_url(term : String) : String?
+          normalized = normalize(term)
+          has_whitespace = normalized.each_char.any?(&.whitespace?)
+          host = begin
+            URI.parse(normalized).host unless has_whitespace
+          rescue URI::Error | OverflowError
+            nil
+          end
+          return unless has_whitespace || host.presence.nil?
+          %("#{present(term)}" isn't a valid link.)
+        end
+
+        private def validate_handle(term : String) : String?
+          normalized = normalize(term)
+          if normalized.blank?
+            %(Remove the stray "@". It can't be used as a keyword.)
+          elsif normalized.count('@') > 1
+            %("#{present(term)}" isn't a single mention. Put each @user@host.com on its own line, or drop the "@" to match it as a keyword.)
+          elsif normalized.includes?('@') && normalized.rpartition('@').last.blank?
+            %("#{present(term)}" is missing a domain. Mentions look like @user@host.com.)
           end
         end
 

@@ -79,9 +79,6 @@ module Ktistec
         validates(iri) { unique_absolute_uri?(iri) if @@required_iri || iri.presence }
 
         private def unique_absolute_uri?(iri)
-          # don't interpolate the iri into the message: it may contain
-          # unsafe HTML, and `error_messages` interpolates the error
-          # message into pages without escaping.
           if iri.blank?
             "must be present"
           elsif !Ktistec::Util.absolute_uri?(iri)

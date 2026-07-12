@@ -126,7 +126,9 @@ module Ktistec::ViewHelper
         %Q(alt="#{::HTML.escape(alt)}"),
         %Q(loading="lazy"),
       ]
-      attrs.push %Q(data-actor-id="#{actor.id}") if actor && actor.id && include_actor_id
+      if actor && (id = actor.id) && include_actor_id
+        attrs.push %Q(data-actor-id="#{::Ktistec::SafeAttrValue.escape(id)}")
+      end
       attrs.unshift %Q(class="#{::HTML.escape(classes)}") if classes
       ::Ktistec::SafeHTML.assert_safe(%Q(<img #{attrs.join(" ")}>))
     end

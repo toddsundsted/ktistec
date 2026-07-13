@@ -72,6 +72,27 @@ Spectator.describe Feed::Judging do
         expect(Feed::Judging.judge(feed, limit: 1)).to eq(0)
       end
 
+      context "when the match limit is reached" do
+        # "something" matches both posts
+        let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["something"]}})).as_h)
+
+        pre_condition { expect(Feed::Candidates.candidates_for(feed).size).to eq(2) }
+
+        it "judges only the first candidate" do
+          expect(Feed::Judging.judge(feed, match_limit: 1)).to eq(1)
+        end
+
+        it "writes a verdict only for the judged candidate" do
+          expect { Feed::Judging.judge(feed, match_limit: 1) }
+            .to change { Feed::Verdict.count(feed_id: feed.id) }.from(0).to(1)
+        end
+
+        it "judges the unjudged candidate on a second run" do
+          Feed::Judging.judge(feed, match_limit: 1)
+          expect(Feed::Judging.judge(feed, match_limit: 1)).to eq(1)
+        end
+      end
+
       context "when the policy is edited and the version bumped" do
         before_each do
           Feed::Judging.judge(feed)
@@ -90,6 +111,11 @@ Spectator.describe Feed::Judging do
 
         it "repopulates the feed under the new policy" do
           Feed::Judging.judge(feed)
+          expect(materialized).to eq([{miss.iri, miss_arrival}])
+        end
+
+        it "drops rows a re-judge never re-reaches" do
+          Feed::Judging.judge(feed, match_limit: 1)
           expect(materialized).to eq([{miss.iri, miss_arrival}])
         end
       end

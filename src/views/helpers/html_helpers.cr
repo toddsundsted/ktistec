@@ -47,7 +47,7 @@ module Ktistec::ViewHelper
     <form #{%form_attrs.join(" ")}>\
     #{%csrf}\
     #{%input}\
-    <input type="hidden" name="object" value="#{{{object}}}">\
+    <input type="hidden" name="object" value="#{::HTML.escape(({{object}}).to_s)}">\
     <input type="hidden" name="type" value="#{{{type || text}}}">\
     <input type="hidden" name="visibility" value="#{{{public}} ? "public" : "private"}">\
     <button #{%button_attrs.join(" ")} type="submit">\

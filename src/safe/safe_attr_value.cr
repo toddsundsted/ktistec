@@ -18,6 +18,12 @@ module Ktistec
       new(::HTML.escape(string))
     end
 
+    # Attribute-encodes the input.
+    #
+    def self.escape(value : Int) : SafeAttrValue
+      new(value.to_s)
+    end
+
     # Asserts the input is already safe inside an HTML attribute.
     #
     def self.assert_safe(string : String) : SafeAttrValue

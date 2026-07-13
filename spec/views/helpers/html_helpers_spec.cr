@@ -99,6 +99,14 @@ Spectator.describe "helpers" do
         expect(subject.xpath_nodes("/form/input[@name='authenticity_token']")).to be_empty
       end
     end
+
+    context "with HTML metacharacters in object" do
+      it "escapes object" do
+        rendered = activity_button("Label", "/foobar", %q(https://object"><script>alert(1)</script>), csrf: nil)
+        expect(rendered).not_to contain(%{"><script>alert(1)</script>})
+        expect(rendered).to contain(%{&lt;script&gt;alert(1)&lt;/script&gt;})
+      end
+    end
   end
 
   describe "form_button" do

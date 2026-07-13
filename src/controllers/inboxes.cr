@@ -422,7 +422,7 @@ class InboxesController
         bad_request
       end
       case (object = activity.object?(account.actor, dereference: true))
-      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like
+      when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         unless object.actor == activity.actor
           bad_request
         end
@@ -483,7 +483,15 @@ class InboxesController
     if (temporary = ActivityPub::Activity.find?(activity.iri))
       activity = temporary
     else
-      activity.save
+      begin
+        activity.save
+      rescue ex : Ktistec::Model::Invalid
+        # a concurrent duplicate delivery can save this activity (or its
+        # cascade-saved object) between the check above and this save,
+        # tripping a uniqueness validation.
+        raise ex unless ActivityPub::Activity.find?(activity.iri)
+        ok
+      end
     end
 
     Log.trace { "[#{request_id}] saved id=#{activity.id}" }

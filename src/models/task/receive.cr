@@ -1,7 +1,6 @@
 require "../task"
 require "../task/mixins/transfer"
 
-require "../../utils/recipients"
 require "../activity_pub/activity"
 require "../activity_pub/activity/update"
 require "../activity_pub/actor"
@@ -23,11 +22,9 @@ class Task
     class State
       include JSON::Serializable
 
-      property deliver_to : Array(String)?
-
       property recipients : Array(String)?
 
-      def initialize(@deliver_to = [] of String, @recipients = nil)
+      def initialize(@recipients = nil)
       end
     end
 
@@ -36,22 +33,10 @@ class Task
     property state : State { State.new }
 
     @[Assignable]
-    @deliver_to : Array(String)?
-
-    @[Assignable]
     @recipients : Array(String)?
 
-    def deliver_to
-      state.deliver_to
-    end
-
-    def deliver_to=(@deliver_to : Array(String)?)
-      state.deliver_to = deliver_to
-    end
-
     def recipients
-      # fallback for in-flight tasks enqueued before the processor began
-      state.recipients || Ktistec::Recipients.for_receive(activity, receiver, deliver_to)
+      state.recipients || [] of String
     end
 
     def recipients=(@recipients : Array(String)?)

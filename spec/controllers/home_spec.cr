@@ -233,7 +233,7 @@ Spectator.describe HomeController do
 
           it "does not display site description" do
             get "/", HTML_HEADERS
-            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'ui segment event')]")).to be_empty
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'segment event')]")).to be_empty
           end
         end
 
@@ -242,7 +242,7 @@ Spectator.describe HomeController do
 
           it "displays site description" do
             get "/", HTML_HEADERS
-            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'ui segment event')]//p").first).to eq("Welcome to our server!")
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'segment event')]//p").first).to eq("Welcome to our server!")
           end
         end
 

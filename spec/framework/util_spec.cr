@@ -492,6 +492,30 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ".duration_in_words" do
+    def self.test_pairs
+      [
+        {1.minute, "1 minute"},
+        {30.minutes, "30 minutes"},
+        {59.minutes, "59 minutes"},
+        {59.minutes + 58.seconds, "1 hour"},
+        {1.hour, "1 hour"},
+        {90.minutes, "1.5 hours"},
+        {13.hours, "13 hours"},
+        {47.hours, "47 hours"},
+        {47.hours + 59.minutes, "2 days"},
+        {2.days, "2 days"},
+        {3.days + 12.hours, "3.5 days"},
+      ]
+    end
+
+    sample test_pairs do |span, words|
+      it "transforms the duration into words" do
+        expect(described_class.duration_in_words(span)).to eq(words)
+      end
+    end
+  end
+
   describe ".pluralize" do
     it "pluralizes the noun" do
       ["fox", "fish", "dress", "bus", "inch", "fez"].each do |noun|

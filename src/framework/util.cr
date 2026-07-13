@@ -378,6 +378,25 @@ module Ktistec
       end
     end
 
+    # Transforms a duration into words, adapting the unit (minutes,
+    # hours, or days) to the magnitude of the duration.
+    #
+    def duration_in_words(span : Time::Span)
+      span = span.abs
+      # choose the unit from the rounded value, so a duration just
+      # under a cutoff doesn't round up into the previous unit
+      minutes, hours = span.total_minutes.round(1), span.total_hours.round(1)
+      if minutes < 60
+        number, unit = minutes, "minute"
+      elsif hours < 48
+        number, unit = hours, "hour"
+      else
+        number, unit = span.total_days.round(1), "day"
+      end
+      value = number == number.to_i ? number.to_i.to_s : number.to_s
+      "#{value} #{number == 1 ? unit : pluralize(unit)}"
+    end
+
     # Pluralizes a singular noun.
     #
     def pluralize(noun)

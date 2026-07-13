@@ -1002,6 +1002,39 @@ Spectator.describe "partials" do
           expect(subject.xpath_nodes("//a[text()='To Drafts']"))
             .to be_empty
         end
+
+        it "renders only the optional editor button" do
+          button_texts = subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')]/text()").map(&.to_s)
+          expect(button_texts).to contain_exactly("Optional")
+        end
+
+        it "enables the optional editor button" do
+          expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][not(contains(@class,'active'))][not(contains(@class,'disabled'))][contains(text(),'Optional')]")).not_to be_empty
+        end
+
+        context "with a name already set" do
+          before_each { object.assign(name: "Title").save }
+
+          it "marks the optional button active and disabled" do
+            expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][contains(@class,'active')][contains(@class,'disabled')][contains(text(),'Optional')]")).not_to be_empty
+          end
+        end
+
+        context "with a summary already set" do
+          before_each { object.assign(summary: "Summary").save }
+
+          it "marks the optional button active and disabled" do
+            expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][contains(@class,'active')][contains(@class,'disabled')][contains(text(),'Optional')]")).not_to be_empty
+          end
+        end
+
+        context "when only sensitive is set" do
+          before_each { object.assign(sensitive: true) }
+
+          it "renders the optional button active and disabled" do
+            expect(subject.xpath_nodes("//div[contains(@class,'editors')]//a[contains(@class,'button')][contains(@class,'active')][contains(@class,'disabled')][contains(text(),'Optional')]")).not_to be_empty
+          end
+        end
       end
 
       context "given an object with errors" do

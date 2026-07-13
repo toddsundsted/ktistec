@@ -66,8 +66,9 @@ Partials in this directory in render order:
 
 ### Content
 
-- Content editor buttons (Rich Text and Markdown) are always displayed
-  but only enabled when an object's source media type is not set.
+- Content editor buttons (Rich Text and Markdown) are displayed only
+  while composing a draft, and are enabled only when an object's source
+  media type is not set.
 
 - Either the Rich Text or the Markdown content editor button is
   active, but never both. A content editor button can be active but
@@ -76,15 +77,16 @@ Partials in this directory in render order:
 
 ### Optional
 
-- The optional editor button is displayed for objects that are not
-  replies, but only enabled when an object's name, summary, and
-  canonical path are all blank.
+- The optional editor button is displayed for both drafts and
+  published posts (so a name, summary, or content warning can be added
+  after publication), but only enabled when an object's name, summary,
+  and canonical path are all blank.
 
 ### Polls
 
-- The poll editor button is displayed for objects that support polls
-  and are not replies, but only enabled when an object's poll options
-  are all blank.
+- The poll editor button is displayed while composing a draft that
+  supports polls and is not a reply, but only enabled when an object's
+  poll options are all blank.
 
 ## Adding a new editor
 

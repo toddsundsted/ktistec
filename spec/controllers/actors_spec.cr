@@ -501,18 +501,18 @@ Spectator.describe ActorsController do
         context "given a create" do
           before_each { put_in_outbox(owner: actor, activity: create) }
 
-          it "renders the object's create aspect" do
+          it "renders the object unthemed" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
           end
         end
 
         context "given an announce" do
           before_each { put_in_outbox(owner: actor, activity: announce) }
 
-          it "renders the object's announce aspect" do
+          it "renders the object unthemed" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
           end
         end
 
@@ -522,9 +522,9 @@ Spectator.describe ActorsController do
             put_in_outbox(owner: actor, activity: announce)
           end
 
-          it "renders the object's create aspect" do
+          it "renders the object unthemed" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-create/)
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
           end
         end
       end
@@ -540,9 +540,14 @@ Spectator.describe ActorsController do
             put_in_outbox(actor, announce)
           end
 
-          it "renders the object's announce aspect" do
+          it "renders the unshared object" do
             get "/actors/#{actor.username}/posts", ACCEPT_HTML
-            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/activity-announce/)
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
+          end
+
+          it "renders the shared object" do
+            get "/actors/#{actor.username}/posts", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'summary')]").first.content).to match(/shared a .* by/)
           end
         end
       end
@@ -1017,6 +1022,11 @@ Spectator.describe ActorsController do
       it "renders the collection" do
         get "/actors/#{actor.username}/drafts", ACCEPT_HTML
         expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain_exactly("object-#{draft.id}")
+      end
+
+      it "renders the draft unthemed" do
+        get "/actors/#{actor.username}/drafts", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly("event")
       end
 
       it "renders the collection" do

@@ -966,7 +966,7 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        body = String.build { |io| Ktistec::ViewHelper.object_partial(env, object, activity: activity, with_detail: with_detail, for_thread: for_thread, content_io: io) }
+        body = String.build { |io| Ktistec::ViewHelper.object_partial(env, object, activity: activity, with_detail: with_detail, for_thread: for_thread, themed: themed, content_io: io) }
         XML.parse_html(body)
       rescue XML::Error
         XML.parse_html("<div/>").document
@@ -980,6 +980,7 @@ Spectator.describe "object partials" do
 
     let(with_detail) { false }
     let(for_thread) { nil }
+    let(themed) { true }
 
     it "renders the activity type as a class" do
       expect(subject.xpath_nodes("//*[contains(@class,'event activity-like')]")).not_to be_empty
@@ -1017,6 +1018,26 @@ Spectator.describe "object partials" do
           "has-replies",
           "visibility-public",
         ).in_any_order
+      end
+    end
+
+    context "when not themed" do
+      let(themed) { false }
+
+      let_create!(:object, sensitive: true, replies_count: 2_i64)
+      let_create!(:mention, subject: object, name: "testuser")
+
+      it "emits only the event class" do
+        class_attr = subject.xpath_nodes("//*[contains(@class,'event')]/@class").first.content
+        expect(class_attr.split(/\s+/)).to contain_exactly("event")
+      end
+
+      it "does not emit theme data attributes" do
+        expect(subject.xpath_nodes("//*[contains(@class,'event')]/@*[starts-with(name(),'data-')]")).to be_empty
+      end
+
+      it "renders the object content" do
+        expect(subject.xpath_nodes("//turbo-frame[contains(@class,'event')]")).not_to be_empty
       end
     end
   end

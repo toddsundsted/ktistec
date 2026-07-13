@@ -19,7 +19,7 @@
   turbo-frame.detailed.event id=anchor(object) class=classes
     - partial "partials/object/label"
     - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor)
-- else
+- elsif themed
   crystal:
     viewing_actor = env.account?.try(&.actor)
     followed_actors = viewing_actor.try(&.followed_actors)
@@ -37,5 +37,9 @@
     ].compact.flatten.join(" ")
     attrs = object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
   turbo-frame.event id=anchor(object) class=classes *attrs
+    - partial "partials/object/label"
+    - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor)
+- else
+  turbo-frame.event id=anchor(object)
     - partial "partials/object/label"
     - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor)

@@ -31,6 +31,14 @@ Spectator.describe Ktistec::SafeAttrValue do
     it "returns a SafeAttrValue" do
       expect(described_class.escape("x")).to be_a(Ktistec::SafeAttrValue)
     end
+
+    it "renders an integer as digits" do
+      expect(described_class.escape(42_i64).to_s).to eq("42")
+    end
+
+    it "returns a SafeAttrValue" do
+      expect(described_class.escape(42)).to be_a(Ktistec::SafeAttrValue)
+    end
   end
 
   describe ".assert_safe" do

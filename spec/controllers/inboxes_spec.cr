@@ -1632,6 +1632,41 @@ Spectator.describe InboxesController do
         end
       end
 
+      context "a dislike" do
+        let_create(:dislike, actor: other)
+
+        before_each do
+          undo.assign(object: dislike)
+        end
+
+        it "returns 400 if related activity does not exist" do
+          dislike.destroy
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld(recursive: false)
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400 if the dislike and undo aren't from the same actor" do
+          dislike.assign(actor: actor).save
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          expect(response.status_code).to eq(400)
+        end
+
+        it "puts the activity in the actor's inbox" do
+          expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "marks the dislike as undone" do
+          expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+            .to change { dislike.reload!.undone_at }
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
+
       context "a follow" do
         let_create(:follow, actor: other, object: actor)
 

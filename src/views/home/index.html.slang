@@ -4,7 +4,7 @@ section.ui.feed data-controller="icon-load-error"
   - # take advantage of existing feed styling for presentation #
   - if (description = Ktistec::DescriptionEnhancer.enhanced_description.presence)
     .ui.segments
-      .ui.segment.event
+      .ui.basic.segment.event
         .content data-controller="image-viewer" data-action="click->image-viewer#handleClick"
           .text
             = description

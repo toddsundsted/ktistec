@@ -35,6 +35,13 @@ class Feed
   property version : Int32 = 1
 
   @[Persistent]
+  property draft : Bool = false
+
+  @[Persistent]
+  property copy_of : Int64?
+  belongs_to original, class_name: Feed, foreign_key: copy_of, primary_key: id
+
+  @[Persistent]
   property description : String?
 
   # An example of what belongs in (or doesn't belong in) the feed.
@@ -68,6 +75,18 @@ class Feed
       messages = backend.validate_params(params)
       errors[""] = [messages.join(" ")] unless messages.empty?
     end
+  end
+
+  # Publishes a draft feed.
+  #
+  def publish
+    assign(draft: false, copy_of: nil).save
+  end
+
+  # Returns `true` if the feed is published, `false` if it's a draft.
+  #
+  def published?
+    !draft
   end
 
   # The relationship type of the feed's materialized rows.

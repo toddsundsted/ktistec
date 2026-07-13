@@ -83,6 +83,49 @@ Spectator.describe Feed do
     end
   end
 
+  describe "#publish" do
+    let_create(:feed, draft: true)
+
+    it "transitions draft to published" do
+      feed.publish
+      expect(feed.draft).to be_false
+    end
+
+    it "persists the transition" do
+      feed.publish
+      expect(Feed.find(feed.id).draft).to be_false
+    end
+
+    context "given a copy" do
+      let_create(:feed, named: original)
+
+      before_each { feed.assign(original: original).save }
+
+      it "clears original" do
+        feed.publish
+        expect(Feed.find(feed.id).original?).to be_nil
+      end
+    end
+  end
+
+  describe "#published?" do
+    context "when the feed is not a draft" do
+      let_build(:feed, draft: false)
+
+      it "is true" do
+        expect(feed.published?).to be_true
+      end
+    end
+
+    context "when the feed is a draft" do
+      let_build(:feed, draft: true)
+
+      it "is false" do
+        expect(feed.published?).to be_false
+      end
+    end
+  end
+
   describe "#params" do
     let_create(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}})).as_h)
 

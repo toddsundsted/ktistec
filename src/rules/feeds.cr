@@ -13,10 +13,10 @@ module Rules
       View::Feed.new(feed_id: feed.id.not_nil!, owner_iri: feed.owner_iri.not_nil!)
     end
 
-    # Registers a view for every feed.
+    # Registers a view for every non-draft feed.
     #
     def register_all : Nil
-      ::Feed.all.each do |feed|
+      ::Feed.where(draft: false).each do |feed|
         View.register(view_for(feed))
       end
     end

@@ -37,7 +37,7 @@ class FeedsController
       not_found
     end
 
-    feeds = Feed.where("owner_iri = ? ORDER BY created_at DESC", account.actor.iri)
+    feeds = Feed.where("owner_iri = ? AND draft = 0 ORDER BY created_at DESC", account.actor.iri)
 
     entries = feeds.map do |feed|
       {feed, Feed::Backend::Criteria::Form.summarize(feed.params), feed.stats}

@@ -166,6 +166,20 @@ Spectator.describe FeedsController do
             expect(entry["posts"].as_i).to eq(1)
           end
         end
+
+        context "that is draft" do
+          before_each { mixed.assign(draft: true).save }
+
+          it "renders the empty page" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+            expect(response.body).to contain("don't have any feeds")
+          end
+
+          it "renders the empty collection" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+            expect(JSON.parse(response.body)["feeds"].as_a).to be_empty
+          end
+        end
       end
     end
   end
@@ -524,6 +538,16 @@ Spectator.describe FeedsController do
           body = JSON.parse(response.body)
           expect(json_fields("any").first).to eq("resin\n@bob@h@x\nwood")
         end
+      end
+
+      it "does not mark the feed as a draft" do
+        post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc"
+        expect(robotics_feed.draft).to be_false
+      end
+
+      it "does not mark the feed as a draft" do
+        post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc"})
+        expect(robotics_feed.draft).to be_false
       end
     end
   end

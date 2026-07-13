@@ -37,6 +37,16 @@ Spectator.describe Rules::Feeds do
         .to change { Rules::View.registry.select(Rules::View::Feed).map(&.type).sort! }
           .from([] of String).to([feed.feed_type, other.feed_type].sort)
     end
+
+    context "given a draft feed" do
+      before_each { other.assign(draft: true).save }
+
+      it "does not register the draft feed's view" do
+        expect { Rules::Feeds.register_all }
+          .to change { Rules::View.registry.select(Rules::View::Feed).map(&.type) }
+            .from([] of String).to([feed.feed_type])
+      end
+    end
   end
 
   describe ".register" do

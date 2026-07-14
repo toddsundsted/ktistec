@@ -38,6 +38,11 @@ a {
     color: var(--text-primary) !important;
 }
 
+.ui.segment {
+    background-color: var(--color-transparent);
+    border-color: var(--border-color);
+}
+
 .ui.card .content .header {
     color: var(--text-primary) !important;
 }
@@ -179,6 +184,11 @@ nav.ui.inverted.menu {
     }
 }
 
+.ui.table > thead > tr > th {
+    .bg-primary-1();
+    color: var(--text-primary);
+}
+
 /* Headers and descriptions */
 
 .ui.header, .ui.dividing.header {
@@ -224,6 +234,10 @@ nav.ui.inverted.menu {
 
 .ui.feed .event .content .extra.text {
     color: var(--text-primary) !important;
+}
+
+.ui.feed .event .content .meta {
+    .text-muted();
 }
 
 .ui.feed .event .content .meta .mini.iconic.button:not(.blue):not(.purple):not(.dangerous) {

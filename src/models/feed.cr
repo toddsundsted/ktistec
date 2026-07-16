@@ -77,6 +77,21 @@ class Feed
     end
   end
 
+  # Indicates whether the new criteria differ from the persisted criteria.
+  #
+  def criteria_changed? : Bool
+    return false if new_record?
+    # compare against the database row rather than relying on change
+    # tracking, so every mutation path is seen
+    Feed.find(id).params != params
+  end
+
+  # Advances `version` when the criteria change.
+  #
+  def before_update
+    self.version += 1 if criteria_changed?
+  end
+
   # Publishes a draft feed.
   #
   def publish

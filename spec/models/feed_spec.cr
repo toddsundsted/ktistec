@@ -83,6 +83,80 @@ Spectator.describe Feed do
     end
   end
 
+  describe "#criteria_changed?" do
+    let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+
+    it "is false" do
+      expect(feed.criteria_changed?).to be_false
+    end
+
+    context "when saved" do
+      before_each { feed.save }
+
+      it "is false" do
+        expect(feed.criteria_changed?).to be_false
+      end
+
+      context "and the criteria are replaced" do
+        before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
+
+        it "is true" do
+          expect(feed.criteria_changed?).to be_true
+        end
+      end
+
+      context "and the criteria are mutated in place" do
+        before_each { feed.params["keywords"] = JSON.parse(%({"any": ["beta"]})) }
+
+        it "is true" do
+          expect(feed.criteria_changed?).to be_true
+        end
+      end
+    end
+  end
+
+  describe "#save" do
+    let_create(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+
+    it "does not bump the version" do
+      expect { feed.save }.not_to change { feed.version }
+    end
+
+    context "when the criteria are replaced" do
+      before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
+
+      it "bumps the version" do
+        expect { feed.save }.to change { feed.version }.from(1).to(2)
+      end
+
+      it "persists the bump" do
+        feed.save
+        expect(Feed.find(feed.id).version).to eq(2)
+      end
+    end
+
+    context "when the criteria are mutated in place" do
+      before_each { feed.params["keywords"] = JSON.parse(%({"any": ["beta"]})) }
+
+      it "bumps the version" do
+        expect { feed.save }.to change { feed.version }.from(1).to(2)
+      end
+
+      it "persists the bump" do
+        feed.save
+        expect(Feed.find(feed.id).version).to eq(2)
+      end
+    end
+
+    context "when the name changes" do
+      before_each { feed.assign(name: "Renamed") }
+
+      it "does not bump the version" do
+        expect { feed.save }.not_to change { feed.version }
+      end
+    end
+  end
+
   describe "#publish" do
     let_create(:feed, draft: true)
 

@@ -1,14 +1,26 @@
+crystal:
+  heading = (feed.draft && feed.copy_of.nil?) ? "New Feed" : "Edit Feed"
 - content_for "title" do
-  | Edit Feed
-h1 Edit Feed
+  | #{heading}
+h1 = heading
 - partial "feeds/form"
+- if contents
+  .ui.segment.feed-preview
+    h3.ui.header Preview
+    - if contents.empty?
+      .ui.text There is nothing here, yet. Adjust the criteria and <em>preview</em> again.
+    - else
+      - partial "feeds/contents"
 .ui.basic.tiny.delete-feed.modal
   .header
     i.trash.icon
     | Delete Feed
   .content
     p
-      | Delete the feed <strong>#{feed.name}</strong>? The feed and everything it has collected are removed. The posts themselves stay in your inbox and timeline—only this feed goes away. This can't be undone.
+      | Delete the feed <strong>#{feed.name}</strong>? The feed and
+        everything it has collected are removed. The posts themselves
+        stay in your inbox—only this feed goes away. This can't be
+        undone.
   .actions
     .ui.basic.cancel.inverted.button
       i.remove.icon

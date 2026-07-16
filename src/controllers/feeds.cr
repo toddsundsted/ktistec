@@ -1,8 +1,40 @@
 require "../framework/controller"
 require "../models/feed"
 require "../rules/feeds"
+require "../services/feed/window"
 require "../services/feed/backend/criteria/form"
 
+# The `FeedsController` manages the lifecycle of feeds and their
+# associated content windows (previews).
+#
+#                            ┌───────┐──┐ preview:
+#    ┌─── preview: ────────▶ │ draft │◀─┘ update feed;
+#    │    create feed;       └───────┘    recompute window
+#    │    recompute window     │   ▲
+#    │                         │   │
+#    │               publish:  │   │ preview [1]:
+#    │          adopt window;  │   │ create a draft feed;
+#  [NEW]       register feed;  │   │ recompute window;
+#    │         unregister and  │   │ keep the original
+#    │       destroy original  │   │
+#    │                         │   │
+#    │                         ▼   │
+#    │                   ┌───────────┐──┐ publish [2]:
+#    └─ publish: ──────▶ │ published │◀─┘ create new feed;
+#       create feed;     └───────────┘    register new feed;
+#       register feed                     unregister and
+#                                         destroy old feed
+#
+# [1] A published feed is never demoted to a draft feed. Instead, a
+#   new draft feed is created (recording the original in `copy_of`)
+#   and the original published feed is left unchanged until the draft
+#   feed is published.
+# [2] A published feed is never mutated. Instead, a new published feed
+#   is created and the original published feed is unregistered and
+#   destroyed.
+#
+# Deleting a feed in any state unregisters and destroys it.
+#
 class FeedsController
   include Ktistec::Controller
 
@@ -21,13 +53,13 @@ class FeedsController
 
   # Authorizes access to a single feed.
   #
-  # Returns the feed if the authenticated user owns the account and
-  # the account's actor owns the feed, `nil` otherwise.
+  # Returns the feed if the authenticated user owns the feed, `nil`
+  # otherwise.
   #
   private def self.get_feed_with_ownership(env)
     if (account = get_account_with_ownership(env))
       if (id = env.params.url["id"].to_i64?) && (feed = Feed.find?(id))
-        feed if feed.owner_iri == account.actor.iri
+        feed if feed.owner == account.actor
       end
     end
   end
@@ -54,7 +86,8 @@ class FeedsController
     feed = Feed.new(owner: account.actor, backend: "criteria", name: "")
 
     buckets = form_buckets(env, feed)
-    ok "feeds/new", env: env, actor: account.actor, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none]
+
+    ok "feeds/new", env: env, actor: account.actor, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
   end
 
   post "/actors/:username/feeds" do |env|
@@ -64,25 +97,40 @@ class FeedsController
 
     cap_request_body env, MAX_REQUEST_BYTES
 
-    feed = Feed.new(**feed_params(env).merge({owner: account.actor, backend: "criteria"}))
-
-    if feed.valid?
-      feed.save
-      Rules::Feeds.register(feed)
-      if accepts?("application/ld+json", "application/activity+json", "application/json")
-        created actor_feed_path(account.actor, feed), "feeds/show", env: env, feed: feed, contents: feed.contents(**cursor_pagination_params(env))
+    if previewing?(env)
+      feed = Feed.new(**feed_params(env).merge({owner: account.actor, backend: "criteria", draft: true}))
+      if feed.valid?
+        feed.save
+        Feed::Window.new(feed).recompute
+        redirect edit_actor_feed_path(account.actor, feed)
       else
-        redirect actor_feeds_path(account.actor)
+        buckets = form_buckets(env, feed)
+        unprocessable_entity "feeds/new", env: env, actor: account.actor, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
       end
     else
-      buckets = form_buckets(env, feed)
-      unprocessable_entity "feeds/new", env: env, actor: account.actor, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none]
+      feed = Feed.new(**feed_params(env).merge({owner: account.actor, backend: "criteria", draft: false}))
+      if feed.valid?
+        feed.save
+        Rules::Feeds.register(feed)
+        if accepts?("application/ld+json", "application/activity+json", "application/json")
+          created actor_feed_path(account.actor, feed), "feeds/show", env: env, feed: feed, contents: feed.contents(**cursor_pagination_params(env))
+        else
+          redirect actor_feeds_path(account.actor)
+        end
+      else
+        buckets = form_buckets(env, feed)
+        unprocessable_entity "feeds/new", env: env, actor: account.actor, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+      end
     end
   end
 
   get "/actors/:username/feeds/:id" do |env|
     unless (feed = get_feed_with_ownership(env))
       not_found
+    end
+
+    if feed.draft
+      redirect edit_actor_feed_path(feed.owner, feed)
     end
 
     contents = feed.contents(**cursor_pagination_params(env))
@@ -95,8 +143,11 @@ class FeedsController
       not_found
     end
 
+    contents = feed.draft ? Feed::Window.new(feed).contents : feed.contents(limit: Feed::Window::MATCH_CAP)
+
     buckets = form_buckets(env, feed)
-    ok "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none]
+
+    ok "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: contents
   end
 
   post "/actors/:username/feeds/:id" do |env|
@@ -106,18 +157,52 @@ class FeedsController
 
     cap_request_body env, MAX_REQUEST_BYTES
 
-    feed.assign(**feed_params(env))
+    if feed.draft
+      original = feed.original?
+      feed.assign(**feed_params(env))
 
-    if feed.valid?
-      feed.save
-      if accepts?("application/ld+json", "application/activity+json", "application/json")
-        ok "feeds/show", env: env, feed: feed, contents: feed.contents(**cursor_pagination_params(env))
+      unless feed.valid?
+        buckets = form_buckets(env, feed)
+        unprocessable_entity "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+      end
+
+      if previewing?(env)
+        feed.save
+        Feed::Window.new(feed).recompute
+        redirect edit_actor_feed_path(feed.owner, feed)
       else
+        feed.publish
+        Feed::Window.new(feed).adopt
+        Rules::Feeds.register(feed)
+        if original && original.owner == feed.owner
+          unregister_and_destroy(original)
+        end
         redirect actor_feeds_path(feed.owner)
       end
     else
-      buckets = form_buckets(env, feed)
-      unprocessable_entity "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none]
+      if previewing?(env)
+        params = feed_params(env)
+        if feed.assign(**params).valid?
+          copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id})).save
+          Feed::Window.new(copy).recompute
+          redirect edit_actor_feed_path(feed.owner, copy)
+        else
+          buckets = form_buckets(env, feed)
+          unprocessable_entity "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+        end
+      else
+        published = Feed.new(**feed_params(env).merge({owner: feed.owner, backend: "criteria", draft: false}))
+        if published.valid?
+          published.save
+          Rules::Feeds.register(published)
+          unregister_and_destroy(feed)
+          redirect actor_feeds_path(feed.owner)
+        else
+          feed.assign(**feed_params(env))
+          buckets = form_buckets(env, feed)
+          unprocessable_entity "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+        end
+      end
     end
   end
 
@@ -126,12 +211,20 @@ class FeedsController
       not_found
     end
 
-    Rules::Feeds.unregister(feed)
-    feed.destroy
+    unregister_and_destroy(feed)
 
     redirect actor_feeds_path(feed.owner)
   end
 
+  # Removes a feed's runtime view before destroying the feed itself.
+  #
+  private def self.unregister_and_destroy(feed)
+    Rules::Feeds.unregister(feed)
+    feed.destroy
+  end
+
+  # Returns the form buckets for a feed.
+  #
   private def self.form_buckets(env, feed)
     if feed.errors.presence
       params = normalize_params(env.params.body.presence || env.params.json)
@@ -139,6 +232,14 @@ class FeedsController
     else
       Feed::Backend::Criteria::Form.format(feed.params)
     end
+  end
+
+  # Whether the submission is a preview request instead of a publish
+  # request.
+  #
+  private def self.previewing?(env)
+    params = normalize_params(env.params.body.presence || env.params.json)
+    params.has_key?("preview")
   end
 
   private def self.feed_params(env)

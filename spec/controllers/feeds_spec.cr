@@ -264,6 +264,30 @@ Spectator.describe FeedsController do
         expect(response.status_code).to eq(200)
       end
 
+      context "that is a draft" do
+        before_each { feed.assign(draft: true).save }
+
+        it "succeeds" do
+          get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_HTML
+          expect(response.status_code).to eq(302)
+        end
+
+        it "succeeds" do
+          get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
+          expect(response.status_code).to eq(302)
+        end
+
+        it "redirects to the editor" do
+          get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_HTML
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{feed.id}/edit")
+        end
+
+        it "redirects to the editor" do
+          get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{feed.id}/edit")
+        end
+      end
+
       context "given objects in the feed" do
         let_create(:object, named: earlier)
         let_create(:object, named: later)
@@ -402,6 +426,16 @@ Spectator.describe FeedsController do
         expect(response.status_code).to eq(404)
       end
 
+      it "returns 413 if the body is too large" do
+        post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=#{"x" * FeedsController::MAX_REQUEST_BYTES}"
+        expect(response.status_code).to eq(413)
+      end
+
+      it "returns 413 if the body is too large" do
+        post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#{"x" * FeedsController::MAX_REQUEST_BYTES}"})
+        expect(response.status_code).to eq(413)
+      end
+
       it "creates a feed" do
         expect { post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc" }
           .to change { Feed.count }.by(1)
@@ -424,6 +458,16 @@ Spectator.describe FeedsController do
       it "translates the buckets into params" do
         post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc\\n3d print","none":"@bob@host"})
         expect(robotics_feed.params).to eq(JSON.parse(%({"keywords":{"any":["3d print"]},"hashtags":{"any":["cnc"]},"mentions":{"none":["bob@host"]}})).as_h)
+      end
+
+      it "does not mark the feed as a draft" do
+        post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc"
+        expect(robotics_feed.draft).to be_false
+      end
+
+      it "does not mark the feed as a draft" do
+        post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc"})
+        expect(robotics_feed.draft).to be_false
       end
 
       it "registers the feed's view" do
@@ -540,14 +584,81 @@ Spectator.describe FeedsController do
         end
       end
 
-      it "does not mark the feed as a draft" do
-        post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc"
-        expect(robotics_feed.draft).to be_false
-      end
+      context "given a preview request" do
+        let_create(:object, named: hit, content: "<p>cnc milling</p>")
+        let_create(:create, named: hit_create, object: hit)
 
-      it "does not mark the feed as a draft" do
-        post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc"})
-        expect(robotics_feed.draft).to be_false
+        before_each { put_in_inbox(actor, hit_create) }
+
+        def preview_form
+          "name=Robotics&any=cnc&preview=1"
+        end
+
+        def preview_json
+          %({"name":"Robotics","any":"cnc","preview":"1"})
+        end
+
+        it "creates a feed" do
+          expect { post "/actors/#{actor.username}/feeds", FORM_HEADERS, preview_form }
+            .to change { Feed.count }.by(1)
+        end
+
+        it "creates a feed" do
+          expect { post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json }
+            .to change { Feed.count }.by(1)
+        end
+
+        it "marks the feed as a draft" do
+          post "/actors/#{actor.username}/feeds", FORM_HEADERS, preview_form
+          expect(robotics_feed.draft).to be_true
+        end
+
+        it "marks the feed as a draft" do
+          post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json
+          expect(robotics_feed.draft).to be_true
+        end
+
+        it "does not register the feed's view" do
+          post "/actors/#{actor.username}/feeds", FORM_HEADERS, preview_form
+          expect(Rules::View.registry.map(&.type)).not_to contain(robotics_feed.feed_type)
+        end
+
+        it "does not register the feed's view" do
+          post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json
+          expect(Rules::View.registry.map(&.type)).not_to contain(robotics_feed.feed_type)
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/feeds", FORM_HEADERS, preview_form
+          expect(response.status_code).to eq(302)
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json
+          expect(response.status_code).to eq(302)
+        end
+
+        it "redirects to the draft's editor" do
+          post "/actors/#{actor.username}/feeds", FORM_HEADERS, preview_form
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{robotics_feed.id}/edit")
+        end
+
+        it "redirects to the draft's editor" do
+          post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{robotics_feed.id}/edit")
+        end
+
+        it "adds the matching post to the window" do
+          post "/actors/#{actor.username}/feeds", FORM_HEADERS, preview_form
+          get "/actors/#{actor.username}/feeds/#{robotics_feed.id}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain("object-#{hit.id}")
+        end
+
+        it "adds the matching post to the window" do
+          post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json
+          get "/actors/#{actor.username}/feeds/#{robotics_feed.id}/edit", ACCEPT_JSON
+          expect(JSON.parse(response.body)["matches"].as_a.map(&.as_i64)).to contain(hit.id)
+        end
       end
     end
   end
@@ -613,6 +724,54 @@ Spectator.describe FeedsController do
         body = JSON.parse(response.body)
         expect(json_fields("name", "any", "all", "none")).to eq({"Robotics", "#cnc", "", ""})
       end
+
+      it "renders an empty preview" do
+        get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'feed-preview')]//text()").map(&.text).join).to contain("There is nothing here, yet")
+      end
+
+      it "renders an empty preview" do
+        get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_JSON
+        expect(JSON.parse(response.body)["matches"].as_a).to be_empty
+      end
+
+      context "that is published and has contents" do
+        let_create(:object, named: hit)
+
+        before_each do
+          feed.assign(draft: false).save
+          put_in_feed(feed, hit)
+        end
+
+        it "renders the matches" do
+          get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain("object-#{hit.id}")
+        end
+
+        it "renders the matches" do
+          get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_JSON
+          expect(JSON.parse(response.body)["matches"].as_a.map(&.as_i64)).to contain(hit.id)
+        end
+      end
+
+      context "that is a draft and has matches" do
+        let_create(:object, named: hit)
+
+        before_each do
+          feed.assign(draft: true).save
+          put_in_feed(feed, hit)
+        end
+
+        it "renders the matches" do
+          get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain("object-#{hit.id}")
+        end
+
+        it "renders the matches" do
+          get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_JSON
+          expect(JSON.parse(response.body)["matches"].as_a.map(&.as_i64)).to contain(hit.id)
+        end
+      end
     end
   end
 
@@ -656,73 +815,553 @@ Spectator.describe FeedsController do
         end
       end
 
+      it "returns 413 if the body is too large" do
+        post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=#{"x" * FeedsController::MAX_REQUEST_BYTES}"
+        expect(response.status_code).to eq(413)
+      end
+
+      it "returns 413 if the body is too large" do
+        post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#{"x" * FeedsController::MAX_REQUEST_BYTES}"})
+        expect(response.status_code).to eq(413)
+      end
+
       def robotics_feed
         Feed.find(name: "Robotics")
       end
 
-      it "updates the feed params" do
-        post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-        expect(robotics_feed.params).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
-      end
-
-      it "updates the feed params" do
-        post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-        expect(robotics_feed.params).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
-      end
-
-      it "succeeds" do
-        post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-        expect(response.status_code).to eq(302)
-      end
-
-      it "succeeds" do
-        post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-        expect(response.status_code).to eq(200)
-      end
-
-      it "redirects to the index" do
-        post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
-      end
-
-      it "returns the feed's location" do
-        post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
-      end
-
-      context "given a blank name" do
-        pre_condition { expect(Feed.find(feed.id).name).to eq("Robotics") }
-
-        it "returns 422" do
-          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23robotics"
-          expect(response.status_code).to eq(422)
+      context "when publishing a changed published feed" do
+        it "deletes the original" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+          expect(Feed.find?(feed.id)).to be_nil
         end
 
-        it "returns 422" do
-          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"#robotics"})
-          expect(response.status_code).to eq(422)
+        it "deletes the original" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+          expect(Feed.find?(feed.id)).to be_nil
         end
 
-        it "returns errors" do
-          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23robotics"
-          message = XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first?
-          expect(message.try(&.text)).to contain("name can't be blank")
+        it "leaves the total count unchanged" do
+          expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics" }
+            .not_to change { Feed.count }
         end
 
-        it "returns errors" do
-          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"#robotics"})
-          errors = JSON.parse(response.body)["errors"].as_h
-          expect(errors["name"].as_a).to contain("can't be blank")
+        it "leaves the total count unchanged" do
+          expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"}) }
+            .not_to change { Feed.count }
         end
 
-        it "does not update the feed" do
-          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23robotics"
-          expect(Feed.find(feed.id).name).to eq("Robotics")
+        it "translates the buckets into params" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+          expect(robotics_feed.params).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
         end
 
-        it "does not update the feed" do
-          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"#robotics"})
-          expect(Feed.find(feed.id).name).to eq("Robotics")
+        it "translates the buckets into params" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+          expect(robotics_feed.params).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
+        end
+
+        it "registers the feed's view" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+          expect(Rules::View.registry.map(&.type)).to contain(robotics_feed.feed_type)
+        end
+
+        it "registers the feed's view" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+          expect(Rules::View.registry.map(&.type)).to contain(robotics_feed.feed_type)
+        end
+
+        context "when the original is registered" do
+          before_each { Rules::Feeds.register(feed) }
+
+          pre_condition { expect(Rules::View.registry.map(&.type)).to contain(feed.feed_type) }
+
+          it "unregisters the original feed's view" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+            expect(Rules::View.registry.map(&.type)).not_to contain(feed.feed_type)
+          end
+
+          it "unregisters the original feed's view" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+            expect(Rules::View.registry.map(&.type)).not_to contain(feed.feed_type)
+          end
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+          expect(response.status_code).to eq(302)
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+          expect(response.status_code).to eq(302)
+        end
+
+        it "redirects to the index" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
+        end
+
+        it "returns the index" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
+        end
+
+        context "given a blank name" do
+          it "returns 422" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23robotics"
+            expect(response.status_code).to eq(422)
+          end
+
+          it "returns 422" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"#robotics"})
+            expect(response.status_code).to eq(422)
+          end
+
+          it "does not delete the original" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23robotics"
+            expect(Feed.find?(feed.id)).not_to be_nil
+          end
+
+          it "does not delete the original" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"#robotics"})
+            expect(Feed.find?(feed.id)).not_to be_nil
+          end
+
+          it "does not create a replacement" do
+            expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23robotics" }
+              .not_to change { Feed.count }
+          end
+
+          it "does not create a replacement" do
+            expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"#robotics"}) }
+              .not_to change { Feed.count }
+          end
+        end
+      end
+
+      context "when previewing a changed published feed" do
+        let_create(:object, named: hit, content: "<p>robotics arm</p>")
+        let_create(:create, named: hit_create, object: hit)
+
+        before_each { put_in_inbox(actor, hit_create) }
+
+        def preview_form
+          "name=Robotics&any=robotics&preview=1"
+        end
+
+        def preview_json
+          %({"name":"Robotics","any":"robotics","preview":"1"})
+        end
+
+        def copy
+          Feed.where("name = ? AND id <> ?", "Robotics", feed.id).first
+        end
+
+        it "creates a copy" do
+          expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form }
+            .to change { Feed.count }.by(1)
+        end
+
+        it "creates a copy" do
+          expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json }
+            .to change { Feed.count }.by(1)
+        end
+
+        it "marks the copy as a draft" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+          expect(copy.draft).to be_true
+        end
+
+        it "marks the copy as a draft" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+          expect(copy.draft).to be_true
+        end
+
+        it "leaves the original untouched" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+          expect(Feed.find(feed.id).draft).to be_false
+        end
+
+        it "leaves the original untouched" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+          expect(Feed.find(feed.id).draft).to be_false
+        end
+
+        it "does not register the copy's view" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+          expect(Rules::View.registry.map(&.type)).not_to contain(copy.feed_type)
+        end
+
+        it "does not register the copy's view" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+          expect(Rules::View.registry.map(&.type)).not_to contain(copy.feed_type)
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+          expect(response.status_code).to eq(302)
+        end
+
+        it "succeeds" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+          expect(response.status_code).to eq(302)
+        end
+
+        it "links the copy to the original" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+          expect(copy.copy_of).to eq(feed.id)
+        end
+
+        it "links the copy to the original" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+          expect(copy.copy_of).to eq(feed.id)
+        end
+
+        it "redirects to the copy's editor" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{copy.id}/edit")
+        end
+
+        it "redirects to the copy's editor" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{copy.id}/edit")
+        end
+
+        it "adds the matching post to the window" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+          get "/actors/#{actor.username}/feeds/#{copy.id}/edit", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain("object-#{hit.id}")
+        end
+
+        it "adds the matching post to the window" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+          get "/actors/#{actor.username}/feeds/#{copy.id}/edit", ACCEPT_JSON
+          expect(JSON.parse(response.body)["matches"].as_a.map(&.as_i64)).to contain(hit.id)
+        end
+
+        context "given a blank name" do
+          it "returns 422" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=robotics&preview=1"
+            expect(response.status_code).to eq(422)
+          end
+
+          it "returns 422" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"robotics","preview":"1"})
+            expect(response.status_code).to eq(422)
+          end
+
+          it "does not create a copy" do
+            expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=robotics&preview=1" }
+              .not_to change { Feed.count }
+          end
+
+          it "does not create a copy" do
+            expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"robotics","preview":"1"}) }
+              .not_to change { Feed.count }
+          end
+        end
+      end
+
+      context "given a draft feed" do
+        before_each { feed.assign(draft: true).save }
+
+        context "when previewing a draft feed" do
+          let_create(:object, named: hit)
+          let_create!(:hashtag, subject: hit, name: "cnc")
+          let_create(:create, named: hit_create, object: hit)
+
+          before_each { put_in_inbox(actor, hit_create) }
+
+          def preview_form
+            "name=Robotics&any=%23cnc&preview=1"
+          end
+
+          def preview_json
+            %({"name":"Robotics","any":"#cnc","preview":"1"})
+          end
+
+          it "keeps the feed a draft" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+            expect(Feed.find(feed.id).draft).to be_true
+          end
+
+          it "keeps the feed a draft" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+            expect(Feed.find(feed.id).draft).to be_true
+          end
+
+          it "does not register the draft's view" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+            expect(Rules::View.registry.map(&.type)).not_to contain(feed.feed_type)
+          end
+
+          it "does not register the draft's view" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+            expect(Rules::View.registry.map(&.type)).not_to contain(feed.feed_type)
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+            expect(response.status_code).to eq(302)
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+            expect(response.status_code).to eq(302)
+          end
+
+          it "redirects to the editor" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+            expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{feed.id}/edit")
+          end
+
+          it "redirects to the editor" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+            expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{feed.id}/edit")
+          end
+
+          it "adds the matching post to the window" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+            get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_HTML
+            expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain("object-#{hit.id}")
+          end
+
+          it "adds the matching post to the window" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+            get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["matches"].as_a.map(&.as_i64)).to contain(hit.id)
+          end
+
+          context "when the criteria are unchanged" do
+            it "does not bump the version" do
+              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form }
+                .not_to change { Feed.find(feed.id).version }.from(1)
+            end
+
+            it "does not bump the version" do
+              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json }
+                .not_to change { Feed.find(feed.id).version }.from(1)
+            end
+          end
+
+          context "when the criteria change" do
+            it "bumps the version" do
+              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23resin&preview=1" }
+                .to change { Feed.find(feed.id).version }.from(1).to(2)
+            end
+
+            it "bumps the version" do
+              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#resin","preview":"1"}) }
+                .to change { Feed.find(feed.id).version }.from(1).to(2)
+            end
+          end
+        end
+
+        context "when publishing a draft feed" do
+          def publish_form
+            "name=Robotics&any=%23cnc"
+          end
+
+          def publish_json
+            %({"name":"Robotics","any":"#cnc"})
+          end
+
+          it "publishes the draft" do
+            expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form }
+              .to change { Feed.find(feed.id).draft }.from(true).to(false)
+          end
+
+          it "publishes the draft" do
+            expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json }
+              .to change { Feed.find(feed.id).draft }.from(true).to(false)
+          end
+
+          it "registers the view" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+            expect(Rules::View.registry.map(&.type)).to contain(feed.feed_type)
+          end
+
+          it "registers the view" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+            expect(Rules::View.registry.map(&.type)).to contain(feed.feed_type)
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+            expect(response.status_code).to eq(302)
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+            expect(response.status_code).to eq(302)
+          end
+
+          it "redirects to the index" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+            expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
+          end
+
+          it "returns the index" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+            expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
+          end
+
+          context "given a blank name" do
+            it "returns 422" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23cnc"
+              expect(response.status_code).to eq(422)
+            end
+
+            it "returns 422" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"#cnc"})
+              expect(response.status_code).to eq(422)
+            end
+
+            it "does not publish the draft" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23cnc"
+              expect(Feed.find(feed.id).draft).to be_true
+            end
+
+            it "does not publish the draft" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"#cnc"})
+              expect(Feed.find(feed.id).draft).to be_true
+            end
+          end
+
+          context "given a previewed window" do
+            let_create(:object, named: hit)
+            let_create!(:feed_verdict, feed: feed, object: hit, included: true, version: 1)
+
+            before_each { put_in_feed(feed, hit) }
+
+            pre_condition { expect(Feed::Verdict.count(feed_id: feed.id)).to eq(1) }
+
+            it "adopts the previewed matches" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+              get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_HTML
+              expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).to contain("object-#{hit.id}")
+            end
+
+            it "adopts the previewed matches" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+              get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
+              expect(JSON.parse(response.body).dig("first", "orderedItems").as_a.map(&.as_s)).to contain(hit.iri)
+            end
+
+            it "does not recompute the verdicts" do
+              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form }
+                .not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
+            end
+
+            it "does not recompute the verdicts" do
+              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json }
+                .not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
+            end
+
+            context "but the criteria changed" do
+              def publish_changed_form
+                "name=Robotics&any=%23resin"
+              end
+
+              def publish_changed_json
+                %({"name":"Robotics","any":"#resin"})
+              end
+
+              it "bumps the version" do
+                expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_changed_form }
+                  .to change { Feed.find(feed.id).version }.from(1).to(2)
+              end
+
+              it "bumps the version" do
+                expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_changed_json }
+                  .to change { Feed.find(feed.id).version }.from(1).to(2)
+              end
+
+              it "drops the stale match" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_changed_form
+                get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_HTML
+                expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id")).not_to contain("object-#{hit.id}")
+              end
+
+              it "drops the stale match" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_changed_json
+                get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
+                expect(response.body).not_to contain(hit.iri)
+              end
+            end
+          end
+
+          context "that is a copy of an original feed" do
+            let_create!(:feed, named: original, owner: actor, name: "Original")
+
+            before_each { feed.assign(original: original).save }
+
+            it "deletes the original" do
+              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form }
+                .to change { Feed.find?(original.id) }.to(nil)
+            end
+
+            it "deletes the original" do
+              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json }
+                .to change { Feed.find?(original.id) }.to(nil)
+            end
+
+            it "publishes the copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+              expect(Feed.find(feed.id).draft).to be_false
+            end
+
+            it "publishes the copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+              expect(Feed.find(feed.id).draft).to be_false
+            end
+
+            context "when the original is registered" do
+              before_each { Rules::Feeds.register(original) }
+
+              pre_condition { expect(Rules::View.registry.map(&.type)).to contain(original.feed_type) }
+
+              it "unregisters the original's view" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+                expect(Rules::View.registry.map(&.type)).not_to contain(original.feed_type)
+              end
+
+              it "unregisters the original's view" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+                expect(Rules::View.registry.map(&.type)).not_to contain(original.feed_type)
+              end
+            end
+
+            context "that no longer exists" do
+              before_each { original.destroy }
+
+              it "publishes the copy" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+                expect(Feed.find(feed.id).draft).to be_false
+              end
+
+              it "publishes the copy" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+                expect(Feed.find(feed.id).draft).to be_false
+              end
+            end
+          end
+
+          context "that is a copy of a feed owned by another actor" do
+            let_create!(:feed, named: foreign, name: "Foreign")
+
+            before_each { feed.assign(copy_of: foreign.id).save }
+
+            it "does not delete the other feed" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+              expect(Feed.find?(foreign.id)).not_to be_nil
+            end
+
+            it "does not delete the other feed" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+              expect(Feed.find?(foreign.id)).not_to be_nil
+            end
+          end
         end
       end
     end

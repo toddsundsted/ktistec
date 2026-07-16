@@ -93,11 +93,13 @@ Spectator.describe Feed::Judging do
         end
       end
 
-      context "when the policy is edited and the version bumped" do
+      context "when the policy is edited" do
         before_each do
           Feed::Judging.judge(feed)
-          feed.assign(version: 2, params: JSON.parse(%({"keywords": {"any": ["gamma"]}})).as_h).save
+          feed.assign(params: JSON.parse(%({"keywords": {"any": ["gamma"]}})).as_h).save
         end
+
+        pre_condition { expect(feed.version).to eq(2) }
 
         it "re-judges all candidates" do
           expect(Feed::Judging.judge(feed)).to eq(2)

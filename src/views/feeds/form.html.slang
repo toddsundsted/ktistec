@@ -1,16 +1,15 @@
 crystal:
   if feed.new_record?
     action = actor_feeds_path(actor)
-    submit_label = "Create Feed"
-    cancel_label = "Cancel"
     cancel_path = actor_feeds_path(actor)
+    cancel_label = "Cancel"
   else
     action = actor_feed_path(actor, feed)
-    submit_label = "Save"
-    cancel_label = "Back"
     cancel_path = back_path(actor_feeds_path(actor))
+    cancel_label = "Back"
   end
-= form_tag(feed, action, method: "POST") do
+  submit_label = (feed.new_record? || feed.draft) ? "Create Feed" : "Update Feed"
+= form_tag(feed, action) do
   = error_messages(feed)
   = input_tag("Name", feed, name, placeholder: "e.g. Fediverse")
   = input_tag("Notes", feed, description, placeholder: "A description of what this feed is about.")
@@ -35,5 +34,7 @@ crystal:
         | None of these
         span.ui.mini.basic.label< optional
       textarea name="none" rows="2" = none
-  = submit_button(submit_label)
-  a.ui.basic.button href=cancel_path = cancel_label
+  .ui.buttons
+    button.ui.primary.button type="submit" = submit_label
+    button.ui.button type="submit" name="preview" value="1" Preview Feed
+  a.ui.right.floated.teal.button href=cancel_path = cancel_label

@@ -20,9 +20,8 @@ module Utils::Paths
   # Returns a `SafeURI` for the `Referer` header, suitable as a
   # `redirect` target.
   #
-  def self.back_path_for(env : ::HTTP::Server::Context) : ::Ktistec::SafeURI
+  def self.back_path_for(env : ::HTTP::Server::Context, fallback : ::Ktistec::SafeURI) : ::Ktistec::SafeURI
     referer = env.request.headers["Referer"]?
-    fallback = ::Ktistec::SafeURI.assert_safe("/")
     return fallback if referer.nil? || referer.empty?
     return fallback unless ::Ktistec::Util.safe_url?(referer)
     return fallback if referer.starts_with?("//")
@@ -51,8 +50,8 @@ module Utils::Paths
     end
   end
 
-  macro back_path
-    ::Utils::Paths.back_path_for(env)
+  macro back_path(fallback = ::Ktistec::SafeURI.assert_safe("/"))
+    ::Utils::Paths.back_path_for(env, {{fallback}})
   end
 
   macro home_path
@@ -331,6 +330,18 @@ module Utils::Paths
 
   macro refresh_remote_actor_path(actor = nil)
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_actor_path({{actor}})}/refresh")
+  end
+
+  macro actor_feeds_path(actor = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds")
+  end
+
+  macro new_actor_feed_path(actor = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_feeds_path({{actor}})}/new")
+  end
+
+  macro edit_actor_feed_path(actor = nil, feed = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_feed_path({{actor}}, {{feed}})}/edit")
   end
 
   macro actor_feed_path(actor = nil, feed = nil)

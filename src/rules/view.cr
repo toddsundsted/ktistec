@@ -84,9 +84,16 @@ module Rules
 
     # Registers a view.
     #
-    def self.register(view : View) : View
-      @@registry << view unless @@registry.includes?(view)
-      view
+    def self.register(view : View) : Nil
+      @@registry << view unless @@registry.any? { |v| v.type == view.type }
+    end
+
+    # Unregisters a view.
+    #
+    def self.unregister(view : View) : Nil
+      if (existing = @@registry.find { |v| v.type == view.type })
+        @@registry.delete(existing)
+      end
     end
   end
 end

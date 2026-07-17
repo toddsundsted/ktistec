@@ -11,7 +11,7 @@ private class RejectingBackend < Feed::Backend
   end
 
   def validate_params(params : Hash(String, JSON::Any)) : Array(String)
-    ["is rejected"]
+    ["These criteria can't be used."]
   end
 end
 
@@ -70,7 +70,7 @@ Spectator.describe Feed do
 
       it "is invalid" do
         expect(feed.valid?).to be_false
-        expect(feed.errors["params"]?).to contain("is rejected")
+        expect(feed.errors[""]?).to contain("These criteria can't be used.")
       end
     end
   end
@@ -80,6 +80,123 @@ Spectator.describe Feed do
 
     it "defaults to 1" do
       expect(feed.version).to eq(1)
+    end
+  end
+
+  describe "#criteria_changed?" do
+    let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+
+    it "is false" do
+      expect(feed.criteria_changed?).to be_false
+    end
+
+    context "when saved" do
+      before_each { feed.save }
+
+      it "is false" do
+        expect(feed.criteria_changed?).to be_false
+      end
+
+      context "and the criteria are replaced" do
+        before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
+
+        it "is true" do
+          expect(feed.criteria_changed?).to be_true
+        end
+      end
+
+      context "and the criteria are mutated in place" do
+        before_each { feed.params["keywords"] = JSON.parse(%({"any": ["beta"]})) }
+
+        it "is true" do
+          expect(feed.criteria_changed?).to be_true
+        end
+      end
+    end
+  end
+
+  describe "#save" do
+    let_create(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+
+    it "does not bump the version" do
+      expect { feed.save }.not_to change { feed.version }
+    end
+
+    context "when the criteria are replaced" do
+      before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
+
+      it "bumps the version" do
+        expect { feed.save }.to change { feed.version }.from(1).to(2)
+      end
+
+      it "persists the bump" do
+        feed.save
+        expect(Feed.find(feed.id).version).to eq(2)
+      end
+    end
+
+    context "when the criteria are mutated in place" do
+      before_each { feed.params["keywords"] = JSON.parse(%({"any": ["beta"]})) }
+
+      it "bumps the version" do
+        expect { feed.save }.to change { feed.version }.from(1).to(2)
+      end
+
+      it "persists the bump" do
+        feed.save
+        expect(Feed.find(feed.id).version).to eq(2)
+      end
+    end
+
+    context "when the name changes" do
+      before_each { feed.assign(name: "Renamed") }
+
+      it "does not bump the version" do
+        expect { feed.save }.not_to change { feed.version }
+      end
+    end
+  end
+
+  describe "#publish" do
+    let_create(:feed, draft: true)
+
+    it "transitions draft to published" do
+      feed.publish
+      expect(feed.draft).to be_false
+    end
+
+    it "persists the transition" do
+      feed.publish
+      expect(Feed.find(feed.id).draft).to be_false
+    end
+
+    context "given a copy" do
+      let_create(:feed, named: original)
+
+      before_each { feed.assign(original: original).save }
+
+      it "clears original" do
+        feed.publish
+        expect(Feed.find(feed.id).original?).to be_nil
+      end
+    end
+  end
+
+  describe "#published?" do
+    context "when the feed is not a draft" do
+      let_build(:feed, draft: false)
+
+      it "is true" do
+        expect(feed.published?).to be_true
+      end
+    end
+
+    context "when the feed is a draft" do
+      let_build(:feed, draft: true)
+
+      it "is false" do
+        expect(feed.published?).to be_false
+      end
     end
   end
 
@@ -108,6 +225,48 @@ Spectator.describe Feed do
 
     it "returns the synthetic per-feed relationship type" do
       expect(feed.feed_type).to eq("Feed::#{feed.id}")
+    end
+  end
+
+  describe "#stats" do
+    let_create(:feed)
+
+    it "reports zero" do
+      expect(feed.stats.count).to eq(0)
+    end
+
+    it "has no newest arrival" do
+      expect(feed.stats.newest).to be_nil
+    end
+
+    context "with objects" do
+      let_build(:object, named: earlier)
+      let_build(:object, named: later)
+
+      before_each do
+        put_in_feed(feed, earlier, at: Time.utc(2026, 1, 1))
+        put_in_feed(feed, later, at: Time.utc(2026, 1, 2))
+      end
+
+      it "returns the count" do
+        expect(feed.stats.count).to eq(2)
+      end
+
+      it "returns the newest arrival time" do
+        expect(feed.stats.newest).to eq(Time.utc(2026, 1, 2))
+      end
+
+      context "when an object is blocked" do
+        before_each { later.block! }
+
+        it "excludes it from the count" do
+          expect(feed.stats.count).to eq(1)
+        end
+
+        it "excludes it from the newest arrival time" do
+          expect(feed.stats.newest).to eq(Time.utc(2026, 1, 1))
+        end
+      end
     end
   end
 

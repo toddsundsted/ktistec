@@ -55,5 +55,30 @@ class Feed
         as: {String, Time})
       rows.map { |(iri, arrival)| {ActivityPub::Object.find(iri: iri), arrival} }
     end
+
+    # Returns `object`'s arrival time in the feed owner's inbox.
+    #
+    # Mirrors the arrival computed by `candidates_for`.
+    #
+    def arrival_for(feed : ::Feed, object : ActivityPub::Object) : Time?
+      query = <<-SQL
+        SELECT MIN(m.created_at)
+          FROM relationships m
+          JOIN activities a ON a.iri = m.to_iri
+         WHERE m.type = ?
+           AND m.from_iri = ?
+           AND a.object_iri = ?
+           AND a.type IN (?, ?)
+           #{ActivityPub.common_filters(activities: "a")}
+      SQL
+      Ktistec.database.query_one(
+        query,
+        Relationship::Content::Inbox.to_s,
+        feed.owner_iri,
+        object.iri,
+        ActivityPub::Activity::Create.to_s,
+        ActivityPub::Activity::Announce.to_s,
+        as: Time?)
+    end
   end
 end

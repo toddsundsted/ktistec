@@ -124,7 +124,7 @@ module Ktistec::ViewHelper
   macro error_messages(model)
     if (%errors = {{model}}.errors.presence)
       %messages = %errors.transform_keys(&.split(".").last).flat_map do |k, vs|
-        vs.map { |v| "#{::HTML.escape(k)} #{::HTML.escape(v)}" }
+        vs.map { |v| k.empty? ? ::HTML.escape(v) : "#{::HTML.escape(k)} #{::HTML.escape(v)}" }
       end.join(", ")
       ::Ktistec::SafeHTML.assert_safe(%Q(<div class="ui error message"><div class="header">#{%messages}</div></div>))
     else

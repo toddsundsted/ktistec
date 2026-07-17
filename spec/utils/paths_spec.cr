@@ -132,6 +132,28 @@ Spectator.describe Utils::Paths do
         expect((back_path).to_s).to eq("/")
       end
     end
+
+    context "with a fallback" do
+      let(fallback) { ::Ktistec::SafeURI.assert_safe("/feeds") }
+
+      context "and a missing Referer header" do
+        let(env) do
+          make_env("GET", "/filters/17")
+        end
+
+        it "returns the fallback" do
+          expect((back_path(fallback)).to_s).to eq("/feeds")
+        end
+      end
+
+      context "and a valid Referer" do
+        let(referer) { "/back" }
+
+        it "returns the Referer" do
+          expect((back_path(fallback)).to_s).to eq("/back")
+        end
+      end
+    end
   end
 
   describe "home_path" do
@@ -645,6 +667,68 @@ Spectator.describe Utils::Paths do
 
     it "gets the unblock actor path" do
       expect((unblock_actor_path).to_s).to eq("/remote/actors/17/unblock")
+    end
+  end
+
+  describe "actor_feeds_path" do
+    let(env) do
+      make_env("GET", "/actors/abc/feeds").tap do |env|
+        env.params.url["username"] = "abc"
+      end
+    end
+
+    context "given an actor" do
+      let(actor) { double(:path_double) }
+
+      it "gets the actor feeds path" do
+        expect((actor_feeds_path(actor)).to_s).to eq("/actors/xyz/feeds")
+      end
+    end
+
+    it "gets the actor feeds path" do
+      expect((actor_feeds_path).to_s).to eq("/actors/abc/feeds")
+    end
+  end
+
+  describe "new_actor_feed_path" do
+    let(env) do
+      make_env("GET", "/actors/abc/feeds/new").tap do |env|
+        env.params.url["username"] = "abc"
+      end
+    end
+
+    context "given an actor" do
+      let(actor) { double(:path_double) }
+
+      it "gets the new actor feed path" do
+        expect((new_actor_feed_path(actor)).to_s).to eq("/actors/xyz/feeds/new")
+      end
+    end
+
+    it "gets the new actor feed path" do
+      expect((new_actor_feed_path).to_s).to eq("/actors/abc/feeds/new")
+    end
+  end
+
+  describe "edit_actor_feed_path" do
+    let(env) do
+      make_env("GET", "/actors/abc/feeds/17/edit").tap do |env|
+        env.params.url["username"] = "abc"
+        env.params.url["id"] = "17"
+      end
+    end
+
+    context "given an actor and a feed" do
+      let(actor) { double(:path_double) }
+      let(feed) { double(:path_double) }
+
+      it "gets the edit actor feed path" do
+        expect((edit_actor_feed_path(actor, feed)).to_s).to eq("/actors/xyz/feeds/42/edit")
+      end
+    end
+
+    it "gets the edit actor feed path" do
+      expect((edit_actor_feed_path).to_s).to eq("/actors/abc/feeds/17/edit")
     end
   end
 

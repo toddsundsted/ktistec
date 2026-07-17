@@ -1,0 +1,11 @@
+{
+<%= error_block(feed) %>
+<%= field_pair(feed, id) %>
+<%= field_pair(feed, name) %>
+<%= field_pair(feed, description) %>
+"any":<%= criteria[:any].to_json %>,
+"all":<%= criteria[:all].to_json %>,
+"none":<%= criteria[:none].to_json %><% if contents %>,
+"matches":<%= contents.map(&.id).to_a.to_json %><% end %><% if feed.copy_of %>,
+"copy_of":<%= feed.copy_of %><% end %>
+}

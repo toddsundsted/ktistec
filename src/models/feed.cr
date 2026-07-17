@@ -35,6 +35,13 @@ class Feed
   property version : Int32 = 1
 
   @[Persistent]
+  property draft : Bool = false
+
+  @[Persistent]
+  property copy_of : Int64?
+  belongs_to original, class_name: Feed, foreign_key: copy_of, primary_key: id
+
+  @[Persistent]
   property description : String?
 
   # An example of what belongs in (or doesn't belong in) the feed.
@@ -58,11 +65,43 @@ class Feed
   #
   @[Persistent]
   property params : Hash(String, JSON::Any) { {} of String => JSON::Any }
-  validates(params) do
+
+  # Validates the backend's params.
+  #
+  # The messages are complete sentences, so they're keyed to no field.
+  #
+  def validate_model
     if (backend = Backend.find?(self.backend))
-      errors = backend.validate_params(params)
-      errors.join(", ") unless errors.empty?
+      messages = backend.validate_params(params)
+      errors[""] = [messages.join(" ")] unless messages.empty?
     end
+  end
+
+  # Indicates whether the new criteria differ from the persisted criteria.
+  #
+  def criteria_changed? : Bool
+    return false if new_record?
+    # compare against the database row rather than relying on change
+    # tracking, so every mutation path is seen
+    Feed.find(id).params != params
+  end
+
+  # Advances `version` when the criteria change.
+  #
+  def before_update
+    self.version += 1 if criteria_changed?
+  end
+
+  # Publishes a draft feed.
+  #
+  def publish
+    assign(draft: false, copy_of: nil).save
+  end
+
+  # Returns `true` if the feed is published, `false` if it's a draft.
+  #
+  def published?
+    !draft
   end
 
   # The relationship type of the feed's materialized rows.
@@ -73,6 +112,31 @@ class Feed
   #
   def feed_type : String
     "Feed::#{id.not_nil!}"
+  end
+
+  # The size of a feed and the arrival time of its newest post.
+  #
+  record Stats, count : Int64, newest : Time?
+
+  # Returns the size of the feed and the arrival time of its newest post.
+  #
+  # Counts only posts the feed displays using the same objects/actors
+  # filters `#contents` applies.
+  #
+  def stats : Stats
+    query = <<-QUERY
+        SELECT COUNT(*), MAX(f.created_at)
+          FROM relationships AS f INDEXED BY idx_relationships_from_iri_type
+          JOIN objects AS o
+            ON o.iri = f.to_iri
+          JOIN actors AS c
+            ON c.iri = o.attributed_to_iri
+         WHERE f.from_iri = ?
+           AND f.type = ?
+           #{ActivityPub.common_filters(objects: "o", actors: "c")}
+    QUERY
+    count, newest = Ktistec.database.query_one(query, owner_iri, feed_type, as: {Int64, Time?})
+    Stats.new(count, newest)
   end
 
   # Deletes the feed's verdicts and materialized rows.

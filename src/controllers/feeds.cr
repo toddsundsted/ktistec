@@ -85,9 +85,9 @@ class FeedsController
 
     feed = Feed.new(owner: account.actor, backend: "criteria", name: "")
 
-    buckets = form_buckets(env, feed)
+    criteria = form_criteria(env, feed)
 
-    ok "feeds/new", env: env, actor: account.actor, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+    ok "feeds/new", env: env, feed: feed, criteria: criteria, contents: nil
   end
 
   post "/actors/:username/feeds" do |env|
@@ -97,18 +97,20 @@ class FeedsController
 
     cap_request_body env, MAX_REQUEST_BYTES
 
+    params = feed_params(env)
+
     if previewing?(env)
-      feed = Feed.new(**feed_params(env).merge({owner: account.actor, backend: "criteria", draft: true}))
+      feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: true}))
       if feed.valid?
         feed.save
         Feed::Window.new(feed).recompute
         redirect edit_actor_feed_path(account.actor, feed)
       else
-        buckets = form_buckets(env, feed)
-        unprocessable_entity "feeds/new", env: env, actor: account.actor, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+        criteria = form_criteria(env, feed)
+        unprocessable_entity "feeds/new", env: env, feed: feed, criteria: criteria, contents: nil
       end
     else
-      feed = Feed.new(**feed_params(env).merge({owner: account.actor, backend: "criteria", draft: false}))
+      feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: false}))
       if feed.valid?
         feed.save
         Rules::Feeds.register(feed)
@@ -118,8 +120,8 @@ class FeedsController
           redirect actor_feeds_path(account.actor)
         end
       else
-        buckets = form_buckets(env, feed)
-        unprocessable_entity "feeds/new", env: env, actor: account.actor, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+        criteria = form_criteria(env, feed)
+        unprocessable_entity "feeds/new", env: env, feed: feed, criteria: criteria, contents: nil
       end
     end
   end
@@ -145,9 +147,9 @@ class FeedsController
 
     contents = feed.draft ? Feed::Window.new(feed).contents : feed.contents(limit: Feed::Window::MATCH_CAP)
 
-    buckets = form_buckets(env, feed)
+    criteria = form_criteria(env, feed)
 
-    ok "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: contents
+    ok "feeds/edit", env: env, feed: feed, criteria: criteria, contents: contents
   end
 
   post "/actors/:username/feeds/:id" do |env|
@@ -157,13 +159,14 @@ class FeedsController
 
     cap_request_body env, MAX_REQUEST_BYTES
 
+    params = feed_params(env)
+
     if feed.draft
       original = feed.original?
-      feed.assign(**feed_params(env))
 
-      unless feed.valid?
-        buckets = form_buckets(env, feed)
-        unprocessable_entity "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+      unless feed.assign(**params).valid?
+        criteria = form_criteria(env, feed)
+        unprocessable_entity "feeds/edit", env: env, feed: feed, criteria: criteria, contents: nil
       end
 
       if previewing?(env)
@@ -181,26 +184,25 @@ class FeedsController
       end
     else
       if previewing?(env)
-        params = feed_params(env)
         if feed.assign(**params).valid?
           copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id})).save
           Feed::Window.new(copy).recompute
           redirect edit_actor_feed_path(feed.owner, copy)
         else
-          buckets = form_buckets(env, feed)
-          unprocessable_entity "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+          criteria = form_criteria(env, feed)
+          unprocessable_entity "feeds/edit", env: env, feed: feed, criteria: criteria, contents: nil
         end
       else
-        published = Feed.new(**feed_params(env).merge({owner: feed.owner, backend: "criteria", draft: false}))
+        published = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: false}))
         if published.valid?
           published.save
           Rules::Feeds.register(published)
           unregister_and_destroy(feed)
           redirect actor_feeds_path(feed.owner)
         else
-          feed.assign(**feed_params(env))
-          buckets = form_buckets(env, feed)
-          unprocessable_entity "feeds/edit", env: env, actor: feed.owner, feed: feed, any: buckets[:any], all: buckets[:all], none: buckets[:none], contents: nil
+          feed.assign(**params)
+          criteria = form_criteria(env, feed)
+          unprocessable_entity "feeds/edit", env: env, feed: feed, criteria: criteria, contents: nil
         end
       end
     end
@@ -223,12 +225,14 @@ class FeedsController
     feed.destroy
   end
 
-  # Returns the form buckets for a feed.
+  # Returns the criteria, as form text, for a feed.
   #
-  private def self.form_buckets(env, feed)
+  # When validation fails, echoes back the submission verbatim.
+  #
+  private def self.form_criteria(env, feed)
     if feed.errors.presence
       params = normalize_params(env.params.body.presence || env.params.json)
-      bucket_strings(params)
+      criteria_strings(params)
     else
       Feed::Backend::Criteria::Form.format(feed.params)
     end
@@ -244,15 +248,15 @@ class FeedsController
 
   private def self.feed_params(env)
     params = normalize_params(env.params.body.presence || env.params.json)
-    buckets = bucket_strings(params)
+    criteria = criteria_strings(params)
     {
       name:        params["name"]?.as?(String) || "",
       description: params["description"]?.as?(String),
-      params:      Feed::Backend::Criteria::Form.parse(buckets[:any], buckets[:all], buckets[:none]),
+      params:      Feed::Backend::Criteria::Form.parse(criteria[:any], criteria[:all], criteria[:none]),
     }
   end
 
-  private def self.bucket_strings(params)
+  private def self.criteria_strings(params)
     {
       any:  params["any"]?.as?(String) || "",
       all:  params["all"]?.as?(String) || "",

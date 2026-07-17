@@ -402,6 +402,9 @@ Spectator.describe FeedsController do
     end
   end
 
+  # the state transition diagram in feeds.cr documents the behavior of
+  # this endpoint
+
   describe "POST /actors/:username/feeds" do
     it "returns 401 if not authorized" do
       post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc"
@@ -450,12 +453,12 @@ Spectator.describe FeedsController do
         Feed.find(name: "Robotics")
       end
 
-      it "translates the buckets into params" do
+      it "translates the criteria into params" do
         post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc%0A3d+print&none=%40bob%40host"
         expect(robotics_feed.params).to eq(JSON.parse(%({"keywords":{"any":["3d print"]},"hashtags":{"any":["cnc"]},"mentions":{"none":["bob@host"]}})).as_h)
       end
 
-      it "translates the buckets into params" do
+      it "translates the criteria into params" do
         post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc\\n3d print","none":"@bob@host"})
         expect(robotics_feed.params).to eq(JSON.parse(%({"keywords":{"any":["3d print"]},"hashtags":{"any":["cnc"]},"mentions":{"none":["bob@host"]}})).as_h)
       end
@@ -775,6 +778,9 @@ Spectator.describe FeedsController do
     end
   end
 
+  # the state transition diagram in feeds.cr documents the behavior of
+  # this endpoint
+
   describe "POST /actors/:username/feeds/:id" do
     let_create!(:feed, owner: actor, name: "Robotics", params: JSON.parse(%({"hashtags":{"any":["cnc"]}})).as_h)
 
@@ -850,12 +856,12 @@ Spectator.describe FeedsController do
             .not_to change { Feed.count }
         end
 
-        it "translates the buckets into params" do
+        it "translates the criteria into params" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
           expect(robotics_feed.params).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
         end
 
-        it "translates the buckets into params" do
+        it "translates the criteria into params" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
           expect(robotics_feed.params).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
         end

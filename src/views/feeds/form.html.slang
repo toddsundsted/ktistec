@@ -1,11 +1,12 @@
 crystal:
+  owner = feed.owner
   if feed.new_record?
-    action = actor_feeds_path(actor)
-    cancel_path = actor_feeds_path(actor)
+    action = actor_feeds_path(owner)
+    cancel_path = actor_feeds_path(owner)
     cancel_label = "Cancel"
   else
-    action = actor_feed_path(actor, feed)
-    cancel_path = back_path(actor_feeds_path(actor))
+    action = actor_feed_path(owner, feed)
+    cancel_path = back_path(actor_feeds_path(owner))
     cancel_label = "Back"
   end
   submit_label = (feed.new_record? || feed.draft) ? "Create Feed" : "Update Feed"
@@ -21,19 +22,19 @@ crystal:
     .ui.segment.feed-bucket.any
       .ui.small.header
         | Any of these
-      textarea name="any" rows="3" = any
+      textarea name="any" rows="3" = criteria[:any]
     .ui.horizontal.divider and
     .ui.segment.feed-bucket.all
       .ui.small.header
         | All of these
         span.ui.mini.basic.label< optional
-      textarea name="all" rows="2" = all
+      textarea name="all" rows="2" = criteria[:all]
     .ui.horizontal.divider.stop but
     .ui.segment.feed-bucket.none
       .ui.small.header
         | None of these
         span.ui.mini.basic.label< optional
-      textarea name="none" rows="2" = none
+      textarea name="none" rows="2" = criteria[:none]
   .ui.buttons
     button.ui.primary.button type="submit" = submit_label
     button.ui.button type="submit" name="preview" value="1" Preview Feed

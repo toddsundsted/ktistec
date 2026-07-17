@@ -28,5 +28,5 @@ h1 = heading
     .ui.red.ok.inverted.button
       i.trash.icon
       | Delete Feed
-= form_button(actor_feed_path(actor, feed), method: "DELETE", button_class: "ui dangerous button", button_data: {"modal" => "delete-feed", "controller" => "modal-action", "action" => "click->modal-action#show"}) do
+= form_button(actor_feed_path(feed.owner, feed), method: "DELETE", button_class: "ui dangerous button", button_data: {"modal" => "delete-feed", "controller" => "modal-action", "action" => "click->modal-action#show"}) do
   | Delete Feed

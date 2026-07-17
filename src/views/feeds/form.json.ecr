@@ -3,9 +3,9 @@
 <%= field_pair(feed, id) %>
 <%= field_pair(feed, name) %>
 <%= field_pair(feed, description) %>
-"any":<%= any.to_json %>,
-"all":<%= all.to_json %>,
-"none":<%= none.to_json %><% if contents %>,
+"any":<%= criteria[:any].to_json %>,
+"all":<%= criteria[:all].to_json %>,
+"none":<%= criteria[:none].to_json %><% if contents %>,
 "matches":<%= contents.map(&.id).to_a.to_json %><% end %><% if feed.copy_of %>,
 "copy_of":<%= feed.copy_of %><% end %>
 }

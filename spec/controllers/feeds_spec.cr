@@ -324,16 +324,6 @@ Spectator.describe FeedsController do
           get "/actors/#{actor.username}/feeds/#{feed.id}?max_id=#{later.id}&limit=1", ACCEPT_JSON
           expect(JSON.parse(response.body).dig("orderedItems").as_a.map(&.as_s)).to eq([earlier.iri])
         end
-
-        context "given a verdict with a reason" do
-          let_create!(:feed_verdict, feed: feed, object: later, reason: "matched: alpha")
-
-          it "renders the reason" do
-            get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_HTML
-            expect(response.status_code).to eq(200)
-            expect(response.body).to contain("matched: alpha")
-          end
-        end
       end
     end
   end

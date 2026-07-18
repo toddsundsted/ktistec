@@ -181,6 +181,68 @@ Spectator.describe FeedsController do
           end
         end
       end
+
+      context "given two feeds" do
+        let_create!(:feed, named: first_feed, owner: actor, name: "First")
+        let_create!(:feed, named: second_feed, owner: actor, name: "Second")
+
+        let_create(:object, named: first_object)
+        let_create(:object, named: second_object)
+
+        macro names
+          JSON.parse(response.body)["feeds"].as_a.map { |f| f["name"].as_s }
+        end
+
+        it "sorts the more recently created feed first" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(names).to eq(["Second", "First"])
+        end
+
+        context "and the first feed has posts" do
+          before_each { put_in_feed(first_feed, first_object, at: 2.hours.ago) }
+
+          it "sorts the empty feed last" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+            expect(names).to eq(["First", "Second"])
+          end
+        end
+
+        context "and both feeds have posts" do
+          before_each { put_in_feed(second_feed, second_object, at: 2.hours.ago) }
+
+          context "and the first feed's post is newer" do
+            before_each { put_in_feed(first_feed, first_object, at: 1.hour.ago) }
+
+            it "sorts the first feed first" do
+              get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+              expect(names).to eq(["First", "Second"])
+            end
+          end
+
+          context "and the first feed's post is older" do
+            before_each { put_in_feed(first_feed, first_object, at: 3.hours.ago) }
+
+            it "sorts the first feed last" do
+              get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+              expect(names).to eq(["Second", "First"])
+            end
+          end
+        end
+
+        context "and both have posts that arrived at the same instant" do
+          let(at) { 2.hours.ago }
+
+          before_each do
+            put_in_feed(first_feed, first_object, at: at)
+            put_in_feed(second_feed, second_object, at: at)
+          end
+
+          it "sorts the more recently created feed first" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+            expect(names).to eq(["Second", "First"])
+          end
+        end
+      end
     end
   end
 

@@ -73,7 +73,7 @@ class FeedsController
 
     entries = feeds.map do |feed|
       {feed, Feed::Backend::Criteria::Form.summarize(feed.params), feed.stats}
-    end
+    end.sort_by! { |feed, _, stats| {stats.newest || Time::UNIX_EPOCH, feed.created_at} }.reverse!
 
     ok "feeds/index", env: env, actor: account.actor, entries: entries
   end

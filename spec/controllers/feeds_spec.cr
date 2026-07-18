@@ -1128,27 +1128,31 @@ Spectator.describe FeedsController do
             expect(JSON.parse(response.body)["matches"].as_a.map(&.as_i64)).to contain(hit.id)
           end
 
-          context "when the criteria are unchanged" do
-            it "does not bump the version" do
-              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form }
-                .not_to change { Feed.find(feed.id).version }.from(1)
+          context "given a previewed window" do
+            before_each { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form }
+
+            context "when the criteria are unchanged" do
+              it "does not recompute the window" do
+                expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form }
+                  .not_to change { Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri).try(&.id) }
+              end
+
+              it "does not recompute the window" do
+                expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json }
+                  .not_to change { Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri).try(&.id) }
+              end
             end
 
-            it "does not bump the version" do
-              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json }
-                .not_to change { Feed.find(feed.id).version }.from(1)
-            end
-          end
+            context "when the criteria change" do
+              it "recomputes the window under the new criteria" do
+                expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23resin&preview=1" }
+                  .to change { Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri).try(&.included) }.from(true).to(false)
+              end
 
-          context "when the criteria change" do
-            it "bumps the version" do
-              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23resin&preview=1" }
-                .to change { Feed.find(feed.id).version }.from(1).to(2)
-            end
-
-            it "bumps the version" do
-              expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#resin","preview":"1"}) }
-                .to change { Feed.find(feed.id).version }.from(1).to(2)
+              it "recomputes the window under the new criteria" do
+                expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#resin","preview":"1"}) }
+                  .to change { Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri).try(&.included) }.from(true).to(false)
+              end
             end
           end
         end
@@ -1226,7 +1230,7 @@ Spectator.describe FeedsController do
 
           context "given a previewed window" do
             let_create(:object, named: hit)
-            let_create!(:feed_verdict, feed: feed, object: hit, included: true, version: 1)
+            let_create!(:feed_verdict, feed: feed, object: hit, included: true)
 
             before_each { put_in_feed(feed, hit) }
 
@@ -1263,14 +1267,14 @@ Spectator.describe FeedsController do
                 %({"name":"Robotics","any":"#resin"})
               end
 
-              it "bumps the version" do
+              it "deletes the previewed verdicts" do
                 expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_changed_form }
-                  .to change { Feed.find(feed.id).version }.from(1).to(2)
+                  .to change { Feed::Verdict.count(feed_id: feed.id) }.from(1).to(0)
               end
 
-              it "bumps the version" do
+              it "deletes the previewed verdicts" do
                 expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_changed_json }
-                  .to change { Feed.find(feed.id).version }.from(1).to(2)
+                  .to change { Feed::Verdict.count(feed_id: feed.id) }.from(1).to(0)
               end
 
               it "drops the stale match" do

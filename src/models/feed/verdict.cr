@@ -27,14 +27,6 @@ class Feed
     @[Persistent]
     property reason : String?
 
-    # The feed config version the verdict was judged under.
-    #
-    # The view treats verdicts whose version is not the feed's current
-    # version as stale and excludes them.
-    #
-    @[Persistent]
-    property version : Int32 = 1
-
     # The time the object arrived -- the `created_at` of the earliest
     # mailbox row that delivered it to the feed's owner.
     #

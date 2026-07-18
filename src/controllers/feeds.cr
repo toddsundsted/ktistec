@@ -175,7 +175,6 @@ class FeedsController
         redirect edit_actor_feed_path(feed.owner, feed)
       else
         feed.publish
-        Feed::Window.new(feed).adopt
         Rules::Feeds.register(feed)
         if original && original.owner == feed.owner
           unregister_and_destroy(original)

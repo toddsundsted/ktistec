@@ -33,23 +33,14 @@ Spectator.describe Feed::Verdict do
     end
   end
 
-  describe "#version" do
-    let_build(:feed_verdict)
-
-    it "defaults to 1" do
-      expect(feed_verdict.version).to eq(1)
-    end
-  end
-
   describe "persistence" do
     let(position) { Time.utc(2016, 2, 15, 10, 20, 0) }
-    let_create(:feed_verdict, included: false, reason: "no keywords matched", version: 2, position: position)
+    let_create(:feed_verdict, included: false, reason: "no keywords matched", position: position)
 
     it "round-trips through the database" do
       verdict = Feed::Verdict.find(feed_verdict.id)
       expect(verdict.included).to be_false
       expect(verdict.reason).to eq("no keywords matched")
-      expect(verdict.version).to eq(2)
       expect(verdict.position).to eq(position)
     end
   end

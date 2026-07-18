@@ -32,9 +32,6 @@ class Feed
   validates(backend) { "is not a registered backend: #{backend}" unless Backend.find?(backend) }
 
   @[Persistent]
-  property version : Int32 = 1
-
-  @[Persistent]
   property draft : Bool = false
 
   @[Persistent]
@@ -86,10 +83,16 @@ class Feed
     Feed.find(id).params != params
   end
 
-  # Advances `version` when the criteria change.
+  # Invalidates the feed's verdicts when the criteria change.
   #
   def before_update
-    self.version += 1 if criteria_changed?
+    delete_verdicts_and_materialized_rows if criteria_changed?
+  end
+
+  # Invalidates the feed's verdicts when the feed is destroyed.
+  #
+  def before_destroy
+    delete_verdicts_and_materialized_rows
   end
 
   # Publishes a draft feed.
@@ -144,7 +147,7 @@ class Feed
   # The materialized rows carry the synthetic feed `type` and must
   # never pass through `Relationship`'s polymorphic loader.
   #
-  def before_destroy
+  private def delete_verdicts_and_materialized_rows
     Ktistec.database.exec("DELETE FROM feed_verdicts WHERE feed_id = ?", id)
     Ktistec.database.exec("DELETE FROM relationships WHERE from_iri = ? AND type = ?", owner_iri, feed_type)
   end

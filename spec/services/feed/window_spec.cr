@@ -89,27 +89,4 @@ Spectator.describe Feed::Window do
       end
     end
   end
-
-  describe "#adopt" do
-    let_build(:object, named: hit)
-    let_create!(:feed_verdict, feed: feed, object: hit, included: true, version: 1)
-
-    before_each { put_in_feed(feed, hit) }
-
-    pre_condition { expect(materialized).to eq([hit.iri]) }
-
-    it "keeps a current-version match" do
-      subject.adopt
-      expect(materialized).to eq([hit.iri])
-    end
-
-    context "when the version is bumped" do
-      before_each { feed.assign(version: 2).save }
-
-      it "drops the stale row" do
-        subject.adopt
-        expect(materialized).to be_empty
-      end
-    end
-  end
 end

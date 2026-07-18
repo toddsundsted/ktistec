@@ -44,17 +44,16 @@ Spectator.describe Feed::Candidates do
         end
       end
 
-      context "when the object has a current-version verdict" do
+      context "when the object has a verdict" do
         let_create!(:feed_verdict, feed: feed, object: object, included: false)
 
-        pre_condition { expect(Feed::Verdict.count(feed_id: feed.id)).to eq(1) }
-
         it "does not return the object" do
+          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(1)
           expect(candidates).to be_empty
         end
 
-        context "and the feed's version is bumped" do
-          before_each { feed.assign(version: 2).save }
+        context "and the criteria change" do
+          before_each { feed.assign(params: JSON.parse(%({"keywords": {"any": ["changed"]}})).as_h).save }
 
           it "returns the object" do
             expect(candidates.map(&.first)).to eq([object])

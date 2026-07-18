@@ -44,7 +44,6 @@ Spectator.describe Feed::Judging do
         verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri)
         expect(verdict.included).to be_true
         expect(verdict.reason).to match(/alpha/)
-        expect(verdict.version).to eq(feed.version)
         expect(verdict.position).to eq(hit_arrival)
       end
 
@@ -99,16 +98,18 @@ Spectator.describe Feed::Judging do
           feed.assign(params: JSON.parse(%({"keywords": {"any": ["gamma"]}})).as_h).save
         end
 
-        pre_condition { expect(feed.version).to eq(2) }
+        pre_condition do
+          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(0)
+          expect(materialized).to be_empty
+        end
 
         it "re-judges all candidates" do
           expect(Feed::Judging.judge(feed)).to eq(2)
         end
 
-        it "overwrites verdicts rather than accumulating them" do
+        it "writes fresh verdicts" do
           Feed::Judging.judge(feed)
           expect(Feed::Verdict.count(feed_id: feed.id)).to eq(2)
-          expect(Feed::Verdict.count(feed_id: feed.id, version: 2)).to eq(2)
         end
 
         it "repopulates the feed under the new policy" do
@@ -116,7 +117,7 @@ Spectator.describe Feed::Judging do
           expect(materialized).to eq([{miss.iri, miss_arrival}])
         end
 
-        it "drops rows a re-judge never re-reaches" do
+        it "leaves no stale rows after a bounded re-judge" do
           Feed::Judging.judge(feed, match_limit: 1)
           expect(materialized).to eq([{miss.iri, miss_arrival}])
         end
@@ -174,7 +175,6 @@ Spectator.describe Feed::Judging do
         Feed::Judging.judge_arrival(hit)
         verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri)
         expect(verdict.included).to be_true
-        expect(verdict.version).to eq(feed.version)
         expect(verdict.position).to eq(arrival)
       end
 

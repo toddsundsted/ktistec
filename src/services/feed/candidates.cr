@@ -37,7 +37,6 @@ class Feed
                FROM feed_verdicts v
               WHERE v.feed_id = ?
                 AND v.object_iri = o.iri
-                AND v.version = ?
            )
          GROUP BY o.iri
          ORDER BY arrival DESC
@@ -50,7 +49,6 @@ class Feed
         ActivityPub::Activity::Create.to_s,
         ActivityPub::Activity::Announce.to_s,
         feed.id,
-        feed.version,
         limit || -1, # in SQLite, a negative limit means no limit
         as: {String, Time})
       rows.map { |(iri, arrival)| {ActivityPub::Object.find(iri: iri), arrival} }

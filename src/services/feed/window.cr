@@ -1,14 +1,12 @@
 require "../../models/feed"
-require "../../rules/feeds"
-require "../../rules/maintainer"
 require "./judging"
 
 class Feed
   # The preview window.
   #
-  # A window is the bounded set of a feed's current-version verdicts
-  # produced by previewing a draft. Once a version has verdicts they
-  # are never recomputed.
+  # A window is the bounded set of a feed's verdicts produced by
+  # previewing a draft. Once a draft's criteria have verdicts they are
+  # never recomputed.
   #
   struct Window
     SCAN_CAP  = 100
@@ -19,26 +17,17 @@ class Feed
 
     # Materializes the window.
     #
-    # It is a no-op if the current version already has verdicts.
+    # It is a no-op if the feed already has verdicts.
     #
     def recompute : Int32
       return 0 if computed?
       Feed::Judging.judge(@feed, limit: SCAN_CAP, match_limit: MATCH_CAP)
     end
 
-    # Whether the current version has been judged, or not.
+    # Whether the feed's criteria have been judged, or not.
     #
     private def computed?
-      Verdict.count(feed_id: @feed.id, version: @feed.version) > 0
-    end
-
-    # Commits the window as it stands, without re-judging.
-    #
-    # Reconciles the feed's view against its current-version
-    # verdicts.
-    #
-    def adopt : Nil
-      Rules::Maintainer.reconcile(Rules::Feeds.view_for(@feed))
+      Verdict.count(feed_id: @feed.id) > 0
     end
 
     # The window's contents.

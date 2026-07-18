@@ -13,6 +13,13 @@ class Feed
   # backend, write verdicts, and after each write explicitly reconcile
   # the feed's view for that object.
   #
+  # Invariant: a judge pass must not yield to another fiber between
+  # candidate selection and its last verdict write. A criteria edit
+  # deletes the feed's verdicts (see `Feed#before_update`); a verdict
+  # written after that delete from a stale in-flight pass would
+  # survive as apparently current, and candidates with verdicts are
+  # never re-judged.
+  #
   module Judging
     extend self
 
@@ -32,6 +39,7 @@ class Feed
       unless (backend = Backend.find?(feed.backend))
         raise "is not a registered backend: #{feed.backend}"
       end
+      view = Rules::Feeds.view_for(feed)
       candidates = Candidates.candidates_for(feed, limit: limit)
       matches = 0
       scanned = 0
@@ -39,13 +47,10 @@ class Feed
         break if match_limit && matches >= match_limit
         judgment = backend.judge(feed, [object]).first
         write_verdict(feed, object, arrival, judgment)
+        Rules::Maintainer.reconcile_object_for(view, object.iri)
         matches += 1 if judgment.included
         scanned += 1
       end
-      # rebuild the whole view, not just the scanned objects: a version
-      # bump makes every prior-criteria row non-current, and a bounded
-      # scan may not re-reach them to drop them incrementally.
-      Rules::Maintainer.reconcile(Rules::Feeds.view_for(feed))
       scanned
     end
 
@@ -72,7 +77,6 @@ class Feed
       verdict.assign(
         included: judgment.included,
         reason: judgment.reason,
-        version: feed.version,
         position: arrival,
       ).save
     end

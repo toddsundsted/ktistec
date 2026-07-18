@@ -25,10 +25,10 @@ module Rules
       def membership(key : Key? = nil) : {String, Array(DB::Any)}
         if key
           scope = "AND v.object_iri = ?"
-          args = Array(DB::Any){@owner_iri, @feed_id, @feed_id, key[:to_iri]}
+          args = Array(DB::Any){@owner_iri, @feed_id, key[:to_iri]}
         else
           scope = ""
-          args = Array(DB::Any){@owner_iri, @feed_id, @feed_id}
+          args = Array(DB::Any){@owner_iri, @feed_id}
         end
         sql = <<-SQL
           SELECT ? AS from_iri,
@@ -38,7 +38,6 @@ module Rules
             JOIN objects o ON o.iri = v.object_iri
            WHERE v.feed_id = ?
              AND v.included = 1
-             AND v.version = (SELECT version FROM feeds WHERE id = ?)
              AND o.deleted_at IS NULL
              #{scope}
         SQL

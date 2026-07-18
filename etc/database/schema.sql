@@ -90,6 +90,8 @@ INSERT INTO migrations VALUES(20260618140820,'drop-relationships-type-index');
 INSERT INTO migrations VALUES(20260626151347,'add-verified-handle-to-actors');
 INSERT INTO migrations VALUES(20260701041921,'recreate-actors-username-index-nocase');
 INSERT INTO migrations VALUES(20260702111403,'create-feeds-and-feed-verdicts');
+INSERT INTO migrations VALUES(20260712135009,'add-draft-and-copy-of-to-feeds');
+INSERT INTO migrations VALUES(20260718052326,'remove-version-from-feeds-and-feed-verdicts');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -322,10 +324,11 @@ CREATE TABLE feeds (
     "owner_iri" varchar(255) NOT NULL COLLATE NOCASE,
     "name" varchar(255) NOT NULL,
     "backend" varchar(63) NOT NULL,
-    "version" integer NOT NULL DEFAULT 1,
     "description" text,
     "examples" text,
-    "params" text
+    "params" text,
+    "draft" boolean NOT NULL DEFAULT 0,
+    "copy_of" integer
   );
 CREATE TABLE feed_verdicts (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -335,7 +338,6 @@ CREATE TABLE feed_verdicts (
     "object_iri" varchar(255) NOT NULL COLLATE NOCASE,
     "included" boolean NOT NULL,
     "reason" text,
-    "version" integer NOT NULL,
     "position" datetime NOT NULL
   );
 CREATE INDEX idx_accounts_iri

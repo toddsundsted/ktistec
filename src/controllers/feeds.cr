@@ -73,7 +73,7 @@ class FeedsController
 
     entries = feeds.map do |feed|
       {feed, Feed::Backend::Criteria::Form.summarize(feed.params), feed.stats}
-    end
+    end.sort_by! { |feed, _, stats| {stats.newest || Time::UNIX_EPOCH, feed.created_at} }.reverse!
 
     ok "feeds/index", env: env, actor: account.actor, entries: entries
   end
@@ -175,7 +175,6 @@ class FeedsController
         redirect edit_actor_feed_path(feed.owner, feed)
       else
         feed.publish
-        Feed::Window.new(feed).adopt
         Rules::Feeds.register(feed)
         if original && original.owner == feed.owner
           unregister_and_destroy(original)

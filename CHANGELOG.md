@@ -1,6 +1,25 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.9.0]
+### Added
+- User-defined algorithmic feeds.
+- Allow editing optional properties on published posts.
+- Support undoing a dislike.
+
+### Fixed
+- Handle concurrent duplicate inbox delivery.
+- Don't apply custom themes on the drafts and posts pages.
+- Adapt duration units in thread analysis.
+- Restore the spinning loader.
+
+### Changed
+- Restrict theme overrides to color and reduce reliance on `!important`.
+- Render the homepage description in a basic segment.
+
+### Removed
+- The `deliver_to` state and the recipients fallback.
+
 ## [v3.8.0]
 ### Added
 - Display activity status on actor cards.
@@ -876,6 +895,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.9.0]: https://github.com/toddsundsted/ktistec/compare/1a47aa6e...56ecc835
 [v3.8.0]: https://github.com/toddsundsted/ktistec/compare/aec6139a...c3605dc6
 [v3.7.0]: https://github.com/toddsundsted/ktistec/compare/731dd8cd...97b2168a
 [v3.6.0]: https://github.com/toddsundsted/ktistec/compare/63adac41...066f0237

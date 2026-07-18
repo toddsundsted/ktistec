@@ -68,24 +68,6 @@ Spectator.describe Rules::View::Feed do
       end
     end
 
-    context "when the verdict is stale" do
-      before_each { feed.assign(version: 2).save }
-
-      pre_condition { expect(Feed::Verdict.count(feed_id: feed.id)).to eq(1) }
-
-      it "does not select the object" do
-        expect(selected_iris).not_to contain(object.iri)
-      end
-
-      context "and the object is re-judged under the current version" do
-        before_each { feed_verdict.assign(version: 2).save }
-
-        it "selects the object" do
-          expect(selected_iris).to contain(object.iri)
-        end
-      end
-    end
-
     context "when the object is deleted" do
       before_each { object.delete! }
 
@@ -121,7 +103,7 @@ Spectator.describe Rules::View::Feed do
       # intentional implementation test
       it "binds the key as parameters, never interpolating them" do
         _, args = subject.membership({from_iri: actor.iri, to_iri: object.iri})
-        expect(args).to eq([actor.iri, feed.id, feed.id, object.iri])
+        expect(args).to eq([actor.iri, feed.id, object.iri])
       end
     end
   end

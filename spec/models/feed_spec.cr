@@ -18,6 +18,10 @@ end
 Spectator.describe Feed do
   setup_spec
 
+  def materialized_count(owner_iri, type)
+    Ktistec.database.scalar("SELECT count(*) FROM relationships WHERE from_iri = ? AND type = ?", owner_iri, type).as(Int64)
+  end
+
   it "instantiates the class" do
     expect(described_class.new(name: "name", backend: "criteria")).to be_a(Feed)
   end
@@ -75,14 +79,6 @@ Spectator.describe Feed do
     end
   end
 
-  describe "#version" do
-    let_build(:feed)
-
-    it "defaults to 1" do
-      expect(feed.version).to eq(1)
-    end
-  end
-
   describe "#criteria_changed?" do
     let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
 
@@ -116,43 +112,53 @@ Spectator.describe Feed do
   end
 
   describe "#save" do
-    let_create(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    let_build(:object)
+    let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    let_create!(:feed_verdict, feed: feed, object: object)
 
-    it "does not bump the version" do
-      expect { feed.save }.not_to change { feed.version }
+    before_each { put_in_feed(feed, object) }
+
+    it "does not delete the verdicts" do
+      expect { feed.save }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
+    end
+
+    it "does not delete the materialized rows" do
+      expect { feed.save }.not_to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1)
     end
 
     context "when the criteria are replaced" do
       before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
 
-      it "bumps the version" do
-        expect { feed.save }.to change { feed.version }.from(1).to(2)
+      it "deletes the verdicts" do
+        expect { feed.save }.to change { Feed::Verdict.count(feed_id: feed.id) }.from(1).to(0)
       end
 
-      it "persists the bump" do
-        feed.save
-        expect(Feed.find(feed.id).version).to eq(2)
+      it "deletes the materialized rows" do
+        expect { feed.save }.to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1).to(0)
       end
     end
 
     context "when the criteria are mutated in place" do
       before_each { feed.params["keywords"] = JSON.parse(%({"any": ["beta"]})) }
 
-      it "bumps the version" do
-        expect { feed.save }.to change { feed.version }.from(1).to(2)
+      it "deletes the verdicts" do
+        expect { feed.save }.to change { Feed::Verdict.count(feed_id: feed.id) }.from(1).to(0)
       end
 
-      it "persists the bump" do
-        feed.save
-        expect(Feed.find(feed.id).version).to eq(2)
+      it "deletes the materialized rows" do
+        expect { feed.save }.to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1).to(0)
       end
     end
 
     context "when the name changes" do
       before_each { feed.assign(name: "Renamed") }
 
-      it "does not bump the version" do
-        expect { feed.save }.not_to change { feed.version }
+      it "does not delete the verdicts" do
+        expect { feed.save }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
+      end
+
+      it "does not delete the materialized rows" do
+        expect { feed.save }.not_to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1)
       end
     end
   end
@@ -271,10 +277,6 @@ Spectator.describe Feed do
   end
 
   describe "#destroy" do
-    def materialized_count(owner_iri, type)
-      Ktistec.database.scalar("SELECT count(*) FROM relationships WHERE from_iri = ? AND type = ?", owner_iri, type).as(Int64)
-    end
-
     let_create(:feed)
     let_build(:object)
     let_create!(:feed_verdict, feed: feed, object: object)

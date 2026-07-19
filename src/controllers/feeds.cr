@@ -71,9 +71,12 @@ class FeedsController
 
     feeds = Feed.where("owner_iri = ? AND draft = 0 ORDER BY created_at DESC", account.actor.iri)
 
+    # feeds with no posts sort first: an empty feed is most likely one
+    # just published with criteria still being tuned, and it is the
+    # thing the owner needs to find again.
     entries = feeds.map do |feed|
       {feed, Feed::Backend::Criteria::Form.summarize(feed.params), feed.stats}
-    end.sort_by! { |feed, _, stats| {stats.newest || Time::UNIX_EPOCH, feed.created_at} }.reverse!
+    end.sort_by! { |feed, _, stats| {stats.newest ? 0 : 1, stats.newest || Time::UNIX_EPOCH, feed.created_at} }.reverse!
 
     ok "feeds/index", env: env, actor: account.actor, entries: entries
   end

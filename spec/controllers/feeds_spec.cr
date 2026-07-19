@@ -201,9 +201,25 @@ Spectator.describe FeedsController do
         context "and the first feed has posts" do
           before_each { put_in_feed(first_feed, first_object, at: 2.hours.ago) }
 
-          it "sorts the empty feed last" do
+          it "sorts the empty feed first" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+            expect(names).to eq(["Second", "First"])
+          end
+        end
+
+        context "and the second feed has posts" do
+          before_each { put_in_feed(second_feed, second_object, at: 2.hours.ago) }
+
+          it "sorts the empty feed first" do
             get "/actors/#{actor.username}/feeds", ACCEPT_JSON
             expect(names).to eq(["First", "Second"])
+          end
+        end
+
+        context "and neither feed has posts" do
+          it "sorts the more recently created feed first" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+            expect(names).to eq(["Second", "First"])
           end
         end
 

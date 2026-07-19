@@ -167,6 +167,17 @@ Spectator.describe FeedsController do
           end
         end
 
+        it "renders the feed as published" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+          expect(response.body).to contain(mixed.name)
+          expect(response.body).not_to contain("Draft")
+        end
+
+        it "renders the feed as published" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(entry["draft"].as_bool).to be_false
+        end
+
         context "that is draft" do
           before_each { mixed.assign(draft: true).save }
 
@@ -178,6 +189,56 @@ Spectator.describe FeedsController do
           it "renders the empty collection" do
             get "/actors/#{actor.username}/feeds", ACCEPT_JSON
             expect(JSON.parse(response.body)["feeds"].as_a).to be_empty
+          end
+
+          context "and drafts are included" do
+            it "renders the feed as a draft" do
+              get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+              expect(response.body).to contain("Draft")
+            end
+
+            it "renders the feed as a draft" do
+              get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_JSON
+              expect(entry["draft"].as_bool).to be_true
+            end
+
+            it "renders nothing in preview" do
+              get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+              expect(response.body).to contain("nothing in preview")
+            end
+
+            context "and the draft has matches" do
+              let_create(:object)
+
+              before_each { put_in_feed(mixed, object) }
+
+              it "renders the preview size" do
+                get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+                expect(response.body).to contain("1 post in preview")
+              end
+            end
+
+            context "and the draft replaces a published feed" do
+              let_create!(:feed, named: replaced, owner: actor, name: "Replaced")
+
+              before_each { mixed.assign(copy_of: replaced.id).save }
+
+              it "lists the published feed alongside the draft" do
+                get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+                expect(response.body).to contain("Replaced", "Robotics")
+              end
+
+              it "lists the published feed alongside the draft" do
+                get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_JSON
+                feeds = JSON.parse(response.body)["feeds"].as_a.map(&.["name"].as_s)
+                expect(feeds).to contain_exactly("Replaced", "Robotics")
+              end
+
+              it "names the feed it replaces" do
+                get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+                expect(response.body).to contain("Draft of Replaced")
+              end
+            end
           end
         end
       end

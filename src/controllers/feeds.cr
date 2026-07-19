@@ -69,7 +69,12 @@ class FeedsController
       not_found
     end
 
-    feeds = Feed.where("owner_iri = ? AND draft = 0 ORDER BY created_at DESC", account.actor.iri)
+    feeds =
+      if env.params.query["include"]? == "drafts"
+        Feed.where("owner_iri = ? ORDER BY created_at DESC", account.actor.iri)
+      else
+        Feed.where("owner_iri = ? AND draft = 0 ORDER BY created_at DESC", account.actor.iri)
+      end
 
     # feeds with no posts sort first: an empty feed is most likely one
     # just published with criteria still being tuned, and it is the

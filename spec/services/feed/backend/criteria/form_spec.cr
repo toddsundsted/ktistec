@@ -117,19 +117,19 @@ Spectator.describe Feed::Backend::Criteria::Form do
       expect(summary.count).to eq(4)
     end
 
-    it "projects typed chips" do
+    it "projects typed terms" do
       summary = described_class.summarize(params(%({"keywords":{"any":["llm"]},"hashtags":{"any":["ai"]},"mentions":{"none":["bob@host"]}})))
-      expect(summary.any).to eq([Feed::Backend::Criteria::Form::Chip.new("keyword", "llm"), Feed::Backend::Criteria::Form::Chip.new("hashtag", "ai")])
+      expect(summary.any).to eq([Feed::Backend::Criteria::Form::Term.new("keyword", "llm"), Feed::Backend::Criteria::Form::Term.new("hashtag", "ai")])
     end
 
-    it "projects none-selector chips" do
+    it "projects none-selector terms" do
       summary = described_class.summarize(params(%({"mentions":{"none":["bob@host"]}})))
-      expect(summary.none).to eq([Feed::Backend::Criteria::Form::Chip.new("mention", "bob@host")])
+      expect(summary.none).to eq([Feed::Backend::Criteria::Form::Term.new("mention", "bob@host")])
     end
   end
 end
 
-Spectator.describe Feed::Backend::Criteria::Form::Chip do
+Spectator.describe Feed::Backend::Criteria::Form::Term do
   describe "#label" do
     it "leaves a keyword bare" do
       expect(described_class.new("keyword", "llm").label).to eq("llm")

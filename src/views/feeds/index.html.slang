@@ -18,12 +18,12 @@
       .content
         a.header href=actor_feed_path(actor, feed) = feed.name
         .description.feed-summary
-          - [{"any", summary.any}, {"all", summary.all}, {"none", summary.none}].each do |selector, chips|
-            - if chips.any?
+          - [{"any", summary.any}, {"all", summary.all}, {"none", summary.none}].each do |selector, terms|
+            - if terms.any?
               span.ui.sub.header = selector
               span.ui.labels
-                - chips.each do |chip|
-                  span.ui.label class=chip.type = chip.label
+                - terms.each do |term|
+                  span.ui.label class=term.type = term.label
       .extra.content
         crystal:
           _meta = [pluralize(summary.count, "term"), stats.count > 0 ? pluralize(stats.count, "post") : "no posts"]

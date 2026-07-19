@@ -112,23 +112,23 @@ Spectator.describe FeedsController do
           expect(entry["href"].as_s).to eq("/actors/#{actor.username}/feeds/#{mixed.id}")
         end
 
-        macro chips(kind)
-          entry["summary"][{{kind}}].as_a.map { |chip| {chip["type"].as_s, chip["label"].as_s} }
+        macro terms(kind)
+          entry["summary"][{{kind}}].as_a.map { |term| {term["type"].as_s, term["label"].as_s} }
         end
 
-        it "renders the chips" do
+        it "renders the terms" do
           get "/actors/#{actor.username}/feeds", ACCEPT_HTML
           expect(response.body).to contain("#cnc", "@bob@host")
         end
 
-        it "renders the any-selector chips" do
+        it "renders the any-selector terms" do
           get "/actors/#{actor.username}/feeds", ACCEPT_JSON
-          expect(chips("any")).to eq([{"hashtag", "#cnc"}])
+          expect(terms("any")).to eq([{"hashtag", "#cnc"}])
         end
 
-        it "renders the none-selector chips" do
+        it "renders the none-selector terms" do
           get "/actors/#{actor.username}/feeds", ACCEPT_JSON
-          expect(chips("none")).to eq([{"mention", "@bob@host"}])
+          expect(terms("none")).to eq([{"mention", "@bob@host"}])
         end
 
         it "renders the term count" do

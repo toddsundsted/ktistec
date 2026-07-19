@@ -11,7 +11,7 @@ crystal:
   end
   submit_label = (feed.new_record? || feed.draft) ? "Create Feed" : "Update Feed"
   placeholder = "Add a keyword, #hashtag, or @mention…"
-= form_tag(feed, action) do
+= form_tag(feed, action, data: {controller: "unsaved-changes"}) do
   = error_messages(feed)
   = input_tag("Name", feed, name, placeholder: "e.g. Fediverse")
   = input_tag("Notes", feed, description, placeholder: "A description of what this feed is about.")

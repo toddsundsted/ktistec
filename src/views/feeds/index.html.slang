@@ -21,9 +21,9 @@
           - [{"any", summary.any}, {"all", summary.all}, {"none", summary.none}].each do |selector, chips|
             - if chips.any?
               span.ui.sub.header = selector
-              - chips.each do |chip|
-                - color = chip.type == "hashtag" ? "blue" : chip.type == "mention" ? "teal" : nil
-                span.ui.label class=color = chip.label
+              span.ui.labels
+                - chips.each do |chip|
+                  span.ui.label class=chip.type = chip.label
       .extra.content
         crystal:
           _meta = [pluralize(summary.count, "term"), stats.count > 0 ? pluralize(stats.count, "post") : "no posts"]

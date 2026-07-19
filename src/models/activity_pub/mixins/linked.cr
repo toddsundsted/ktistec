@@ -142,14 +142,14 @@ module Ktistec
                   {% foreign_key = method.body[2].id %}
                   {% clazz = method.body[3].id %}
                   class ::{{type}}
-                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, **options)
+                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, include_deleted = false, include_undone = false, **options)
                       if dereference && ({{foreign_key}} = self.{{foreign_key}})
-                        if ignore_changed || ({{name}}_ = self.{{name}}?).nil? || (ignore_cached && !{{name}}_.changed?)
+                        if ignore_changed || ({{name}}_ = self.{{name}}?(include_deleted: include_deleted, include_undone: include_undone)).nil? || (ignore_cached && !{{name}}_.changed?)
                           if ::Ktistec::Model::Linked.local?({{foreign_key}})
-                            {{name}}_ = self.{{name}}?
+                            {{name}}_ = self.{{name}}?(include_deleted: include_deleted, include_undone: include_undone)
                           elsif {{foreign_key}}.includes?("#")
                             Log.debug { "#{self.class}##{{{name.stringify}}}? - #{{{foreign_key}}} - skipping dereference for URL with fragment" }
-                            {{name}}_ = self.{{name}}?
+                            {{name}}_ = self.{{name}}?(include_deleted: include_deleted, include_undone: include_undone)
                           else
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
                             Ktistec::Network.get?(key_pair, {{foreign_key}}, headers) do |response|
@@ -169,10 +169,10 @@ module Ktistec
                             end
                           end
                         else
-                          {{name}}_ = self.{{name}}?
+                          {{name}}_ = self.{{name}}?(include_deleted: include_deleted, include_undone: include_undone)
                         end
                       else
-                        {{name}}_ = self.{{name}}?
+                        {{name}}_ = self.{{name}}?(include_deleted: include_deleted, include_undone: include_undone)
                       end
                       {{name}}_
                     end

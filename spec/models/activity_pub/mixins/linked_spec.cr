@@ -11,6 +11,7 @@ Spectator.describe Ktistec::Model::Linked do
     include Ktistec::Model
     include Ktistec::Model::Linked
     include Ktistec::Model::Deletable
+    include Ktistec::Model::Undoable
     include ActivityPub
 
     @@table_name = "linked_models"
@@ -53,7 +54,8 @@ Spectator.describe Ktistec::Model::Linked do
         id integer PRIMARY KEY AUTOINCREMENT,
         iri varchar(255) NOT NULL,
         linked_model_iri text,
-        deleted_at datetime
+        deleted_at datetime,
+        undone_at datetime
       )
     SQL
   end
@@ -184,7 +186,17 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "fetches and returns the object" do
-        expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: false)).not_to be_nil
+        expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: true)).not_to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+
+      it "fetches and returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, include_deleted: false)).not_to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+
+      it "fetches and returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, include_deleted: true)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
 
@@ -205,6 +217,40 @@ Spectator.describe Ktistec::Model::Linked do
           expect(subject.linked_model?(key_pair, dereference: true, ignore_cached: true)).not_to be_nil
           expect(HTTP::Client.last?).to match("GET #{object.iri}")
         end
+      end
+    end
+
+    context "when linked object is cached and deleted" do
+      before_each do
+        HTTP::Client.objects << object
+        object.save.delete!
+        subject.linked_model_iri = object.iri
+      end
+
+      it "returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: false, include_deleted: true)).not_to be_nil
+      end
+
+      it "does not fetch the object" do
+        subject.linked_model?(key_pair, dereference: true, include_deleted: true)
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+
+    context "when linked object is cached and undone" do
+      before_each do
+        HTTP::Client.objects << object
+        object.save.undo!
+        subject.linked_model_iri = object.iri
+      end
+
+      it "returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: false, include_undone: true)).not_to be_nil
+      end
+
+      it "does not fetch the object" do
+        subject.linked_model?(key_pair, dereference: true, include_undone: true)
+        expect(HTTP::Client.last?).to be_nil
       end
     end
 

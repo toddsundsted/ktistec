@@ -15,6 +15,7 @@
     - [Content discovery](#content-discovery)
     - [Content filtering](#content-filtering)
     - [Blocking](#blocking)
+    - [Custom Hashtag, Mention, and Keyword Feeds](#custom-hashtag-mention-and-keyword-feeds)
     - [Bookmarks](#bookmarks)
     - [Pinned posts](#pinned-posts)
     - [Quote posts](#quote-posts)
@@ -229,6 +230,14 @@ been deleted or blocked.
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/42fwx6.png" width=460>
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/epdb39.png" width=460>
+
+### Custom Hashtag, Mention, and Keyword Feeds
+
+Build your own feeds from the posts that arrive in your inbox. A feed
+matches on keywords, hashtags, and mentions, each grouped as terms you
+want *any* of, *all* of, or *none* of, so a feed can be as broad or as
+narrow as you like. Preview the matches while you tune the criteria,
+then publish.
 
 ### Bookmarks
 

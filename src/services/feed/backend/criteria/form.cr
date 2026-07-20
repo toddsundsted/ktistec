@@ -50,33 +50,33 @@ class Feed
 
         # A single typed term.
         #
-        record Chip, type : String, term : String do
-          # The term prefixed with its type's sigil.
+        record Term, type : String, value : String do
+          # The value prefixed with its type's sigil.
           #
           def label : String
-            Criteria::GROUPS.find(&.label.==(type)).try(&.present(term)) || term
+            Criteria::GROUPS.find(&.label.==(type)).try(&.present(value)) || value
           end
         end
 
-        # The any/all/none typed-chip projection and a term count.
+        # The any/all/none typed-term projection and a term count.
         #
         record Summary,
-          any : Array(Chip),
-          all : Array(Chip),
-          none : Array(Chip),
+          any : Array(Term),
+          all : Array(Term),
+          none : Array(Term),
           count : Int32
 
-        # Projects `params` into typed chips per selector and a total
+        # Projects `params` into typed terms per selector and a total
         # term count.
         #
         def self.summarize(params : Hash(String, JSON::Any)) : Summary
-          chips = {"any" => [] of Chip, "all" => [] of Chip, "none" => [] of Chip}
+          terms = {"any" => [] of Term, "all" => [] of Term, "none" => [] of Term}
           count = 0
           each_term(params) do |group, selector, term|
-            chips[selector] << Chip.new(TYPES[group], term)
+            terms[selector] << Term.new(TYPES[group], term)
             count += 1
           end
-          Summary.new(any: chips["any"], all: chips["all"], none: chips["none"], count: count)
+          Summary.new(any: terms["any"], all: terms["all"], none: terms["none"], count: count)
         end
 
         # Infers a line's group and extracts its term.
@@ -95,7 +95,7 @@ class Feed
         # Prefixes a stored term with its group's sigil for display.
         #
         private def self.present(group : String, term : String) : String
-          Chip.new(TYPES[group], term).label
+          Term.new(TYPES[group], term).label
         end
 
         # Yields every `(group, selector, term)` in `params`.

@@ -38,6 +38,7 @@ Ktistec::Server.run do
     Task::RunScripts.ensure_scheduled
     Task::CleanOauth.ensure_scheduled
     Task::ReconcileTagStatistics.ensure_scheduled
+    Task::CollectFeedDrafts.ensure_scheduled
   end
   Session.clean_up_stale_sessions
   # track server starts

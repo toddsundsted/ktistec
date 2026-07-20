@@ -156,6 +156,16 @@ Spectator.describe Account do
       expect(subject.validate["pinned_collections"]).to eq(["path must be a supported collection"])
     end
 
+    it "rejects pinned_collections with another user's feed" do
+      subject.pinned_collections = {"Feed" => "/actors/otheruser/feeds/1"}
+      expect(subject.validate["pinned_collections"]).to eq(["path must be a supported collection"])
+    end
+
+    it "rejects pinned_collections with feed and extra segment" do
+      subject.pinned_collections = {"Feed" => "/actors/#{username}/feeds/1/extra"}
+      expect(subject.validate["pinned_collections"]).to eq(["path must be a supported collection"])
+    end
+
     it "accepts pinned_collections with hashtag" do
       subject.pinned_collections = {"Crystal" => "/tags/crystal"}
       expect(subject.valid?).to be_true
@@ -168,6 +178,11 @@ Spectator.describe Account do
 
     it "accepts pinned_collections with collection" do
       subject.pinned_collections = {"Likes" => "/actors/#{username}/likes"}
+      expect(subject.valid?).to be_true
+    end
+
+    it "accepts pinned_collections with feed" do
+      subject.pinned_collections = {"Feed" => "/actors/#{username}/feeds/1"}
       expect(subject.valid?).to be_true
     end
 

@@ -4,13 +4,14 @@
       id:      feed.id,
       name:    feed.name,
       href:    actor_feed_path(actor, feed).to_s,
+      draft:   feed.draft,
       terms:   summary.count,
       posts:   stats.count,
       newest:  stats.newest.try(&.to_rfc3339),
       summary: {
-        any:  summary.any.map  { |chip| {type: chip.type, label: chip.label} },
-        all:  summary.all.map  { |chip| {type: chip.type, label: chip.label} },
-        none: summary.none.map { |chip| {type: chip.type, label: chip.label} },
+        any:  summary.any.map  { |term| {type: term.type, label: term.label} },
+        all:  summary.all.map  { |term| {type: term.type, label: term.label} },
+        none: summary.none.map { |term| {type: term.type, label: term.label} },
       },
     }
   },

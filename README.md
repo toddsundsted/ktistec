@@ -1,24 +1,25 @@
 # ![Ktistec](images/logo.png)
   - [Features](#features)
-    - [Text and images](#text-and-images)
-    - [Draft posts](#draft-posts)
-    - [Threaded replies](#threaded-replies)
+    - [Text and Images](#text-and-images)
+    - [Draft Posts](#draft-posts)
+    - [Threaded Replies](#threaded-replies)
     - [Thread Analysis](#thread-analysis)
     - [Translations](#translations)
-    - [@-mention and #-hashtag autocomplete](#-mention-and--hashtag-autocomplete)
-    - [Custom emoji](#custom-emoji)
+    - [@-Mention and #-Hashtag Autocomplete](#-mention-and--hashtag-autocomplete)
+    - [Custom Emoji](#custom-emoji)
     - [Polls](#polls)
-    - [Control over comment visibility](#control-over-comment-visibility)
+    - [Control over Comment Visibility](#control-over-comment-visibility)
     - [Pretty URLs](#pretty-urls)
-    - [Open Graph metadata](#open-graph-metadata)
-    - [Followers/following](#followersfollowing)
-    - [Content discovery](#content-discovery)
-    - [Content filtering](#content-filtering)
+    - [Open Graph Metadata](#open-graph-metadata)
+    - [Followers/Following](#followersfollowing)
+    - [Content Discovery](#content-discovery)
+    - [Content Filtering](#content-filtering)
     - [Blocking](#blocking)
+    - [Custom Hashtag, Mention, and Keyword Feeds](#custom-hashtag-mention-and-keyword-feeds)
     - [Bookmarks](#bookmarks)
-    - [Pinned posts](#pinned-posts)
-    - [Quote posts](#quote-posts)
-    - [RSS feeds](#rss-feeds)
+    - [Pinned Posts](#pinned-posts)
+    - [Quote Posts](#quote-posts)
+    - [RSS Feeds](#rss-feeds)
     - [X-Ray Mode](#x-ray-mode)
     - [Metrics](#metrics)
     - [Tasks](#tasks)
@@ -62,7 +63,7 @@ home in the Fediverse. If you want to talk to me, I'm
 
 Ktistec is intended for writing and scripting.
 
-### Text and images
+### Text and Images
 
 Ktistec supports two editing modes: a rich text editor and a Markdown
 editor. Choose your preferred editor in your account settings.
@@ -91,7 +92,7 @@ edit an image's focal point locally at this time.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/aecz36.png" width=460>
 
-### Draft posts
+### Draft Posts
 
 Meaningful writing is an iterative process so Ktistec supports draft
 posts. Draft posts aren't visible until you publish them. Draft posts,
@@ -102,7 +103,7 @@ including draft replies, are automatically saved as you type.
 With Ktistec, you can focus on creating without worrying about losing
 your work.
 
-### Threaded replies
+### Threaded Replies
 
 Threaded replies make it easier to follow discussions with many
 posts. To keep the author's first posts together, the author's
@@ -132,7 +133,7 @@ languages into your own language.
 See [Configuring Translation](#configuring-translation) for details on
 how to set up the integration.
 
-### @-mention and #-hashtag autocomplete
+### @-Mention and #-Hashtag Autocomplete
 
 Ktistec automatically converts @-mentions and #-hashtags into links,
 and to encourage hands-on-the-keyboard composition, Ktistec supports
@@ -140,7 +141,7 @@ autocompletion.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/22aee8.gif" width=460>
 
-### Custom emoji
+### Custom Emoji
 
 Ktistec supports viewing custom emoji in posts and on actor
 profiles. Custom emoji are federated from remote servers and
@@ -156,7 +157,7 @@ options and vote directly from your timeline. Poll results are updated
 in real-time as votes are federated across the network.  Poll authors
 receive notifications when their polls expire.
 
-### Control over comment visibility
+### Control over Comment Visibility
 
 Ktistec promotes healthy dialog and gives you comprehensive control
 over content visibility.
@@ -178,7 +179,7 @@ visibility controls.
 Assign pretty (canonical) URLs to posts, both for SEO and as helpful
 mnemonics for users (and yourself).
 
-### Open Graph metadata
+### Open Graph Metadata
 
 Ktistec includes Open Graph metadata support for actor and posts.
 When you share a link to your profile or a post on social media
@@ -186,7 +187,7 @@ platforms, rich previews with images, titles, and descriptions are
 automatically generated. Configure a site image in the site settings
 to customize how your instance appears when shared.
 
-### Followers/following
+### Followers/Following
 
 The Fediverse is a distributed social network. You can follow other
 users on other servers from your timeline or by searching for them by
@@ -197,7 +198,7 @@ and other servers.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/88hvqq.png" width=460>
 
-### Content discovery
+### Content Discovery
 
 In addition to following other users, you can follow threads, hashtags
 and even mentions. When posts arrive for content you follow, a
@@ -210,7 +211,7 @@ fetches relevant content from other servers.
 To make navigation and discovery easier, post details pages now have
 labels with links to internal hashtag and mention index pages.
 
-### Content filtering
+### Content Filtering
 
 Content filters prevent undesirable content from appearing in your
 timeline and notifications. Filter terms match on the text of a post
@@ -230,26 +231,34 @@ been deleted or blocked.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/epdb39.png" width=460>
 
+### Custom Hashtag, Mention, and Keyword Feeds
+
+Build your own feeds from the posts that arrive in your inbox. A feed
+matches on keywords, hashtags, and mentions, each grouped as terms you
+want *any* of, *all* of, or *none* of, so a feed can be as broad or as
+narrow as you like. Preview the matches while you tune the criteria,
+then publish.
+
 ### Bookmarks
 
 Save posts for later with bookmarks. Bookmark any post to add it to
 your personal bookmarks collection for easy access.
 
-### Pinned posts
+### Pinned Posts
 
 Pin important posts to the top of your profile. Pinned posts appear
 prominently at the top of your profile page and are also exposed via
 the Mastodon "featured posts" collection for compatibility with
 Mastodon and other Fediverse servers.
 
-### Quote posts
+### Quote Posts
 
 Ktistec supports consent-respecting quote posts (FEP-044f), allowing
 you to quote another user's post in your own post. You can also
 configure whether to automatically approve requests to quote your
 posts or to require manual approval.
 
-### RSS feeds
+### RSS Feeds
 
 Ktistec provides RSS feeds for easy content syndication even without
 an account in the Fediverse. RSS feeds are available on the *home

@@ -112,23 +112,23 @@ Spectator.describe FeedsController do
           expect(entry["href"].as_s).to eq("/actors/#{actor.username}/feeds/#{mixed.id}")
         end
 
-        macro chips(kind)
-          entry["summary"][{{kind}}].as_a.map { |chip| {chip["type"].as_s, chip["label"].as_s} }
+        macro terms(kind)
+          entry["summary"][{{kind}}].as_a.map { |term| {term["type"].as_s, term["label"].as_s} }
         end
 
-        it "renders the chips" do
+        it "renders the terms" do
           get "/actors/#{actor.username}/feeds", ACCEPT_HTML
           expect(response.body).to contain("#cnc", "@bob@host")
         end
 
-        it "renders the any-selector chips" do
+        it "renders the any-selector terms" do
           get "/actors/#{actor.username}/feeds", ACCEPT_JSON
-          expect(chips("any")).to eq([{"hashtag", "#cnc"}])
+          expect(terms("any")).to eq([{"hashtag", "#cnc"}])
         end
 
-        it "renders the none-selector chips" do
+        it "renders the none-selector terms" do
           get "/actors/#{actor.username}/feeds", ACCEPT_JSON
-          expect(chips("none")).to eq([{"mention", "@bob@host"}])
+          expect(terms("none")).to eq([{"mention", "@bob@host"}])
         end
 
         it "renders the term count" do
@@ -167,6 +167,17 @@ Spectator.describe FeedsController do
           end
         end
 
+        it "renders the feed as published" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+          expect(response.body).to contain(mixed.name)
+          expect(response.body).not_to contain("Draft")
+        end
+
+        it "renders the feed as published" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+          expect(entry["draft"].as_bool).to be_false
+        end
+
         context "that is draft" do
           before_each { mixed.assign(draft: true).save }
 
@@ -178,6 +189,56 @@ Spectator.describe FeedsController do
           it "renders the empty collection" do
             get "/actors/#{actor.username}/feeds", ACCEPT_JSON
             expect(JSON.parse(response.body)["feeds"].as_a).to be_empty
+          end
+
+          context "and drafts are included" do
+            it "renders the feed as a draft" do
+              get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+              expect(response.body).to contain("Draft")
+            end
+
+            it "renders the feed as a draft" do
+              get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_JSON
+              expect(entry["draft"].as_bool).to be_true
+            end
+
+            it "renders nothing in preview" do
+              get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+              expect(response.body).to contain("nothing in preview")
+            end
+
+            context "and the draft has matches" do
+              let_create(:object)
+
+              before_each { put_in_feed(mixed, object) }
+
+              it "renders the preview size" do
+                get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+                expect(response.body).to contain("1 post in preview")
+              end
+            end
+
+            context "and the draft replaces a published feed" do
+              let_create!(:feed, named: replaced, owner: actor, name: "Replaced")
+
+              before_each { mixed.assign(copy_of: replaced.id).save }
+
+              it "lists the published feed alongside the draft" do
+                get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+                expect(response.body).to contain("Replaced", "Robotics")
+              end
+
+              it "lists the published feed alongside the draft" do
+                get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_JSON
+                feeds = JSON.parse(response.body)["feeds"].as_a.map(&.["name"].as_s)
+                expect(feeds).to contain_exactly("Replaced", "Robotics")
+              end
+
+              it "names the feed it replaces" do
+                get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
+                expect(response.body).to contain("Draft of Replaced")
+              end
+            end
           end
         end
       end
@@ -201,9 +262,25 @@ Spectator.describe FeedsController do
         context "and the first feed has posts" do
           before_each { put_in_feed(first_feed, first_object, at: 2.hours.ago) }
 
-          it "sorts the empty feed last" do
+          it "sorts the empty feed first" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+            expect(names).to eq(["Second", "First"])
+          end
+        end
+
+        context "and the second feed has posts" do
+          before_each { put_in_feed(second_feed, second_object, at: 2.hours.ago) }
+
+          it "sorts the empty feed first" do
             get "/actors/#{actor.username}/feeds", ACCEPT_JSON
             expect(names).to eq(["First", "Second"])
+          end
+        end
+
+        context "and neither feed has posts" do
+          it "sorts the more recently created feed first" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+            expect(names).to eq(["Second", "First"])
           end
         end
 
@@ -1116,6 +1193,48 @@ Spectator.describe FeedsController do
           it "does not create a copy" do
             expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"robotics","preview":"1"}) }
               .not_to change { Feed.count }
+          end
+        end
+
+        context "given an earlier draft copy" do
+          let_create!(:feed, named: superseded, owner: actor, name: "Earlier", draft: true, copy_of: feed.id)
+
+          it "discards the superseded copy" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+            expect(Feed.find?(superseded.id)).to be_nil
+          end
+
+          it "discards the superseded copy" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+            expect(Feed.find?(superseded.id)).to be_nil
+          end
+
+          context "of a different feed" do
+            let_create!(:feed, named: other, owner: actor, name: "Other")
+
+            before_each { superseded.assign(copy_of: other.id).save }
+
+            it "does not discard the superseded copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+              expect(Feed.find?(superseded.id)).not_to be_nil
+            end
+
+            it "does not discard the superseded copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+              expect(Feed.find?(superseded.id)).not_to be_nil
+            end
+          end
+
+          context "and a rejected preview" do
+            it "does not discard the superseded copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=robotics&preview=1"
+              expect(Feed.find?(superseded.id)).not_to be_nil
+            end
+
+            it "does not discard the superseded copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"robotics","preview":"1"})
+              expect(Feed.find?(superseded.id)).not_to be_nil
+            end
           end
         end
       end

@@ -192,6 +192,7 @@ class FeedsController
     else
       if previewing?(env)
         if feed.assign(**params).valid?
+          discard_superseded_copies(feed)
           copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id})).save
           Feed::Window.new(copy).recompute
           redirect edit_actor_feed_path(feed.owner, copy)
@@ -223,6 +224,12 @@ class FeedsController
     unregister_and_destroy(feed)
 
     redirect actor_feeds_path(feed.owner)
+  end
+
+  # Discards any existing draft copies of a published feed.
+  #
+  private def self.discard_superseded_copies(feed)
+    Feed.where("copy_of = ? AND draft = 1", feed.id).each(&.destroy)
   end
 
   # Removes a feed's runtime view before destroying the feed itself.

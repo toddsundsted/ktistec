@@ -1195,6 +1195,48 @@ Spectator.describe FeedsController do
               .not_to change { Feed.count }
           end
         end
+
+        context "given an earlier draft copy" do
+          let_create!(:feed, named: superseded, owner: actor, name: "Earlier", draft: true, copy_of: feed.id)
+
+          it "discards the superseded copy" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+            expect(Feed.find?(superseded.id)).to be_nil
+          end
+
+          it "discards the superseded copy" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+            expect(Feed.find?(superseded.id)).to be_nil
+          end
+
+          context "of a different feed" do
+            let_create!(:feed, named: other, owner: actor, name: "Other")
+
+            before_each { superseded.assign(copy_of: other.id).save }
+
+            it "does not discard the superseded copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+              expect(Feed.find?(superseded.id)).not_to be_nil
+            end
+
+            it "does not discard the superseded copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+              expect(Feed.find?(superseded.id)).not_to be_nil
+            end
+          end
+
+          context "and a rejected preview" do
+            it "does not discard the superseded copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=robotics&preview=1"
+              expect(Feed.find?(superseded.id)).not_to be_nil
+            end
+
+            it "does not discard the superseded copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"robotics","preview":"1"})
+              expect(Feed.find?(superseded.id)).not_to be_nil
+            end
+          end
+        end
       end
 
       context "given a draft feed" do

@@ -6,7 +6,6 @@ describe("XrayController", () => {
   let controller
 
   beforeEach(() => {
-    // test methods directly
     controller = Object.create(XrayController.prototype)
   })
 

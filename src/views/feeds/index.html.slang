@@ -17,16 +17,26 @@
     .ui.fluid.card
       .content
         a.header href=actor_feed_path(actor, feed) = feed.name
+        - if feed.draft
+          .meta
+            - _replaces = feed.original?
+            span.ui.mini.basic.label = _replaces ? "Draft of #{_replaces.name}" : "Draft"
         .description.feed-summary
-          - [{"any", summary.any}, {"all", summary.all}, {"none", summary.none}].each do |selector, chips|
-            - if chips.any?
+          - [{"any", summary.any}, {"all", summary.all}, {"none", summary.none}].each do |selector, terms|
+            - if terms.any?
               span.ui.sub.header = selector
-              - chips.each do |chip|
-                - color = chip.type == "hashtag" ? "blue" : chip.type == "mention" ? "teal" : nil
-                span.ui.label class=color = chip.label
+              span.ui.labels
+                - terms.each do |term|
+                  span.ui.label class=term.type = term.label
       .extra.content
         crystal:
-          _meta = [pluralize(summary.count, "term"), stats.count > 0 ? pluralize(stats.count, "post") : "no posts"]
+          _posts =
+            if feed.draft
+              stats.count > 0 ? "#{pluralize(stats.count, "post")} in preview" : "nothing in preview"
+            else
+              stats.count > 0 ? pluralize(stats.count, "post") : "no posts"
+            end
+          _meta = [pluralize(summary.count, "term"), _posts]
           if (_newest = stats.newest)
             _meta << "newest #{distance_of_time_in_words(_newest)} ago"
           end

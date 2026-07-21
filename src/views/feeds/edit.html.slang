@@ -6,10 +6,15 @@ h1 = heading
 - partial "feeds/form"
 - if contents
   .ui.segment.feed-preview
-    h3.ui.header Preview
     - if contents.empty?
+      h3.ui.header Preview
       .ui.text There is nothing here, yet. Adjust the criteria and <em>preview</em> again.
     - else
+      h3.ui.header Preview
+        - if contents.size >= Feed::Window::MATCH_CAP
+          .sub.header Showing the first #{Feed::Window::MATCH_CAP} matches
+        - else
+          .sub.header Showing all #{pluralize(contents.size, "match")}
       - partial "feeds/contents"
 .ui.basic.tiny.delete-feed.modal
   .header

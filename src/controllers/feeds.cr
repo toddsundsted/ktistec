@@ -1,6 +1,7 @@
 require "../framework/controller"
 require "../models/feed"
 require "../rules/feeds"
+require "../services/feed/judging"
 require "../services/feed/window"
 require "../services/feed/backend/criteria/form"
 
@@ -185,6 +186,7 @@ class FeedsController
         feed.publish
         Rules::Feeds.register(feed)
         if original && original.owner == feed.owner
+          Feed::Judging.rejudge_contents(original, feed)
           unregister_and_destroy(original)
         end
         redirect actor_feeds_path(feed.owner)
@@ -205,6 +207,7 @@ class FeedsController
         if published.valid?
           published.save
           Rules::Feeds.register(published)
+          Feed::Judging.rejudge_contents(feed, published)
           unregister_and_destroy(feed)
           redirect actor_feeds_path(feed.owner)
         else

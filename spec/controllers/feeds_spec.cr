@@ -1041,6 +1041,23 @@ Spectator.describe FeedsController do
           expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
         end
 
+        context "and the original has contents" do
+          let_create!(:object, named: kept)
+          let_create!(:hashtag, named: nil, subject: kept, name: "cnc")
+          let_create!(:hashtag, named: nil, subject: kept, name: "robotics")
+          let_create!(:feed_verdict, named: nil, feed: feed, object: kept, included: true)
+
+          it "carries the retained post into the successor" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+            expect(robotics_feed.contents.map(&.iri)).to contain(kept.iri)
+          end
+
+          it "carries the retained post into the successor" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+            expect(robotics_feed.contents.map(&.iri)).to contain(kept.iri)
+          end
+        end
+
         context "given a blank name" do
           it "returns 422" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23robotics"
@@ -1510,6 +1527,22 @@ Spectator.describe FeedsController do
               it "unregisters the original's view" do
                 post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
                 expect(Rules::View.registry.map(&.type)).not_to contain(original.feed_type)
+              end
+            end
+
+            context "and the original has contents" do
+              let_create!(:object, named: kept, content: "<p>keyword</p>")
+              let_create!(:hashtag, named: nil, subject: kept, name: "cnc")
+              let_create!(:feed_verdict, named: nil, feed: original, object: kept, included: true)
+
+              it "carries the retained post into the successor" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+                expect(Feed.find(feed.id).contents.map(&.iri)).to contain(kept.iri)
+              end
+
+              it "carries the retained post into the successor" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+                expect(Feed.find(feed.id).contents.map(&.iri)).to contain(kept.iri)
               end
             end
 

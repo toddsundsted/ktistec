@@ -54,6 +54,31 @@ class Feed
       scanned
     end
 
+    # Re-judges the objects a feed currently contains under another
+    # feed's criteria, seeding the survivors into the target feed.
+    #
+    # Used at the publish transition so editing a feed's criteria no
+    # longer discards its accumulated contents.
+    #
+    # Returns the number of survivors seeded.
+    #
+    def rejudge_contents(source : ::Feed, target : ::Feed) : Int32
+      unless (backend = Backend.find?(target.backend))
+        raise "is not a registered backend: #{target.backend}"
+      end
+      view = Rules::Feeds.view_for(target)
+      seeded = 0
+      Verdict.where(feed_id: source.id, included: true).each do |verdict|
+        next unless (object = verdict.object?)
+        judgment = backend.judge(target, [object]).first
+        next unless judgment.included
+        write_verdict(target, object, verdict.position, judgment)
+        Rules::Maintainer.reconcile_object_for(view, object.iri)
+        seeded += 1
+      end
+      seeded
+    end
+
     # Judges a single newly-arrived object against every registered
     # feed, writing (or refreshing) each feed's verdict.
     #

@@ -21,10 +21,11 @@ require "../services/feed/backend/criteria/form"
 #    │                         │   │
 #    │                         ▼   │
 #    │                   ┌───────────┐──┐ publish [2]:
-#    └─ publish: ──────▶ │ published │◀─┘ create new feed;
-#       create feed;     └───────────┘    register new feed;
-#       register feed                     unregister and
-#                                         destroy old feed
+#    └─ publish: ──────▶ │ published │◀─┘ create a draft feed;
+#       create feed;     └───────────┘    seed it with content;
+#       register feed                     publish and register it;
+#                                         unregister and destroy
+#                                         the original
 #
 # [1] A published feed is never demoted to a draft feed. Instead, a
 #   new draft feed is created (recording the original in `copy_of`)
@@ -33,6 +34,9 @@ require "../services/feed/backend/criteria/form"
 # [2] A published feed is never mutated. Instead, a new published feed
 #   is created and the original published feed is unregistered and
 #   destroyed.
+#
+# Publishing is not atomic: it saves, seeds, publishes, registers, and
+# destroys the original as separate steps.
 #
 # Deleting a feed in any state unregisters and destroys it.
 #
@@ -183,10 +187,13 @@ class FeedsController
         Feed::Window.new(feed).recompute
         redirect edit_actor_feed_path(feed.owner, feed)
       else
+        feed.save
+        if original && original.owner == feed.owner
+          Feed::Judging.rejudge_contents(original, feed)
+        end
         feed.publish
         Rules::Feeds.register(feed)
         if original && original.owner == feed.owner
-          Feed::Judging.rejudge_contents(original, feed)
           unregister_and_destroy(original)
         end
         redirect actor_feeds_path(feed.owner)
@@ -203,11 +210,13 @@ class FeedsController
           unprocessable_entity "feeds/edit", env: env, feed: feed, criteria: criteria, contents: nil
         end
       else
-        published = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: false}))
+        published = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id}))
         if published.valid?
+          discard_superseded_copies(feed)
           published.save
-          Rules::Feeds.register(published)
           Feed::Judging.rejudge_contents(feed, published)
+          published.publish
+          Rules::Feeds.register(published)
           unregister_and_destroy(feed)
           redirect actor_feeds_path(feed.owner)
         else

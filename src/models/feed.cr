@@ -147,6 +147,10 @@ class Feed
   # The materialized rows carry the synthetic feed `type` and must
   # never pass through `Relationship`'s polymorphic loader.
   #
+  # Deleting in SQL bypasses model hooks. If the associated models
+  # ever gain any, this and the methods in `Task::CollectFeedOrphans`
+  # are the sites to revisit.
+  #
   private def delete_verdicts_and_materialized_rows
     Ktistec.database.exec("DELETE FROM feed_verdicts WHERE feed_id = ?", id)
     Ktistec.database.exec("DELETE FROM relationships WHERE from_iri = ? AND type = ?", owner_iri, feed_type)

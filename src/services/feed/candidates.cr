@@ -56,18 +56,25 @@ class Feed
 
     # Returns `object`'s arrival time in the feed owner's inbox.
     #
-    # Mirrors the arrival computed by `candidates_for`.
-    #
     def arrival_for(feed : ::Feed, object : ActivityPub::Object) : Time?
+      # filters differ from `candidates_for`.
+      # `Task::CollectFeedOrphans` collects verdicts for objects
+      # deleted after they were judged.  this keeps us from judging
+      # objects that were already deleted.
       query = <<-SQL
         SELECT MIN(m.created_at)
           FROM relationships m
           JOIN activities a ON a.iri = m.to_iri
+          JOIN objects o ON o.iri = a.object_iri
+          JOIN actors c ON c.iri = o.attributed_to_iri
          WHERE m.type = ?
            AND m.from_iri = ?
            AND a.object_iri = ?
            AND a.type IN (?, ?)
-           #{ActivityPub.common_filters(activities: "a")}
+           AND a.undone_at IS NULL
+           AND o.deleted_at IS NULL
+           AND c.deleted_at IS NULL
+           AND o.special IS NULL
       SQL
       Ktistec.database.query_one(
         query,

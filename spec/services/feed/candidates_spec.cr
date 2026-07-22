@@ -209,6 +209,48 @@ Spectator.describe Feed::Candidates do
           expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
         end
       end
+
+      context "and the object is deleted" do
+        before_each { object.delete! }
+
+        it "returns nil" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+        end
+      end
+
+      context "and the object's author is deleted" do
+        before_each { object.attributed_to.delete! }
+
+        it "returns nil" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+        end
+      end
+
+      # blocking is reversible
+
+      context "and the object is blocked" do
+        before_each { object.block! }
+
+        it "returns the arrival time" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
+        end
+      end
+
+      context "and the object's author is blocked" do
+        before_each { object.attributed_to.block! }
+
+        it "returns the arrival time" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
+        end
+      end
+
+      context "and the object is special" do
+        before_each { object.assign(special: "vote").save }
+
+        it "returns nil" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+        end
+      end
     end
 
     context "given a create in the owner's outbox" do

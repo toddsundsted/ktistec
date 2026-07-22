@@ -271,6 +271,11 @@ Spectator.describe Feed::Judging do
     context "when the feed is registered" do
       before_each { Rules::Feeds.register(feed) }
 
+      it "does not materialize the feed itself" do
+        Feed::Judging.judge_arrival(hit)
+        expect(materialized).to be_empty
+      end
+
       it "writes a verdict" do
         expect { Feed::Judging.judge_arrival(hit) }
           .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
@@ -283,9 +288,24 @@ Spectator.describe Feed::Judging do
         expect(verdict.position).to eq(arrival)
       end
 
-      it "does not materialize the feed itself" do
-        Feed::Judging.judge_arrival(hit)
-        expect(materialized).to be_empty
+      context "given a matching object whose author is deleted" do
+        before_each { hit.attributed_to.delete! }
+
+        pre_condition { expect(hit.deleted?).to be_false }
+
+        it "writes no verdict" do
+          expect { Feed::Judging.judge_arrival(hit) }
+            .not_to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0)
+        end
+      end
+
+      context "given a matching object whose author is blocked" do
+        before_each { hit.attributed_to.block! }
+
+        it "writes a verdict" do
+          expect { Feed::Judging.judge_arrival(hit) }
+            .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
+        end
       end
 
       context "given a non-matching object" do

@@ -41,6 +41,17 @@ class Feed
   @[Persistent]
   property description : String?
 
+  # The arrival time the feed's backfill reaches back to.
+  #
+  # `nil` means "no backfill".
+  #
+  @[Persistent]
+  property floor : Time?
+
+  # How far back a newly published feed reaches.
+  #
+  HORIZON = 30.days
+
   # An example of what belongs in (or doesn't belong in) the feed.
   #
   class Example
@@ -146,6 +157,10 @@ class Feed
   #
   # The materialized rows carry the synthetic feed `type` and must
   # never pass through `Relationship`'s polymorphic loader.
+  #
+  # Deleting in SQL bypasses model hooks. If the associated models
+  # ever gain any, this and the methods in `Task::CollectFeedOrphans`
+  # are the sites to revisit.
   #
   private def delete_verdicts_and_materialized_rows
     Ktistec.database.exec("DELETE FROM feed_verdicts WHERE feed_id = ?", id)

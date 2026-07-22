@@ -139,6 +139,182 @@ Spectator.describe Feed::Judging do
     end
   end
 
+  describe ".rejudge_contents" do
+    let_create!(:feed, named: source, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    let_create!(:feed, named: target, owner: actor, params: JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h)
+
+    def materialized_in(feed)
+      Ktistec.database.query_all(
+        "SELECT to_iri, created_at FROM relationships WHERE type = ?",
+        feed.feed_type, as: {String, Time})
+    end
+
+    context "given included members of the source feed" do
+      let_build(:object, named: kept, content: "<p>alpha beta</p>")
+      let_build(:object, named: dropped, content: "<p>alpha gamma</p>")
+      let(kept_position) { Time.utc(2026, 1, 2) }
+      let_create!(:feed_verdict, named: nil, feed: source, object: kept, included: true, position: kept_position)
+      let_create!(:feed_verdict, named: nil, feed: source, object: dropped, included: true)
+
+      it "seeds the surviving member" do
+        Feed::Judging.rejudge_contents(source, target)
+        expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri).try(&.included)).to be_true
+      end
+
+      it "materializes the surviving member at its arrival position" do
+        Feed::Judging.rejudge_contents(source, target)
+        expect(materialized_in(target)).to eq([{kept.iri, kept_position}])
+      end
+
+      it "returns the number seeded" do
+        expect(Feed::Judging.rejudge_contents(source, target)).to eq(1)
+      end
+
+      it "writes only included verdicts" do
+        Feed::Judging.rejudge_contents(source, target)
+        expect(Feed::Verdict.count(feed_id: target.id)).to eq(1)
+      end
+
+      it "does not include the dropped member" do
+        Feed::Judging.rejudge_contents(source, target)
+        expect(Feed::Verdict.find?(feed_id: target.id, object_iri: dropped.iri)).to be_nil
+      end
+
+      it "leaves the source untouched" do
+        expect { Feed::Judging.rejudge_contents(source, target) }
+          .not_to change { Feed::Verdict.count(feed_id: source.id) }.from(2)
+      end
+
+      context "and an excluded member the target's criteria would match" do
+        let_build(:object, named: excluded, content: "<p>beta</p>")
+        let_create!(:feed_verdict, named: nil, feed: source, object: excluded, included: false)
+
+        pre_condition { expect(Feed::Verdict.find(feed_id: source.id, object_iri: excluded.iri).included).to be_false }
+
+        it "does not include the excluded member" do
+          Feed::Judging.rejudge_contents(source, target)
+          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri)).not_to be_nil
+          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: excluded.iri)).to be_nil
+        end
+      end
+
+      context "and a member whose object was deleted" do
+        let_build(:object, named: deleted, content: "<p>alpha beta</p>")
+        let_create!(:feed_verdict, named: nil, feed: source, object: deleted, included: true)
+
+        before_each { deleted.delete! }
+
+        pre_condition { expect(Feed::Verdict.find(feed_id: source.id, object_iri: deleted.iri).included).to be_true }
+
+        it "does not include the deleted member" do
+          Feed::Judging.rejudge_contents(source, target)
+          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri)).not_to be_nil
+          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: deleted.iri)).to be_nil
+        end
+      end
+
+      # in draft->publish the target already holds its own
+      # preview-window verdicts, so a survivor can arrive already
+      # having a target verdict; rejudge must upsert it, not add a
+      # second row..
+      context "and the target already has a verdict for the survivor" do
+        let(stale_position) { Time.utc(2020, 1, 1) }
+        let_create!(:feed_verdict, named: nil, feed: target, object: kept, included: true, position: stale_position)
+
+        pre_condition { expect(Feed::Verdict.count(feed_id: target.id, object_iri: kept.iri)).to eq(1) }
+
+        it "does not duplicate the survivor's verdict" do
+          expect { Feed::Judging.rejudge_contents(source, target) }
+            .not_to change { Feed::Verdict.count(feed_id: target.id, object_iri: kept.iri) }.from(1)
+        end
+
+        it "overwrites the position with the source's arrival" do
+          Feed::Judging.rejudge_contents(source, target)
+          expect(Feed::Verdict.find(feed_id: target.id, object_iri: kept.iri).position).to eq(kept_position)
+        end
+      end
+    end
+
+    context "given an unregistered target backend" do
+      before_each { target.assign(backend: "missing").save(skip_validation: true) }
+
+      it "raises an error" do
+        expect { Feed::Judging.rejudge_contents(source, target) }.to raise_error(/is not a registered backend/)
+      end
+    end
+  end
+
+  describe ".backfill" do
+    let(floor) { Time.utc(1970, 1, 1) }
+    let(cursor) { nil }
+    let(limit) { 10 }
+
+    subject { Feed::Judging.backfill(feed, floor, cursor, limit) }
+
+    it "scans nothing" do
+      expect(subject.scanned).to eq(0)
+    end
+
+    it "reports no oldest arrival" do
+      expect(subject.oldest).to be_nil
+    end
+
+    context "given posts in the owner's inbox" do
+      let_build(:object, named: hit, content: "<p>something alpha something</p>")
+      let_build(:object, named: miss, content: "<p>something gamma something</p>")
+      let_create(:create, named: hit_create, object: hit)
+      let_create(:create, named: miss_create, object: miss)
+      let!(hit_arrival) { put_in_inbox(actor, hit_create).created_at }
+      let!(miss_arrival) { put_in_inbox(actor, miss_create).created_at }
+
+      it "scans both candidates" do
+        expect(subject.scanned).to eq(2)
+      end
+
+      it "reports the oldest arrival" do
+        expect(subject.oldest).to eq(hit_arrival)
+      end
+
+      it "counts the matching post" do
+        expect(subject.included).to eq(1)
+      end
+
+      it "writes a verdict for the matching post" do
+        subject
+        expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri).included).to be_true
+      end
+
+      # only `included` verdicts are written -- a verdict for every
+      # post the owner ever received, for every feed they own, is what
+      # the backfill must not write.
+      it "writes no verdict for the non-matching post" do
+        subject
+        expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: miss.iri)).to be_nil
+      end
+
+      it "materializes the matching post at its arrival time" do
+        subject
+        expect(materialized).to eq([{hit.iri, hit_arrival}])
+      end
+
+      context "when the batch is truncated" do
+        let(limit) { 1 }
+
+        it "reports the last candidate's arrival as the oldest scanned" do
+          expect(subject.oldest).to eq(miss_arrival)
+        end
+      end
+    end
+
+    context "given an unregistered backend" do
+      before_each { feed.assign(backend: "missing").save(skip_validation: true) }
+
+      it "raises an error" do
+        expect { subject }.to raise_error(/is not a registered backend/)
+      end
+    end
+  end
+
   describe ".judge_arrival" do
     around_each do |proc|
       saved = Rules::View.registry.dup
@@ -166,6 +342,11 @@ Spectator.describe Feed::Judging do
     context "when the feed is registered" do
       before_each { Rules::Feeds.register(feed) }
 
+      it "does not materialize the feed itself" do
+        Feed::Judging.judge_arrival(hit)
+        expect(materialized).to be_empty
+      end
+
       it "writes a verdict" do
         expect { Feed::Judging.judge_arrival(hit) }
           .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
@@ -178,9 +359,24 @@ Spectator.describe Feed::Judging do
         expect(verdict.position).to eq(arrival)
       end
 
-      it "does not materialize the feed itself" do
-        Feed::Judging.judge_arrival(hit)
-        expect(materialized).to be_empty
+      context "given a matching object whose author is deleted" do
+        before_each { hit.attributed_to.delete! }
+
+        pre_condition { expect(hit.deleted?).to be_false }
+
+        it "writes no verdict" do
+          expect { Feed::Judging.judge_arrival(hit) }
+            .not_to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0)
+        end
+      end
+
+      context "given a matching object whose author is blocked" do
+        before_each { hit.attributed_to.block! }
+
+        it "writes a verdict" do
+          expect { Feed::Judging.judge_arrival(hit) }
+            .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
+        end
       end
 
       context "given a non-matching object" do

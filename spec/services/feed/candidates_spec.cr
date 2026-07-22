@@ -178,6 +178,87 @@ Spectator.describe Feed::Candidates do
     end
   end
 
+  describe ".backfill_candidates_for" do
+    let(floor) { Time.utc(1970, 1, 1) }
+    let(cursor) { nil }
+    let(limit) { 10 }
+
+    let(candidates) { Feed::Candidates.backfill_candidates_for(feed, floor, cursor, limit) }
+
+    it "returns no candidates" do
+      expect(candidates).to be_empty
+    end
+
+    context "given creates in the owner's inbox" do
+      let_build(:object, named: :object1)
+      let_create(:create, named: :create1, object: object1)
+      let!(arrival1) { put_in_inbox(actor, create1).created_at }
+
+      let_build(:object, named: :object2)
+      let_create(:create, named: :create2, object: object2)
+      let!(arrival2) { put_in_inbox(actor, create2).created_at }
+
+      let_build(:object, named: :object3)
+      let_create(:create, named: :create3, object: object3)
+      let!(arrival3) { put_in_inbox(actor, create3).created_at }
+
+      it "returns candidates in arrival order" do
+        expect(candidates.map(&.first)).to eq([object3, object2, object1])
+      end
+
+      it "carries the arrival times" do
+        expect(candidates.map(&.last)).to eq([arrival3, arrival2, arrival1])
+      end
+
+      context "with a limit" do
+        let(limit) { 2 }
+
+        it "returns the most recently arrived candidates" do
+          expect(candidates.map(&.first)).to eq([object3, object2])
+        end
+      end
+
+      context "with a floor above the oldest arrival" do
+        let(floor) { arrival2 }
+
+        it "does not return the candidate that arrived before the floor" do
+          expect(candidates.map(&.first)).to eq([object3, object2])
+        end
+      end
+
+      context "with a cursor" do
+        let(cursor) { arrival3 }
+
+        it "does not return the candidate that arrived at the cursor" do
+          expect(candidates.map(&.first)).to eq([object2, object1])
+        end
+      end
+
+      context "when a candidate has a verdict" do
+        let_create!(:feed_verdict, feed: feed, object: object3, included: true)
+
+        it "does not return the candidate" do
+          expect(candidates.map(&.first)).to eq([object2, object1])
+        end
+      end
+
+      context "when a candidate below the floor arrives again above the floor" do
+        let_create(:announce, object: object1)
+        before_each { put_in_inbox(actor, announce) }
+
+        let(floor) { arrival2 }
+
+        it "does not return the candidate" do
+          expect(candidates.map(&.first)).to eq([object3, object2])
+        end
+      end
+    end
+
+    it "raises an error" do
+      expect { Feed::Candidates.backfill_candidates_for(feed, floor, cursor, 0) }.to raise_error(ArgumentError, "limit must be positive")
+    end
+  end
+
   describe ".arrival_for" do
     let_build(:object)
 
@@ -204,6 +285,48 @@ Spectator.describe Feed::Candidates do
 
       context "and the activity is undone" do
         before_each { create.undo! }
+
+        it "returns nil" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+        end
+      end
+
+      context "and the object is deleted" do
+        before_each { object.delete! }
+
+        it "returns nil" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+        end
+      end
+
+      context "and the object's author is deleted" do
+        before_each { object.attributed_to.delete! }
+
+        it "returns nil" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+        end
+      end
+
+      # blocking is reversible
+
+      context "and the object is blocked" do
+        before_each { object.block! }
+
+        it "returns the arrival time" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
+        end
+      end
+
+      context "and the object's author is blocked" do
+        before_each { object.attributed_to.block! }
+
+        it "returns the arrival time" do
+          expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
+        end
+      end
+
+      context "and the object is special" do
+        before_each { object.assign(special: "vote").save }
 
         it "returns nil" do
           expect(Feed::Candidates.arrival_for(feed, object)).to be_nil

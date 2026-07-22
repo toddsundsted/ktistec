@@ -1,6 +1,8 @@
 require "../framework/controller"
 require "../models/feed"
+require "../models/task/backfill_feed"
 require "../rules/feeds"
+require "../services/feed/judging"
 require "../services/feed/window"
 require "../services/feed/backend/criteria/form"
 
@@ -20,10 +22,11 @@ require "../services/feed/backend/criteria/form"
 #    │                         │   │
 #    │                         ▼   │
 #    │                   ┌───────────┐──┐ publish [2]:
-#    └─ publish: ──────▶ │ published │◀─┘ create new feed;
-#       create feed;     └───────────┘    register new feed;
-#       register feed                     unregister and
-#                                         destroy old feed
+#    └─ publish: ──────▶ │ published │◀─┘ create a draft feed;
+#       create feed;     └───────────┘    seed it with content;
+#       register feed                     publish and register it;
+#                                         unregister and destroy
+#                                         the original
 #
 # [1] A published feed is never demoted to a draft feed. Instead, a
 #   new draft feed is created (recording the original in `copy_of`)
@@ -32,6 +35,9 @@ require "../services/feed/backend/criteria/form"
 # [2] A published feed is never mutated. Instead, a new published feed
 #   is created and the original published feed is unregistered and
 #   destroyed.
+#
+# Publishing is not atomic: it saves, seeds, publishes, registers, and
+# destroys the original as separate steps.
 #
 # Deleting a feed in any state unregisters and destroys it.
 #
@@ -118,10 +124,11 @@ class FeedsController
         unprocessable_entity "feeds/new", env: env, feed: feed, criteria: criteria, contents: nil
       end
     else
-      feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: false}))
+      feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: false, floor: Time.utc - Feed::HORIZON}))
       if feed.valid?
         feed.save
         Rules::Feeds.register(feed)
+        Task::BackfillFeed.schedule_for(feed)
         if accepts?("application/ld+json", "application/activity+json", "application/json")
           created actor_feed_path(account.actor, feed), "feeds/show", env: env, feed: feed, contents: feed.contents(**cursor_pagination_params(env))
         else
@@ -182,11 +189,21 @@ class FeedsController
         Feed::Window.new(feed).recompute
         redirect edit_actor_feed_path(feed.owner, feed)
       else
+        if original && original.owner == feed.owner
+          feed.assign(floor: original.floor)
+        else
+          feed.assign(floor: Time.utc - Feed::HORIZON)
+        end
+        feed.save
+        if original && original.owner == feed.owner
+          Feed::Judging.rejudge_contents(original, feed)
+        end
         feed.publish
         Rules::Feeds.register(feed)
         if original && original.owner == feed.owner
           unregister_and_destroy(original)
         end
+        Task::BackfillFeed.schedule_for(feed)
         redirect actor_feeds_path(feed.owner)
       end
     else
@@ -201,11 +218,15 @@ class FeedsController
           unprocessable_entity "feeds/edit", env: env, feed: feed, criteria: criteria, contents: nil
         end
       else
-        published = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: false}))
+        published = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor}))
         if published.valid?
+          discard_superseded_copies(feed)
           published.save
+          Feed::Judging.rejudge_contents(feed, published)
+          published.publish
           Rules::Feeds.register(published)
           unregister_and_destroy(feed)
+          Task::BackfillFeed.schedule_for(published)
           redirect actor_feeds_path(feed.owner)
         else
           feed.assign(**params)
@@ -232,10 +253,12 @@ class FeedsController
     Feed.where("copy_of = ? AND draft = 1", feed.id).each(&.destroy)
   end
 
-  # Removes a feed's runtime view before destroying the feed itself.
+  # Removes a feed's runtime view and backfill before destroying the
+  # feed itself.
   #
   private def self.unregister_and_destroy(feed)
     Rules::Feeds.unregister(feed)
+    Task::BackfillFeed.destroy_for(feed)
     feed.destroy
   end
 

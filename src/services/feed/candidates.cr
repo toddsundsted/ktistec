@@ -13,78 +13,95 @@ class Feed
   module Candidates
     extend self
 
-    # The unjudged posts in a feed owner's inbox, grouped by object.
+    # One mailbox row: a single delivery of a post to the feed's
+    # owner.
     #
-    private CANDIDATE_SOURCE_SQL = <<-SQL
-        FROM relationships m
-        JOIN activities a ON a.iri = m.to_iri
-        JOIN objects o ON o.iri = a.object_iri
-        JOIN actors c ON c.iri = o.attributed_to_iri
-       WHERE m.type = ?
-         AND m.from_iri = ?
-         AND a.type IN (?, ?)
-         #{ActivityPub.common_filters(objects: "o", actors: "c", activities: "a")}
-         AND NOT EXISTS (
-           SELECT 1
-             FROM feed_verdicts v
-            WHERE v.feed_id = ?
-              AND v.object_iri = o.iri
-         )
-       GROUP BY o.iri
+    record MailboxRow, id : Int64, created_at : Time, object : ActivityPub::Object
+
+    # The rows holding the feed's unjudged candidates.
+    #
+    private MAILBOX_ROWS_SQL = <<-SQL
+        SELECT m.id, m.created_at, o.iri
+          FROM relationships m
+          JOIN activities a ON a.iri = m.to_iri
+          JOIN objects o ON o.iri = a.object_iri
+          JOIN actors c ON c.iri = o.attributed_to_iri
+         WHERE m.type = ?
+           AND m.from_iri = ?
+           AND a.type IN (?, ?)
+           #{ActivityPub.common_filters(objects: "o", actors: "c", activities: "a")}
+           AND NOT EXISTS (
+             SELECT 1
+               FROM feed_verdicts v
+              WHERE v.feed_id = ?
+                AND v.object_iri = o.iri
+           )
       SQL
+
+    private MAILBOX_ROWS_FROM_NEWEST_SQL = <<-SQL
+      #{MAILBOX_ROWS_SQL}
+         ORDER BY m.id DESC
+         LIMIT ?
+      SQL
+
+    private MAILBOX_ROWS_BELOW_CURSOR_SQL = <<-SQL
+      #{MAILBOX_ROWS_SQL}
+           AND m.id < ?
+         ORDER BY m.id DESC
+         LIMIT ?
+      SQL
+
+    # Returns the mailbox rows holding the feed's unjudged candidates,
+    # newest first.
+    #
+    # `cursor` is the mailbox row id to scan down from; `nil` starts at
+    # the newest row.
+    #
+    def mailbox_rows_for(feed : ::Feed, cursor : Int64?, limit : Int32) : Array(MailboxRow)
+      if limit < 1
+        raise ArgumentError.new("limit must be positive")
+      end
+      scan(feed, cursor, limit)
+    end
 
     # Returns the feed's candidates, each with its arrival time.
     #
-    # `limit` bounds the candidates to the most recently arrived;
-    # `nil` (the default) means unbounded.
+    # `limit` bounds how many mailbox rows are scanned; `nil` (the
+    # default) scans the whole mailbox.
     #
     def candidates_for(feed : ::Feed, limit : Int32? = nil) : Array({ActivityPub::Object, Time})
       if limit && limit < 1
         raise ArgumentError.new("limit must be positive")
       end
-      query = <<-SQL
-        SELECT o.iri, MIN(m.created_at) AS arrival
-        #{CANDIDATE_SOURCE_SQL}
-         ORDER BY arrival DESC
-         LIMIT ?
-      SQL
-      rows = Ktistec.database.query_all(
-        query,
-        *source_parameters(feed),
-        limit || -1, # in SQLite, a negative limit means no limit
-        as: {String, Time})
-      to_candidates(rows)
+      seen = Set(String).new
+      candidates = [] of {ActivityPub::Object, Time}
+      # in SQLite, a negative limit means no limit
+      scan(feed, nil, limit || -1).each do |row|
+        next unless seen.add?(row.object.iri)
+        if (arrival = arrival_for(feed, row.object))
+          candidates << {row.object, arrival}
+        end
+      end
+      candidates
     end
 
-    # Returns the feed's unjudged candidates that arrived at or after
-    # `floor` and before `cursor`, most recently arrived first.
-    #
-    # The cursor bound is strict, so two candidates whose arrivals
-    # collide to the exact millisecond, straddling a batch boundary,
-    # skip the older one. Not fixed: inbox writes are serialized by
-    # insert cost, and across 838K arrivals in production none shared
-    # a millisecond -- the closest pair was 2ms apart.
-    #
-    def backfill_candidates_for(feed : ::Feed, floor : Time, cursor : Time?, limit : Int32) : Array({ActivityPub::Object, Time})
-      if limit < 1
-        raise ArgumentError.new("limit must be positive")
-      end
-      query = <<-SQL
-        SELECT o.iri, MIN(m.created_at) AS arrival
-        #{CANDIDATE_SOURCE_SQL}
-        HAVING arrival >= ?
-           AND (? IS NULL OR arrival < ?)
-         ORDER BY arrival DESC
-         LIMIT ?
-      SQL
-      rows = Ktistec.database.query_all(
-        query,
-        *source_parameters(feed),
-        floor,
-        cursor, cursor,
-        limit,
-        as: {String, Time})
-      to_candidates(rows)
+    private def scan(feed : ::Feed, cursor : Int64?, limit : Int32) : Array(MailboxRow)
+      rows =
+        if cursor
+          Ktistec.database.query_all(
+            MAILBOX_ROWS_BELOW_CURSOR_SQL,
+            *source_parameters(feed),
+            cursor,
+            limit,
+            as: {Int64, Time, String})
+        else
+          Ktistec.database.query_all(
+            MAILBOX_ROWS_FROM_NEWEST_SQL,
+            *source_parameters(feed),
+            limit,
+            as: {Int64, Time, String})
+        end
+      rows.map { |(id, created_at, iri)| MailboxRow.new(id, created_at, ActivityPub::Object.find(iri: iri)) }
     end
 
     private def source_parameters(feed : ::Feed)
@@ -95,10 +112,6 @@ class Feed
         ActivityPub::Activity::Announce.to_s,
         feed.id,
       }
-    end
-
-    private def to_candidates(rows)
-      rows.map { |(iri, arrival)| {ActivityPub::Object.find(iri: iri), arrival} }
     end
 
     # Returns `object`'s arrival time in the feed owner's inbox.

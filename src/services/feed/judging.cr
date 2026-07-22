@@ -81,37 +81,51 @@ class Feed
 
     # The result of one backfill batch.
     #
-    # `oldest` is the arrival time of the last candidate judged --
-    # the next batch's cursor.
+    # `cursor` is the mailbox row id to resume below. `done` reports
+    # that the scan has reached the floor, or run out of mailbox.
     #
-    record Batch, scanned : Int32, included : Int32, oldest : Time?
+    record Batch, scanned : Int32, included : Int32, cursor : Int64?, done : Bool
 
-    # Judges one batch of a feed's unjudged candidates between `floor`
-    # and `cursor`, most recently arrived first.
+    # Judges one batch of a feed's unjudged candidates, newest first,
+    # stopping at `floor`.
     #
-    # Writes a verdict only for candidates the feed includes. An
-    # excluded candidate therefore stays a candidate. Skipping
-    # excluded verdicts keeps the backfill from writing a row for
-    # every post the owner has ever received, for every feed they own.
+    # Writes a verdict only for posts the feed includes. An excluded
+    # post therefore stays a candidate. Skipping excluded verdicts
+    # keeps the backfill from writing a row for every post the owner
+    # has ever received, for every feed they own.
     #
-    def backfill(feed : ::Feed, floor : Time, cursor : Time?, limit : Int32) : Batch
+    def backfill(feed : ::Feed, floor : Time, cursor : Int64?, limit : Int32) : Batch
       unless (backend = Backend.find?(feed.backend))
         raise "is not a registered backend: #{feed.backend}"
       end
       view = Rules::Feeds.view_for(feed)
-      candidates = Candidates.backfill_candidates_for(feed, floor, cursor, limit)
+      rows = Candidates.mailbox_rows_for(feed, cursor, limit)
+      seen = Set(String).new
+      scanned = 0
       included = 0
-      oldest = nil
-      candidates.each do |(object, arrival)|
+      above_floor = false
+      rows.each do |row|
+        next if row.created_at < floor
+        above_floor = true
+        object = row.object
+        next unless seen.add?(object.iri)
+        next unless (position = Candidates.arrival_for(feed, object))
+        next if position < floor
         judgment = backend.judge(feed, [object]).first
+        scanned += 1
         if judgment.included
-          write_verdict(feed, object, arrival, judgment)
+          write_verdict(feed, object, position, judgment)
           Rules::Maintainer.reconcile_object_for(view, object.iri)
           included += 1
         end
-        oldest = arrival
       end
-      Batch.new(scanned: candidates.size, included: included, oldest: oldest)
+      # a batch entirely below the floor ends the scan.
+      Batch.new(
+        scanned: scanned,
+        included: included,
+        cursor: rows.last?.try(&.id),
+        done: rows.size < limit || !above_floor,
+      )
     end
 
     # Judges a single newly-arrived object against every registered

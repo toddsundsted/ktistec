@@ -9,7 +9,7 @@ class Task
   class BackfillFeed < Task
     Log = ::Log.for(self)
 
-    BATCH_SIZE = 25
+    BATCH_SIZE = 250
 
     BATCH_INTERVAL = 5.seconds
 
@@ -20,14 +20,7 @@ class Task
     class State
       include JSON::Serializable
 
-      # milliseconds, not RFC 3339: `Time#to_json` emits no fractional
-      # part, and the worker reloads the task from the database every
-      # cycle, so a whole-second cursor would truncate at every batch
-      # boundary -- permanently skipping every unjudged candidate that
-      # shares the boundary second with the batch's oldest.
-
-      @[JSON::Field(converter: Time::EpochMillisConverter)]
-      property cursor : Time?
+      property cursor : Int64?
 
       property scanned : Int32
 
@@ -106,15 +99,14 @@ class Task
       state.scanned += batch.scanned
       state.included += batch.included
       state.batches += 1
+      state.cursor = batch.cursor
 
-      unless (oldest = batch.oldest)
+      if batch.done
         Log.info { "BackfillFeed: #{subject_iri} reached floor #{floor}: batches=#{state.batches} scanned=#{state.scanned} included=#{state.included}" }
         return
       end
 
-      state.cursor = oldest
-
-      Log.debug { "BackfillFeed: #{subject_iri} batch #{state.batches}: floor=#{floor} cursor=#{oldest} scanned=#{batch.scanned} included=#{batch.included} elapsed=#{elapsed.total_milliseconds.round}ms" }
+      Log.debug { "BackfillFeed: #{subject_iri} batch #{state.batches}: floor=#{floor} cursor=#{state.cursor} scanned=#{batch.scanned} included=#{batch.included} elapsed=#{elapsed.total_milliseconds.round}ms" }
 
       self.next_attempt_at = BATCH_INTERVAL.from_now
     end

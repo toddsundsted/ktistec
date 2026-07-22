@@ -101,16 +101,20 @@ Spectator.describe Task::BackfillFeed do
       let_build(:object, named: miss, content: "<p>something gamma something</p>")
       let_create(:create, named: hit_create, object: hit)
       let_create(:create, named: miss_create, object: miss)
-      let!(hit_arrival) { put_in_inbox(actor, hit_create).created_at }
-      let!(miss_arrival) { put_in_inbox(actor, miss_create).created_at }
+      let!(hit_row) { put_in_inbox(actor, hit_create) }
+      let!(miss_row) { put_in_inbox(actor, miss_create) }
 
       it "reschedules" do
-        expect { subject.perform }.to change { subject.next_attempt_at }
+        expect { subject.perform(1) }.to change { subject.next_attempt_at }
+      end
+
+      it "does not reschedule once the mailbox is exhausted" do
+        expect { subject.perform }.not_to change { subject.next_attempt_at }
       end
 
       it "records the cursor" do
         subject.perform
-        expect(subject.state.cursor).to eq(hit_arrival)
+        expect(subject.state.cursor).to eq(hit_row.id)
       end
 
       it "counts what it scanned" do
@@ -121,16 +125,6 @@ Spectator.describe Task::BackfillFeed do
       it "counts what it included" do
         subject.perform
         expect(subject.state.included).to eq(1)
-      end
-
-      context "when the batch is exhausted" do
-        before_each { subject.perform }
-
-        pre_condition { expect(Feed::Verdict.count(feed_id: feed.id)).to eq(1) }
-
-        it "does not reschedule" do
-          expect { subject.perform }.not_to change { subject.next_attempt_at }
-        end
       end
 
       context "when a batch judges only the newest candidate" do
@@ -148,7 +142,7 @@ Spectator.describe Task::BackfillFeed do
       end
 
       context "when the feed's floor is above the posts" do
-        before_each { feed.assign(floor: miss_arrival + 1.second).save }
+        before_each { feed.assign(floor: miss_row.created_at + 1.second).save }
 
         it "writes no verdict" do
           subject.perform
@@ -195,16 +189,18 @@ Spectator.describe Task::BackfillFeed do
         end
       end
 
-      context "and two more that arrived within the same second" do
+      context "and two more that arrived in the same millisecond" do
         let_build(:object, named: early, content: "<p>something alpha something</p>")
         let_build(:object, named: late, content: "<p>something gamma something</p>")
         let_create(:create, named: early_create, object: early)
         let_create(:create, named: late_create, object: late)
 
-        let_create!(:inbox_relationship, named: nil, owner: actor, activity: early_create, created_at: Time.utc(2026, 1, 1, 1, 1, 1, nanosecond: 300_000_000))
-        let_create!(:inbox_relationship, named: nil, owner: actor, activity: late_create, created_at: Time.utc(2026, 1, 1, 1, 1, 1, nanosecond: 700_000_000))
+        let(instant) { Time.utc(2026, 1, 1, 1, 1, 1, nanosecond: 700_000_000) }
 
-        it "judges the earlier of the two on the reloaded task" do
+        let_create!(:inbox_relationship, named: nil, owner: actor, activity: early_create, created_at: instant)
+        let_create!(:inbox_relationship, named: nil, owner: actor, activity: late_create, created_at: instant)
+
+        it "judges the second of them when the task is reloaded" do
           subject.perform(1)
           subject.save
           described_class.find(subject.id).perform(1)
@@ -212,25 +208,10 @@ Spectator.describe Task::BackfillFeed do
         end
       end
 
-      context "given a cursor with sub-second precision" do
-        let(precise) { Time.utc(2026, 1, 1, 1, 1, 1, nanosecond: 700_000_000) }
-
-        it "persists the cursor exactly" do
-          subject.state.cursor = precise
-          subject.save
-          expect(described_class.find(subject.id).state.cursor).to eq(precise)
-        end
-      end
-
       context "when run by the task worker" do
         before_each { TaskWorker.instance.perform(subject) }
 
-        it "does not mark the task complete" do
-          expect(subject.complete).to be_false
-        end
-
         it "marks the task complete" do
-          TaskWorker.instance.perform(subject)
           expect(subject.complete).to be_true
         end
       end

@@ -178,84 +178,81 @@ Spectator.describe Feed::Candidates do
     end
   end
 
-  describe ".backfill_candidates_for" do
-    let(floor) { Time.utc(1970, 1, 1) }
+  describe ".mailbox_rows_for" do
     let(cursor) { nil }
     let(limit) { 10 }
 
-    let(candidates) { Feed::Candidates.backfill_candidates_for(feed, floor, cursor, limit) }
+    let(rows) { Feed::Candidates.mailbox_rows_for(feed, cursor, limit) }
 
-    it "returns no candidates" do
-      expect(candidates).to be_empty
+    it "returns no rows" do
+      expect(rows).to be_empty
     end
 
     context "given creates in the owner's inbox" do
       let_build(:object, named: :object1)
       let_create(:create, named: :create1, object: object1)
-      let!(arrival1) { put_in_inbox(actor, create1).created_at }
+      let!(row1) { put_in_inbox(actor, create1) }
 
       let_build(:object, named: :object2)
       let_create(:create, named: :create2, object: object2)
-      let!(arrival2) { put_in_inbox(actor, create2).created_at }
+      let!(row2) { put_in_inbox(actor, create2) }
 
       let_build(:object, named: :object3)
       let_create(:create, named: :create3, object: object3)
-      let!(arrival3) { put_in_inbox(actor, create3).created_at }
+      let!(row3) { put_in_inbox(actor, create3) }
 
-      it "returns candidates in arrival order" do
-        expect(candidates.map(&.first)).to eq([object3, object2, object1])
+      it "returns the rows newest first" do
+        expect(rows.map(&.object)).to eq([object3, object2, object1])
       end
 
-      it "carries the arrival times" do
-        expect(candidates.map(&.last)).to eq([arrival3, arrival2, arrival1])
+      it "carries the mailbox row id" do
+        expect(rows.map(&.id)).to eq([row3.id, row2.id, row1.id])
+      end
+
+      it "carries the time the post arrived" do
+        expect(rows.map(&.created_at)).to eq([row3.created_at, row2.created_at, row1.created_at])
       end
 
       context "with a limit" do
         let(limit) { 2 }
 
-        it "returns the most recently arrived candidates" do
-          expect(candidates.map(&.first)).to eq([object3, object2])
-        end
-      end
-
-      context "with a floor above the oldest arrival" do
-        let(floor) { arrival2 }
-
-        it "does not return the candidate that arrived before the floor" do
-          expect(candidates.map(&.first)).to eq([object3, object2])
+        it "returns the most recently arrived" do
+          expect(rows.map(&.object)).to eq([object3, object2])
         end
       end
 
       context "with a cursor" do
-        let(cursor) { arrival3 }
+        let(cursor) { row3.id }
 
-        it "does not return the candidate that arrived at the cursor" do
-          expect(candidates.map(&.first)).to eq([object2, object1])
+        it "does not return the row at the cursor" do
+          expect(rows.map(&.object)).to eq([object2, object1])
         end
       end
 
-      context "when a candidate has a verdict" do
+      context "when a post has a verdict" do
         let_create!(:feed_verdict, feed: feed, object: object3, included: true)
 
-        it "does not return the candidate" do
-          expect(candidates.map(&.first)).to eq([object2, object1])
+        it "does not return its row" do
+          expect(rows.map(&.object)).to eq([object2, object1])
         end
       end
 
-      context "when a candidate below the floor arrives again above the floor" do
+      context "and a later announce of the same post" do
         let_create(:announce, object: object1)
-        before_each { put_in_inbox(actor, announce) }
+        let!(row4) { put_in_inbox(actor, announce) }
 
-        let(floor) { arrival2 }
+        it "returns the post once per arrival" do
+          expect(rows.map(&.object)).to eq([object1, object3, object2, object1])
+        end
 
-        it "does not return the candidate" do
-          expect(candidates.map(&.first)).to eq([object3, object2])
+        it "returns a row per arrival" do
+          expect(rows.map(&.id)).to eq([row4.id, row3.id, row2.id, row1.id])
         end
       end
     end
 
     it "raises an error" do
-      expect { Feed::Candidates.backfill_candidates_for(feed, floor, cursor, 0) }.to raise_error(ArgumentError, "limit must be positive")
+      expect { Feed::Candidates.mailbox_rows_for(feed, cursor, 0) }.to raise_error(ArgumentError, "limit must be positive")
     end
   end
 

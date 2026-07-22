@@ -255,8 +255,12 @@ Spectator.describe Feed::Judging do
       expect(subject.scanned).to eq(0)
     end
 
-    it "reports no oldest arrival" do
-      expect(subject.oldest).to be_nil
+    it "reports no cursor" do
+      expect(subject.cursor).to be_nil
+    end
+
+    it "is done" do
+      expect(subject.done).to be_true
     end
 
     context "given posts in the owner's inbox" do
@@ -264,15 +268,15 @@ Spectator.describe Feed::Judging do
       let_build(:object, named: miss, content: "<p>something gamma something</p>")
       let_create(:create, named: hit_create, object: hit)
       let_create(:create, named: miss_create, object: miss)
-      let!(hit_arrival) { put_in_inbox(actor, hit_create).created_at }
-      let!(miss_arrival) { put_in_inbox(actor, miss_create).created_at }
+      let!(hit_row) { put_in_inbox(actor, hit_create) }
+      let!(miss_row) { put_in_inbox(actor, miss_create) }
 
-      it "scans both candidates" do
+      it "scans both posts" do
         expect(subject.scanned).to eq(2)
       end
 
-      it "reports the oldest arrival" do
-        expect(subject.oldest).to eq(hit_arrival)
+      it "reports the last row scanned as the cursor" do
+        expect(subject.cursor).to eq(hit_row.id)
       end
 
       it "counts the matching post" do
@@ -294,14 +298,66 @@ Spectator.describe Feed::Judging do
 
       it "materializes the matching post at its arrival time" do
         subject
-        expect(materialized).to eq([{hit.iri, hit_arrival}])
+        expect(materialized).to eq([{hit.iri, hit_row.created_at}])
       end
 
       context "when the batch is truncated" do
         let(limit) { 1 }
 
-        it "reports the last candidate's arrival as the oldest scanned" do
-          expect(subject.oldest).to eq(miss_arrival)
+        it "reports the last row scanned as the cursor" do
+          expect(subject.cursor).to eq(miss_row.id)
+        end
+
+        it "is not done" do
+          expect(subject.done).to be_false
+        end
+      end
+
+      context "when the floor is above the oldest arrival" do
+        let(floor) { miss_row.created_at }
+
+        it "does not scan the post below the floor" do
+          expect(subject.scanned).to eq(1)
+        end
+
+        it "writes no verdict for it" do
+          subject
+          expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri)).to be_nil
+        end
+      end
+
+      context "when the whole batch is below the floor" do
+        let(floor) { miss_row.created_at + 1.second }
+
+        it "scans nothing" do
+          expect(subject.scanned).to eq(0)
+        end
+
+        it "is done" do
+          expect(subject.done).to be_true
+        end
+      end
+
+      context "and the matching post arrives again" do
+        let_create(:announce, named: hit_announce, object: hit)
+        let!(hit_announce_row) { put_in_inbox(actor, hit_announce) }
+
+        it "materializes it at its earliest arrival" do
+          subject
+          expect(materialized).to eq([{hit.iri, hit_row.created_at}])
+        end
+
+        it "judges it once" do
+          expect(subject.scanned).to eq(2)
+        end
+
+        context "but its earliest arrival is below the floor" do
+          let(floor) { hit_announce_row.created_at }
+
+          it "writes no verdict for it" do
+            subject
+            expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri)).to be_nil
+          end
         end
       end
     end

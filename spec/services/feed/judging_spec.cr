@@ -244,6 +244,77 @@ Spectator.describe Feed::Judging do
     end
   end
 
+  describe ".backfill" do
+    let(floor) { Time.utc(1970, 1, 1) }
+    let(cursor) { nil }
+    let(limit) { 10 }
+
+    subject { Feed::Judging.backfill(feed, floor, cursor, limit) }
+
+    it "scans nothing" do
+      expect(subject.scanned).to eq(0)
+    end
+
+    it "reports no oldest arrival" do
+      expect(subject.oldest).to be_nil
+    end
+
+    context "given posts in the owner's inbox" do
+      let_build(:object, named: hit, content: "<p>something alpha something</p>")
+      let_build(:object, named: miss, content: "<p>something gamma something</p>")
+      let_create(:create, named: hit_create, object: hit)
+      let_create(:create, named: miss_create, object: miss)
+      let!(hit_arrival) { put_in_inbox(actor, hit_create).created_at }
+      let!(miss_arrival) { put_in_inbox(actor, miss_create).created_at }
+
+      it "scans both candidates" do
+        expect(subject.scanned).to eq(2)
+      end
+
+      it "reports the oldest arrival" do
+        expect(subject.oldest).to eq(hit_arrival)
+      end
+
+      it "counts the matching post" do
+        expect(subject.included).to eq(1)
+      end
+
+      it "writes a verdict for the matching post" do
+        subject
+        expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri).included).to be_true
+      end
+
+      # only `included` verdicts are written -- a verdict for every
+      # post the owner ever received, for every feed they own, is what
+      # the backfill must not write.
+      it "writes no verdict for the non-matching post" do
+        subject
+        expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: miss.iri)).to be_nil
+      end
+
+      it "materializes the matching post at its arrival time" do
+        subject
+        expect(materialized).to eq([{hit.iri, hit_arrival}])
+      end
+
+      context "when the batch is truncated" do
+        let(limit) { 1 }
+
+        it "reports the last candidate's arrival as the oldest scanned" do
+          expect(subject.oldest).to eq(miss_arrival)
+        end
+      end
+    end
+
+    context "given an unregistered backend" do
+      before_each { feed.assign(backend: "missing").save(skip_validation: true) }
+
+      it "raises an error" do
+        expect { subject }.to raise_error(/is not a registered backend/)
+      end
+    end
+  end
+
   describe ".judge_arrival" do
     around_each do |proc|
       saved = Rules::View.registry.dup

@@ -79,6 +79,41 @@ class Feed
       seeded
     end
 
+    # The result of one backfill batch.
+    #
+    # `oldest` is the arrival time of the last candidate judged --
+    # the next batch's cursor.
+    #
+    record Batch, scanned : Int32, included : Int32, oldest : Time?
+
+    # Judges one batch of a feed's unjudged candidates between `floor`
+    # and `cursor`, most recently arrived first.
+    #
+    # Writes a verdict only for candidates the feed includes. An
+    # excluded candidate therefore stays a candidate. Skipping
+    # excluded verdicts keeps the backfill from writing a row for
+    # every post the owner has ever received, for every feed they own.
+    #
+    def backfill(feed : ::Feed, floor : Time, cursor : Time?, limit : Int32) : Batch
+      unless (backend = Backend.find?(feed.backend))
+        raise "is not a registered backend: #{feed.backend}"
+      end
+      view = Rules::Feeds.view_for(feed)
+      candidates = Candidates.backfill_candidates_for(feed, floor, cursor, limit)
+      included = 0
+      oldest = nil
+      candidates.each do |(object, arrival)|
+        judgment = backend.judge(feed, [object]).first
+        if judgment.included
+          write_verdict(feed, object, arrival, judgment)
+          Rules::Maintainer.reconcile_object_for(view, object.iri)
+          included += 1
+        end
+        oldest = arrival
+      end
+      Batch.new(scanned: candidates.size, included: included, oldest: oldest)
+    end
+
     # Judges a single newly-arrived object against every registered
     # feed, writing (or refreshing) each feed's verdict.
     #

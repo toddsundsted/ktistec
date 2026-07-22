@@ -41,6 +41,17 @@ class Feed
   @[Persistent]
   property description : String?
 
+  # The arrival time the feed's backfill reaches back to.
+  #
+  # `nil` means "no backfill".
+  #
+  @[Persistent]
+  property floor : Time?
+
+  # How far back a newly published feed reaches.
+  #
+  HORIZON = 30.days
+
   # An example of what belongs in (or doesn't belong in) the feed.
   #
   class Example

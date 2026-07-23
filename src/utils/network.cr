@@ -293,10 +293,10 @@ module Ktistec
     #
     private def resolve_and_validate(host : String, port : Int32) : Socket::Addrinfo
       addrinfos = Socket::Addrinfo.tcp(host, port, timeout: DNS_TIMEOUT)
-      raise Error.new("No addresses found: #{host}") if addrinfos.empty?
+      raise TransientError.new("No addresses found: #{host}") if addrinfos.empty?
       addrinfos.each do |addrinfo|
         unless safe_for_untrusted_outbound_http?(addrinfo.ip_address)
-          raise Error.new("Request to private address denied: #{host}")
+          raise PermanentError.new("Request to private address denied: #{host}")
         end
       end
       addrinfos.first
@@ -360,7 +360,7 @@ module Ktistec
     #
     def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
       was = url
-      error_class = Error # default error class
+      error_class = TransientError # default error class
       message = "Failed"
       attempts.times do
         start = Time.instant
@@ -368,9 +368,9 @@ module Ktistec
         begin
           uri = URI.parse(url)
           host = uri.host.presence
-          raise Error.new("URL has no host: #{url}") unless host
+          raise PermanentError.new("URL has no host: #{url}") unless host
           unless uri.scheme == "http" || uri.scheme == "https"
-            raise Error.new("URL scheme not supported: #{url}")
+            raise PermanentError.new("URL scheme not supported: #{url}")
           end
           client = make_client(uri)
           request_headers =
@@ -394,7 +394,7 @@ module Ktistec
             response_headers = response.headers
             if status_code == 200
               if (cl = response_headers["Content-Length"]?) && (n = cl.to_i?) && n > max_bytes
-                raise Error.new("Response body too large [Content-Length=#{n} > #{max_bytes}]: #{url}")
+                raise PermanentError.new("Response body too large [Content-Length=#{n} > #{max_bytes}]: #{url}")
               end
               if (io = response.body_io?)
                 body_capped = read_strict_capped(io, max_bytes, url)
@@ -409,13 +409,20 @@ module Ktistec
             if (tmp = response_headers["Location"]?) && (url = uri.resolve(tmp).to_s)
               next
             else
+              error_class = PermanentError
               message = "Could not redirect [#{status_code}] [#{tmp}]"
               break
             end
           when 401
+            # deliberately transient: Mastodon's authorized fetch
+            # returns 401 when it cannot verify the fetcher's
+            # signature, which includes failing to fetch our key on
+            # their side -- so a 401 is not reliably a refusal
+            error_class = TransientError
             message = "Unauthorized [#{status_code}]"
             break
           when 403
+            error_class = RefusedError
             message = "Forbidden [#{status_code}]"
             break
           when 404, 410
@@ -429,6 +436,7 @@ module Ktistec
             break
           end
         rescue URI::Error
+          error_class = PermanentError
           message = "Invalid URI"
           break
         rescue Socket::Addrinfo::Error
@@ -477,7 +485,7 @@ module Ktistec
       buf = IO::Memory.new
       bytes = IO.copy(io, buf, max + 1)
       if bytes > max
-        raise Error.new("Response body too large [>#{max} bytes]: #{url}")
+        raise PermanentError.new("Response body too large [>#{max} bytes]: #{url}")
       end
       buf.to_s
     end
@@ -542,9 +550,9 @@ module Ktistec
       begin
         uri = URI.parse(url)
         host = uri.host.presence
-        raise Error.new("URL has no host: #{url}") unless host
+        raise PermanentError.new("URL has no host: #{url}") unless host
         unless uri.scheme == "http" || uri.scheme == "https"
-          raise Error.new("URL scheme not supported: #{url}")
+          raise PermanentError.new("URL scheme not supported: #{url}")
         end
         client = make_client(uri)
         request_headers = Ktistec::Signature.sign(key_pair, url, body, content_type).merge!(headers)
@@ -570,26 +578,26 @@ module Ktistec
           HTTP::Client::Response.new(status, headers: response_headers)
         end
       rescue URI::Error
-        raise Error.new("Invalid URI: #{url}")
+        raise PermanentError.new("Invalid URI: #{url}")
       rescue Socket::Addrinfo::Error
-        raise Error.new("Hostname lookup failure: #{url}")
+        raise TransientError.new("Hostname lookup failure: #{url}")
       rescue Socket::ConnectError
-        raise Error.new("Connection failure: #{url}")
+        raise TransientError.new("Connection failure: #{url}")
       rescue OpenSSL::Error
-        raise Error.new("Secure connection failure: #{url}")
+        raise TransientError.new("Secure connection failure: #{url}")
       rescue IO::TimeoutError # subclass of IO::Error
-        raise Error.new("Timeout [#{(Time.instant - start).to_i}s]: #{url}")
+        raise TransientError.new("Timeout [#{(Time.instant - start).to_i}s]: #{url}")
       rescue IO::Error
-        raise Error.new("I/O error: #{url}")
+        raise TransientError.new("I/O error: #{url}")
       rescue Compress::Deflate::Error | Compress::Gzip::Error
-        raise Error.new("Encoding error: #{url}")
+        raise TransientError.new("Encoding error: #{url}")
       rescue ex : Exception
         # an HTTP::Client built on an existing IO cannot reconnect;
         # when the peer drops the connection mid-request,
         # HTTP::Client's internal one-shot retry raises a bare
         # exception.
         raise ex unless ex.message == "This HTTP::Client cannot be reconnected"
-        raise Error.new("Connection failure: #{url}")
+        raise TransientError.new("Connection failure: #{url}")
       ensure
         client.try(&.close)
       end
@@ -607,9 +615,24 @@ module Ktistec
     class Error < Exception
     end
 
+    # Raised when retrying will not change the outcome.
+    #
+    class PermanentError < Error
+    end
+
+    # Raised when retrying may succeed.
+    #
+    class TransientError < Error
+    end
+
     # Raised when the response status is 404 or 410.
     #
-    class NotFoundError < Error
+    class NotFoundError < PermanentError
+    end
+
+    # Raised when the response status is 403.
+    #
+    class RefusedError < PermanentError
     end
   end
 end

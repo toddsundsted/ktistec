@@ -190,6 +190,8 @@ class HTTP::Client
         raise Socket::ConnectError.from_os_error(nil, nil)
       when /openssl-error/
         raise OpenSSL::Error.new
+      when /timeout-error/
+        raise IO::TimeoutError.new
       when /io-error/
         raise IO::Error.new
       when /reconnect-error/
@@ -257,6 +259,8 @@ class HTTP::Client
         raise Socket::ConnectError.from_os_error(nil, nil)
       when /openssl-error/
         raise OpenSSL::Error.new
+      when /timeout-error/
+        raise IO::TimeoutError.new
       when /io-error/
         raise IO::Error.new
       when /reconnect-error/

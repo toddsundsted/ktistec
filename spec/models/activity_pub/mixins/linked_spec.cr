@@ -430,7 +430,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "fetches the object and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::JSON_LD::Error)
+        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::Network::TransientError)
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
@@ -497,7 +497,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "fetches the object and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::JSON_LD::Error)
+        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
         expect(HTTP::Client.last?).to match("GET #{requested_iri}")
       end
     end
@@ -508,7 +508,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { subject.linked_model_iri = iri }
 
       it "does not fetch the object and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::Model::NotFound)
+        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
         expect(HTTP::Client.last?).to be_nil
       end
 
@@ -539,6 +539,25 @@ Spectator.describe Ktistec::Model::Linked do
         expect(subject.linked_model(key_pair, dereference: true, ignore_cached: true)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
+
+      context "and the forced refresh fails" do
+        before_each { HTTP::Client.cache.delete(object.iri) }
+
+        it "returns the cached object" do
+          expect(subject.linked_model(key_pair, dereference: true, ignore_cached: true)).to be(object) # object identity
+        end
+      end
+    end
+
+    context "when linked object is cached and the remote returns a mismatched document" do
+      before_each do
+        subject.linked_model = object.save
+        HTTP::Client.objects[object.iri] = LinkedModel.new(iri: "https://remote/objects/other").to_json_ld
+      end
+
+      it "raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, ignore_cached: true) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+      end
     end
 
     context "when linked object is changed" do
@@ -557,6 +576,14 @@ Spectator.describe Ktistec::Model::Linked do
       it "fetches and returns the object" do
         expect(subject.linked_model(key_pair, dereference: true, ignore_changed: true)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+
+      context "and a forced refresh fails" do
+        before_each { HTTP::Client.cache.delete(object.iri) }
+
+        it "raises an error" do
+          expect { subject.linked_model(key_pair, dereference: true, ignore_changed: true) }.to raise_error(Ktistec::Network::NotFoundError)
+        end
       end
     end
 
@@ -836,7 +863,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "fetches the object and raises an error" do
-        expect { subject.dereference(key_pair, object.iri) }.to raise_error(Ktistec::JSON_LD::Error)
+        expect { subject.dereference(key_pair, object.iri) }.to raise_error(Ktistec::Network::TransientError)
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
@@ -918,7 +945,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects[requested_iri] = object.to_json_ld }
 
       it "fetches the object and raises an error" do
-        expect { subject.dereference(key_pair, requested_iri) }.to raise_error(Ktistec::JSON_LD::Error)
+        expect { subject.dereference(key_pair, requested_iri) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
         expect(HTTP::Client.last?).to match("GET #{requested_iri}")
       end
     end
@@ -927,7 +954,7 @@ Spectator.describe Ktistec::Model::Linked do
       let(iri) { "https://remote/objects/object#updates/123456" }
 
       it "does not fetch the object and raises an error" do
-        expect { subject.dereference(key_pair, iri) }.to raise_error(Ktistec::Model::NotFound)
+        expect { subject.dereference(key_pair, iri) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
         expect(HTTP::Client.last?).to be_nil
       end
 
@@ -940,7 +967,7 @@ Spectator.describe Ktistec::Model::Linked do
         end
 
         it "fetches and raises an error" do
-          expect { subject.dereference(key_pair, iri, ignore_cached: true) }.to raise_error(Ktistec::Model::NotFound)
+          expect { subject.dereference(key_pair, iri, ignore_cached: true) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
           expect(HTTP::Client.last?).to be_nil
         end
       end

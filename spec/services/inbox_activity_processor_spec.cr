@@ -573,6 +573,25 @@ Spectator.describe InboxActivityProcessor do
           expect(MockDeliverTask.last_sender).to eq(account.actor)
           expect(MockDeliverTask.last_activity).to be_a(ActivityPub::Activity::Reject)
         end
+
+        context "and the request has already been rejected" do
+          before_each { InboxActivityProcessor.process(account, quote_request_activity) }
+
+          it "does not create a second Reject" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { ActivityPub::Activity::Reject.count }
+          end
+
+          it "does not create a second notification" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { Relationship::Content::Notification::Quote.count }
+          end
+
+          it "does not schedule a second deliver task" do
+            InboxActivityProcessor.process(account, quote_request_activity, deliver_task_class: MockDeliverTask)
+            expect(MockDeliverTask.schedule_called_count).to eq(0)
+          end
+        end
       end
 
       context "when manually_approve_quotes is false" do
@@ -646,6 +665,56 @@ Spectator.describe InboxActivityProcessor do
               .to change { ActivityPub::Activity::Accept.count }.by(1)
             accept = ActivityPub::Activity::Accept.all.last
             expect(accept.result).to eq(quote_authorization)
+          end
+        end
+
+        context "and the request has already been accepted" do
+          before_each { InboxActivityProcessor.process(account, quote_request_activity) }
+
+          it "does not create a second Accept" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { ActivityPub::Activity::Accept.count }
+          end
+
+          it "does not create a second notification" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { Relationship::Content::Notification::Quote.count }
+          end
+
+          it "does not schedule a second deliver task" do
+            InboxActivityProcessor.process(account, quote_request_activity, deliver_task_class: MockDeliverTask)
+            expect(MockDeliverTask.schedule_called_count).to eq(0)
+          end
+        end
+      end
+
+      # a request is answered once; toggling the setting between an
+      # original delivery and a redelivery must not produce a second,
+      # contradictory answer
+      context "when manually_approve_quotes is toggled between deliveries" do
+        context "rejected, then approval turned off" do
+          before_each do
+            account.assign(manually_approve_quotes: true).save
+            InboxActivityProcessor.process(account, quote_request_activity)
+            account.assign(manually_approve_quotes: false).save
+          end
+
+          it "does not accept it" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { ActivityPub::Activity::Accept.count }
+          end
+        end
+
+        context "accepted, then approval turned on" do
+          before_each do
+            account.assign(manually_approve_quotes: false).save
+            InboxActivityProcessor.process(account, quote_request_activity)
+            account.assign(manually_approve_quotes: true).save
+          end
+
+          it "does not reject it" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { ActivityPub::Activity::Reject.count }
           end
         end
       end

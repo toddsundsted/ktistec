@@ -183,6 +183,14 @@ class InboxActivityProcessor
   private def self.process_quote_request(account, quote_request, deliver_task_class)
     now = Time.utc
 
+    # a request is answered once, and stays answered across a
+    # redelivery regardless of the current `manually_approve_quotes`
+    # setting.
+    if ActivityPub::Activity::Accept.where(actor_iri: account.actor.iri, object_iri: quote_request.iri).first? ||
+       ActivityPub::Activity::Reject.where(actor_iri: account.actor.iri, object_iri: quote_request.iri).first?
+      return
+    end
+
     if account.manually_approve_quotes
       reject = ActivityPub::Activity::Reject.new(
         iri: "#{Ktistec.host}/activities/#{Ktistec::Util.id}",

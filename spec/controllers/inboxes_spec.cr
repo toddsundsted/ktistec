@@ -1462,6 +1462,20 @@ Spectator.describe InboxesController do
           post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
           expect(response.status_code).to eq(200)
         end
+
+        context "and the request has already been received" do
+          before_each { post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true) }
+
+          it "does not answer it a second time" do
+            expect { post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true) }
+              .not_to change { ActivityPub::Activity::Reject.count }
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
       end
 
       it "accepts the quote request" do

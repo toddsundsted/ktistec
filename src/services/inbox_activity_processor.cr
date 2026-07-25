@@ -39,6 +39,45 @@ class InboxActivityProcessor
     deliver_task_class : Task::Deliver.class = Task::Deliver,
     processed : Set(String) = Set(String).new,
   )
+    deliver(
+      account, activity, deliver_to,
+      handle_follow_request_task_class: handle_follow_request_task_class,
+      deliver_task_class: deliver_task_class,
+    )
+
+    maintain(activity)
+
+    partition = Ktistec::Recipients.partition(
+      Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
+    )
+
+    # `processed` tracks the actors already handled in this delivery pass,
+    # breaking the `process` -> `process_locally` -> `process` recursion.
+
+    processed << account.actor.iri
+    process_locally(partition.local, activity, processed)
+
+    # scheduled unconditionally even when `partition.remote` is empty:
+    # `Task::Receive#perform` does per-receiver work (quote handling)
+    # that's needed regardless of remote forwarding.
+
+    receive_task_class.new(
+      receiver: account.actor,
+      activity: activity,
+      recipients: partition.remote,
+    ).schedule
+  end
+
+  # Produces the delivery artifacts for a local account and the side
+  # effects that belong to the account the activity implicates.
+  #
+  def self.deliver(
+    account : Account,
+    activity : ActivityPub::Activity,
+    deliver_to : Array(String)? = nil,
+    handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
+    deliver_task_class : Task::Deliver.class = Task::Deliver,
+  )
     if Ktistec::Recipients.recipient?(activity, account.actor, deliver_to) && !filtered?(account.actor, activity)
       unless Relationship::Content::Inbox.find?(owner: account.actor, activity: activity)
         Relationship::Content::Inbox.new(owner: account.actor, activity: activity).save
@@ -63,22 +102,22 @@ class InboxActivityProcessor
     when ActivityPub::Activity::QuoteRequest
       process_quote_request(account, activity, deliver_task_class)
     when ActivityPub::Activity::Accept
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: object.object))
-          follow.assign(confirmed: true).save
-        end
-      when ActivityPub::Activity::QuoteRequest
+      if (object = activity.object).is_a?(ActivityPub::Activity::QuoteRequest)
         process_accept_quote_request(account, object, activity)
       end
-    when ActivityPub::Activity::Reject
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: object.object))
+    end
+  end
+
+  # Corrects the local cache to match the state of the fediverse, and
+  # re-evaluates the materialized views.
+  #
+  def self.maintain(activity : ActivityPub::Activity)
+    case activity
+    when ActivityPub::Activity::Accept, ActivityPub::Activity::Reject
+      if (object = activity.object).is_a?(ActivityPub::Activity::Follow)
+        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
           follow.assign(confirmed: true).save
         end
-      when ActivityPub::Activity::QuoteRequest
-        # no action needed
       end
     when ActivityPub::Activity::Undo
       object =
@@ -111,25 +150,6 @@ class InboxActivityProcessor
     # re-evaluate the materialized views for the object this activity
     # concerns.
     Rules::Trigger.reconcile_for_activity(activity)
-
-    partition = Ktistec::Recipients.partition(
-      Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
-    )
-
-    # `processed` tracks the actors already handled in this delivery pass,
-    # breaking the `process` -> `process_locally` -> `process` recursion.
-    processed << account.actor.iri
-    process_locally(partition.local, activity, processed)
-
-    # scheduled unconditionally even when `partition.remote` is empty:
-    # `Task::Receive#perform` does per-receiver work (quote handling)
-    # that's needed regardless of remote forwarding.
-
-    receive_task_class.new(
-      receiver: account.actor,
-      activity: activity,
-      recipients: partition.remote,
-    ).schedule
   end
 
   # Processes local recipients in-process.

@@ -932,4 +932,89 @@ Spectator.describe InboxActivityProcessor do
       end
     end
   end
+
+  describe ".maintain" do
+    context "with a Delete of an Object" do
+      let_create!(:object, named: :doomed, attributed_to: other)
+      let_create(:delete, named: :delete_activity, actor: other, object: doomed)
+
+      it "marks the object as deleted" do
+        expect { InboxActivityProcessor.maintain(delete_activity) }
+          .to change { ActivityPub::Object.find(doomed.iri, include_deleted: true).deleted_at }.from(nil)
+      end
+    end
+
+    context "with an Undo of a Follow" do
+      let_create(:follow, named: :follow_activity, actor: other, object: account.actor)
+      let_create!(:follow_relationship, actor: other, object: account.actor)
+      let_create(:undo, named: :undo_activity, actor: other, object: follow_activity)
+
+      it "marks the follow activity as undone" do
+        expect { InboxActivityProcessor.maintain(undo_activity) }
+          .to change { follow_activity.reload!.undone_at }.from(nil)
+      end
+
+      it "destroys the follow relationship" do
+        expect { InboxActivityProcessor.maintain(undo_activity) }
+          .to change { Relationship::Social::Follow.count }.by(-1)
+      end
+
+      it "does not create an inbox row" do
+        expect { InboxActivityProcessor.maintain(undo_activity) }
+          .not_to change { Relationship::Content::Inbox.count }
+      end
+    end
+
+    context "with an Accept of a Follow" do
+      let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
+      let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
+      let_create(:accept, named: :accept_activity, actor: other, object: follow_activity)
+
+      it "confirms the follow relationship" do
+        expect { InboxActivityProcessor.maintain(accept_activity) }
+          .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+      end
+    end
+
+    context "with a Reject of a Follow" do
+      let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
+      let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
+      let_create(:reject, named: :reject_activity, actor: other, object: follow_activity)
+
+      it "confirms the follow relationship" do
+        expect { InboxActivityProcessor.maintain(reject_activity) }
+          .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+      end
+    end
+  end
+
+  describe ".deliver" do
+    let_create(:create, named: :create_activity, actor: other, object: object, to: [account.actor.iri])
+
+    it "creates the inbox row" do
+      expect { InboxActivityProcessor.deliver(account, create_activity) }
+        .to change { Relationship::Content::Inbox.count(from_iri: account.actor.iri) }.by(1)
+    end
+
+    context "with an Undo of a Follow" do
+      let_create(:follow, named: :follow_activity, actor: other, object: account.actor)
+      let_create!(:follow_relationship, actor: other, object: account.actor)
+      let_create(:undo, named: :undo_activity, actor: other, object: follow_activity, to: [account.actor.iri])
+
+      it "does not undo the target" do
+        expect { InboxActivityProcessor.deliver(account, undo_activity) }
+          .not_to change { follow_activity.reload!.undone_at }
+      end
+
+      it "does not destroy the follow relationship" do
+        expect { InboxActivityProcessor.deliver(account, undo_activity) }
+          .not_to change { Relationship::Social::Follow.count }
+      end
+
+      it "creates the inbox row" do
+        expect { InboxActivityProcessor.deliver(account, undo_activity) }
+          .to change { Relationship::Content::Inbox.count(from_iri: account.actor.iri) }.by(1)
+      end
+    end
+  end
 end

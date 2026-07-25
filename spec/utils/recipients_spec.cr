@@ -408,6 +408,283 @@ Spectator.describe Ktistec::Recipients do
     end
   end
 
+  describe ".local_recipients" do
+    subject { described_class.local_recipients(activity) }
+
+    let(iris) { subject.map(&.iri) }
+
+    let!(addressee) { register }
+    let!(bystander) { register }
+
+    let_build(:actor, named: :sender_actor)
+
+    before_each { activity.actor_iri = sender_actor.iri }
+
+    it "returns nothing" do
+      expect(subject).to be_empty
+    end
+
+    context "addressed to an account via to" do
+      before_each { activity.to = [addressee.actor.iri] }
+
+      it "includes the account" do
+        expect(iris).to contain(addressee.iri)
+      end
+
+      it "does not include the other account" do
+        expect(iris).not_to contain(bystander.iri)
+      end
+    end
+
+    context "addressed to an account via cc" do
+      before_each { activity.cc = [addressee.actor.iri] }
+
+      it "includes the account" do
+        expect(iris).to contain(addressee.iri)
+      end
+
+      it "does not include the other account" do
+        expect(iris).not_to contain(bystander.iri)
+      end
+    end
+
+    context "addressed to an account via audience" do
+      before_each { activity.audience = [addressee.actor.iri] }
+
+      it "includes the account" do
+        expect(iris).to contain(addressee.iri)
+      end
+
+      it "does not include the other account" do
+        expect(iris).not_to contain(bystander.iri)
+      end
+    end
+
+    context "addressed to a remote actor" do
+      before_each { activity.to = [remote_recipient.iri] }
+
+      it "returns nothing" do
+        expect(subject).to be_empty
+      end
+    end
+
+    context "addressed to the public collection" do
+      before_each { activity.to = [Ktistec::Constants::PUBLIC] }
+
+      it "returns nothing" do
+        expect(subject).to be_empty
+      end
+
+      context "and an account follows the sender" do
+        let_create!(:follow_relationship, actor: addressee.actor, object: sender_actor, confirmed: true)
+
+        it "includes the follower" do
+          expect(iris).to contain(addressee.iri)
+        end
+
+        it "does not include the other account" do
+          expect(iris).not_to contain(bystander.iri)
+        end
+
+        context "but the follow is not confirmed" do
+          before_each { follow_relationship.assign(confirmed: false).save }
+
+          it "returns nothing" do
+            expect(subject).to be_empty
+          end
+        end
+      end
+    end
+
+    context "addressed to the sender's followers collection" do
+      before_each { activity.to = ["#{sender_actor.iri}/followers"] }
+
+      it "returns nothing" do
+        expect(subject).to be_empty
+      end
+
+      context "and an account follows the sender" do
+        let_create!(:follow_relationship, actor: addressee.actor, object: sender_actor, confirmed: true)
+
+        it "includes the follower" do
+          expect(iris).to contain(addressee.iri)
+        end
+
+        it "does not include the other account" do
+          expect(iris).not_to contain(bystander.iri)
+        end
+
+        context "but the follow is not confirmed" do
+          before_each { follow_relationship.assign(confirmed: false).save }
+
+          it "returns nothing" do
+            expect(subject).to be_empty
+          end
+        end
+      end
+    end
+
+    context "addressed to an account's followers collection" do
+      let!(collection_owner) { register }
+      let!(follower) { register }
+
+      before_each { activity.to = ["#{collection_owner.actor.iri}/followers"] }
+
+      let_create!(:follow_relationship, actor: follower.actor, object: collection_owner.actor, confirmed: true)
+
+      it "returns nothing" do
+        expect(subject).to be_empty
+      end
+
+      context "and the activity's object is a reply in a thread the owner started" do
+        let_build(:object, named: :original, attributed_to: collection_owner.actor, to: ["#{collection_owner.actor.iri}/followers"])
+        let_build(:object, named: :reply, in_reply_to: original)
+
+        before_each do
+          original.save
+          reply.save
+          activity.object_iri = reply.iri
+        end
+
+        it "includes the follower" do
+          expect(iris).to contain(follower.iri)
+        end
+
+        it "does not include the owner" do
+          expect(iris).not_to contain(collection_owner.iri)
+        end
+      end
+    end
+
+    context "given a Follow of an account's actor" do
+      let_build(:follow, named: :activity, actor: sender_actor, object: addressee.actor)
+
+      it "includes the account" do
+        expect(iris).to contain(addressee.iri)
+      end
+
+      context "of a remote actor" do
+        let_build(:follow, named: :activity, actor: sender_actor, object: remote_recipient)
+
+        it "returns nothing" do
+          expect(subject).to be_empty
+        end
+      end
+    end
+
+    context "given an Accept of an account's Follow" do
+      let_create!(:follow, named: :follow_activity, actor: addressee.actor, object: sender_actor)
+      let_build(:accept, named: :activity, actor: sender_actor, object: follow_activity)
+
+      it "includes the account" do
+        expect(iris).to contain(addressee.iri)
+      end
+
+      context "when this server never sent the Follow" do
+        let_build(:follow, named: :follow_activity, actor: addressee.actor, object: sender_actor)
+
+        it "returns nothing" do
+          expect(subject).to be_empty
+        end
+      end
+    end
+
+    context "given a Reject of an account's Follow" do
+      let_create!(:follow, named: :follow_activity, actor: addressee.actor, object: sender_actor)
+      let_build(:reject, named: :activity, actor: sender_actor, object: follow_activity)
+
+      it "includes the account" do
+        expect(iris).to contain(addressee.iri)
+      end
+
+      context "when this server never sent the Follow" do
+        let_build(:follow, named: :follow_activity, actor: addressee.actor, object: sender_actor)
+
+        it "returns nothing" do
+          expect(subject).to be_empty
+        end
+      end
+    end
+
+    context "given an account's cached object" do
+      let_create!(:object, named: :owned, attributed_to: addressee.actor)
+
+      # `to: nil` throughout -- the like/dislike factories otherwise
+      # address the activity to the object's owner, which would
+      # exercise explicit addressing rather than the semantic path.
+
+      context "and a Like" do
+        let_build(:like, named: :activity, actor: sender_actor, object: owned, to: nil)
+
+        it "includes the account" do
+          expect(iris).to contain(addressee.iri)
+        end
+
+        context "when the payload names an object this server doesn't have" do
+          let_build(:object, named: :owned, attributed_to: addressee.actor)
+
+          it "returns nothing" do
+            expect(subject).to be_empty
+          end
+        end
+
+        context "when the payload claims a different owner" do
+          let_build(:object, named: :forged, iri: owned.iri, attributed_to: bystander.actor)
+          let_build(:like, named: :activity, actor: sender_actor, object: forged, to: nil)
+
+          it "includes the stored owner" do
+            expect(iris).to contain(addressee.iri)
+          end
+
+          it "does not include the claimed owner" do
+            expect(iris).not_to contain(bystander.iri)
+          end
+        end
+      end
+
+      context "and a Like addressed to another account" do
+        let_build(:like, named: :activity, actor: sender_actor, object: owned, to: [bystander.actor.iri])
+
+        it "includes both accounts" do
+          expect(iris).to contain_exactly(addressee.iri, bystander.iri)
+        end
+      end
+
+      context "and a Dislike" do
+        let_build(:dislike, named: :activity, actor: sender_actor, object: owned, to: nil)
+
+        it "includes the account" do
+          expect(iris).to contain(addressee.iri)
+        end
+      end
+
+      context "and a QuoteRequest for it" do
+        let_build(:quote_request, named: :activity, actor: sender_actor, object: owned)
+
+        it "includes the account" do
+          expect(iris).to contain(addressee.iri)
+        end
+      end
+
+      context "and a Delete" do
+        let_build(:delete, named: :activity, actor: sender_actor, object: owned)
+
+        it "returns nothing" do
+          expect(subject).to be_empty
+        end
+      end
+
+      context "and an Undo of a Like" do
+        let_create!(:like, named: :like_activity, actor: sender_actor, object: owned, to: nil)
+        let_build(:undo, named: :activity, actor: sender_actor, activity: like_activity)
+
+        it "returns nothing" do
+          expect(subject).to be_empty
+        end
+      end
+    end
+  end
+
   describe ".recipient?" do
     let(deliver_to) { nil }
 

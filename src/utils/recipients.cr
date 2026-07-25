@@ -1,6 +1,12 @@
 require "../ktistec/constants"
 require "../models/account"
 require "../models/activity_pub/activity"
+require "../models/activity_pub/activity/accept"
+require "../models/activity_pub/activity/dislike"
+require "../models/activity_pub/activity/follow"
+require "../models/activity_pub/activity/like"
+require "../models/activity_pub/activity/quote_request"
+require "../models/activity_pub/activity/reject"
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
 require "../models/relationship/social/follow"
@@ -41,7 +47,13 @@ module Ktistec
     # deduplicated list of actor IRIs reachable from this server.
     #
     def self.for_receive(activity : ActivityPub::Activity, receiver : ActivityPub::Actor, deliver_to : Array(String)?) : Array(String)
-      [activity.to, activity.cc, deliver_to].flatten.flat_map do |recipient|
+      expand(activity, receiver, [activity.to, activity.cc, deliver_to].flatten)
+    end
+
+    # Expands addressed IRIs relative to a single receiver.
+    #
+    private def self.expand(activity : ActivityPub::Activity, receiver : ActivityPub::Actor, recipients : Array(String?)) : Array(String)
+      recipients.flat_map do |recipient|
         if recipient == receiver.iri
           # 1. recipient is the receiver
           recipient
@@ -77,6 +89,46 @@ module Ktistec
           end
         end
       end.compact.sort!.uniq!
+    end
+
+    # Returns the local accounts an inbound activity implicates.
+    #
+    # Recipients come from two sources, unioned: the activity's
+    # explicit addressing and the recipient implied by the activity's
+    # type.
+    #
+    def self.local_recipients(activity : ActivityPub::Activity) : Array(Account)
+      accounts = Account.all
+      recipients = [activity.to, activity.cc, activity.audience].flatten
+      iris = Set(String).new
+      accounts.each do |account|
+        iris.concat(expand(activity, account.actor, recipients))
+      end
+      if (iri = semantic_recipient_iri?(activity))
+        iris << iri
+      end
+      accounts.select { |account| iris.includes?(account.iri) }
+    end
+
+    # Returns the IRI of the actor the activity implicates by virtue of
+    # its type, if any.
+    #
+    # Only IRIs come from the payload; any attribute of the object
+    # they name is read from the cache.
+    #
+    private def self.semantic_recipient_iri?(activity : ActivityPub::Activity) : String?
+      case activity
+      when ActivityPub::Activity::Follow
+        activity.object_iri
+      when ActivityPub::Activity::Accept, ActivityPub::Activity::Reject
+        if (object_iri = activity.object_iri)
+          ActivityPub::Activity.find?(object_iri, include_undone: true).try(&.actor_iri)
+        end
+      when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike, ActivityPub::Activity::QuoteRequest
+        if (object_iri = activity.object_iri)
+          ActivityPub::Object.find?(object_iri, include_deleted: true).try(&.attributed_to_iri)
+        end
+      end
     end
 
     # Returns true if the receiver is a recipient of the inbound

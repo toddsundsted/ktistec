@@ -81,18 +81,29 @@ class InboxActivityProcessor
         # no action needed
       end
     when ActivityPub::Activity::Undo
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
-          follow.destroy
+      object =
+        if (object_iri = activity.object_iri)
+          ActivityPub::Activity.find?(object_iri, include_undone: true)
         end
+      object ||= activity.object?(include_undone: true)
+      if object && !object.undone?
+        if object.is_a?(ActivityPub::Activity::Follow)
+          if (follow_actor = object.actor?) && (follow_object = object.object?)
+            if (follow = Relationship::Social::Follow.find?(actor: follow_actor, object: follow_object))
+              follow.destroy
+            end
+          end
+        end
+        object.undo!
       end
-      activity.object.undo!
     when ActivityPub::Activity::Delete
-      case (object = activity.object?)
-      when ActivityPub::Object
-        object.delete!
-      when ActivityPub::Actor
+      object =
+        if (object_iri = activity.object_iri)
+          ActivityPub::Object.find?(object_iri, include_deleted: true) ||
+            ActivityPub::Actor.find?(object_iri, include_deleted: true)
+        end
+      object ||= activity.object?(include_deleted: true)
+      if object && !object.deleted?
         object.delete!
       end
     end

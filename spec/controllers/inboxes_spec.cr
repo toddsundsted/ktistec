@@ -1690,6 +1690,27 @@ Spectator.describe InboxesController do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
         end
+
+        context "and the undo has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            # without this the redelivery short-circuits at the inbox
+            # row near the top of the handler and passes vacuously
+            Relationship::Content::Inbox.find(owner: actor, activity: undo).destroy
+          end
+
+          pre_condition { expect(announce.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { announce.reload!.undone_at }
+          end
+        end
       end
 
       context "a like" do
@@ -1725,6 +1746,27 @@ Spectator.describe InboxesController do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
         end
+
+        context "and the undo has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            # without this the redelivery short-circuits at the inbox
+            # row near the top of the handler and passes vacuously
+            Relationship::Content::Inbox.find(owner: actor, activity: undo).destroy
+          end
+
+          pre_condition { expect(like.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { like.reload!.undone_at }
+          end
+        end
       end
 
       context "a dislike" do
@@ -1759,6 +1801,27 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the undo has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            # without this the redelivery short-circuits at the inbox
+            # row near the top of the handler and passes vacuously
+            Relationship::Content::Inbox.find(owner: actor, activity: undo).destroy
+          end
+
+          pre_condition { expect(dislike.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { dislike.reload!.undone_at }
+          end
         end
       end
 
@@ -1812,6 +1875,53 @@ Spectator.describe InboxesController do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
         end
+
+        context "and the undo has already been delivered" do
+          let(body) { undo.to_json_ld }
+          let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", body, "application/json") }
+
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, body
+            # without this the redelivery short-circuits at the inbox
+            # row near the top of the handler and passes vacuously
+            Relationship::Content::Inbox.find(owner: actor, activity: undo).destroy
+          end
+
+          pre_condition { expect(follow.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, body
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, body }
+              .not_to change { follow.reload!.undone_at }
+          end
+
+          context "and the payload does not embed the follow" do
+            let(body) { undo.to_json_ld(recursive: false) }
+
+            it "succeeds" do
+              post "/actors/#{actor.username}/inbox", headers, body
+              expect(response.status_code).to eq(200)
+            end
+          end
+        end
+
+        context "and the follow is already undone" do
+          before_each { follow.undo! }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not destroy the relationship" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { Relationship::Social::Follow.count(from_iri: other.iri, to_iri: actor.iri) }
+          end
+        end
       end
     end
 
@@ -1856,6 +1966,27 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the delete has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            # without this the redelivery short-circuits at the inbox
+            # row near the top of the handler and passes vacuously
+            Relationship::Content::Inbox.find(owner: actor, activity: delete).destroy
+          end
+
+          pre_condition { expect(note.reload!.deleted_at).not_to be_nil }
+
+          it "accepts the delete" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+          end
+
+          it "does not move the deletion timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { note.reload!.deleted_at }
+          end
         end
 
         context "and the object was a reply to the actor's object" do
@@ -1960,6 +2091,27 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the delete has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            # without this the redelivery short-circuits at the inbox
+            # row near the top of the handler and passes vacuously
+            Relationship::Content::Inbox.find(owner: actor, activity: delete).destroy
+          end
+
+          pre_condition { expect(other.reload!.deleted_at).not_to be_nil }
+
+          it "accepts the delete" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(202)
+          end
+
+          it "does not move the deletion timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { other.reload!.deleted_at }
+          end
         end
 
         context "signature is not valid but the remote actor no longer exists" do
@@ -2293,6 +2445,27 @@ Spectator.describe InboxesController do
             it "returns 400" do
               post "/actors/#{actor.username}/inbox", headers, wrapped_json
               expect(response.status_code).to eq(400)
+            end
+          end
+
+          context "and the delete has already been delivered" do
+            before_each do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              # without this the redelivery short-circuits at the inbox
+              # row near the top of the handler and passes vacuously
+              Relationship::Content::Inbox.find(owner: actor, activity: delete).destroy
+            end
+
+            pre_condition { expect(object.reload!.deleted_at).not_to be_nil }
+
+            it "is successful" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(200)
+            end
+
+            it "does not move the deletion timestamp" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .not_to change { object.reload!.deleted_at }
             end
           end
         end

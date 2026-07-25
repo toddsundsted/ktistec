@@ -454,7 +454,14 @@ class InboxesController
       unless activity.actor?(account.actor, dereference: true)
         bad_request
       end
-      case (object = activity.object?(account.actor, dereference: true))
+      # prefer the database record over the payload: an embedded
+      # object is parsed into a new instance that carries no
+      # `undone_at`.
+      if (object_iri = activity.object_iri) &&
+         (persisted = ActivityPub::Activity.find?(object_iri, include_undone: true))
+        activity.object = persisted
+      end
+      case (object = activity.object?(account.actor, dereference: true, include_undone: true))
       when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         unless object.actor == activity.actor
           bad_request
@@ -467,7 +474,7 @@ class InboxesController
         unless object.actor == activity.actor
           bad_request
         end
-        unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
+        unless object.undone? || Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
           bad_request
         end
         deliver_to = [account.iri]
@@ -479,7 +486,7 @@ class InboxesController
       # contents of the payload. also because the original object may
       # be replaced by a tombstone (per the spec).
       if (community = via_community)
-        unless (object = ActivityPub::Object.find?(activity.object_iri))
+        unless (object = ActivityPub::Object.find?(activity.object_iri, include_deleted: true))
           bad_request
         end
         unless relay_delete_authorized?(account, community, object)

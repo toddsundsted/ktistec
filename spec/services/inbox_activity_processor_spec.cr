@@ -401,6 +401,30 @@ Spectator.describe InboxActivityProcessor do
           expect(MockReceiveTask.last_receiver).to eq(account.actor)
           expect(MockReceiveTask.last_activity).to eq(undo_activity)
         end
+
+        context "and the follow activity is already undone" do
+          before_each { ActivityPub::Activity::Follow.find(follow_activity.iri).undo! }
+
+          pre_condition { expect(undo_activity.object.undone_at).to be_nil }
+
+          it "leaves the follow relationship alone" do
+            InboxActivityProcessor.process(account, undo_activity)
+            expect(Relationship::Social::Follow.find?(actor: other, object: account.actor)).not_to be_nil
+          end
+
+          context "and the undo carries no cached association" do
+            let(fetched) { ActivityPub::Activity.find(undo_activity.iri) }
+
+            it "does not raise" do
+              expect { InboxActivityProcessor.process(account, fetched) }.not_to raise_error
+            end
+
+            it "leaves the follow relationship alone" do
+              InboxActivityProcessor.process(account, fetched)
+              expect(Relationship::Social::Follow.find?(actor: other, object: account.actor)).not_to be_nil
+            end
+          end
+        end
       end
 
       context "given an Announce" do
@@ -410,6 +434,19 @@ Spectator.describe InboxActivityProcessor do
         it "marks the announce activity as undone" do
           expect { InboxActivityProcessor.process(account, undo_activity) }
             .to change { announce_activity.reload!.undone_at }.from(nil)
+        end
+
+        context "and the announce activity is already undone" do
+          before_each { ActivityPub::Activity::Announce.find(announce_activity.iri).undo! }
+
+          pre_condition { expect(undo_activity.object.undone_at).to be_nil }
+
+          # re-query, don't `reload!`: reloading populates the cached
+          # object's timestamp from the DB before the code under test runs
+          it "does not move the undo timestamp" do
+            expect { InboxActivityProcessor.process(account, undo_activity) }
+              .not_to change { ActivityPub::Activity::Announce.find(announce_activity.iri, include_undone: true).undone_at }
+          end
         end
 
         it "schedules receive task" do
@@ -431,6 +468,19 @@ Spectator.describe InboxActivityProcessor do
             .to change { object_to_delete.reload!.deleted_at }.from(nil)
         end
 
+        context "and the object is already deleted" do
+          before_each { ActivityPub::Object.find(object_to_delete.iri).delete! }
+
+          pre_condition { expect(delete_activity.object.deleted_at).to be_nil }
+
+          # re-query, don't `reload!`: reloading populates the cached
+          # object's timestamp from the DB before the code under test runs
+          it "does not move the deletion timestamp" do
+            expect { InboxActivityProcessor.process(account, delete_activity) }
+              .not_to change { ActivityPub::Object.find(object_to_delete.iri, include_deleted: true).deleted_at }
+          end
+        end
+
         it "schedules receive task" do
           InboxActivityProcessor.process(account, delete_activity, receive_task_class: MockReceiveTask)
           expect(MockReceiveTask.schedule_called_count).to eq(1)
@@ -445,6 +495,19 @@ Spectator.describe InboxActivityProcessor do
         it "marks the actor as deleted" do
           expect { InboxActivityProcessor.process(account, delete_activity) }
             .to change { other.reload!.deleted_at }.from(nil)
+        end
+
+        context "and the actor is already deleted" do
+          before_each { ActivityPub::Actor.find(other.iri).delete! }
+
+          pre_condition { expect(delete_activity.object.deleted_at).to be_nil }
+
+          # re-query, don't `reload!`: reloading populates the cached
+          # object's timestamp from the DB before the code under test runs
+          it "does not move the deletion timestamp" do
+            expect { InboxActivityProcessor.process(account, delete_activity) }
+              .not_to change { ActivityPub::Actor.find(other.iri, include_deleted: true).deleted_at }
+          end
         end
 
         it "schedules receive task" do

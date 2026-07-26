@@ -139,6 +139,15 @@ class InboxesController
     false
   end
 
+  # Authorizes an `Accept` or `Reject` of a `QuoteRequest`.
+  #
+  private def self.answer_quote_request_authorized?(activity)
+    return false unless (quote_request = activity.object?.as?(ActivityPub::Activity::QuoteRequest))
+    return false unless (quoted_object = quote_request.object?)
+    return false unless (actor_iri = activity.actor_iri)
+    actor_iri == quoted_object.attributed_to_iri
+  end
+
   # Returns true if the object is gone (404/410) at its own origin.
   #
   private def self.object_gone_at_origin?(account, iri)
@@ -412,7 +421,9 @@ class InboxesController
           bad_request
         end
       when ActivityPub::Activity::QuoteRequest
-        # no additional check needed
+        unless answer_quote_request_authorized?(activity)
+          bad_request
+        end
       else
         bad_request
       end
@@ -431,7 +442,9 @@ class InboxesController
           bad_request
         end
       when ActivityPub::Activity::QuoteRequest
-        # no additional check needed
+        unless answer_quote_request_authorized?(activity)
+          bad_request
+        end
       else
         bad_request
       end

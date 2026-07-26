@@ -1511,7 +1511,8 @@ Spectator.describe InboxesController do
     end
 
     context "on accept (quote request)" do
-      let_create(:quote_request, actor: actor, object: nil)
+      let_create(:object, named: :quoted_post, attributed_to: other)
+      let_create(:quote_request, actor: actor, object: quoted_post)
       let_build(:accept, actor: other, object: quote_request)
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", accept.to_json_ld, "application/json") }
@@ -1528,6 +1529,12 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 400 if the quoted post does not exist" do
+        quoted_post.destroy
+        post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
       it "accepts the quote request" do
         post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
         expect(response.status_code).to eq(200)
@@ -1537,6 +1544,20 @@ Spectator.describe InboxesController do
         accept.save
         post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld
         expect(response.status_code).to eq(200)
+      end
+
+      context "and the accept is from an actor other than the quoted post's author" do
+        let_create(:actor, named: :attacker, with_keys: true)
+        let_build(:accept, named: :forged_accept, actor: attacker, object: quote_request)
+
+        let(headers) { Ktistec::Signature.sign(attacker, "https://test.test/actors/#{actor.username}/inbox", forged_accept.to_json_ld, "application/json") }
+
+        pre_condition { expect(quoted_post.attributed_to).not_to eq(attacker) }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, forged_accept.to_json_ld
+          expect(response.status_code).to eq(400)
+        end
       end
     end
 
@@ -1580,7 +1601,8 @@ Spectator.describe InboxesController do
     end
 
     context "on reject (quote request)" do
-      let_create(:quote_request, actor: actor, object: nil)
+      let_create(:object, named: :quoted_post, attributed_to: other)
+      let_create(:quote_request, actor: actor, object: quoted_post)
       let_build(:reject, actor: other, object: quote_request)
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", reject.to_json_ld, "application/json") }
@@ -1597,6 +1619,12 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 400 if the quoted post does not exist" do
+        quoted_post.destroy
+        post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
       it "rejects the quote request" do
         post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
         expect(response.status_code).to eq(200)
@@ -1606,6 +1634,20 @@ Spectator.describe InboxesController do
         reject.save
         post "/actors/#{actor.username}/inbox", headers, reject.to_json_ld
         expect(response.status_code).to eq(200)
+      end
+
+      context "and the reject is from an actor other than the quoted post's author" do
+        let_create(:actor, named: :attacker, with_keys: true)
+        let_build(:reject, named: :forged_reject, actor: attacker, object: quote_request)
+
+        let(headers) { Ktistec::Signature.sign(attacker, "https://test.test/actors/#{actor.username}/inbox", forged_reject.to_json_ld, "application/json") }
+
+        pre_condition { expect(quoted_post.attributed_to).not_to eq(attacker) }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, forged_reject.to_json_ld
+          expect(response.status_code).to eq(400)
+        end
       end
     end
 

@@ -644,6 +644,24 @@ Spectator.describe InboxesController do
       end
     end
 
+    context "given an activity whose id is not on the actor's host" do
+      let_create!(:object, attributed_to: actor)
+      # the gate runs before the per-type dispatch, so the activity type is immaterial.
+      let_build(:like, actor: other, object: object, iri: "https://elsewhere.test/activities/#{random_string}")
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", like.to_json_ld(true), "application/json") }
+
+      it "returns 400" do
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "does not save the activity" do
+        expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
+          .not_to change { ActivityPub::Activity.count }
+      end
+    end
+
     context "when the other actor is down" do
       let_build(:activity, actor: other, to: [actor.iri])
 
@@ -1275,6 +1293,41 @@ Spectator.describe InboxesController do
             expect(ActivityPub::Actor.find(other.iri).verified_handle).to be_nil
           end
         end
+      end
+    end
+
+    context "on a spoofed update of a cached object" do
+      let_create(:actor, named: third, iri: "https://elsewhere.test/actors/#{random_string}")
+      let_create!(:object, named: theirs, iri: "https://elsewhere.test/objects/#{random_string}", attributed_to: third, content: "original")
+
+      let(activity_iri) { "https://elsewhere.test/activities/#{random_string}" }
+
+      let(json_ld) do
+        {
+          "@context" => "https://www.w3.org/ns/activitystreams",
+          "@id"      => activity_iri,
+          "@type"    => "Update",
+          "actor"    => other.iri,
+          "to"       => [actor.iri],
+          "object"   => {
+            "@id"          => theirs.iri,
+            "@type"        => "Note",
+            "content"      => "spoofed",
+            "attributedTo" => other.iri,
+          },
+        }.to_json
+      end
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", json_ld, "application/json") }
+
+      it "returns 400" do
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(response.status_code).to eq(400)
+      end
+
+      it "does not change the object" do
+        expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+          .not_to change { ActivityPub::Object.find(theirs.iri).content }
       end
     end
 
@@ -2180,6 +2233,25 @@ Spectator.describe InboxesController do
           it "is successful" do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
             expect(response.status_code).to eq(200)
+          end
+
+          context "when the inner activity's id is not on its actor's host" do
+            let_build(:delete, actor: moderator, object: object, iri: "https://test.test/activities/#{random_string}")
+
+            it "does not save the Delete activity" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .not_to change { ActivityPub::Activity::Delete.count }
+            end
+
+            it "does not delete the object" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .not_to change { object.reload!.deleted_at }
+            end
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(400)
+            end
           end
         end
 

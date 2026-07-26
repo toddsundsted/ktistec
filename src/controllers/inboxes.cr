@@ -130,6 +130,15 @@ class InboxesController
     object_gone_at_origin?(account, object.iri)
   end
 
+  # Returns true if both IRIs are on the same host.
+  #
+  private def self.same_host?(first : String, second : String) : Bool
+    host = URI.parse(first).host.try(&.presence)
+    !!(host && host == URI.parse(second).host)
+  rescue URI::Error
+    false
+  end
+
   # Returns true if the object is gone (404/410) at its own origin.
   #
   private def self.object_gone_at_origin?(account, iri)
@@ -304,6 +313,17 @@ class InboxesController
 
     unless activity && verified
       bad_request("Can't Be Verified")
+    end
+
+    # an activity's own identifier must be on the same host as its
+    # actor. this holds for a relayed activity too, where the inner
+    # activity's `@id` and actor both belong to the original author
+    # rather than to the relaying community.
+    if (activity_iri = activity.iri.presence) && (activity_actor_iri = activity.actor_iri)
+      unless same_host?(activity_iri, activity_actor_iri)
+        Log.trace { "[#{request_id}] activity iri=#{activity_iri} is not on the actor's host actor=#{activity_actor_iri}" }
+        bad_request("Origin Mismatch")
+      end
     end
 
     # 6

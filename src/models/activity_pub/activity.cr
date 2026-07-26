@@ -107,6 +107,7 @@ module ActivityPub
       def self.from_json_ld(json : JSON::Any | String | IO)
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
         activity_host = (activity_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(activity_iri) : nil
+        actor_host = (actor_iri = Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#actor")) ? parse_host(actor_iri) : nil
         {
           "iri"       => json.dig?("@id").try(&.as_s),
           "_type"     => json.dig?("@type").try(&.as_s.split("#").last),
@@ -116,7 +117,7 @@ module ActivityPub
             actor.as_s? || actor.dig?("@id").try(&.as_s?)
           end,
           "actor" => if actor && actor.as_h?
-            if (actor_iri = actor.dig?("@id").try(&.as_s?)) && activity_host && parse_host(actor_iri) == activity_host
+            if anchored?(actor.dig?("@id").try(&.as_s?), activity_host, actor_host)
               ActivityPub.from_json_ld(actor, default: ActivityPub::Actor)
             end
           end,
@@ -125,7 +126,7 @@ module ActivityPub
             object.as_s? || object.dig?("@id").try(&.as_s?)
           end,
           "object" => if object && object.as_h?
-            if (object_iri = object.dig?("@id").try(&.as_s?)) && activity_host && parse_host(object_iri) == activity_host
+            if anchored?(object.dig?("@id").try(&.as_s?), activity_host, actor_host)
               ActivityPub.from_json_ld(object, default: ActivityPub::Object)
             end
           end,
@@ -134,7 +135,7 @@ module ActivityPub
             target.as_s? || target.dig?("@id").try(&.as_s?)
           end,
           "target" => if target && target.as_h?
-            if (target_iri = target.dig?("@id").try(&.as_s?)) && activity_host && parse_host(target_iri) == activity_host
+            if anchored?(target.dig?("@id").try(&.as_s?), activity_host, actor_host)
               ActivityPub.from_json_ld(target, default: ActivityPub::Object)
             end
           end,
@@ -143,7 +144,7 @@ module ActivityPub
             instrument.as_s? || instrument.dig?("@id").try(&.as_s?)
           end,
           "instrument" => if instrument && instrument.as_h?
-            if (instrument_iri = instrument.dig?("@id").try(&.as_s?)) && activity_host && parse_host(instrument_iri) == activity_host
+            if anchored?(instrument.dig?("@id").try(&.as_s?), activity_host, actor_host)
               ActivityPub.from_json_ld(instrument, default: ActivityPub::Object)
             end
           end,
@@ -152,7 +153,7 @@ module ActivityPub
             result.as_s? || result.dig?("@id").try(&.as_s?)
           end,
           "result" => if result && result.as_h?
-            if (result_iri = result.dig?("@id").try(&.as_s?)) && activity_host && parse_host(result_iri) == activity_host
+            if anchored?(result.dig?("@id").try(&.as_s?), activity_host, actor_host)
               ActivityPub.from_json_ld(result, default: ActivityPub::Object)
             end
           end,
@@ -163,6 +164,14 @@ module ActivityPub
           # use addressing to establish visibility
           "visible" => [to, cc].compact.flatten.includes?("https://www.w3.org/ns/activitystreams#Public"),
         }.compact
+      end
+
+      # Returns true if the node's host matches the hosts of both the
+      # activity and its actor.
+      #
+      private def self.anchored?(iri : String?, activity_host : String?, actor_host : String?) : Bool
+        host = iri.try { |i| parse_host(i) }.try(&.presence)
+        !!(host && host == activity_host && host == actor_host)
       end
 
       private def self.parse_host(uri)

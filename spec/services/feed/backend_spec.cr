@@ -38,6 +38,13 @@ Spectator.describe Feed::Backend do
     end
   end
 
+  describe "#judging_params" do
+    it "returns the params unchanged" do
+      params = JSON.parse(%({"anything":{"any":["alpha"]}})).as_h
+      expect(backend.judging_params(params)).to eq(params)
+    end
+  end
+
   describe ".find?" do
     it "returns the registered backend" do
       described_class.register("canned", backend)

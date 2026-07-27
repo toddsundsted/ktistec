@@ -91,7 +91,11 @@ class Feed
     return false if new_record?
     # compare against the database row rather than relying on change
     # tracking, so every mutation path is seen
-    Feed.find(id).params != params
+    if (backend = Backend.find?(self.backend))
+      backend.judging_params(Feed.find(id).params) != backend.judging_params(params)
+    else
+      Feed.find(id).params != params
+    end
   end
 
   # Invalidates the feed's verdicts when the criteria change.

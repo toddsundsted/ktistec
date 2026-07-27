@@ -403,6 +403,11 @@ Spectator.describe Feed::Backend::Criteria do
       expect(subject.validate_params(params)).to be_empty
     end
 
+    it "accepts the recorded entry order" do
+      params = JSON.parse(%({"keywords": {"any": ["alpha"]}, "order": {"any": ["alpha"]}})).as_h
+      expect(subject.validate_params(params)).to be_empty
+    end
+
     it "rejects a keywords array" do
       params = JSON.parse(%({"keywords": ["alpha", "beta"]})).as_h
       expect(subject.validate_params(params)).to contain("keywords must be an object with any, all, or none")

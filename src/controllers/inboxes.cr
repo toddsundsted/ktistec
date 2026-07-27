@@ -511,6 +511,12 @@ class InboxesController
       bad_request("Activity Not Supported")
     end
 
+    unless activity.is_a?(ActivityPub::Activity::Delete)
+      if activity.responds_to?(:object?) && activity.object?.is_a?(ActivityPub::Object::QuoteAuthorization)
+        bad_request
+      end
+    end
+
     # check to see if the activity already exists. if not, save it
 
     if (temporary = ActivityPub::Activity.find?(activity.iri))

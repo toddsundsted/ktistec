@@ -309,7 +309,7 @@ module MCP
         contents["quote_status"] = JSON::Any.new(
           if object.attributed_to_iri == quote.attributed_to_iri
             "self_quote"
-          elsif object.quote_authorization?
+          elsif object.quote_approved?(quote)
             "verified"
           else
             "unverified"

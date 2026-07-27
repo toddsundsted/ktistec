@@ -543,9 +543,15 @@ Spectator.describe MCP::Resources do
           attributed_to: other,
           content: "The quoted content",
         )
+        let_build(:quote_decision,
+          named: decision,
+          interacting_object: object,
+          interaction_target: quoted,
+        )
         let_create!(:quote_authorization,
           named: auth,
           attributed_to: other,
+          quote_decision: decision,
         )
 
         before_each { object.assign(quote: quoted, quote_authorization: auth).save }
@@ -558,6 +564,19 @@ Spectator.describe MCP::Resources do
 
           expect(json["quote"]).to eq("ktistec://objects/#{quoted.id}")
           expect(json["quote_status"]).to eq("verified")
+        end
+
+        context "but the authorization is attributed to the quoting actor" do
+          before_each { auth.assign(attributed_to: object.attributed_to).save }
+
+          it "includes quote field with unverified status" do
+            response = described_class.handle_resources_read(request, account)
+
+            text = response["contents"].as_a.first["text"].as_s
+            json = JSON.parse(text)
+
+            expect(json["quote_status"]).to eq("unverified")
+          end
         end
       end
 

@@ -16,10 +16,20 @@ class ActivityPub::Object
     # `quoting_object` to quote `quoted_object`, `false` otherwise.
     #
     def valid_for?(quoting_object : ActivityPub::Object, quoted_object : ActivityPub::Object) : Bool
-      !!(quote_decision = quote_decision?) &&
-        quote_decision.interacting_object? == quoting_object &&
-        quote_decision.interaction_target? == quoted_object &&
-        attributed_to? == quoted_object.attributed_to?
+      return false unless (quote_decision = quote_decision?)
+      return false unless (author_iri = attributed_to_iri)
+      quote_decision.decision == "accept" &&
+        quote_decision.interacting_object_iri == quoting_object.iri &&
+        quote_decision.interaction_target_iri == quoted_object.iri &&
+        author_iri == quoted_object.attributed_to_iri &&
+        same_host?(iri, author_iri)
+    end
+
+    private def same_host?(first : String, second : String) : Bool
+      host = URI.parse(first).host.try(&.presence)
+      !!(host && host == URI.parse(second).host)
+    rescue URI::Error
+      false
     end
 
     def self.map(json, **options)

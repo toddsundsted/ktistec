@@ -456,23 +456,13 @@ module API
 
       private def self.build_quote(object : ActivityPub::Object, actor : ActivityPub::Actor? = nil) : Quote?
         if (quoted_object = object.quote?)
-          if object.attributed_to == quoted_object.attributed_to
+          if object.quote_approved?(quoted_object)
             quoted_status = from_object(quoted_object, actor: actor, include_quote: false)
             Quote.new(state: "accepted", quoted_status: quoted_status)
+          elsif object.quote_authorization?.try(&.quote_decision?).try(&.decision) == "reject"
+            Quote.new(state: "rejected", quoted_status: nil)
           else
-            if (authorization = object.quote_authorization?) && (decision = authorization.quote_decision?)
-              case decision.decision
-              when "accept"
-                quoted_status = from_object(quoted_object, actor: actor, include_quote: false)
-                Quote.new(state: "accepted", quoted_status: quoted_status)
-              when "reject"
-                Quote.new(state: "rejected", quoted_status: nil)
-              else
-                Quote.new(state: "pending", quoted_status: nil)
-              end
-            else
-              Quote.new(state: "pending", quoted_status: nil)
-            end
+            Quote.new(state: "pending", quoted_status: nil)
           end
         elsif object.quote_iri
           Quote.new(state: "deleted", quoted_status: nil)

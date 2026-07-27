@@ -812,8 +812,8 @@ Spectator.describe "object partials" do
     context "given a quote" do
       let(with_detail) { true }
 
-      let_create(:object, named: :quote, attributed_to: actor, published: Time.utc)
-      let_create(:object, named: :other, attributed_to: actor, published: Time.utc)
+      let_create(:object, named: :quote, attributed_to: actor, content: "i am quote", published: Time.utc)
+      let_create(:object, named: :other, attributed_to: actor, content: "i am other", published: Time.utc)
 
       before_each { object.assign(quote: quote).save }
 
@@ -843,6 +843,38 @@ Spectator.describe "object partials" do
 
           it "renders two quote sections" do
             expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(2)
+          end
+        end
+      end
+
+      context "and the quote is by another actor" do
+        let_create(:actor, named: :author)
+
+        before_each { quote.assign(attributed_to: author).save }
+
+        it "does not render the quoted content" do
+          expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]//text()").map(&.text).join)
+            .to contain("cannot be verified")
+        end
+
+        context "with an authorization from the quoted object's author" do
+          let_build(:quote_decision, named: :decision, interacting_object: object, interaction_target: quote)
+          let_create!(:quote_authorization, named: :authorization, attributed_to: author, quote_decision: decision)
+
+          before_each { object.assign(quote_authorization: authorization).save }
+
+          it "renders the quoted content" do
+            expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]//text()").map(&.text).join)
+              .to contain("i am quote")
+          end
+
+          context "but attributed to the quoting actor" do
+            before_each { authorization.assign(attributed_to: actor).save }
+
+            it "does not render the quoted content" do
+              expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]//text()").map(&.text).join)
+                .to contain("has not been verified")
+            end
           end
         end
       end

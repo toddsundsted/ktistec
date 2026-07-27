@@ -244,6 +244,14 @@ module ActivityPub
     has_many mentions, class_name: Tag::Mention, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
     has_many emojis, class_name: Tag::Emoji, foreign_key: subject_iri, primary_key: iri, inverse_of: subject
 
+    # Returns `true` if this object's quote of `quoted_object` is
+    # approved by the latter's author.
+    #
+    def quote_approved?(quoted_object : ActivityPub::Object) : Bool
+      return true if attributed_to_iri && attributed_to_iri == quoted_object.attributed_to_iri
+      !!quote_authorization?.try(&.valid_for?(self, quoted_object))
+    end
+
     # Updates the thread and saves the object.
     #
     # On older databases, threads are lazily migrated. This is a

@@ -15,7 +15,7 @@
     .ui.segment.quoted-object
       em This post is blocked!
   - else
-    - if !error_message && (object.draft? || object.attributed_to == quote.attributed_to || object.quote_authorization?)
+    - if !error_message && (object.draft? || object.quote_approved?(quote))
       turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
         section.ui.feed data-controller="icon-load-error"
           - partial object_partial(env, quote, show_quote: false)

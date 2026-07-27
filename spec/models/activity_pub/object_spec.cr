@@ -1698,6 +1698,47 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#quote_approved?" do
+    let_create(:actor, named: :author)
+    let_create(:actor, named: :quoter)
+
+    let_create(:object, named: :quoted, attributed_to: author)
+    let_create(:object, named: :quoting, attributed_to: quoter, quote: quoted)
+
+    it "returns false" do
+      expect(quoting.quote_approved?(quoted)).to be_false
+    end
+
+    context "given a self-quote" do
+      before_each { quoting.assign(attributed_to: author).save }
+
+      it "returns true" do
+        expect(quoting.quote_approved?(quoted)).to be_true
+      end
+    end
+
+    context "given an authorization from the quoted object's author" do
+      let_build(:quote_decision, named: :decision, interacting_object: quoting, interaction_target: quoted)
+      let_create!(:quote_authorization, named: :authorization, attributed_to: author, quote_decision: decision)
+
+      before_each { quoting.assign(quote_authorization: authorization).save }
+
+      it "returns true" do
+        expect(quoting.quote_approved?(quoted)).to be_true
+      end
+
+      context "but served by another host" do
+        let_create!(:quote_authorization, named: :authorization,
+          iri: "https://elsewhere.example/objects/#{random_string}",
+          attributed_to: author, quote_decision: decision)
+
+        it "returns false" do
+          expect(quoting.quote_approved?(quoted)).to be_false
+        end
+      end
+    end
+  end
+
   describe "#thread!" do
     let_build(:object)
 

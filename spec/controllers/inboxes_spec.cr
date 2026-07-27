@@ -2555,6 +2555,59 @@ Spectator.describe InboxesController do
         end
       end
     end
+
+    context "given an activity whose object is a quote authorization" do
+      let_build(:quote_authorization, named: :stamp, attributed_to: other)
+
+      before_each do
+        HTTP::Client.objects << stamp
+        HTTP::Client.activities << activity
+      end
+
+      let(json_ld) { activity.to_json_ld }
+
+      context "delivered as a Create" do
+        let_build(:create, named: :activity, actor: other, object: stamp)
+
+        it "does not persist the stamp" do
+          expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+            .not_to change { ActivityPub::Object::QuoteAuthorization.count }
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(response.status_code).to eq(400)
+        end
+      end
+
+      context "delivered as an Announce" do
+        let_build(:announce, named: :activity, actor: other, object: stamp)
+
+        it "does not persist the stamp" do
+          expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+            .not_to change { ActivityPub::Object::QuoteAuthorization.count }
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(response.status_code).to eq(400)
+        end
+      end
+
+      context "delivered as a Like" do
+        let_build(:like, named: :activity, actor: other, object: stamp)
+
+        it "does not persist the stamp" do
+          expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+            .not_to change { ActivityPub::Object::QuoteAuthorization.count }
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(response.status_code).to eq(400)
+        end
+      end
+    end
   end
 
   describe "GET /actors/:username/inbox" do

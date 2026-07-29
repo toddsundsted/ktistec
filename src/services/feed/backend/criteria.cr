@@ -36,8 +36,18 @@ class Feed
         objects.map { |object| judge_one(object, active) }
       end
 
+      # Sorts every group's selectors' term list.
+      #
+      # Drops the entry order.
+      #
       def judging_params(params : Hash(String, JSON::Any)) : Hash(String, JSON::Any)
-        params.reject(ORDER)
+        params.reject(ORDER).transform_values do |selectors|
+          next selectors unless (raw = selectors.as_h?)
+          JSON::Any.new(raw.transform_values do |list|
+            next list unless (terms = list.as_a?)
+            JSON::Any.new(terms.sort_by { |term| term.as_s? || "" })
+          end)
+        end
       end
 
       def validate_params(params : Hash(String, JSON::Any)) : Array(String)

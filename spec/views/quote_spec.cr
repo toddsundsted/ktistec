@@ -25,7 +25,9 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
   let(account) { register }
   let(actor) { account.actor }
 
-  let_create(:object, attributed_to: actor, published: Time.utc)
+  let(published) { Time.utc(2024, 6, 15, 12, 0, 0) }
+
+  let_create(:object, attributed_to: actor, published: published)
 
   let(quote) { nil }
   let(failed) { false }
@@ -55,7 +57,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
   end
 
   context "when cached" do
-    let_create(:object, named: :quote, attributed_to: actor, published: Time.utc, content: "This is a quoted post.")
+    let_create(:object, named: :quote, attributed_to: actor, published: published, content: "This is a quoted post.")
 
     before_each { object.assign(quote: quote).save }
 
@@ -96,7 +98,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
     end
 
     context "when quoted object has a quote" do
-      let_create(:object, named: :other, published: Time.utc)
+      let_create(:object, named: :other, published: published)
 
       before_each { quote.assign(quote: other).save }
 
@@ -171,7 +173,8 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
       end
 
       context "and the quote authorization is cached" do
-        let_create(:quote_authorization, attributed_to: other)
+        let_create!(:quote_authorization, attributed_to: other)
+        let_create!(:quote_decision, quote_authorization: quote_authorization, interacting_object: object, interaction_target: quote)
 
         before_each { object.assign(quote_authorization_iri: quote_authorization.iri).save }
 
@@ -185,6 +188,32 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
         it "does not render buttons" do
           expect(subject.xpath_nodes(BUTTON_TEXT_XPATH)).to be_empty
+        end
+
+        context "but attributed to the quoting actor" do
+          before_each { quote_authorization.assign(attributed_to: actor).save }
+
+          it "renders the message" do
+            expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("This quote has not been verified.")
+          end
+
+          it "does not render the quoted content" do
+            expect(subject.xpath_nodes(CONTENT_XPATH)).to be_empty
+          end
+        end
+
+        context "but naming a different object as the interaction target" do
+          let_create(:object, named: :elsewhere, attributed_to: other, published: published)
+
+          before_each { quote_decision.assign(interaction_target: elsewhere).save }
+
+          it "renders the message" do
+            expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("This quote has not been verified.")
+          end
+
+          it "does not render the quoted content" do
+            expect(subject.xpath_nodes(CONTENT_XPATH)).to be_empty
+          end
         end
       end
 
@@ -208,7 +237,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
     context "when the quoting object is a draft" do
       let_create(:actor, named: :other)
       let_create(:object, attributed_to: actor, published: nil)
-      let_create(:object, named: :quote, attributed_to: other, published: Time.utc)
+      let_create(:object, named: :quote, attributed_to: other, published: published)
 
       before_each { object.assign(quote: quote).save }
 

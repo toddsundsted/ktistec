@@ -108,6 +108,16 @@ Spectator.describe Feed do
           expect(feed.criteria_changed?).to be_true
         end
       end
+
+      # this tests that adding the entry order key, and changing
+      # nothing else, does not count as a criteria change.
+      context "and only the entry order is added" do
+        before_each { feed.params[Feed::Backend::Criteria::ORDER] = JSON.parse(%({"any": ["alpha"]})) }
+
+        it "is false" do
+          expect(feed.criteria_changed?).to be_false
+        end
+      end
     end
   end
 
@@ -152,6 +162,20 @@ Spectator.describe Feed do
 
     context "when the name changes" do
       before_each { feed.assign(name: "Renamed") }
+
+      it "does not delete the verdicts" do
+        expect { feed.save }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
+      end
+
+      it "does not delete the materialized rows" do
+        expect { feed.save }.not_to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1)
+      end
+    end
+
+    # this tests that adding the entry order key, and changing
+    # nothing else, does not count as a criteria change.
+    context "when only the entry order is added" do
+      before_each { feed.params[Feed::Backend::Criteria::ORDER] = JSON.parse(%({"any": ["alpha"]})) }
 
       it "does not delete the verdicts" do
         expect { feed.save }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)

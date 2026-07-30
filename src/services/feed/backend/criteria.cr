@@ -23,6 +23,8 @@ class Feed
       SELECTORS = %w(any all none)
       POSITIVE  = %w(any all)
 
+      ORDER = "order"
+
       # Distinguishes an IRI term from a handle.
       #
       def self.iri_term?(term : String) : Bool
@@ -34,9 +36,23 @@ class Feed
         objects.map { |object| judge_one(object, active) }
       end
 
+      # Sorts every group's selectors' term list.
+      #
+      # Drops the entry order.
+      #
+      def judging_params(params : Hash(String, JSON::Any)) : Hash(String, JSON::Any)
+        params.reject(ORDER).transform_values do |selectors|
+          next selectors unless (raw = selectors.as_h?)
+          JSON::Any.new(raw.transform_values do |list|
+            next list unless (terms = list.as_a?)
+            JSON::Any.new(terms.sort_by { |term| term.as_s? || "" })
+          end)
+        end
+      end
+
       def validate_params(params : Hash(String, JSON::Any)) : Array(String)
         errors = [] of String
-        unknown_groups = params.keys - GROUPS.map(&.key)
+        unknown_groups = params.keys - GROUPS.map(&.key) - [ORDER]
         errors << "unknown groups: #{unknown_groups.join(", ")}" unless unknown_groups.empty?
         positive_terms = 0
         GROUPS.each do |group|

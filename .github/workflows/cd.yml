@@ -11,7 +11,10 @@ env:
 
 # run build-and-push job and deploy-docs jobs on an ubuntu host
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
   deploy-docs:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,6 +52,7 @@ jobs:
         uses: actions/deploy-pages@v5
 
   build-and-push-image:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read

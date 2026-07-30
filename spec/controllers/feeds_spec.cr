@@ -596,14 +596,28 @@ Spectator.describe FeedsController do
         Feed.find(name: "Robotics")
       end
 
+      def robotics_feed_groups
+        robotics_feed.params.reject(Feed::Backend::Criteria::ORDER)
+      end
+
       it "translates the criteria into params" do
         post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc%0A3d+print&none=%40bob%40host"
-        expect(robotics_feed.params).to eq(JSON.parse(%({"keywords":{"any":["3d print"]},"hashtags":{"any":["cnc"]},"mentions":{"none":["bob@host"]}})).as_h)
+        expect(robotics_feed_groups).to eq(JSON.parse(%({"keywords":{"any":["3d print"]},"hashtags":{"any":["cnc"]},"mentions":{"none":["bob@host"]}})).as_h)
       end
 
       it "translates the criteria into params" do
         post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc\\n3d print","none":"@bob@host"})
-        expect(robotics_feed.params).to eq(JSON.parse(%({"keywords":{"any":["3d print"]},"hashtags":{"any":["cnc"]},"mentions":{"none":["bob@host"]}})).as_h)
+        expect(robotics_feed_groups).to eq(JSON.parse(%({"keywords":{"any":["3d print"]},"hashtags":{"any":["cnc"]},"mentions":{"none":["bob@host"]}})).as_h)
+      end
+
+      it "records the order the criteria appeared in" do
+        post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc%0A3d+print&none=%40bob%40host"
+        expect(robotics_feed.params[Feed::Backend::Criteria::ORDER]).to eq(JSON.parse(%({"any":["#cnc","3d print"],"none":["@bob@host"]})))
+      end
+
+      it "records the order the criteria appeared in" do
+        post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc\\n3d print","none":"@bob@host"})
+        expect(robotics_feed.params[Feed::Backend::Criteria::ORDER]).to eq(JSON.parse(%({"any":["#cnc","3d print"],"none":["@bob@host"]})))
       end
 
       it "does not mark the feed as a draft" do
@@ -998,6 +1012,10 @@ Spectator.describe FeedsController do
         Feed.find(name: "Robotics")
       end
 
+      def robotics_feed_groups
+        robotics_feed.params.reject(Feed::Backend::Criteria::ORDER)
+      end
+
       def published_feeds
         Feed.where("owner_iri = ? AND draft = 0 ORDER BY id", actor.iri)
       end
@@ -1033,12 +1051,22 @@ Spectator.describe FeedsController do
 
         it "translates the criteria into params" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-          expect(robotics_feed.params).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
+          expect(robotics_feed_groups).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
         end
 
         it "translates the criteria into params" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-          expect(robotics_feed.params).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
+          expect(robotics_feed_groups).to eq(JSON.parse(%({"hashtags":{"any":["robotics"]}})).as_h)
+        end
+
+        it "records the order the criteria appeared in" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+          expect(robotics_feed.params[Feed::Backend::Criteria::ORDER]).to eq(JSON.parse(%({"any":["#robotics"]})))
+        end
+
+        it "records the order the criteria appeared in" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+          expect(robotics_feed.params[Feed::Backend::Criteria::ORDER]).to eq(JSON.parse(%({"any":["#robotics"]})))
         end
 
         it "registers the feed's view" do

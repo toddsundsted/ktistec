@@ -585,6 +585,26 @@ Spectator.describe API::V1::Serializers::Status do
         end
       end
 
+      context "with an authorization attributed to the quoting actor" do
+        let_create!(:quote_authorization, attributed_to: actor)
+        let_create!(:quote_decision,
+          quote_authorization: quote_authorization,
+          interacting_object: quoting,
+          interaction_target: quoted,
+          decision: "accept",
+        )
+
+        before_each { quoting.assign(quote_authorization: quote_authorization).save }
+
+        it "returns quote state" do
+          expect(api_quote.state).to eq("pending")
+        end
+
+        it "returns quote quoted_status" do
+          expect(api_quote.quoted_status).to be_nil
+        end
+      end
+
       context "when self-quote" do
         let_create(:object, named: :quoted, attributed_to: actor, published: published, visible: true)
         let_create(:object, named: :quoting, attributed_to: actor, quote_iri: quoted.iri, published: published, visible: true)

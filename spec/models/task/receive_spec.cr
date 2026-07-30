@@ -178,6 +178,14 @@ Spectator.describe Task::Receive do
             end
           end
 
+          context "and quote authorization is served by another host" do
+            let(authorization_iri) { "https://elsewhere.example/authorizations/#{random_string}" }
+
+            it "does not save the quote authorization" do
+              expect { subject.perform }.not_to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
+            end
+          end
+
           context "when quote authorization cannot be dereferenced" do
             before_each do
               HTTP::Client.cache.delete(authorization_iri)

@@ -403,6 +403,11 @@ Spectator.describe Feed::Backend::Criteria do
       expect(subject.validate_params(params)).to be_empty
     end
 
+    it "accepts the recorded entry order" do
+      params = JSON.parse(%({"keywords": {"any": ["alpha"]}, "order": {"any": ["alpha"]}})).as_h
+      expect(subject.validate_params(params)).to be_empty
+    end
+
     it "rejects a keywords array" do
       params = JSON.parse(%({"keywords": ["alpha", "beta"]})).as_h
       expect(subject.validate_params(params)).to contain("keywords must be an object with any, all, or none")
@@ -571,6 +576,33 @@ Spectator.describe Feed::Backend::Criteria do
 
     it "is false for a handle" do
       expect(described_class.iri_term?("@bob@example.com")).to be_false
+    end
+  end
+
+  describe "#judging_params" do
+    it "drops the recorded entry order" do
+      params = JSON.parse(%({"keywords": {"any": ["alpha"]}, "order": {"any": ["alpha"]}})).as_h
+      expect(subject.judging_params(params)).to eq(JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    end
+
+    it "sorts every selector's term list" do
+      params = JSON.parse(%({"keywords": {"any": ["beta", "alpha"], "all": ["gamma", "delta"], "none": ["zeta", "epsilon"]}})).as_h
+      expect(subject.judging_params(params)).to eq(JSON.parse(%({"keywords": {"any": ["alpha", "beta"], "all": ["delta", "gamma"], "none": ["epsilon", "zeta"]}})).as_h)
+    end
+
+    it "sorts every group's selectors' term lists" do
+      params = JSON.parse(%({"keywords": {"any": ["b", "a"]}, "hashtags": {"any": ["d", "c"]}, "mentions": {"any": ["f", "e"]}})).as_h
+      expect(subject.judging_params(params)).to eq(JSON.parse(%({"keywords": {"any": ["a", "b"]}, "hashtags": {"any": ["c", "d"]}, "mentions": {"any": ["e", "f"]}})).as_h)
+    end
+
+    it "leaves a malformed term list alone" do
+      params = JSON.parse(%({"keywords": {"any": "alpha"}})).as_h
+      expect(subject.judging_params(params)).to eq(params)
+    end
+
+    it "leaves a malformed group alone" do
+      params = JSON.parse(%({"keywords": ["alpha"]})).as_h
+      expect(subject.judging_params(params)).to eq(params)
     end
   end
 end

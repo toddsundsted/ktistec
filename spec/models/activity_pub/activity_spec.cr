@@ -249,7 +249,9 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
     end
 
     context "given an actor with the same host" do
-      let(json) { super.gsub(%q|"id":"actor link"|, %q|"id":"https://test.test/actor"|) }
+      let(json) do
+        super.gsub(%q|"id":"actor link"|, %q|"id":"https://test.test/actor"|)
+      end
 
       it "populates actor" do
         expect(activity["actor"]).to be_a(ActivityPub::Actor)
@@ -266,11 +268,48 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
     end
 
     context "given an object with the same host" do
-      let(json) { super.gsub(%q|"@id":"object link"|, %q|"@id":"https://test.test/object"|) }
+      let(json) do
+        super
+          .gsub(%q|"id":"actor link"|, %q|"id":"https://test.test/actor"|)
+          .gsub(%q|"@id":"object link"|, %q|"@id":"https://test.test/object"|)
+      end
 
       it "populates object" do
         expect(activity["object"]).to be_a(ActivityPub::Object)
         expect(activity["object"].as(ActivityPub::Object).iri).to eq("https://test.test/object")
+      end
+    end
+
+    context "given an object on the activity's host but not the actor's" do
+      let(json) do
+        super
+          .gsub(%q|"id":"actor link"|, %q|"id":"https://other.test/actor"|)
+          .gsub(%q|"@id":"object link"|, %q|"@id":"https://test.test/object"|)
+      end
+
+      it "does not populate object" do
+        expect(activity.has_key?("object")).to be_false
+      end
+
+      it "still populates object_iri" do
+        expect(activity["object_iri"]).to eq("https://test.test/object")
+      end
+    end
+
+    context "given an object on the actor's host but not the activity's" do
+      let(json) do
+        super
+          .gsub(%q|"@id":"https://test.test/foo_bar"|, %q|"@id":"https://other.test/foo_bar"|)
+          .gsub(%q|"id":"actor link"|, %q|"id":"https://test.test/actor"|)
+          .gsub(%q|"@id":"object link"|, %q|"@id":"https://test.test/object"|)
+      end
+
+      it "does not populate object" do
+        expect(activity.has_key?("object")).to be_false
+      end
+
+      it "still populates object_iri" do
+        expect(activity["object_iri"]).to eq("https://test.test/object")
       end
     end
 
@@ -283,7 +322,11 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
     end
 
     context "given a target with the same host" do
-      let(json) { super.gsub(%q|"@id":"target link"|, %q|"@id":"https://test.test/target"|) }
+      let(json) do
+        super
+          .gsub(%q|"id":"actor link"|, %q|"id":"https://test.test/actor"|)
+          .gsub(%q|"@id":"target link"|, %q|"@id":"https://test.test/target"|)
+      end
 
       it "populates target" do
         expect(activity["target"]).to be_a(ActivityPub::Activity)
@@ -300,7 +343,11 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
     end
 
     context "given an instrument with the same host" do
-      let(json) { super.gsub(%q|"@id":"instrument link"|, %q|"@id":"https://test.test/instrument"|) }
+      let(json) do
+        super
+          .gsub(%q|"id":"actor link"|, %q|"id":"https://test.test/actor"|)
+          .gsub(%q|"@id":"instrument link"|, %q|"@id":"https://test.test/instrument"|)
+      end
 
       it "populates instrument" do
         expect(activity["instrument"]).to be_a(ActivityPub::Object)
@@ -317,7 +364,11 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
     end
 
     context "given a result with the same host" do
-      let(json) { super.gsub(%q|"@id":"result link"|, %q|"@id":"https://test.test/result"|) }
+      let(json) do
+        super
+          .gsub(%q|"id":"actor link"|, %q|"id":"https://test.test/actor"|)
+          .gsub(%q|"@id":"result link"|, %q|"@id":"https://test.test/result"|)
+      end
 
       it "populates result" do
         expect(activity["result"]).to be_a(ActivityPub::Object)

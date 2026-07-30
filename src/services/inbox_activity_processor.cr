@@ -16,6 +16,8 @@ require "../models/quote_decision"
 require "../utils/recipients"
 
 class InboxActivityProcessor
+  Log = ::Log.for(self)
+
   # Processes an inbound activity that has already been received,
   # validated, and saved.
   #
@@ -142,17 +144,29 @@ class InboxActivityProcessor
   end
 
   private def self.process_accept_quote_request(account, quote_request, accept)
-    if (quote_post = quote_request.instrument?)
-      quote_post.assign(quote_authorization_iri: accept.result_iri).save
-      if (quote_authorization_iri = accept.result_iri)
-        if (quote_authorization = ActivityPub::Object::QuoteAuthorization.dereference?(account.actor, quote_authorization_iri))
-          if (quote = quote_post.quote?) && quote_authorization.valid_for?(quote_post, quote)
-            quote_authorization.save
-          end
-        end
-      end
-      Task::DeliverDelayedObject.find?(object: quote_post).try(&.schedule)
+    return unless (quoted_post = quote_request.object?)
+    return unless (actor_iri = accept.actor_iri) && actor_iri == quoted_post.attributed_to_iri
+
+    # every path that does not release the quote post logs why.
+    # the post remains an unpublished draft.
+    return unless (quote_post = quote_request.instrument?)
+
+    unless (quote_authorization_iri = accept.result_iri)
+      Log.info { "quote post not released: accept has no result: #{quote_post.iri}" }
+      return
     end
+    unless (quote_authorization = ActivityPub::Object::QuoteAuthorization.dereference?(account.actor, quote_authorization_iri))
+      Log.info { "quote post not released: authorization could not be dereferenced: #{quote_post.iri} #{quote_authorization_iri}" }
+      return
+    end
+    unless (quote = quote_post.quote?) && quote_authorization.valid_for?(quote_post, quote)
+      Log.info { "quote post not released: authorization is not valid: #{quote_post.iri} #{quote_authorization_iri}" }
+      return
+    end
+
+    quote_authorization.save
+    quote_post.assign(quote_authorization_iri: quote_authorization_iri).save
+    Task::DeliverDelayedObject.find?(object: quote_post).try(&.schedule)
   end
 
   private def self.process_quote_request(account, quote_request, deliver_task_class)

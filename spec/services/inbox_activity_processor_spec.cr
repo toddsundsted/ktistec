@@ -176,16 +176,6 @@ Spectator.describe InboxActivityProcessor do
         let_create(:accept, named: :accept_activity, actor: other, object: quote_request_activity, result_iri: authorization_iri)
         let_create!(:deliver_delayed_object_task, actor: account.actor, object: quote_post, state: state)
 
-        it "sets quote_authorization_iri" do
-          InboxActivityProcessor.process(account, accept_activity)
-          expect(quote_post.reload!.quote_authorization_iri).to eq(authorization_iri)
-        end
-
-        it "publishes the quote post" do
-          expect { InboxActivityProcessor.process(account, accept_activity) }
-            .to change { quote_post.reload!.published }.from(nil)
-        end
-
         it "schedules receive task" do
           InboxActivityProcessor.process(account, accept_activity, receive_task_class: MockReceiveTask)
           expect(MockReceiveTask.schedule_called_count).to eq(1)
@@ -219,6 +209,16 @@ Spectator.describe InboxActivityProcessor do
               .to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
           end
 
+          it "sets quote_authorization_iri" do
+            InboxActivityProcessor.process(account, accept_activity)
+            expect(quote_post.reload!.quote_authorization_iri).to eq(authorization_iri)
+          end
+
+          it "publishes the quote post" do
+            expect { InboxActivityProcessor.process(account, accept_activity) }
+              .to change { quote_post.reload!.published }.from(nil)
+          end
+
           context "and quote authorization has wrong interacting_object_iri" do
             before_each do
               quote_decision.interacting_object_iri = "https://remote/objects/wrong"
@@ -228,6 +228,16 @@ Spectator.describe InboxActivityProcessor do
             it "does not save the quote authorization" do
               expect { InboxActivityProcessor.process(account, accept_activity) }
                 .not_to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
+            end
+
+            it "does not set quote_authorization_iri" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { quote_post.reload!.quote_authorization_iri }
+            end
+
+            it "does not publish the quote post" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { quote_post.reload!.published }
             end
           end
 
@@ -263,8 +273,59 @@ Spectator.describe InboxActivityProcessor do
                 .not_to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
             end
 
+            it "does not set quote_authorization_iri" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { quote_post.reload!.quote_authorization_iri }
+            end
+
+            it "does not publish the quote post" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { quote_post.reload!.published }
+            end
+
             it "does not raise an error" do
               expect { InboxActivityProcessor.process(account, accept_activity) }.not_to raise_error
+            end
+          end
+
+          context "and the quoted post has been deleted" do
+            before_each { quoted_post.destroy }
+
+            it "does not save the quote authorization" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
+            end
+
+            it "does not set quote_authorization_iri" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { quote_post.reload!.quote_authorization_iri }
+            end
+
+            it "does not publish the quote post" do
+              expect { InboxActivityProcessor.process(account, accept_activity) }
+                .not_to change { quote_post.reload!.published }
+            end
+          end
+
+          context "and the accept is from an actor other than the quoted post's author" do
+            let_create(:actor, named: :attacker)
+            let_create(:accept, named: :forged_accept, actor: attacker, object: quote_request_activity, result_iri: authorization_iri)
+
+            pre_condition { expect(quoted_post.attributed_to).not_to eq(attacker) }
+
+            it "does not save the quote authorization" do
+              expect { InboxActivityProcessor.process(account, forged_accept) }
+                .not_to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }
+            end
+
+            it "does not set quote_authorization_iri" do
+              expect { InboxActivityProcessor.process(account, forged_accept) }
+                .not_to change { quote_post.reload!.quote_authorization_iri }
+            end
+
+            it "does not publish the quote post" do
+              expect { InboxActivityProcessor.process(account, forged_accept) }
+                .not_to change { quote_post.reload!.published }
             end
           end
         end

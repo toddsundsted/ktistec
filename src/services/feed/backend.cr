@@ -29,6 +29,14 @@ class Feed
     #
     abstract def validate_params(params : Hash(String, JSON::Any)) : Array(String)
 
+    # Returns a feed's params reduced to what decides membership.
+    #
+    # In canonical form. Compared, never stored.
+    #
+    def judging_params(params : Hash(String, JSON::Any)) : Hash(String, JSON::Any)
+      params
+    end
+
     @@registry = {} of String => Backend
 
     # Registers a backend.

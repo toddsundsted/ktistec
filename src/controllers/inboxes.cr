@@ -130,6 +130,24 @@ class InboxesController
     object_gone_at_origin?(account, object.iri)
   end
 
+  # Returns true if both IRIs are on the same host.
+  #
+  private def self.same_host?(first : String, second : String) : Bool
+    host = URI.parse(first).host.try(&.presence)
+    !!(host && host == URI.parse(second).host)
+  rescue URI::Error
+    false
+  end
+
+  # Authorizes an `Accept` or `Reject` of a `QuoteRequest`.
+  #
+  private def self.answer_quote_request_authorized?(activity)
+    return false unless (quote_request = activity.object?.as?(ActivityPub::Activity::QuoteRequest))
+    return false unless (quoted_object = quote_request.object?)
+    return false unless (actor_iri = activity.actor_iri)
+    actor_iri == quoted_object.attributed_to_iri
+  end
+
   # Returns true if the object is gone (404/410) at its own origin.
   #
   private def self.object_gone_at_origin?(account, iri)
@@ -306,6 +324,17 @@ class InboxesController
       bad_request("Can't Be Verified")
     end
 
+    # an activity's own identifier must be on the same host as its
+    # actor. this holds for a relayed activity too, where the inner
+    # activity's `@id` and actor both belong to the original author
+    # rather than to the relaying community.
+    if (activity_iri = activity.iri.presence) && (activity_actor_iri = activity.actor_iri)
+      unless same_host?(activity_iri, activity_actor_iri)
+        Log.trace { "[#{request_id}] activity iri=#{activity_iri} is not on the actor's host actor=#{activity_actor_iri}" }
+        bad_request("Origin Mismatch")
+      end
+    end
+
     # 6
 
     if actor
@@ -392,7 +421,9 @@ class InboxesController
           bad_request
         end
       when ActivityPub::Activity::QuoteRequest
-        # no additional check needed
+        unless answer_quote_request_authorized?(activity)
+          bad_request
+        end
       else
         bad_request
       end
@@ -411,7 +442,9 @@ class InboxesController
           bad_request
         end
       when ActivityPub::Activity::QuoteRequest
-        # no additional check needed
+        unless answer_quote_request_authorized?(activity)
+          bad_request
+        end
       else
         bad_request
       end
@@ -476,6 +509,12 @@ class InboxesController
       end
     else
       bad_request("Activity Not Supported")
+    end
+
+    unless activity.is_a?(ActivityPub::Activity::Delete)
+      if activity.responds_to?(:object?) && activity.object?.is_a?(ActivityPub::Object::QuoteAuthorization)
+        bad_request
+      end
     end
 
     # check to see if the activity already exists. if not, save it

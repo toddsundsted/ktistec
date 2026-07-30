@@ -15,6 +15,7 @@ describe("CriteriaInputController", () => {
   const connect = (value) => {
     textarea.value = value
     controller = Object.create(CriteriaInputController.prototype)
+    Object.defineProperty(controller, "element", { value: element, writable: true })
     Object.defineProperty(controller, "textareaTarget", { value: textarea, writable: true })
     Object.defineProperty(controller, "placeholderValue", { value: "Add a term…", writable: true })
     controller.connect()
@@ -60,12 +61,25 @@ describe("CriteriaInputController", () => {
       expect([labelAt(0).dataset.index, labelAt(1).dataset.index]).toEqual(["0", "1"])
     })
 
+    it("adds the enhanced class to the element", () => {
+      connect("")
+
+      expect(element.classList).toContain("enhanced")
+    })
+
     it("restores the textarea", () => {
       connect("filament")
       controller.disconnect()
 
       expect(textarea.style.display).toEqual("")
       expect(element.querySelector(".ui.labels")).toBeNull()
+    })
+
+    it("removes the enhanced class from the element", () => {
+      connect("filament")
+      controller.disconnect()
+
+      expect(element.classList).not.toContain("enhanced")
     })
   })
 
@@ -78,6 +92,7 @@ describe("CriteriaInputController", () => {
       const snapshot = source.cloneNode(true)
       document.body.appendChild(snapshot)
       const restored = Object.create(CriteriaInputController.prototype)
+      Object.defineProperty(restored, "element", { value: snapshot, writable: true })
       Object.defineProperty(restored, "textareaTarget", {
         value: snapshot.querySelector("textarea"),
         writable: true,
@@ -93,6 +108,13 @@ describe("CriteriaInputController", () => {
 
       expect(element.querySelector(".ui.labels")).toBeNull()
       expect(textarea.style.display).toEqual("")
+    })
+
+    it("leaves an unmarked element in the cache", () => {
+      connect("filament")
+      document.dispatchEvent(new Event("turbo:before-cache"))
+
+      expect(element.classList).not.toContain("enhanced")
     })
 
     it("leaves the terms in the textarea", () => {

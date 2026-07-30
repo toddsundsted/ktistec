@@ -68,6 +68,8 @@ export default class extends Controller {
     this.field.insertAdjacentElement("afterend", this.status)
     this.textareaTarget.style.display = "none"
 
+    this.element.classList.add("enhanced")
+
     this._render()
   }
 
@@ -97,6 +99,8 @@ export default class extends Controller {
     this.field.remove()
     this.status.remove()
     this.textareaTarget.style.display = null
+
+    this.element.classList.remove("enhanced")
   }
 
   _labels() {

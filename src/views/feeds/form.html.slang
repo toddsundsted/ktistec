@@ -10,15 +10,19 @@ crystal:
     cancel_label = "Back"
   end
   submit_label = (feed.new_record? || feed.draft) ? "Create Feed" : "Update Feed"
-  placeholder = "Add a keyword, #hashtag, or @mention…"
+  placeholder = "Add a keyword, #hashtag, or @mention, then press Enter"
 = form_tag(feed, action, data: {controller: "unsaved-changes"}) do
   = error_messages(feed)
   = input_tag("Name", feed, name, placeholder: "e.g. Fediverse")
   = input_tag("Notes", feed, description, placeholder: "A description of what this feed is about.")
   h3.ui.header Criteria
-  p
+  p.criteria-hint.plain
     | Start a term with <code>#</code> for a hashtag, <code>@</code>
       for a mention, or just type keywords. <em>One term per line.</em>
+  p.criteria-hint.enhanced
+    | Start a term with <code>#</code> for a hashtag, <code>@</code>
+      for a mention, or just type keywords. <em>Press Enter to add
+      each.</em>
   / note the morphing protection (`data-turbo-permanent=true`)
   .ui.field.criteria-builder
     .ui.segment.feed-bucket.any data-turbo-permanent=true data-controller="criteria-input" data-criteria-input-placeholder-value=placeholder

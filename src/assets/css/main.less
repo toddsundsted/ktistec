@@ -1013,6 +1013,13 @@ a > img.emoji {
 }
 
 /** feeds builder **/
+.criteria-hint.enhanced { display: none; }
+
+.ui.form:has(.feed-bucket.enhanced) {
+    .criteria-hint.plain { display: none; }
+    .criteria-hint.enhanced { display: block; }
+}
+
 .criteria-builder {
     .feed-bucket.any  { border-left: 3px solid var(--semantic-affirmative); }
     .feed-bucket.all  { border-left: 3px solid var(--semantic-primary); }

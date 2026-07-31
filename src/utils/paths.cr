@@ -1,5 +1,6 @@
 require "uri"
 
+require "../framework/assets"
 require "../safe/safe_uri"
 
 # Path helpers
@@ -52,6 +53,21 @@ module Utils::Paths
 
   macro back_path(fallback = ::Ktistec::SafeURI.assert_safe("/"))
     ::Utils::Paths.back_path_for(env, {{fallback}})
+  end
+
+  # Returns a `SafeURI` for a static asset, with a cache-busting
+  # query parameter derived from the asset's contents.
+  #
+  def self.asset_path_for(path : String) : ::Ktistec::SafeURI
+    if (digest = ::Ktistec::Assets.digest?(path))
+      ::Ktistec::SafeURI.assert_safe("#{path}?v=#{digest}")
+    else
+      ::Ktistec::SafeURI.assert_safe(path)
+    end
+  end
+
+  macro asset_path(path)
+    ::Utils::Paths.asset_path_for({{path}})
   end
 
   macro home_path

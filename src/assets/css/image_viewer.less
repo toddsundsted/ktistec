@@ -21,6 +21,8 @@
 @image-viewer-mobile-viewport-width: 98vw;
 @image-viewer-zoom-transition-duration: 0.3s;
 @image-viewer-zoom-bounce-easing: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+@image-viewer-swipe-target-bg-opacity: 0.9;
+@image-viewer-swipe-target-scale: 1.15;
 
 .image-viewer-modal {
     position: fixed;
@@ -32,6 +34,7 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity @image-viewer-transition-duration ease, visibility @image-viewer-transition-duration ease;
+    touch-action: none;
 
     &[aria-hidden="false"] {
         opacity: 1;
@@ -109,7 +112,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background-color @image-viewer-transition-duration ease;
+        transition: color @image-viewer-transition-duration ease,
+                    background-color @image-viewer-transition-duration ease,
+                    transform @image-viewer-transition-duration ease;
         padding: 0;
         flex-shrink: 0;
 
@@ -132,6 +137,12 @@
             opacity: 0.5;
             cursor: not-allowed;
             outline: none;
+        }
+
+        &.is-swipe-target {
+            color: black;
+            background: rgba(255, 255, 255, @image-viewer-swipe-target-bg-opacity);
+            transform: scale(@image-viewer-swipe-target-scale);
         }
     }
 
@@ -156,6 +167,9 @@
                     height @image-viewer-zoom-transition-duration @image-viewer-zoom-bounce-easing;
         will-change: transform;
 
+        &.is-settling {
+            transition: transform @image-viewer-transition-duration ease-out;
+        }
         &.no-transition {
             transition: none;
         }

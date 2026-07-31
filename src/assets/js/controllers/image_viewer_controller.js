@@ -1,5 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
+const SWIPE_ARM_DISTANCE = 10
+const SWIPE_COMMIT_DISTANCE = 60
+const SWIPE_CLOSE_DISTANCE = 80
+const SWIPE_RESISTANCE = 0.25
+const SWIPE_FADE_DISTANCE = 240
+const SWIPE_FADE_AMOUNT = 0.7
+const SWIPE_SETTLE_DURATION = 200
+
 export default class extends Controller {
   /**
    * Disconnects the controller.
@@ -226,6 +234,7 @@ export default class extends Controller {
       () => this.closeModal()
     )
     rightGroup.appendChild(closeButton)
+    this.closeButton = closeButton
   }
 
   /**
@@ -269,6 +278,10 @@ export default class extends Controller {
     this.panStartY = 0
     this.panStartPanX = 0
     this.panStartPanY = 0
+    this.swipeX = 0
+    this.swipeY = 0
+    this.swipeAxis = null
+    this.isSwiping = false
 
     return { content, imageWrapper }
   }
@@ -339,6 +352,7 @@ export default class extends Controller {
 
     const { modal, backdrop, container, controls, leftGroup, rightGroup } = this.createModalStructure()
     this.modal = modal
+    this.backdropElement = backdrop
 
     this.createControls(leftGroup, rightGroup)
     controls.appendChild(leftGroup)
@@ -482,9 +496,21 @@ export default class extends Controller {
       }
 
       const content = this.modal.querySelector('.image-viewer-modal__content')
-      if (content && this.boundTouchStart && this.boundTouchEnd) {
-        content.removeEventListener('touchstart', this.boundTouchStart)
-        content.removeEventListener('touchend', this.boundTouchEnd)
+
+      if (this.boundTouchStart) {
+        this.modal.removeEventListener('touchstart', this.boundTouchStart)
+        this.modal.removeEventListener('touchmove', this.boundTouchMove)
+        this.modal.removeEventListener('touchend', this.boundTouchEnd)
+        this.modal.removeEventListener('touchcancel', this.boundTouchCancel)
+        this.boundTouchStart = null
+        this.boundTouchMove = null
+        this.boundTouchEnd = null
+        this.boundTouchCancel = null
+      }
+
+      if (this.swipeSettleTimeout) {
+        clearTimeout(this.swipeSettleTimeout)
+        this.swipeSettleTimeout = null
       }
 
       if (content && this.boundPanMouseDown) {
@@ -544,6 +570,8 @@ export default class extends Controller {
       this.zoomLevelDisplay = null
       this.imageWrapper = null
       this.captionElement = null
+      this.closeButton = null
+      this.backdropElement = null
       this.zoomLevel = 1.0
       this.naturalImageWidth = 0
       this.naturalImageHeight = 0
@@ -551,6 +579,10 @@ export default class extends Controller {
       this.panX = 0
       this.panY = 0
       this.isPanning = false
+      this.swipeX = 0
+      this.swipeY = 0
+      this.swipeAxis = null
+      this.isSwiping = false
     }
   }
 
@@ -749,18 +781,22 @@ export default class extends Controller {
   }
 
   /**
-   * Applies transform (scale + translate) to the image wrapper.
+   * Applies transform (swipe + scale + pan) to the image wrapper.
    */
   applyTransform() {
     if (!this.imageWrapper) return
 
-    if (this.isPanning) {
+    if (this.isPanning || this.isSwiping) {
       this.imageWrapper.classList.add('no-transition')
     } else {
       this.imageWrapper.classList.remove('no-transition')
     }
 
-    this.imageWrapper.style.transform = `scale(${this.zoomLevel}) translate(${this.panX}px, ${this.panY}px)`
+    const swipeX = this.swipeX || 0
+    const swipeY = this.swipeY || 0
+
+    this.imageWrapper.style.transform =
+      `translate(${swipeX}px, ${swipeY}px) scale(${this.zoomLevel}) translate(${this.panX}px, ${this.panY}px)`
     this.imageWrapper.style.transformOrigin = 'center center'
   }
 
@@ -1255,75 +1291,226 @@ export default class extends Controller {
    * Initializes touch event listeners for swipe detection.
    */
   initSwipeListeners() {
-    const content = this.modal.querySelector('.image-viewer-modal__content')
-    if (!content) return
+    this.boundTouchStart = this.handleSwipeStart.bind(this)
+    this.boundTouchMove = this.handleSwipeMove.bind(this)
+    this.boundTouchEnd = this.handleSwipeEnd.bind(this)
+    this.boundTouchCancel = this.handleSwipeCancel.bind(this)
 
-    // skip swipe detection when zoomed (pan handles it)
-
-    this.boundTouchStart = (e) => {
-      if (this.zoomLevel > 1.0) return
-      if (e.touches.length !== 1) return
-
-      const touch = e.touches[0]
-      this.touchStartX = touch.clientX
-      this.touchStartY = touch.clientY
-    }
-
-    this.boundTouchEnd = (e) => {
-      if (this.zoomLevel > 1.0) return
-      if (e.changedTouches.length !== 1) return
-
-      const touch = e.changedTouches[0]
-      this.touchEndX = touch.clientX
-      this.touchEndY = touch.clientY
-      this.handleSwipe()
-    }
-
-    content.addEventListener('touchstart', this.boundTouchStart, { passive: true })
-    content.addEventListener('touchend', this.boundTouchEnd, { passive: true })
+    this.modal.addEventListener('touchstart', this.boundTouchStart, { passive: true })
+    this.modal.addEventListener('touchmove', this.boundTouchMove, { passive: false })
+    this.modal.addEventListener('touchend', this.boundTouchEnd)
+    this.modal.addEventListener('touchcancel', this.boundTouchCancel)
   }
 
   /**
-   * Handles swipe gesture detection and navigation.
+   * Begins tracking a potential swipe.
    */
-  handleSwipe() {
-    if (this.touchStartX === null || this.touchStartX === undefined ||
-        this.touchEndX === null || this.touchEndX === undefined) {
+  handleSwipeStart(event) {
+    if (this.zoomLevel > 1.0) return
+    if (event.touches.length !== 1) {
+      this.releaseSwipe()
       return
     }
 
-    const deltaX = this.touchEndX - this.touchStartX
-    const deltaY = this.touchEndY - this.touchStartY
+    const target = event.touches[0].target
+    if (target && target.closest && (target.closest('button') || target.closest('.image-viewer-modal__controls'))) {
+      return
+    }
 
-    // swipe left/right
-    const minSwipeDistance = 50
-    const maxVerticalDistance = 30
-    // swipe up
-    const minVerticalSwipeDistance = 100
-    const maxHorizontalDistance = 50
+    const touch = event.touches[0]
+    this.touchStartX = touch.clientX
+    this.touchStartY = touch.clientY
+    this.swipeAxis = null
+    this.swipeX = 0
+    this.swipeY = 0
+  }
 
-    // check for vertical swipe (flick up to close)
-    if (deltaY < -minVerticalSwipeDistance && Math.abs(deltaX) < maxHorizontalDistance) {
+  /**
+   * Tracks the finger.
+   */
+  handleSwipeMove(event) {
+    if (this.touchStartX === null || this.touchStartX === undefined) return
+    if (event.touches.length !== 1) {
+      this.releaseSwipe()
+      return
+    }
+
+    const touch = event.touches[0]
+    const deltaX = touch.clientX - this.touchStartX
+    const deltaY = touch.clientY - this.touchStartY
+
+    if (!this.swipeAxis) {
+      if (Math.hypot(deltaX, deltaY) < SWIPE_ARM_DISTANCE) return
+      this.stopSettling()
+      this.swipeAxis = Math.abs(deltaX) >= Math.abs(deltaY) ? 'horizontal' : 'vertical'
+      this.isSwiping = true
+    }
+
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+
+    if (this.swipeAxis === 'horizontal') {
+      this.swipeX = this.canNavigateBy(deltaX) ? deltaX : deltaX * SWIPE_RESISTANCE
+      this.swipeY = 0
+    } else {
+      this.swipeX = 0
+      this.swipeY = deltaY
+    }
+
+    this.applyTransform()
+    this.updateSwipeFeedback()
+  }
+
+  /**
+   * Acts on the swipe, if it went far enough, and lets go.
+   */
+  handleSwipeEnd() {
+    if (this.touchStartX === null || this.touchStartX === undefined) return
+
+    const axis = this.swipeAxis
+    const distance = axis === 'vertical' ? this.swipeY : this.swipeX
+    const committed = this.swipeCommits()
+
+    if (committed && axis === 'vertical') {
+      this.clearSwipeState()
       this.closeModal()
-      this.touchStartX = null
-      this.touchStartY = null
-      this.touchEndX = null
-      this.touchEndY = null
       return
     }
 
-    // check for horizontal swipe (navigate left/right)
-    if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaY) < maxVerticalDistance) {
-      if (deltaX > 0) {
-        this.navigatePrev()
-      } else {
-        this.navigateNext()
+    this.releaseSwipe()
+
+    if (!committed) return
+
+    if (distance > 0) {
+      this.navigatePrev()
+    } else {
+      this.navigateNext()
+    }
+  }
+
+  /**
+   * Abandons the swipe when the system takes the touch away.
+   */
+  handleSwipeCancel() {
+    this.releaseSwipe()
+  }
+
+  /**
+   * Determines whether a horizontal swipe of this direction has an
+   * image to navigate to.
+   */
+  canNavigateBy(deltaX) {
+    if (!this.collection) return false
+
+    return deltaX > 0
+      ? this.currentIndex > 0
+      : this.currentIndex < this.collection.length - 1
+  }
+
+  /**
+   * Determines whether releasing the swipe now would do anything.
+   */
+  swipeCommits() {
+    if (this.swipeAxis === 'vertical') {
+      return Math.abs(this.swipeY) > SWIPE_CLOSE_DISTANCE
+    }
+
+    if (this.swipeAxis === 'horizontal') {
+      return this.canNavigateBy(this.swipeX) && Math.abs(this.swipeX) > SWIPE_COMMIT_DISTANCE
+    }
+
+    return false
+  }
+
+  /**
+   * Returns the control that releasing the swipe would press, or null if
+   * releasing it would do nothing.
+   */
+  swipeTarget() {
+    if (!this.swipeCommits()) return null
+
+    if (this.swipeAxis === 'vertical') {
+      return this.closeButton
+    }
+
+    return this.swipeX > 0 ? this.prevButton : this.nextButton
+  }
+
+  /**
+   * Highlights the control the swipe has committed to, and dims the
+   * backdrop in proportion to how far a close swipe has travelled.
+   */
+  updateSwipeFeedback() {
+    const target = this.swipeTarget()
+
+    for (const button of [this.prevButton, this.nextButton, this.closeButton]) {
+      if (button) {
+        button.classList.toggle('is-swipe-target', button === target)
       }
     }
 
+    if (this.backdropElement) {
+      if (this.swipeAxis === 'vertical') {
+        const fade = Math.min(Math.abs(this.swipeY) / SWIPE_FADE_DISTANCE, 1)
+        this.backdropElement.style.opacity = `${1 - fade * SWIPE_FADE_AMOUNT}`
+      } else {
+        this.backdropElement.style.opacity = ''
+      }
+    }
+  }
+
+  /**
+   * Ends the settle animation, if one is still running.
+   */
+  stopSettling() {
+    if (this.swipeSettleTimeout) {
+      clearTimeout(this.swipeSettleTimeout)
+      this.swipeSettleTimeout = null
+    }
+
+    if (this.imageWrapper) {
+      this.imageWrapper.classList.remove('is-settling')
+    }
+  }
+
+  /**
+   * Forgets the swipe without disturbing what's on screen.
+   */
+  clearSwipeState() {
+    const wasSwiping = this.isSwiping
+
     this.touchStartX = null
     this.touchStartY = null
-    this.touchEndX = null
-    this.touchEndY = null
+    this.swipeAxis = null
+    this.isSwiping = false
+    this.swipeX = 0
+    this.swipeY = 0
+
+    return wasSwiping
+  }
+
+  /**
+   * Lets go of the swipe and settles the image back into place.
+   */
+  releaseSwipe() {
+    const wasSwiping = this.clearSwipeState()
+
+    if (!wasSwiping) return
+
+    if (this.imageWrapper) {
+      this.stopSettling()
+      this.imageWrapper.classList.add('is-settling')
+
+      this.swipeSettleTimeout = setTimeout(() => {
+        this.swipeSettleTimeout = null
+        if (this.imageWrapper) {
+          this.imageWrapper.classList.remove('is-settling')
+        }
+      }, SWIPE_SETTLE_DURATION)
+    }
+
+    this.applyTransform()
+    this.updateSwipeFeedback()
   }
 }

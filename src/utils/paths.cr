@@ -74,9 +74,7 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("/")
   end
 
-  # The empty string -- a relative reference resolving to the current
-  # page URL. Used as a fallback href on links whose click is
-  # intercepted by the client (e.g., Turbo `data-turbo-action` links).
+  # A relative reference resolving to the current page URL.
   #
   macro current_page_path
     ::Ktistec::SafeURI::EMPTY_URI
@@ -96,10 +94,6 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("##{{{name}}}")
   end
 
-  # Lifts a path validated by `Account#pinned_collections` into a
-  # `SafeURI`. The model setter normalizes and allowlist-validates
-  # each entry against a small set of route shapes.
-  #
   macro pinned_collection_path(path)
     ::Ktistec::SafeURI.assert_safe({{path}})
   end

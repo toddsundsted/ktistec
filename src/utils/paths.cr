@@ -1,5 +1,6 @@
 require "uri"
 
+require "../framework/assets"
 require "../safe/safe_uri"
 
 # Path helpers
@@ -54,13 +55,26 @@ module Utils::Paths
     ::Utils::Paths.back_path_for(env, {{fallback}})
   end
 
+  # Returns a `SafeURI` for a static asset, with a cache-busting
+  # query parameter derived from the asset's contents.
+  #
+  def self.asset_path_for(path : String) : ::Ktistec::SafeURI
+    if (digest = ::Ktistec::Assets.digest?(path))
+      ::Ktistec::SafeURI.assert_safe("#{path}?v=#{digest}")
+    else
+      ::Ktistec::SafeURI.assert_safe(path)
+    end
+  end
+
+  macro asset_path(path)
+    ::Utils::Paths.asset_path_for({{path}})
+  end
+
   macro home_path
     ::Ktistec::SafeURI.assert_safe("/")
   end
 
-  # The empty string -- a relative reference resolving to the current
-  # page URL. Used as a fallback href on links whose click is
-  # intercepted by the client (e.g., Turbo `data-turbo-action` links).
+  # A relative reference resolving to the current page URL.
   #
   macro current_page_path
     ::Ktistec::SafeURI::EMPTY_URI
@@ -80,10 +94,6 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("##{{{name}}}")
   end
 
-  # Lifts a path validated by `Account#pinned_collections` into a
-  # `SafeURI`. The model setter normalizes and allowlist-validates
-  # each entry against a small set of route shapes.
-  #
   macro pinned_collection_path(path)
     ::Ktistec::SafeURI.assert_safe({{path}})
   end

@@ -1,3 +1,5 @@
+require "file_utils"
+
 require "../../src/utils/paths"
 
 require "../spec_helper/base"
@@ -159,6 +161,34 @@ Spectator.describe Utils::Paths do
   describe "home_path" do
     it "gets the home path" do
       expect((home_path).to_s).to eq("/")
+    end
+  end
+
+  describe "asset_path" do
+    let(tmp_dir) { File.join(Dir.tempdir, "assets_#{Random.new.rand(10000)}") }
+
+    around_each do |example|
+      Dir.mkdir_p(File.join(tmp_dir, "dist"))
+      public_folder = Kemal.config.public_folder
+      Kemal.config.public_folder = tmp_dir
+      begin
+        example.call
+      ensure
+        Kemal.config.public_folder = public_folder
+        FileUtils.rm_rf(tmp_dir)
+      end
+    end
+
+    it "gets the asset path" do
+      expect((asset_path("/dist/site.css"))).to eq("/dist/site.css")
+    end
+
+    context "given an asset" do
+      before_each { File.write(File.join(tmp_dir, "dist", "site.css"), "body {}") }
+
+      it "includes a cache-busting query parameter" do
+        expect((asset_path("/dist/site.css"))).to match(%r|^/dist/site\.css\?v=[0-9a-f]{8}$|)
+      end
     end
   end
 

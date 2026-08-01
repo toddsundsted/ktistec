@@ -1,6 +1,6 @@
 - content_for "head" do
-  link rel="stylesheet" href="/dist/settings.css"
-  script src="/dist/settings.bundle.js"
+  link rel="stylesheet" href=asset_path("/dist/settings.css")
+  script src=asset_path("/dist/settings.bundle.js")
 - content_for "title" do
   | Settings
 - partial actor_panel_partial(env, actor)

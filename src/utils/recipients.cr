@@ -20,6 +20,10 @@ module Ktistec
       local : Array({ActivityPub::Actor, Account}),
       remote : Array(String)
 
+    record Forwarding,
+      account : Account,
+      recipients : Array(String)
+
     # Expands an outbound activity's recipient fields into a sorted,
     # deduplicated list of actor IRIs reachable from this server.
     #
@@ -108,6 +112,20 @@ module Ktistec
         iris << iri
       end
       accounts.select { |account| iris.includes?(account.iri) }
+    end
+
+    # Returns the remote actors an inbound activity must be forwarded
+    # to, paired with the local account on whose behalf the transfer
+    # is made, or `nil` if there is nothing to forward.
+    #
+    # Reads `to` and `cc` only. `audience` is resolver-only.
+    #
+    def self.forwarding(activity : ActivityPub::Activity) : Forwarding?
+      recipients = [activity.to, activity.cc].flatten
+      Account.all.each do |account|
+        remote = partition(expand(activity, account.actor, recipients)).remote
+        return Forwarding.new(account, remote) unless remote.empty?
+      end
     end
 
     # Returns the IRI of the actor the activity implicates by virtue of

@@ -49,19 +49,33 @@ class InboxActivityProcessor
 
     maintain(activity)
 
-    partition = Ktistec::Recipients.partition(
-      Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
-    )
+    if recipients
+      forwarding = Ktistec::Recipients.forwarding(activity)
 
-    # scheduled unconditionally even when `partition.remote` is empty:
-    # `Task::Receive#perform` does per-receiver work (quote handling)
-    # that's needed regardless of remote forwarding.
+      # the forwarding account signs the transfer -- they own the
+      # followers collection being expanded -- otherwise any
+      # implicated account supplies the fetch identity.
 
-    receive_task_class.new(
-      receiver: account.actor,
-      activity: activity,
-      recipients: partition.remote,
-    ).schedule
+      if (receiver = forwarding.try(&.account) || recipients.first?)
+        receive_task_class.new(
+          receiver: receiver.actor,
+          activity: activity,
+          recipients: forwarding.try(&.recipients) || [] of String,
+        ).schedule
+      end
+    else
+      partition = Ktistec::Recipients.partition(
+        Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
+      )
+
+      # scheduled unconditionally.
+
+      receive_task_class.new(
+        receiver: account.actor,
+        activity: activity,
+        recipients: partition.remote,
+      ).schedule
+    end
   end
 
   # Produces the delivery artifacts for a local account and the side

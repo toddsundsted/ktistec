@@ -772,6 +772,80 @@ Spectator.describe InboxActivityProcessor do
       end
     end
 
+    context "scheduling the receive task" do
+      let_create(:create, named: :activity, actor: other, object: object)
+
+      it "does not schedule the task" do
+        InboxActivityProcessor.process(account, activity, recipients: [] of Account, receive_task_class: MockReceiveTask)
+        expect(MockReceiveTask.schedule_called_count).to eq(0)
+      end
+
+      context "given a resolved recipient" do
+        let!(recipient) { register }
+
+        it "makes the recipient the receiver" do
+          InboxActivityProcessor.process(account, activity, recipients: [recipient], receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.last_receiver).to eq(recipient.actor)
+        end
+
+        it "forwards to nobody" do
+          InboxActivityProcessor.process(account, activity, recipients: [recipient], receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.last_recipients).to be_empty
+        end
+
+        it "schedules one task" do
+          InboxActivityProcessor.process(account, activity, recipients: [recipient], receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.schedule_called_count).to eq(1)
+        end
+
+        context "and a second recipient" do
+          let!(second_recipient) { register }
+
+          it "still schedules one task" do
+            InboxActivityProcessor.process(account, activity, recipients: [recipient, second_recipient], receive_task_class: MockReceiveTask)
+            expect(MockReceiveTask.schedule_called_count).to eq(1)
+          end
+        end
+      end
+
+      context "given an addressed followers collection" do
+        let!(collection_owner) { register }
+        let(followers) { ["#{collection_owner.actor.iri}/followers"] }
+        let_create(:actor, named: :follower)
+        let_create!(:object, named: :origin, attributed_to: collection_owner.actor, to: followers)
+        let_create!(:object, named: :reply, attributed_to: other, in_reply_to: origin, to: followers)
+        let_create(:create, named: :activity, actor: other, object: reply, to: followers)
+
+        before_each { do_follow(follower, collection_owner.actor) }
+
+        it "makes the collection's owner the receiver" do
+          InboxActivityProcessor.process(account, activity, recipients: [] of Account, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.last_receiver).to eq(collection_owner.actor)
+        end
+
+        it "forwards to the owner's remote followers" do
+          InboxActivityProcessor.process(account, activity, recipients: [] of Account, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.last_recipients).to eq([follower.iri])
+        end
+
+        it "schedules one task" do
+          InboxActivityProcessor.process(account, activity, recipients: [] of Account, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.schedule_called_count).to eq(1)
+        end
+
+        context "and one of the owner's followers is local" do
+          let!(local_follower) { register }
+
+          before_each { do_follow(local_follower.actor, collection_owner.actor) }
+
+          it "still makes the collection's owner the receiver" do
+            InboxActivityProcessor.process(account, activity, recipients: [local_follower], receive_task_class: MockReceiveTask)
+            expect(MockReceiveTask.last_receiver).to eq(collection_owner.actor)
+          end
+        end
+      end
+    end
+
     context "with an Announce of the owner's object" do
       let_create!(:object, named: announced, attributed_to: account.actor)
       let_create!(:announce, named: announce_activity, actor: other, object: announced, to: [account.actor.iri])

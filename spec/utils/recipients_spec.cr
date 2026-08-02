@@ -685,6 +685,78 @@ Spectator.describe Ktistec::Recipients do
     end
   end
 
+  describe ".forwarding" do
+    let!(collection_owner) { register }
+
+    let_build(:actor, named: :sender_actor)
+
+    subject { described_class.forwarding(activity) }
+
+    before_each { activity.actor_iri = sender_actor.save.iri }
+
+    it "returns nothing" do
+      expect(subject).to be_nil
+    end
+
+    context "addressed to an account's followers collection" do
+      let_create!(:actor, named: :remote_follower)
+      let_create!(:follow_relationship, actor: remote_follower, object: collection_owner.actor, confirmed: true)
+
+      before_each { activity.to = ["#{collection_owner.actor.iri}/followers"] }
+
+      it "returns nothing" do
+        expect(subject).to be_nil
+      end
+
+      context "when the activity's object is a reply in a thread the owner started" do
+        let_build(:object, named: :origin, attributed_to: collection_owner.actor, to: ["#{collection_owner.actor.iri}/followers"])
+        let_build(:object, named: :reply, in_reply_to: origin)
+
+        before_each do
+          origin.save
+          reply.save
+          activity.object_iri = reply.iri
+        end
+
+        it "returns the collection's owner" do
+          expect(subject.try(&.account)).to eq(collection_owner)
+        end
+
+        it "returns the owner's followers" do
+          expect(subject.try(&.recipients)).to eq([remote_follower.iri])
+        end
+
+        context "and a follower is local" do
+          let!(local_follower) { register }
+          let_create!(:follow_relationship, named: :local_relationship, actor: local_follower.actor, object: collection_owner.actor, confirmed: true)
+
+          it "does not return the local follower" do
+            expect(subject.try(&.recipients)).not_to contain(local_follower.iri)
+          end
+        end
+
+        context "and the follow is not confirmed" do
+          before_each { follow_relationship.assign(confirmed: false).save }
+
+          it "returns nothing" do
+            expect(subject).to be_nil
+          end
+        end
+
+        context "and the collection is addressed via audience" do
+          before_each do
+            activity.to = nil
+            activity.audience = ["#{collection_owner.actor.iri}/followers"]
+          end
+
+          it "returns nothing" do
+            expect(subject).to be_nil
+          end
+        end
+      end
+    end
+  end
+
   describe ".recipient?" do
     let(deliver_to) { nil }
 

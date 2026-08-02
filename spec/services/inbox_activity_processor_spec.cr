@@ -36,11 +36,6 @@ Spectator.describe InboxActivityProcessor do
         object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
       end
 
-      # also, proves a fix to an inbox infinite-recursion
-      # server-killer: a filtered incoming Create from a remote actor
-      # recurses until the fiber stack overflows. `process_locally`
-      # re-enters `process` (via `for_receive` echoing the recipient
-      # back).
       context "and a matching Create from a remote actor" do
         let_create!(:create, named: :filtered_create, actor: other, object: object, to: [account.actor.iri])
 
@@ -80,6 +75,15 @@ Spectator.describe InboxActivityProcessor do
       it "stores the activity in the recipient's inbox" do
         InboxActivityProcessor.process(account, addressed_create, receive_task_class: MockReceiveTask)
         expect(account.actor.in_inbox(public: false)).to eq([addressed_create])
+      end
+
+      context "given an existing inbox item" do
+        before_each { put_in_inbox(account.actor, addressed_create) }
+
+        it "does not store a duplicate" do
+          expect { InboxActivityProcessor.process(account, addressed_create, receive_task_class: MockReceiveTask) }
+            .not_to change { Relationship::Content::Inbox.count(owner: account.actor, activity: addressed_create) }
+        end
       end
     end
 
@@ -122,6 +126,16 @@ Spectator.describe InboxActivityProcessor do
         expect(MockHandleFollowRequestTask.schedule_called_count).to eq(1)
         expect(MockHandleFollowRequestTask.last_recipient).to eq(account.actor)
         expect(MockHandleFollowRequestTask.last_activity).to eq(follow_activity)
+      end
+
+      context "given an additional recipient" do
+        let(other_account) { register }
+
+        it "schedules the task only for the followed account" do
+          InboxActivityProcessor.process(account, follow_activity, recipients: [account, other_account], handle_follow_request_task_class: MockHandleFollowRequestTask)
+          expect(MockHandleFollowRequestTask.schedule_called_count).to eq(1)
+          expect(MockHandleFollowRequestTask.last_recipient).to eq(account.actor)
+        end
       end
 
       it "schedules receive task" do
@@ -202,6 +216,15 @@ Spectator.describe InboxActivityProcessor do
           it "dereferences the quote authorization" do
             InboxActivityProcessor.process(account, accept_activity)
             expect(HTTP::Client.requests).to have("GET #{authorization_iri}")
+          end
+
+          context "given a recipient who does not own the quote post" do
+            let(other_account) { register }
+
+            it "does not dereference the quote authorization" do
+              InboxActivityProcessor.process(account, accept_activity, recipients: [other_account])
+              expect(HTTP::Client.requests).not_to have("GET #{authorization_iri}")
+            end
           end
 
           it "saves the quote authorization" do
@@ -567,6 +590,15 @@ Spectator.describe InboxActivityProcessor do
           expect(reject.result?).to be_nil
         end
 
+        context "given a recipient who does not own the quoted post" do
+          let(other_account) { register }
+
+          it "does not create a Reject activity" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity, recipients: [other_account]) }
+              .not_to change { ActivityPub::Activity::Reject.count }
+          end
+        end
+
         it "schedules deliver task" do
           InboxActivityProcessor.process(account, quote_request_activity, deliver_task_class: MockDeliverTask)
           expect(MockDeliverTask.schedule_called_count).to eq(1)
@@ -721,22 +753,13 @@ Spectator.describe InboxActivityProcessor do
     end
 
     context "recipient partitioning" do
-      let(local) { register.actor }
       let_create(:actor, named: :follower)
       let(followers) { ["#{account.actor.iri}/followers"] }
       let_create!(:object, named: :origin, attributed_to: account.actor, to: followers)
       let_create!(:object, named: :reply, attributed_to: other, in_reply_to: origin, to: followers)
       let_create(:create, named: :activity, actor: other, object: reply, to: followers)
 
-      before_each do
-        do_follow(local, account.actor)
-        do_follow(follower, account.actor)
-      end
-
-      it "adds an inbox item to the local recipient's inbox" do
-        expect { InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask) }
-          .to change { Relationship::Content::Inbox.find?(owner: local, activity: activity) }
-      end
+      before_each { do_follow(follower, account.actor) }
 
       it "passes remote recipients to the receive task" do
         InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask)
@@ -746,15 +769,6 @@ Spectator.describe InboxActivityProcessor do
       it "schedules the receive task" do
         InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask)
         expect(MockReceiveTask.schedule_called_count).to eq(1)
-      end
-
-      context "given an existing inbox item for the local recipient" do
-        before_each { put_in_inbox(local, activity) }
-
-        it "does not add a duplicate inbox item" do
-          expect { InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask) }
-            .not_to change { Relationship::Content::Inbox.count(owner: local, activity: activity) }
-        end
       end
     end
 

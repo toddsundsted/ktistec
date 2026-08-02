@@ -124,7 +124,7 @@ class InboxesController
   #
   private def self.relay_delete_authorized?(account, community, object)
     if (audience = object.audience) && audience.includes?(community.iri) &&
-       Relationship::Social::Follow.find?(actor: account.actor, object: community)
+       Account.all.any? { |local| Relationship::Social::Follow.find?(actor: local.actor, object: community) }
       return true
     end
     object_gone_at_origin?(account, object.iri)
@@ -343,7 +343,10 @@ class InboxesController
       activity.actor = actor
     end
 
-    Log.trace { "[#{request_id}] processing type=#{activity.class}" }
+    recipients = Ktistec::Recipients.local_recipients(activity)
+    deliver_to = recipients.map(&.iri)
+
+    Log.trace { "[#{request_id}] processing type=#{activity.class} recipients=#{deliver_to}" }
 
     case activity
     when ActivityPub::Activity::Announce
@@ -365,8 +368,6 @@ class InboxesController
       unless object.attributed_to?(account.actor, dereference: true)
         bad_request
       end
-      # compatibility with implementations that don't address likes/dislikes
-      deliver_to = [account.iri]
     when ActivityPub::Activity::Create
       unless (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
         bad_request
@@ -399,8 +400,6 @@ class InboxesController
       unless (object = activity.object?(account.actor, dereference: true))
         bad_request
       end
-      # compatibility with implementations that don't address follows
-      deliver_to = [account.iri]
     when ActivityPub::Activity::QuoteRequest
       unless (object = activity.object?(account.actor, dereference: true))
         bad_request
@@ -412,12 +411,12 @@ class InboxesController
       unless activity.object?.try(&.local?)
         bad_request
       end
-      unless activity.object.actor == account.actor
+      unless recipients.any? { |recipient| recipient.iri == activity.object.actor.iri }
         bad_request
       end
       case activity.object
       when ActivityPub::Activity::Follow
-        unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
+        unless Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.actor)
           bad_request
         end
       when ActivityPub::Activity::QuoteRequest
@@ -427,18 +426,16 @@ class InboxesController
       else
         bad_request
       end
-      # compatibility with implementations that don't address accepts
-      deliver_to = [account.iri]
     when ActivityPub::Activity::Reject
       unless activity.object?.try(&.local?)
         bad_request
       end
-      unless activity.object.actor == account.actor
+      unless recipients.any? { |recipient| recipient.iri == activity.object.actor.iri }
         bad_request
       end
       case activity.object
       when ActivityPub::Activity::Follow
-        unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
+        unless Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.actor)
           bad_request
         end
       when ActivityPub::Activity::QuoteRequest
@@ -448,8 +445,6 @@ class InboxesController
       else
         bad_request
       end
-      # compatibility with implementations that don't address rejects
-      deliver_to = [account.iri]
     when ActivityPub::Activity::Undo
       unless activity.actor?(account.actor, dereference: true)
         bad_request
@@ -466,9 +461,8 @@ class InboxesController
         unless object.actor == activity.actor
           bad_request
         end
-        deliver_to = [account.iri]
       when ActivityPub::Activity::Follow
-        unless object.object == account.actor
+        unless Account.find?(iri: object.object.iri)
           bad_request
         end
         unless object.actor == activity.actor
@@ -477,7 +471,6 @@ class InboxesController
         unless object.undone? || Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
           bad_request
         end
-        deliver_to = [account.iri]
       else
         bad_request
       end
@@ -493,7 +486,6 @@ class InboxesController
           bad_request
         end
         activity.object = object
-        deliver_to = [account.iri]
       else
         unless activity.actor?(account.actor, dereference: true)
           bad_request
@@ -503,13 +495,11 @@ class InboxesController
             bad_request
           end
           activity.object = object
-          deliver_to = [account.iri]
         elsif (object = ActivityPub::Actor.find?(activity.object_iri))
           unless object == activity.actor
             bad_request
           end
           activity.actor = activity.object = object
-          deliver_to = [account.iri]
         else
           bad_request
         end
@@ -542,7 +532,7 @@ class InboxesController
 
     Log.trace { "[#{request_id}] saved id=#{activity.id}" }
 
-    InboxActivityProcessor.process(account, activity, deliver_to)
+    InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients)
 
     Log.trace { "[#{request_id}] complete" }
 

@@ -34,28 +34,24 @@ class InboxActivityProcessor
     account : Account,
     activity : ActivityPub::Activity,
     deliver_to : Array(String)? = nil,
+    recipients : Array(Account)? = nil,
     handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
     receive_task_class : Task::Receive.class = Task::Receive,
     deliver_task_class : Task::Deliver.class = Task::Deliver,
-    processed : Set(String) = Set(String).new,
   )
-    deliver(
-      account, activity, deliver_to,
-      handle_follow_request_task_class: handle_follow_request_task_class,
-      deliver_task_class: deliver_task_class,
-    )
+    (recipients || [account]).each do |recipient|
+      deliver(
+        recipient, activity, deliver_to,
+        handle_follow_request_task_class: handle_follow_request_task_class,
+        deliver_task_class: deliver_task_class,
+      )
+    end
 
     maintain(activity)
 
     partition = Ktistec::Recipients.partition(
       Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
     )
-
-    # `processed` tracks the actors already handled in this delivery pass,
-    # breaking the `process` -> `process_locally` -> `process` recursion.
-
-    processed << account.actor.iri
-    process_locally(partition.local, activity, processed)
 
     # scheduled unconditionally even when `partition.remote` is empty:
     # `Task::Receive#perform` does per-receiver work (quote handling)
@@ -86,7 +82,7 @@ class InboxActivityProcessor
 
     case activity
     when ActivityPub::Activity::Follow
-      if activity.object == account.actor
+      if Ktistec::Recipients.semantic_recipient?(activity, account.actor)
         unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object)
           Relationship::Social::Follow.new(
             actor: activity.actor,
@@ -100,10 +96,14 @@ class InboxActivityProcessor
         ).schedule
       end
     when ActivityPub::Activity::QuoteRequest
-      process_quote_request(account, activity, deliver_task_class)
+      if Ktistec::Recipients.semantic_recipient?(activity, account.actor)
+        process_quote_request(account, activity, deliver_task_class)
+      end
     when ActivityPub::Activity::Accept
       if (object = activity.object).is_a?(ActivityPub::Activity::QuoteRequest)
-        process_accept_quote_request(account, object, activity)
+        if Ktistec::Recipients.semantic_recipient?(activity, account.actor)
+          process_accept_quote_request(account, object, activity)
+        end
       end
     end
   end
@@ -154,10 +154,10 @@ class InboxActivityProcessor
 
   # Processes local recipients in-process.
   #
-  def self.process_locally(actors_accounts : Array(Tuple(ActivityPub::Actor, Account)), activity : ActivityPub::Activity, processed : Set(String) = Set(String).new)
+  def self.process_locally(actors_accounts : Array(Tuple(ActivityPub::Actor, Account)), activity : ActivityPub::Activity)
     actors_accounts.each do |actor, account|
-      next if processed.includes?(actor.iri) || Relationship::Content::Inbox.find?(owner: actor, activity: activity)
-      process(account, activity, deliver_to: [actor.iri], processed: processed)
+      next if Relationship::Content::Inbox.find?(owner: actor, activity: activity)
+      process(account, activity, deliver_to: [actor.iri])
     end
   end
 

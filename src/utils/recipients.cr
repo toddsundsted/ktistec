@@ -131,6 +131,13 @@ module Ktistec
       end
     end
 
+    # Returns true if the receiver is the actor the inbound activity
+    # implicates by virtue of its type.
+    #
+    def self.semantic_recipient?(activity : ActivityPub::Activity, receiver : ActivityPub::Actor) : Bool
+      semantic_recipient_iri?(activity) == receiver.iri
+    end
+
     # Returns true if the receiver is a recipient of the inbound
     # activity.
     #

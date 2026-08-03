@@ -92,6 +92,8 @@ INSERT INTO migrations VALUES(20260701041921,'recreate-actors-username-index-noc
 INSERT INTO migrations VALUES(20260702111403,'create-feeds-and-feed-verdicts');
 INSERT INTO migrations VALUES(20260712135009,'add-draft-and-copy-of-to-feeds');
 INSERT INTO migrations VALUES(20260718052326,'remove-version-from-feeds-and-feed-verdicts');
+INSERT INTO migrations VALUES(20260721095825,'add-deleted-at-indexes');
+INSERT INTO migrations VALUES(20260721183245,'add-floor-to-feeds');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -328,7 +330,8 @@ CREATE TABLE feeds (
     "examples" text,
     "params" text,
     "draft" boolean NOT NULL DEFAULT 0,
-    "copy_of" integer
+    "copy_of" integer,
+    "floor" datetime
   );
 CREATE TABLE feed_verdicts (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -354,6 +357,9 @@ CREATE INDEX idx_activities_object_iri
     ON activities (object_iri ASC);
 CREATE INDEX idx_activities_target_iri
     ON activities (target_iri ASC);
+CREATE INDEX idx_actors_deleted_at_iri
+    ON actors (deleted_at ASC, iri ASC)
+    WHERE deleted_at IS NOT NULL;
 CREATE UNIQUE INDEX idx_actors_iri
     ON actors (iri ASC);
 CREATE INDEX idx_actors_username
@@ -378,6 +384,9 @@ CREATE UNIQUE INDEX idx_oauth_clients_client_id
     ON oauth_clients (client_id ASC);
 CREATE INDEX idx_objects_attributed_to_iri_published_id
     ON objects (attributed_to_iri ASC, published DESC, id DESC);
+CREATE INDEX idx_objects_deleted_at_iri
+    ON objects (deleted_at ASC, iri ASC)
+    WHERE deleted_at IS NOT NULL;
 CREATE INDEX idx_objects_in_reply_to_iri
     ON objects (in_reply_to_iri ASC);
 CREATE UNIQUE INDEX idx_objects_iri

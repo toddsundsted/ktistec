@@ -2219,12 +2219,12 @@ Spectator.describe InboxesController do
 
           it "accepts the delete without verifying" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
           end
 
           it "makes no outbound requests" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
             expect(HTTP::Client.requests).to be_empty
           end
 
@@ -2264,7 +2264,7 @@ Spectator.describe InboxesController do
 
           it "accepts the delete" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
           end
 
           it "does not move the deletion timestamp" do
@@ -2346,12 +2346,12 @@ Spectator.describe InboxesController do
 
           it "accepts the delete without verifying" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
           end
 
           it "makes no outbound requests" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
             expect(HTTP::Client.requests).to be_empty
           end
 
@@ -2391,7 +2391,7 @@ Spectator.describe InboxesController do
 
           it "accepts the delete" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
           end
 
           it "does not move the deletion timestamp" do

@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.10.0]
+### Added
+- Link to feeds index page from secondary menu.
+- Garbage collect abandoned feed drafts and orphaned feed state.
+- Backfill feeds with historical posts.
+
+### Fixed
+- Quote post request, authorization, and release fixes.
+- Recognize a swipe anywhere in the image viewer.
+
+### Changed
+- Feed editor usability improvements.
+- Bust the asset cache when a bundle's contents change.
+
 ## [v3.9.0]
 ### Added
 - User-defined algorithmic feeds.
@@ -895,6 +909,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.10.0]: https://github.com/toddsundsted/ktistec/compare/5b66aaad...b8245e87
 [v3.9.0]: https://github.com/toddsundsted/ktistec/compare/1a47aa6e...56ecc835
 [v3.8.0]: https://github.com/toddsundsted/ktistec/compare/aec6139a...c3605dc6
 [v3.7.0]: https://github.com/toddsundsted/ktistec/compare/731dd8cd...97b2168a

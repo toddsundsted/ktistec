@@ -93,6 +93,32 @@ Spectator.describe InboxesController do
             .to change { Relationship::Content::Inbox.count(from_iri: second_account.iri) }.by(1)
         end
       end
+
+      context "and the activity undoes a follow of a terminated account" do
+        let!(terminated) { register }
+
+        let_create!(:follow, actor: other, object: terminated.actor)
+        let_create!(:follow_relationship, actor: other, object: terminated.actor)
+
+        let_build(:undo, actor: other, object: follow)
+
+        let(json_ld) { undo.to_json_ld(true) }
+
+        before_each do
+          terminated.actor.delete!
+          terminated.destroy
+        end
+
+        it "destroys the follow relationship" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Social::Follow.count(from_iri: other.iri) }.by(-1)
+        end
+
+        it "is successful" do
+          post "/inbox", headers, json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
     end
   end
 

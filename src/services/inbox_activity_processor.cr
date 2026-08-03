@@ -142,7 +142,7 @@ class InboxActivityProcessor
       object ||= activity.object?(include_undone: true)
       if object && !object.undone?
         if object.is_a?(ActivityPub::Activity::Follow)
-          if (follow_actor = object.actor?) && (follow_object = object.object?)
+          if (follow_actor = object.actor?) && (follow_object = object.object?(include_deleted: true))
             if (follow = Relationship::Social::Follow.find?(actor: follow_actor, object: follow_object))
               follow.destroy
             end

@@ -475,13 +475,13 @@ class InboxesController
           bad_request
         end
       when ActivityPub::Activity::Follow
-        unless Account.find?(iri: object.object.iri)
+        unless (followed = object.object?(include_deleted: true)) && followed.local?
           bad_request
         end
         unless object.actor == activity.actor
           bad_request
         end
-        unless object.undone? || Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
+        unless object.undone? || Relationship::Social::Follow.find?(actor: object.actor, object: followed)
           bad_request
         end
       else

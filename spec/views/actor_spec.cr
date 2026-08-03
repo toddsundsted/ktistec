@@ -232,8 +232,8 @@ Spectator.describe "actor" do
     context "if local" do
       before_each { actor.assign(iri: "https://test.test/actor") }
 
-      it "renders a shared inbox endpoint" do
-        expect(subject.dig?("endpoints", "sharedInbox")).not_to be_nil
+      it "renders the server's shared inbox endpoint" do
+        expect(subject.dig?("endpoints", "sharedInbox")).to eq("https://test.test/inbox")
       end
     end
   end

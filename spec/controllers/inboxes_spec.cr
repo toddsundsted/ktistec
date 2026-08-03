@@ -15,6 +15,87 @@ Spectator.describe InboxesController do
 
   PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
+  describe "POST /inbox" do
+    # actor with keys is cached
+    let_create(:actor, named: :other, with_keys: true)
+
+    let_build(:create, actor: other)
+
+    let(json_ld) { create.to_json_ld(true) }
+
+    let(headers) { Ktistec::Signature.sign(other, "https://test.test/inbox", json_ld, "application/json") }
+
+    it "returns 503 if the server has no accounts" do
+      post "/inbox", headers, json_ld
+      expect(response.status_code).to eq(503)
+    end
+
+    context "given an account" do
+      let!(actor) { register.actor }
+
+      it "is successful" do
+        post "/inbox", headers, json_ld
+        expect(response.status_code).to eq(200)
+      end
+
+      it "saves the activity" do
+        expect { post "/inbox", headers, json_ld }
+          .to change { ActivityPub::Activity.count(iri: create.iri) }.by(1)
+      end
+
+      it "does not put the activity in an inbox" do
+        post "/inbox", headers, json_ld
+        expect(Relationship::Content::Inbox.count).to eq(0)
+      end
+
+      context "and the activity is unsigned" do
+        let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
+        before_each { HTTP::Client.activities << create }
+
+        it "retrieves the activity from the origin" do
+          post "/inbox", headers, json_ld
+          expect(HTTP::Client.requests).to have("GET #{create.iri}")
+        end
+
+        it "signs the retrieval with the local account" do
+          post "/inbox", headers, json_ld
+          expect(HTTP::Client.last?.not_nil!.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
+        end
+      end
+
+      let!(second_account) { register.actor }
+
+      context "and the activity addresses the account" do
+        before_each { create.to = [actor.iri] }
+
+        it "puts the activity in the first account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not put the activity in the second account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: second_account.iri) }
+        end
+      end
+
+      context "and the activity addresses both accounts" do
+        before_each { create.to = [actor.iri, second_account.iri] }
+
+        it "puts the activity in the first account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "puts the activity in the second account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: second_account.iri) }.by(1)
+        end
+      end
+    end
+  end
+
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
 
@@ -111,6 +192,11 @@ Spectator.describe InboxesController do
       it "retrieves the activity from the origin" do
         post "/actors/#{actor.username}/inbox", headers, json_ld
         expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+      end
+
+      it "signs the retrieval with the account in the path" do
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(HTTP::Client.last?.not_nil!.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
       end
 
       it "does not retrieve the actor from the origin" do

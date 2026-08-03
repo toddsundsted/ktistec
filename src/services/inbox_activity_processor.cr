@@ -28,10 +28,11 @@ class InboxActivityProcessor
   # Preconditions:
   # - activity must be saved
   # - activity must be from a remote actor
-  # - account.actor must be the recipient
+  # - account.actor must be the recipient when `recipients` is not
+  #   supplied -- when it is, `account` is unused and may be `nil`
   #
   def self.process(
-    account : Account,
+    account : Account?,
     activity : ActivityPub::Activity,
     deliver_to : Array(String)? = nil,
     recipients : Array(Account)? = nil,
@@ -39,7 +40,7 @@ class InboxActivityProcessor
     receive_task_class : Task::Receive.class = Task::Receive,
     deliver_task_class : Task::Deliver.class = Task::Deliver,
   )
-    (recipients || [account]).each do |recipient|
+    (recipients || [account].compact).each do |recipient|
       deliver(
         recipient, activity, deliver_to,
         handle_follow_request_task_class: handle_follow_request_task_class,
@@ -63,7 +64,7 @@ class InboxActivityProcessor
           recipients: forwarding.try(&.recipients) || [] of String,
         ).schedule
       end
-    else
+    elsif account
       partition = Ktistec::Recipients.partition(
         Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
       )

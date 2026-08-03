@@ -82,6 +82,7 @@ module Ktistec
   end
 
   CSRF_ALLOWED_ROUTES = [
+    "/inbox",
     "/actors/:username/inbox",
     "/oauth/token",
     "/api/*",

@@ -239,6 +239,15 @@ want *any* of, *all* of, or *none* of, so a feed can be as broad or as
 narrow as you like. Preview the matches while you tune the criteria,
 then publish.
 
+Your feeds are listed under *Feeds* in the menu on your home page.
+
+A feed you haven't published yet is kept as a draft, so you can come
+back to it later, and editing a published feed leaves the new version
+a draft until you publish your changes.
+
+When you publish a feed, it's backfilled with matching posts from the
+previous 30 days, so it isn't empty when you start reading.
+
 ### Bookmarks
 
 Save posts for later with bookmarks. Bookmark any post to add it to

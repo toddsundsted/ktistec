@@ -14,7 +14,7 @@ class InboxesController
 
   MAX_INBOX_REQUEST_BYTES = 1_048_576
 
-  skip_auth ["/actors/:username/inbox"], POST
+  skip_auth ["/inbox", "/actors/:username/inbox"], POST
 
   # Lightweight `KeyPair` for path-based `keyId` resolution.
   #
@@ -77,14 +77,14 @@ class InboxesController
   #
   # Returns `nil` on any failure.
   #
-  private def self.resolve_signer(account, key_id : String, request_id)
+  private def self.resolve_signer(key_pair, key_id : String, request_id)
     if key_id.includes?("#")
       # case 1: fragment URI
       {key_id.split("#", 2).first, nil}
     else
       # cases 2 & 3: path URI
       accept = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-      response = Ktistec::Network.get?(account.actor, key_id, accept)
+      response = Ktistec::Network.get?(key_pair, key_id, accept)
       unless response
         Log.warn { "[#{request_id}] failed to fetch key for #{key_id}" }
         return
@@ -110,11 +110,11 @@ class InboxesController
 
   # Finds a cached actor by IRI, or dereferences and saves it.
   #
-  private def self.find_or_dereference_actor(account, iri, request_id, require_key)
+  private def self.find_or_dereference_actor(key_pair, iri, request_id, require_key)
     return unless iri
     actor = ActivityPub::Actor.find?(iri)
     return actor if actor && (!require_key || actor.pem_public_key)
-    ActivityPub::Actor.dereference?(account.actor, iri, ignore_cached: true, include_key: true).try do |dereferenced|
+    ActivityPub::Actor.dereference?(key_pair, iri, ignore_cached: true, include_key: true).try do |dereferenced|
       dereferenced.verify_handle!
       dereferenced.save
     end
@@ -122,12 +122,12 @@ class InboxesController
 
   # Authorizes a community-relayed `Delete`.
   #
-  private def self.relay_delete_authorized?(account, community, object)
+  private def self.relay_delete_authorized?(key_pair, community, object)
     if (audience = object.audience) && audience.includes?(community.iri) &&
-       Relationship::Social::Follow.find?(actor: account.actor, object: community)
+       Account.all.any? { |local| Relationship::Social::Follow.find?(actor: local.actor, object: community) }
       return true
     end
-    object_gone_at_origin?(account, object.iri)
+    object_gone_at_origin?(key_pair, object.iri)
   end
 
   # Returns true if both IRIs are on the same host.
@@ -150,9 +150,9 @@ class InboxesController
 
   # Returns true if the object is gone (404/410) at its own origin.
   #
-  private def self.object_gone_at_origin?(account, iri)
+  private def self.object_gone_at_origin?(key_pair, iri)
     headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-    Ktistec::Network.get(account.actor, iri, headers)
+    Ktistec::Network.get(key_pair, iri, headers)
     false
   rescue Ktistec::Network::NotFoundError
     true
@@ -165,15 +165,25 @@ class InboxesController
     Account.find?(username: env.params.url["username"]?)
   end
 
-  post "/actors/:username/inbox" do |env|
+  post "/inbox", "/actors/:username/inbox" do |env|
     request_id = env.request.object_id
 
     if Ktistec::Server.shutting_down?
       service_unavailable
     end
 
-    unless (account = get_account(env))
+    account = get_account(env)
+
+    if env.params.url["username"]? && account.nil?
       gone
+    end
+
+    # the identity that signs the requests made while verifying and
+    # dereferencing this activity. the account named in the path when
+    # there is one, otherwise an arbitrary local account.
+
+    unless (fetch_identity = account.try(&.actor) || Account.all.first?.try(&.actor))
+      service_unavailable
     end
 
     cap_request_body env, MAX_INBOX_REQUEST_BYTES
@@ -207,22 +217,25 @@ class InboxesController
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
     # this is, strictly speaking, not required because this method
-    # should be idempotent, but it avoids a lot of unnecessary work
+    # should be idempotent, but it avoids a lot of unnecessary work.
 
-    if Relationship::Content::Inbox.find?(owner: account.actor, activity: activity)
+    if Relationship::Content::Inbox.find?(activity: activity)
       ok
     end
 
     # a directly-delivered `Delete` for an uncached object or actor is
-    # a no-op: there is nothing to remove, and -- because there is
-    # nothing to remove -- nothing an unverified sender could spoof.
+    # a no-op -- there is nothing to delete. nevertheless, processing
+    # those deletes runs multiple doomed fetches -- each bounded only
+    # by the network timeout -- and deletes arrive in storms. this
+    # fast-path addresses that.
 
-    if !inner_ld && activity.is_a?(ActivityPub::Activity::Delete) &&
+    if !inner_ld &&
+       activity.is_a?(ActivityPub::Activity::Delete) &&
        (object_iri = activity.object_iri) &&
        ActivityPub::Object.find?(object_iri).nil? &&
        ActivityPub::Actor.find?(object_iri).nil?
       Log.trace { "[#{request_id}] delete of unknown target iri=#{object_iri}; accepting without verification" }
-      accepted
+      ok
     end
 
     # 1) resolve the keyId from the Signature header to the signer and
@@ -241,9 +254,9 @@ class InboxesController
 
     signer = nil
 
-    if (key_id = parse_key_id(env.request.headers)) && (resolved = resolve_signer(account, key_id, request_id))
+    if (key_id = parse_key_id(env.request.headers)) && (resolved = resolve_signer(fetch_identity, key_id, request_id))
       signer_iri, resolved_key = resolved
-      candidate = find_or_dereference_actor(account, signer_iri, request_id, require_key: resolved_key.nil?)
+      candidate = find_or_dereference_actor(fetch_identity, signer_iri, request_id, require_key: resolved_key.nil?)
       key_pair = resolved_key || candidate
       if candidate && key_pair && Ktistec::Signature.verify?(key_pair, "#{host}#{env.request.path}", env.request.headers, body)
         signer = candidate
@@ -267,16 +280,16 @@ class InboxesController
         via_community = signer
         verified = true
       end
-      actor = find_or_dereference_actor(account, activity.actor_iri, request_id, require_key: false)
+      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, require_key: false)
     elsif !inner_ld && signer && outer_actor_iri && signer.iri == outer_actor_iri
       actor = signer
       verified = true
     else
-      actor = find_or_dereference_actor(account, activity.actor_iri, request_id, require_key: false)
+      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, require_key: false)
 
       # 4
 
-      if activity.iri.presence && (temporary = ActivityPub::Activity.dereference?(account.actor, activity.iri))
+      if activity.iri.presence && (temporary = ActivityPub::Activity.dereference?(fetch_identity, activity.iri))
         activity = temporary
         verified = true
       else
@@ -295,19 +308,19 @@ class InboxesController
         if (object_iri = activity.object_iri)
           if activity.is_a?(ActivityPub::Activity::Create)
             Log.trace { "[#{request_id}] checking object of create iri=#{object_iri}" }
-            if (temporary = ActivityPub::Object.dereference?(account.actor, object_iri, ignore_cached: true))
+            if (temporary = ActivityPub::Object.dereference?(fetch_identity, object_iri, ignore_cached: true))
               activity.object = temporary
               verified = true
             end
           elsif activity.is_a?(ActivityPub::Activity::Update)
             Log.trace { "[#{request_id}] checking object of update iri=#{object_iri}" }
-            if (temporary = ActivityPub::Object.dereference?(account.actor, object_iri, ignore_cached: true))
+            if (temporary = ActivityPub::Object.dereference?(fetch_identity, object_iri, ignore_cached: true))
               activity.object = temporary
               verified = true
             end
           elsif activity.is_a?(ActivityPub::Activity::Delete)
             Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
-            verified = true if object_gone_at_origin?(account, object_iri)
+            verified = true if object_gone_at_origin?(fetch_identity, object_iri)
           end
         end
       end
@@ -343,14 +356,17 @@ class InboxesController
       activity.actor = actor
     end
 
-    Log.trace { "[#{request_id}] processing type=#{activity.class}" }
+    recipients = Ktistec::Recipients.local_recipients(activity)
+    deliver_to = recipients.map(&.iri)
+
+    Log.trace { "[#{request_id}] processing type=#{activity.class} recipients=#{deliver_to}" }
 
     case activity
     when ActivityPub::Activity::Announce
-      unless (object = activity.object?(account.actor, dereference: true))
+      unless (object = activity.object?(fetch_identity, dereference: true))
         bad_request
       end
-      unless object.attributed_to?(account.actor, dereference: true)
+      unless object.attributed_to?(fetch_identity, dereference: true)
         bad_request
       end
     when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
@@ -359,24 +375,22 @@ class InboxesController
       # state. Some ActivityPub implementations may allow users to both
       # upvote and downvote the same content. Ktistec preserves this
       # state as received.
-      unless (object = activity.object?(account.actor, dereference: true))
+      unless (object = activity.object?(fetch_identity, dereference: true))
         bad_request
       end
-      unless object.attributed_to?(account.actor, dereference: true)
+      unless object.attributed_to?(fetch_identity, dereference: true)
         bad_request
       end
-      # compatibility with implementations that don't address likes/dislikes
-      deliver_to = [account.iri]
     when ActivityPub::Activity::Create
-      unless (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
+      unless (object = activity.object?(fetch_identity, dereference: true, ignore_cached: true))
         bad_request
       end
-      unless activity.actor == object.attributed_to?(account.actor, dereference: true)
+      unless activity.actor == object.attributed_to?(fetch_identity, dereference: true)
         bad_request
       end
       object.attributed_to = activity.actor
     when ActivityPub::Activity::Update
-      case (object = activity.object?(account.actor, dereference: true, ignore_cached: true))
+      case (object = activity.object?(fetch_identity, dereference: true, ignore_cached: true))
       when ActivityPub::Actor
         unless object.iri == activity.actor.iri
           bad_request
@@ -385,7 +399,7 @@ class InboxesController
         object.up!
         activity.actor = activity.object = object
       when ActivityPub::Object
-        unless activity.actor == object.attributed_to?(account.actor, dereference: true)
+        unless activity.actor == object.attributed_to?(fetch_identity, dereference: true)
           bad_request
         end
         object.attributed_to = activity.actor
@@ -396,13 +410,11 @@ class InboxesController
       unless actor
         bad_request
       end
-      unless (object = activity.object?(account.actor, dereference: true))
+      unless (object = activity.object?(fetch_identity, dereference: true))
         bad_request
       end
-      # compatibility with implementations that don't address follows
-      deliver_to = [account.iri]
     when ActivityPub::Activity::QuoteRequest
-      unless (object = activity.object?(account.actor, dereference: true))
+      unless (object = activity.object?(fetch_identity, dereference: true))
         bad_request
       end
       unless object.local? && object.visible
@@ -412,12 +424,12 @@ class InboxesController
       unless activity.object?.try(&.local?)
         bad_request
       end
-      unless activity.object.actor == account.actor
+      unless recipients.any? { |recipient| recipient.iri == activity.object.actor.iri }
         bad_request
       end
       case activity.object
       when ActivityPub::Activity::Follow
-        unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
+        unless Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.actor)
           bad_request
         end
       when ActivityPub::Activity::QuoteRequest
@@ -427,18 +439,16 @@ class InboxesController
       else
         bad_request
       end
-      # compatibility with implementations that don't address accepts
-      deliver_to = [account.iri]
     when ActivityPub::Activity::Reject
       unless activity.object?.try(&.local?)
         bad_request
       end
-      unless activity.object.actor == account.actor
+      unless recipients.any? { |recipient| recipient.iri == activity.object.actor.iri }
         bad_request
       end
       case activity.object
       when ActivityPub::Activity::Follow
-        unless Relationship::Social::Follow.find?(actor: account.actor, object: activity.actor)
+        unless Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.actor)
           bad_request
         end
       when ActivityPub::Activity::QuoteRequest
@@ -448,29 +458,32 @@ class InboxesController
       else
         bad_request
       end
-      # compatibility with implementations that don't address rejects
-      deliver_to = [account.iri]
     when ActivityPub::Activity::Undo
-      unless activity.actor?(account.actor, dereference: true)
+      unless activity.actor?(fetch_identity, dereference: true)
         bad_request
       end
-      case (object = activity.object?(account.actor, dereference: true))
+      # prefer the database record over the payload: an embedded
+      # object is parsed into a new instance that carries no
+      # `undone_at`.
+      if (object_iri = activity.object_iri) &&
+         (persisted = ActivityPub::Activity.find?(object_iri, include_undone: true))
+        activity.object = persisted
+      end
+      case (object = activity.object?(fetch_identity, dereference: true, include_undone: true))
       when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         unless object.actor == activity.actor
           bad_request
         end
-        deliver_to = [account.iri]
       when ActivityPub::Activity::Follow
-        unless object.object == account.actor
+        unless (followed = object.object?(include_deleted: true)) && followed.local?
           bad_request
         end
         unless object.actor == activity.actor
           bad_request
         end
-        unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
+        unless object.undone? || Relationship::Social::Follow.find?(actor: object.actor, object: followed)
           bad_request
         end
-        deliver_to = [account.iri]
       else
         bad_request
       end
@@ -479,16 +492,15 @@ class InboxesController
       # contents of the payload. also because the original object may
       # be replaced by a tombstone (per the spec).
       if (community = via_community)
-        unless (object = ActivityPub::Object.find?(activity.object_iri))
+        unless (object = ActivityPub::Object.find?(activity.object_iri, include_deleted: true))
           bad_request
         end
-        unless relay_delete_authorized?(account, community, object)
+        unless relay_delete_authorized?(fetch_identity, community, object)
           bad_request
         end
         activity.object = object
-        deliver_to = [account.iri]
       else
-        unless activity.actor?(account.actor, dereference: true)
+        unless activity.actor?(fetch_identity, dereference: true)
           bad_request
         end
         if (object = ActivityPub::Object.find?(activity.object_iri))
@@ -496,13 +508,11 @@ class InboxesController
             bad_request
           end
           activity.object = object
-          deliver_to = [account.iri]
         elsif (object = ActivityPub::Actor.find?(activity.object_iri))
           unless object == activity.actor
             bad_request
           end
           activity.actor = activity.object = object
-          deliver_to = [account.iri]
         else
           bad_request
         end
@@ -535,7 +545,7 @@ class InboxesController
 
     Log.trace { "[#{request_id}] saved id=#{activity.id}" }
 
-    InboxActivityProcessor.process(account, activity, deliver_to)
+    InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients)
 
     Log.trace { "[#{request_id}] complete" }
 

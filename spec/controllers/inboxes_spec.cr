@@ -15,6 +15,113 @@ Spectator.describe InboxesController do
 
   PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
+  describe "POST /inbox" do
+    # actor with keys is cached
+    let_create(:actor, named: :other, with_keys: true)
+
+    let_build(:create, actor: other)
+
+    let(json_ld) { create.to_json_ld(true) }
+
+    let(headers) { Ktistec::Signature.sign(other, "https://test.test/inbox", json_ld, "application/json") }
+
+    it "returns 503 if the server has no accounts" do
+      post "/inbox", headers, json_ld
+      expect(response.status_code).to eq(503)
+    end
+
+    context "given an account" do
+      let!(actor) { register.actor }
+
+      it "is successful" do
+        post "/inbox", headers, json_ld
+        expect(response.status_code).to eq(200)
+      end
+
+      it "saves the activity" do
+        expect { post "/inbox", headers, json_ld }
+          .to change { ActivityPub::Activity.count(iri: create.iri) }.by(1)
+      end
+
+      it "does not put the activity in an inbox" do
+        post "/inbox", headers, json_ld
+        expect(Relationship::Content::Inbox.count).to eq(0)
+      end
+
+      context "and the activity is unsigned" do
+        let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
+        before_each { HTTP::Client.activities << create }
+
+        it "retrieves the activity from the origin" do
+          post "/inbox", headers, json_ld
+          expect(HTTP::Client.requests).to have("GET #{create.iri}")
+        end
+
+        it "signs the retrieval with the local account" do
+          post "/inbox", headers, json_ld
+          expect(HTTP::Client.last?.not_nil!.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
+        end
+      end
+
+      let!(second_account) { register.actor }
+
+      context "and the activity addresses the account" do
+        before_each { create.to = [actor.iri] }
+
+        it "puts the activity in the first account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not put the activity in the second account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: second_account.iri) }
+        end
+      end
+
+      context "and the activity addresses both accounts" do
+        before_each { create.to = [actor.iri, second_account.iri] }
+
+        it "puts the activity in the first account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "puts the activity in the second account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: second_account.iri) }.by(1)
+        end
+      end
+
+      context "and the activity undoes a follow of a terminated account" do
+        let!(terminated) { register }
+
+        let_create!(:follow, actor: other, object: terminated.actor)
+        let_create!(:follow_relationship, actor: other, object: terminated.actor)
+
+        let_build(:undo, actor: other, object: follow)
+
+        let(json_ld) { undo.to_json_ld(true) }
+
+        before_each do
+          terminated.actor.delete!
+          terminated.destroy
+        end
+
+        it "destroys the follow relationship" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Social::Follow.count(from_iri: other.iri) }.by(-1)
+        end
+
+        it "is successful" do
+          post "/inbox", headers, json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
+    end
+  end
+
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
 
@@ -111,6 +218,11 @@ Spectator.describe InboxesController do
       it "retrieves the activity from the origin" do
         post "/actors/#{actor.username}/inbox", headers, json_ld
         expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+      end
+
+      it "signs the retrieval with the account in the path" do
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(HTTP::Client.last?.not_nil!.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
       end
 
       it "does not retrieve the actor from the origin" do
@@ -770,6 +882,12 @@ Spectator.describe InboxesController do
             .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
+        it "is successful" do
+          announce.object = note
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+
         context "and the actor follows other" do
           before_each do
             actor.follow(other, confirmed: true).save
@@ -792,6 +910,12 @@ Spectator.describe InboxesController do
           announce.object = note
           expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
             .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
+        end
+
+        it "is successful" do
+          announce.object = note
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(response.status_code).to eq(200)
         end
 
         context "and the actor follows other" do
@@ -996,6 +1120,30 @@ Spectator.describe InboxesController do
         end
       end
 
+      context "and it is delivered to another account's inbox" do
+        let!(other_account) { register.actor }
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{other_account.username}/inbox", create.to_json_ld(true), "application/json") }
+
+        it "puts the activity in the addressed account's inbox" do
+          create.object = note
+          expect { post "/actors/#{other_account.username}/inbox", headers, create.to_json_ld(true) }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not put the activity in the inbox it was delivered to" do
+          create.object = note
+          post "/actors/#{other_account.username}/inbox", headers, create.to_json_ld(true)
+          expect(Relationship::Content::Inbox.count(from_iri: other_account.iri)).to eq(0)
+        end
+
+        it "is successful" do
+          create.object = note
+          post "/actors/#{other_account.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+      end
+
       context "and the object's a reply to some object" do
         let_build(:object, named: parent)
 
@@ -1047,6 +1195,12 @@ Spectator.describe InboxesController do
             .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
+        it "is successful" do
+          create.object = note
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+
         context "and the actor follows other" do
           before_each do
             actor.follow(other, confirmed: true).save
@@ -1069,6 +1223,12 @@ Spectator.describe InboxesController do
           create.object = note
           expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
             .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
+        end
+
+        it "is successful" do
+          create.object = note
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
         end
 
         context "and the actor follows other" do
@@ -1387,6 +1547,11 @@ Spectator.describe InboxesController do
             expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
               .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
           end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
         end
       end
 
@@ -1423,9 +1588,76 @@ Spectator.describe InboxesController do
             follow.to.try(&.clear)
           end
 
-          it "puts the activity in the actor's inbox" do
+          it "does not put the activity in the actor's inbox" do
             expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
-              .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+              .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+      end
+
+      context "when object is another local account" do
+        let(followed) { register.actor }
+
+        before_each do
+          follow.actor = other
+          follow.object = followed
+        end
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", follow.to_json_ld(true), "application/json") }
+
+        it "creates an unconfirmed follow relationship for the followed account" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Relationship::Social::Follow.count(to_iri: followed.iri, confirmed: false) }.by(1)
+        end
+
+        it "puts the activity in the followed account's inbox" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Relationship::Content::Inbox.count(from_iri: followed.iri) }.by(1)
+        end
+
+        it "puts the activity in the followed account's notifications" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Notification.count(from_iri: followed.iri) }.by(1)
+        end
+
+        it "puts the activity in the receiving account's inbox" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not create a follow relationship for the receiving account" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .not_to change { Relationship::Social::Follow.count(to_iri: actor.iri) }
+        end
+
+        it "does not put the activity in the receiving account's notifications" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .not_to change { Notification.count(from_iri: actor.iri) }
+        end
+
+        context "and activity isn't addressed" do
+          before_each do
+            follow.to.try(&.clear)
+          end
+
+          it "puts the activity in the followed account's inbox" do
+            expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+              .to change { Relationship::Content::Inbox.count(from_iri: followed.iri) }.by(1)
+          end
+
+          it "does not put the activity in the receiving account's inbox" do
+            expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+              .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+            expect(response.status_code).to eq(200)
           end
         end
       end
@@ -1461,6 +1693,20 @@ Spectator.describe InboxesController do
         it "accepts the quote request" do
           post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the request has already been received" do
+          before_each { post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true) }
+
+          it "does not answer it a second time" do
+            expect { post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true) }
+              .not_to change { ActivityPub::Activity::Reject.count }
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
         end
       end
 
@@ -1507,6 +1753,32 @@ Spectator.describe InboxesController do
         expect { post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld }
           .to change { relationship.reload!.confirmed }
         expect(response.status_code).to eq(200)
+      end
+
+      context "and it is delivered to another account's inbox" do
+        let(other_account) { register.actor }
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{other_account.username}/inbox", accept.to_json_ld, "application/json") }
+
+        it "accepts the relationship" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, accept.to_json_ld }
+            .to change { relationship.reload!.confirmed }
+        end
+
+        it "puts the activity in the following account's inbox" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, accept.to_json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not put the activity in the receiving account's inbox" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, accept.to_json_ld }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: other_account.iri) }
+        end
+
+        it "succeeds" do
+          post "/actors/#{other_account.username}/inbox", headers, accept.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
       end
     end
 
@@ -1598,6 +1870,32 @@ Spectator.describe InboxesController do
           .to change { relationship.reload!.confirmed }
         expect(response.status_code).to eq(200)
       end
+
+      context "and it is delivered to another account's inbox" do
+        let(other_account) { register.actor }
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{other_account.username}/inbox", reject.to_json_ld, "application/json") }
+
+        it "accepts the relationship" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, reject.to_json_ld }
+            .to change { relationship.reload!.confirmed }
+        end
+
+        it "puts the activity in the following account's inbox" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, reject.to_json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not put the activity in the receiving account's inbox" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, reject.to_json_ld }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: other_account.iri) }
+        end
+
+        it "succeeds" do
+          post "/actors/#{other_account.username}/inbox", headers, reject.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
     end
 
     context "on reject (quote request)" do
@@ -1676,9 +1974,9 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "puts the activity in the actor's inbox" do
+        it "does not put the activity in the actor's inbox" do
           expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
-            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         it "marks the announce as undone" do
@@ -1689,6 +1987,24 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the undo has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          end
+
+          pre_condition { expect(announce.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { announce.reload!.undone_at }
+          end
         end
       end
 
@@ -1711,9 +2027,9 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "puts the activity in the actor's inbox" do
+        it "does not put the activity in the actor's inbox" do
           expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
-            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         it "marks the like as undone" do
@@ -1724,6 +2040,24 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the undo has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          end
+
+          pre_condition { expect(like.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { like.reload!.undone_at }
+          end
         end
       end
 
@@ -1746,9 +2080,9 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "puts the activity in the actor's inbox" do
+        it "does not put the activity in the actor's inbox" do
           expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
-            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         it "marks the dislike as undone" do
@@ -1759,6 +2093,24 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the undo has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          end
+
+          pre_condition { expect(dislike.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { dislike.reload!.undone_at }
+          end
         end
       end
 
@@ -1781,7 +2133,7 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "returns 400 if the follow to undo isn't for this actor" do
+        it "returns 400 if the follow to undo isn't for a local actor" do
           follow.assign(object: other).save
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(400)
@@ -1793,9 +2145,31 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "puts the activity in the actor's inbox" do
+        context "and the follow is for a local actor" do
+          let(other_account) { register.actor }
+          let_create!(:follow_relationship, named: :other_relationship, actor: other, object: other_account)
+
+          before_each { follow.assign(object: other_account).save }
+
+          it "destroys the relationship" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .to change { Relationship::Social::Follow.count(from_iri: other.iri, to_iri: other_account.iri) }.by(-1)
+          end
+
+          it "marks the follow as undone" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .to change { follow.reload!.undone_at }
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        it "does not put the activity in the actor's inbox" do
           expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
-            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         it "destroys the relationship" do
@@ -1812,6 +2186,50 @@ Spectator.describe InboxesController do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
         end
+
+        context "and the undo has already been delivered" do
+          let(body) { undo.to_json_ld }
+          let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", body, "application/json") }
+
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, body
+          end
+
+          pre_condition { expect(follow.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, body
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, body }
+              .not_to change { follow.reload!.undone_at }
+          end
+
+          context "and the payload does not embed the follow" do
+            let(body) { undo.to_json_ld(recursive: false) }
+
+            it "succeeds" do
+              post "/actors/#{actor.username}/inbox", headers, body
+              expect(response.status_code).to eq(200)
+            end
+          end
+        end
+
+        context "and the follow is already undone" do
+          before_each { follow.undo! }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not destroy the relationship" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { Relationship::Social::Follow.count(from_iri: other.iri, to_iri: actor.iri) }
+          end
+        end
       end
     end
 
@@ -1827,12 +2245,12 @@ Spectator.describe InboxesController do
 
           it "accepts the delete without verifying" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
           end
 
           it "makes no outbound requests" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
             expect(HTTP::Client.requests).to be_empty
           end
 
@@ -1853,9 +2271,32 @@ Spectator.describe InboxesController do
             .to change { note.reload!.deleted_at }
         end
 
+        it "does not put the activity in the actor's inbox" do
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(Relationship::Content::Inbox.count(from_iri: actor.iri)).to eq(0)
+        end
+
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the delete has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          end
+
+          pre_condition { expect(note.reload!.deleted_at).not_to be_nil }
+
+          it "accepts the delete" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the deletion timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { note.reload!.deleted_at }
+          end
         end
 
         context "and the object was a reply to the actor's object" do
@@ -1931,12 +2372,12 @@ Spectator.describe InboxesController do
 
           it "accepts the delete without verifying" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
           end
 
           it "makes no outbound requests" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
             expect(HTTP::Client.requests).to be_empty
           end
 
@@ -1957,9 +2398,32 @@ Spectator.describe InboxesController do
             .to change { other.reload!.deleted_at }
         end
 
+        it "does not put the activity in the actor's inbox" do
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(Relationship::Content::Inbox.count(from_iri: actor.iri)).to eq(0)
+        end
+
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the delete has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          end
+
+          pre_condition { expect(other.reload!.deleted_at).not_to be_nil }
+
+          it "accepts the delete" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the deletion timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { other.reload!.deleted_at }
+          end
         end
 
         context "signature is not valid but the remote actor no longer exists" do
@@ -2294,6 +2758,46 @@ Spectator.describe InboxesController do
               post "/actors/#{actor.username}/inbox", headers, wrapped_json
               expect(response.status_code).to eq(400)
             end
+          end
+
+          context "and the delete has already been delivered" do
+            before_each do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            end
+
+            pre_condition { expect(object.reload!.deleted_at).not_to be_nil }
+
+            it "is successful" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(200)
+            end
+
+            it "does not move the deletion timestamp" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .not_to change { object.reload!.deleted_at }
+            end
+          end
+        end
+
+        context "when community is in the audience and another local account follows it" do
+          let(other_account) { register.actor }
+          let_create!(:follow_relationship, named: :other_follow, actor: other_account, object: community)
+
+          pre_condition { expect(Relationship::Social::Follow.find?(actor: actor, object: community)).to be_nil }
+
+          it "saves the Delete activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { ActivityPub::Activity::Delete.count }.by(1)
+          end
+
+          it "deletes the object" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { object.reload!.deleted_at }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(200)
           end
         end
 

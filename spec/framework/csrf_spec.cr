@@ -201,6 +201,16 @@ Spectator.describe Ktistec::CSRF do
     expect(client_response.status_code).to eq(404)
   end
 
+  it "allows POSTs to the shared inbox" do
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/inbox",
+      body: "hasan=lamec",
+      headers: HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"},
+    )
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(404)
+  end
+
   it "outputs error string" do
     handler = described_class.new(error: "Oh no you have an error")
     request = HTTP::Request.new("POST", "/")

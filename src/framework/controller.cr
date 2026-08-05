@@ -1,6 +1,7 @@
 require "kemal"
 
 require "./ext/context"
+require "./ext/kemal"
 
 require "../views/view_helper"
 

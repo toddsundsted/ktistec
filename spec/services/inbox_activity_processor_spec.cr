@@ -36,11 +36,6 @@ Spectator.describe InboxActivityProcessor do
         object.assign(content: "<span class='capitalize'>c</span>ontent blah blah").save
       end
 
-      # also, proves a fix to an inbox infinite-recursion
-      # server-killer: a filtered incoming Create from a remote actor
-      # recurses until the fiber stack overflows. `process_locally`
-      # re-enters `process` (via `for_receive` echoing the recipient
-      # back).
       context "and a matching Create from a remote actor" do
         let_create!(:create, named: :filtered_create, actor: other, object: object, to: [account.actor.iri])
 
@@ -80,6 +75,15 @@ Spectator.describe InboxActivityProcessor do
       it "stores the activity in the recipient's inbox" do
         InboxActivityProcessor.process(account, addressed_create, receive_task_class: MockReceiveTask)
         expect(account.actor.in_inbox(public: false)).to eq([addressed_create])
+      end
+
+      context "given an existing inbox item" do
+        before_each { put_in_inbox(account.actor, addressed_create) }
+
+        it "does not store a duplicate" do
+          expect { InboxActivityProcessor.process(account, addressed_create, receive_task_class: MockReceiveTask) }
+            .not_to change { Relationship::Content::Inbox.count(owner: account.actor, activity: addressed_create) }
+        end
       end
     end
 
@@ -122,6 +126,16 @@ Spectator.describe InboxActivityProcessor do
         expect(MockHandleFollowRequestTask.schedule_called_count).to eq(1)
         expect(MockHandleFollowRequestTask.last_recipient).to eq(account.actor)
         expect(MockHandleFollowRequestTask.last_activity).to eq(follow_activity)
+      end
+
+      context "given an additional recipient" do
+        let(other_account) { register }
+
+        it "schedules the task only for the followed account" do
+          InboxActivityProcessor.process(account, follow_activity, recipients: [account, other_account], handle_follow_request_task_class: MockHandleFollowRequestTask)
+          expect(MockHandleFollowRequestTask.schedule_called_count).to eq(1)
+          expect(MockHandleFollowRequestTask.last_recipient).to eq(account.actor)
+        end
       end
 
       it "schedules receive task" do
@@ -202,6 +216,15 @@ Spectator.describe InboxActivityProcessor do
           it "dereferences the quote authorization" do
             InboxActivityProcessor.process(account, accept_activity)
             expect(HTTP::Client.requests).to have("GET #{authorization_iri}")
+          end
+
+          context "given a recipient who does not own the quote post" do
+            let(other_account) { register }
+
+            it "does not dereference the quote authorization" do
+              InboxActivityProcessor.process(account, accept_activity, recipients: [other_account])
+              expect(HTTP::Client.requests).not_to have("GET #{authorization_iri}")
+            end
           end
 
           it "saves the quote authorization" do
@@ -401,6 +424,30 @@ Spectator.describe InboxActivityProcessor do
           expect(MockReceiveTask.last_receiver).to eq(account.actor)
           expect(MockReceiveTask.last_activity).to eq(undo_activity)
         end
+
+        context "and the follow activity is already undone" do
+          before_each { ActivityPub::Activity::Follow.find(follow_activity.iri).undo! }
+
+          pre_condition { expect(undo_activity.object.undone_at).to be_nil }
+
+          it "leaves the follow relationship alone" do
+            InboxActivityProcessor.process(account, undo_activity)
+            expect(Relationship::Social::Follow.find?(actor: other, object: account.actor)).not_to be_nil
+          end
+
+          context "and the undo carries no cached association" do
+            let(fetched) { ActivityPub::Activity.find(undo_activity.iri) }
+
+            it "does not raise" do
+              expect { InboxActivityProcessor.process(account, fetched) }.not_to raise_error
+            end
+
+            it "leaves the follow relationship alone" do
+              InboxActivityProcessor.process(account, fetched)
+              expect(Relationship::Social::Follow.find?(actor: other, object: account.actor)).not_to be_nil
+            end
+          end
+        end
       end
 
       context "given an Announce" do
@@ -410,6 +457,19 @@ Spectator.describe InboxActivityProcessor do
         it "marks the announce activity as undone" do
           expect { InboxActivityProcessor.process(account, undo_activity) }
             .to change { announce_activity.reload!.undone_at }.from(nil)
+        end
+
+        context "and the announce activity is already undone" do
+          before_each { ActivityPub::Activity::Announce.find(announce_activity.iri).undo! }
+
+          pre_condition { expect(undo_activity.object.undone_at).to be_nil }
+
+          # re-query, don't `reload!`: reloading populates the cached
+          # object's timestamp from the DB before the code under test runs
+          it "does not move the undo timestamp" do
+            expect { InboxActivityProcessor.process(account, undo_activity) }
+              .not_to change { ActivityPub::Activity::Announce.find(announce_activity.iri, include_undone: true).undone_at }
+          end
         end
 
         it "schedules receive task" do
@@ -431,6 +491,19 @@ Spectator.describe InboxActivityProcessor do
             .to change { object_to_delete.reload!.deleted_at }.from(nil)
         end
 
+        context "and the object is already deleted" do
+          before_each { ActivityPub::Object.find(object_to_delete.iri).delete! }
+
+          pre_condition { expect(delete_activity.object.deleted_at).to be_nil }
+
+          # re-query, don't `reload!`: reloading populates the cached
+          # object's timestamp from the DB before the code under test runs
+          it "does not move the deletion timestamp" do
+            expect { InboxActivityProcessor.process(account, delete_activity) }
+              .not_to change { ActivityPub::Object.find(object_to_delete.iri, include_deleted: true).deleted_at }
+          end
+        end
+
         it "schedules receive task" do
           InboxActivityProcessor.process(account, delete_activity, receive_task_class: MockReceiveTask)
           expect(MockReceiveTask.schedule_called_count).to eq(1)
@@ -445,6 +518,19 @@ Spectator.describe InboxActivityProcessor do
         it "marks the actor as deleted" do
           expect { InboxActivityProcessor.process(account, delete_activity) }
             .to change { other.reload!.deleted_at }.from(nil)
+        end
+
+        context "and the actor is already deleted" do
+          before_each { ActivityPub::Actor.find(other.iri).delete! }
+
+          pre_condition { expect(delete_activity.object.deleted_at).to be_nil }
+
+          # re-query, don't `reload!`: reloading populates the cached
+          # object's timestamp from the DB before the code under test runs
+          it "does not move the deletion timestamp" do
+            expect { InboxActivityProcessor.process(account, delete_activity) }
+              .not_to change { ActivityPub::Actor.find(other.iri, include_deleted: true).deleted_at }
+          end
         end
 
         it "schedules receive task" do
@@ -504,11 +590,39 @@ Spectator.describe InboxActivityProcessor do
           expect(reject.result?).to be_nil
         end
 
+        context "given a recipient who does not own the quoted post" do
+          let(other_account) { register }
+
+          it "does not create a Reject activity" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity, recipients: [other_account]) }
+              .not_to change { ActivityPub::Activity::Reject.count }
+          end
+        end
+
         it "schedules deliver task" do
           InboxActivityProcessor.process(account, quote_request_activity, deliver_task_class: MockDeliverTask)
           expect(MockDeliverTask.schedule_called_count).to eq(1)
           expect(MockDeliverTask.last_sender).to eq(account.actor)
           expect(MockDeliverTask.last_activity).to be_a(ActivityPub::Activity::Reject)
+        end
+
+        context "and the request has already been rejected" do
+          before_each { InboxActivityProcessor.process(account, quote_request_activity) }
+
+          it "does not create a second Reject" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { ActivityPub::Activity::Reject.count }
+          end
+
+          it "does not create a second notification" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { Relationship::Content::Notification::Quote.count }
+          end
+
+          it "does not schedule a second deliver task" do
+            InboxActivityProcessor.process(account, quote_request_activity, deliver_task_class: MockDeliverTask)
+            expect(MockDeliverTask.schedule_called_count).to eq(0)
+          end
         end
       end
 
@@ -585,26 +699,67 @@ Spectator.describe InboxActivityProcessor do
             expect(accept.result).to eq(quote_authorization)
           end
         end
+
+        context "and the request has already been accepted" do
+          before_each { InboxActivityProcessor.process(account, quote_request_activity) }
+
+          it "does not create a second Accept" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { ActivityPub::Activity::Accept.count }
+          end
+
+          it "does not create a second notification" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { Relationship::Content::Notification::Quote.count }
+          end
+
+          it "does not schedule a second deliver task" do
+            InboxActivityProcessor.process(account, quote_request_activity, deliver_task_class: MockDeliverTask)
+            expect(MockDeliverTask.schedule_called_count).to eq(0)
+          end
+        end
+      end
+
+      # a request is answered once; toggling the setting between an
+      # original delivery and a redelivery must not produce a second,
+      # contradictory answer
+      context "when manually_approve_quotes is toggled between deliveries" do
+        context "rejected, then approval turned off" do
+          before_each do
+            account.assign(manually_approve_quotes: true).save
+            InboxActivityProcessor.process(account, quote_request_activity)
+            account.assign(manually_approve_quotes: false).save
+          end
+
+          it "does not accept it" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { ActivityPub::Activity::Accept.count }
+          end
+        end
+
+        context "accepted, then approval turned on" do
+          before_each do
+            account.assign(manually_approve_quotes: false).save
+            InboxActivityProcessor.process(account, quote_request_activity)
+            account.assign(manually_approve_quotes: true).save
+          end
+
+          it "does not reject it" do
+            expect { InboxActivityProcessor.process(account, quote_request_activity) }
+              .not_to change { ActivityPub::Activity::Reject.count }
+          end
+        end
       end
     end
 
     context "recipient partitioning" do
-      let(local) { register.actor }
       let_create(:actor, named: :follower)
       let(followers) { ["#{account.actor.iri}/followers"] }
       let_create!(:object, named: :origin, attributed_to: account.actor, to: followers)
       let_create!(:object, named: :reply, attributed_to: other, in_reply_to: origin, to: followers)
       let_create(:create, named: :activity, actor: other, object: reply, to: followers)
 
-      before_each do
-        do_follow(local, account.actor)
-        do_follow(follower, account.actor)
-      end
-
-      it "adds an inbox item to the local recipient's inbox" do
-        expect { InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask) }
-          .to change { Relationship::Content::Inbox.find?(owner: local, activity: activity) }
-      end
+      before_each { do_follow(follower, account.actor) }
 
       it "passes remote recipients to the receive task" do
         InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask)
@@ -615,13 +770,78 @@ Spectator.describe InboxActivityProcessor do
         InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask)
         expect(MockReceiveTask.schedule_called_count).to eq(1)
       end
+    end
 
-      context "given an existing inbox item for the local recipient" do
-        before_each { put_in_inbox(local, activity) }
+    context "scheduling the receive task" do
+      let_create(:create, named: :activity, actor: other, object: object)
 
-        it "does not add a duplicate inbox item" do
-          expect { InboxActivityProcessor.process(account, activity, receive_task_class: MockReceiveTask) }
-            .not_to change { Relationship::Content::Inbox.count(owner: local, activity: activity) }
+      it "does not schedule the task" do
+        InboxActivityProcessor.process(account, activity, recipients: [] of Account, receive_task_class: MockReceiveTask)
+        expect(MockReceiveTask.schedule_called_count).to eq(0)
+      end
+
+      context "given a resolved recipient" do
+        let!(recipient) { register }
+
+        it "makes the recipient the receiver" do
+          InboxActivityProcessor.process(account, activity, recipients: [recipient], receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.last_receiver).to eq(recipient.actor)
+        end
+
+        it "forwards to nobody" do
+          InboxActivityProcessor.process(account, activity, recipients: [recipient], receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.last_recipients).to be_empty
+        end
+
+        it "schedules one task" do
+          InboxActivityProcessor.process(account, activity, recipients: [recipient], receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.schedule_called_count).to eq(1)
+        end
+
+        context "and a second recipient" do
+          let!(second_recipient) { register }
+
+          it "still schedules one task" do
+            InboxActivityProcessor.process(account, activity, recipients: [recipient, second_recipient], receive_task_class: MockReceiveTask)
+            expect(MockReceiveTask.schedule_called_count).to eq(1)
+          end
+        end
+      end
+
+      context "given an addressed followers collection" do
+        let!(collection_owner) { register }
+        let(followers) { ["#{collection_owner.actor.iri}/followers"] }
+        let_create(:actor, named: :follower)
+        let_create!(:object, named: :origin, attributed_to: collection_owner.actor, to: followers)
+        let_create!(:object, named: :reply, attributed_to: other, in_reply_to: origin, to: followers)
+        let_create(:create, named: :activity, actor: other, object: reply, to: followers)
+
+        before_each { do_follow(follower, collection_owner.actor) }
+
+        it "makes the collection's owner the receiver" do
+          InboxActivityProcessor.process(account, activity, recipients: [] of Account, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.last_receiver).to eq(collection_owner.actor)
+        end
+
+        it "forwards to the owner's remote followers" do
+          InboxActivityProcessor.process(account, activity, recipients: [] of Account, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.last_recipients).to eq([follower.iri])
+        end
+
+        it "schedules one task" do
+          InboxActivityProcessor.process(account, activity, recipients: [] of Account, receive_task_class: MockReceiveTask)
+          expect(MockReceiveTask.schedule_called_count).to eq(1)
+        end
+
+        context "and one of the owner's followers is local" do
+          let!(local_follower) { register }
+
+          before_each { do_follow(local_follower.actor, collection_owner.actor) }
+
+          it "still makes the collection's owner the receiver" do
+            InboxActivityProcessor.process(account, activity, recipients: [local_follower], receive_task_class: MockReceiveTask)
+            expect(MockReceiveTask.last_receiver).to eq(collection_owner.actor)
+          end
         end
       end
     end
@@ -797,6 +1017,91 @@ Spectator.describe InboxActivityProcessor do
           expect { InboxActivityProcessor.process(account, undo_activity, receive_task_class: MockReceiveTask) }
             .to change { Relationship::Content::Timeline::Announce.count(to_iri: shared.iri) }.from(1).to(0)
         end
+      end
+    end
+  end
+
+  describe ".maintain" do
+    context "with a Delete of an Object" do
+      let_create!(:object, named: :doomed, attributed_to: other)
+      let_create(:delete, named: :delete_activity, actor: other, object: doomed)
+
+      it "marks the object as deleted" do
+        expect { InboxActivityProcessor.maintain(delete_activity) }
+          .to change { ActivityPub::Object.find(doomed.iri, include_deleted: true).deleted_at }.from(nil)
+      end
+    end
+
+    context "with an Undo of a Follow" do
+      let_create(:follow, named: :follow_activity, actor: other, object: account.actor)
+      let_create!(:follow_relationship, actor: other, object: account.actor)
+      let_create(:undo, named: :undo_activity, actor: other, object: follow_activity)
+
+      it "marks the follow activity as undone" do
+        expect { InboxActivityProcessor.maintain(undo_activity) }
+          .to change { follow_activity.reload!.undone_at }.from(nil)
+      end
+
+      it "destroys the follow relationship" do
+        expect { InboxActivityProcessor.maintain(undo_activity) }
+          .to change { Relationship::Social::Follow.count }.by(-1)
+      end
+
+      it "does not create an inbox row" do
+        expect { InboxActivityProcessor.maintain(undo_activity) }
+          .not_to change { Relationship::Content::Inbox.count }
+      end
+    end
+
+    context "with an Accept of a Follow" do
+      let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
+      let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
+      let_create(:accept, named: :accept_activity, actor: other, object: follow_activity)
+
+      it "confirms the follow relationship" do
+        expect { InboxActivityProcessor.maintain(accept_activity) }
+          .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+      end
+    end
+
+    context "with a Reject of a Follow" do
+      let_create(:follow, named: :follow_activity, actor: account.actor, object: other)
+      let_create(:follow_relationship, actor: account.actor, object: other, confirmed: false)
+      let_create(:reject, named: :reject_activity, actor: other, object: follow_activity)
+
+      it "confirms the follow relationship" do
+        expect { InboxActivityProcessor.maintain(reject_activity) }
+          .to change { follow_relationship.reload!.confirmed }.from(false).to(true)
+      end
+    end
+  end
+
+  describe ".deliver" do
+    let_create(:create, named: :create_activity, actor: other, object: object, to: [account.actor.iri])
+
+    it "creates the inbox row" do
+      expect { InboxActivityProcessor.deliver(account, create_activity) }
+        .to change { Relationship::Content::Inbox.count(from_iri: account.actor.iri) }.by(1)
+    end
+
+    context "with an Undo of a Follow" do
+      let_create(:follow, named: :follow_activity, actor: other, object: account.actor)
+      let_create!(:follow_relationship, actor: other, object: account.actor)
+      let_create(:undo, named: :undo_activity, actor: other, object: follow_activity, to: [account.actor.iri])
+
+      it "does not undo the target" do
+        expect { InboxActivityProcessor.deliver(account, undo_activity) }
+          .not_to change { follow_activity.reload!.undone_at }
+      end
+
+      it "does not destroy the follow relationship" do
+        expect { InboxActivityProcessor.deliver(account, undo_activity) }
+          .not_to change { Relationship::Social::Follow.count }
+      end
+
+      it "creates the inbox row" do
+        expect { InboxActivityProcessor.deliver(account, undo_activity) }
+          .to change { Relationship::Content::Inbox.count(from_iri: account.actor.iri) }.by(1)
       end
     end
   end

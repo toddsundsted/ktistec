@@ -1,6 +1,7 @@
 require "../../src/models/activity_pub"
 require "../../src/models/activity_pub/actor/person"
 require "../../src/models/activity_pub/collection"
+require "../../src/models/activity_pub/object/article"
 require "../../src/models/activity_pub/object/note"
 
 require "../spec_helper/base"
@@ -63,6 +64,64 @@ Spectator.describe ActivityPub do
     it "updates the instance if it already exists" do
       json = %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{activity.iri}","@type":"Activity","summary":"foo bar baz"}]
       expect { described_class.from_json_ld(json).save }.to change { activity.reload!.summary }
+    end
+
+    context "given a deleted object" do
+      let_create(:note, named: :deleted_object, content: "original")
+
+      let(json) { %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{deleted_object.iri}","@type":"Note","content":"changed"}] }
+
+      before_each { deleted_object.delete! }
+
+      it "reuses the existing record" do
+        expect(described_class.from_json_ld(json).as(ActivityPub::Object).id).to eq(deleted_object.id)
+      end
+
+      it "leaves it deleted" do
+        described_class.from_json_ld(json).save
+        expect(ActivityPub::Object.find?(deleted_object.iri)).to be_nil
+      end
+
+      it "does not apply the incoming attributes" do
+        described_class.from_json_ld(json).save
+        expect(ActivityPub::Object.find?(deleted_object.iri, include_deleted: true).try(&.content)).to eq("original")
+      end
+
+      context "and the payload declares a different type" do
+        let(json) { %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{deleted_object.iri}","@type":"Article","content":"changed"}] }
+
+        it "leaves it deleted" do
+          described_class.from_json_ld(json).save
+          expect(ActivityPub::Object.find?(deleted_object.iri)).to be_nil
+        end
+
+        it "does not apply the incoming attributes" do
+          described_class.from_json_ld(json).save
+          expect(ActivityPub::Object.find?(deleted_object.iri, include_deleted: true).try(&.content)).to eq("original")
+        end
+      end
+    end
+
+    context "given an undone activity" do
+      let_create(:activity, named: :undone_activity, summary: "original")
+
+      let(json) { %Q[{"@context":"https://www.w3.org/ns/activitystreams","@id":"#{undone_activity.iri}","@type":"Activity","summary":"changed"}] }
+
+      before_each { undone_activity.undo! }
+
+      it "reuses the existing record" do
+        expect(described_class.from_json_ld(json).as(ActivityPub::Activity).id).to eq(undone_activity.id)
+      end
+
+      it "leaves it undone" do
+        described_class.from_json_ld(json).save
+        expect(ActivityPub::Activity.find?(undone_activity.iri)).to be_nil
+      end
+
+      it "does not apply the incoming attributes" do
+        described_class.from_json_ld(json).save
+        expect(ActivityPub::Activity.find?(undone_activity.iri, include_undone: true).try(&.summary)).to eq("original")
+      end
     end
   end
 

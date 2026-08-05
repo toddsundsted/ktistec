@@ -1318,6 +1318,40 @@ Spectator.describe OutboxesController do
         end
       end
 
+      context "on accept of a follow whose actor is deleted" do
+        let_create!(:actor, named: :remote)
+        let_create!(:follow, actor: remote, object: actor)
+
+        before_each { remote.delete! }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Accept&object=#{URI.encode_www_form(follow.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Accept","object":"#{follow.iri}"}|
+          expect(response.status_code).to eq(400)
+        end
+      end
+
+      context "on accept of a follow whose object is deleted" do
+        let_create!(:actor, named: :remote)
+        let_create!(:follow, actor: actor, object: remote)
+
+        before_each { remote.delete! }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Accept&object=#{URI.encode_www_form(follow.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Accept","object":"#{follow.iri}"}|
+          expect(response.status_code).to eq(400)
+        end
+      end
+
       context "on reject" do
         let_create!(:follow_relationship, named: :relationship, actor: other, object: actor, confirmed: false)
         let_create!(:follow, actor: other, object: actor)
@@ -1394,6 +1428,40 @@ Spectator.describe OutboxesController do
         it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}|
           expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
+        end
+      end
+
+      context "on reject of a follow whose actor is deleted" do
+        let_create!(:actor, named: :remote)
+        let_create!(:follow, actor: remote, object: actor)
+
+        before_each { remote.delete! }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Reject&object=#{URI.encode_www_form(follow.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}|
+          expect(response.status_code).to eq(400)
+        end
+      end
+
+      context "on reject of a follow whose object is deleted" do
+        let_create!(:actor, named: :remote)
+        let_create!(:follow, actor: actor, object: remote)
+
+        before_each { remote.delete! }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Reject&object=#{URI.encode_www_form(follow.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Reject","object":"#{follow.iri}"}|
+          expect(response.status_code).to eq(400)
         end
       end
 
@@ -1720,6 +1788,51 @@ Spectator.describe OutboxesController do
         it "writes the activity to the other's inbox" do
           post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}|
           expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1)
+        end
+      end
+
+      context "when undoing an activity whose actor is deleted" do
+        let_create!(:actor, named: :remote)
+        let_create!(:follow, actor: remote, object: actor)
+
+        before_each { remote.delete! }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}"
+          expect(response.status_code).to eq(400)
+        end
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}|
+          expect(response.status_code).to eq(400)
+        end
+      end
+
+      context "when undoing a follow whose object is deleted" do
+        let_create!(:actor, named: :remote)
+        let_create!(:follow_relationship, named: :relationship, actor: actor, object: remote, confirmed: true)
+        let_create!(:follow, actor: actor, object: remote)
+
+        before_each { remote.delete! }
+
+        it "destroys the relationship" do
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { Relationship::Social::Follow.count(from_iri: actor.iri, to_iri: remote.iri) }.by(-1)
+        end
+
+        it "destroys the relationship" do
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}| }
+            .to change { Relationship::Social::Follow.count(from_iri: actor.iri, to_iri: remote.iri) }.by(-1)
+        end
+
+        it "undoes the follow" do
+          expect { post "/actors/#{actor.username}/outbox", HTML_HEADERS, "type=Undo&object=#{URI.encode_www_form(follow.iri)}" }
+            .to change { ActivityPub::Activity.count(iri: follow.iri) }.by(-1)
+        end
+
+        it "undoes the follow" do
+          expect { post "/actors/#{actor.username}/outbox", JSON_HEADERS, %Q|{"type":"Undo","object":"#{follow.iri}"}| }
+            .to change { ActivityPub::Activity.count(iri: follow.iri) }.by(-1)
         end
       end
 

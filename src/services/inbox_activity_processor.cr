@@ -28,16 +28,66 @@ class InboxActivityProcessor
   # Preconditions:
   # - activity must be saved
   # - activity must be from a remote actor
-  # - account.actor must be the recipient
+  # - account.actor must be the recipient when `recipients` is not
+  #   supplied -- when it is, `account` is unused and may be `nil`
   #
   def self.process(
+    account : Account?,
+    activity : ActivityPub::Activity,
+    deliver_to : Array(String)? = nil,
+    recipients : Array(Account)? = nil,
+    handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
+    receive_task_class : Task::Receive.class = Task::Receive,
+    deliver_task_class : Task::Deliver.class = Task::Deliver,
+  )
+    (recipients || [account].compact).each do |recipient|
+      deliver(
+        recipient, activity, deliver_to,
+        handle_follow_request_task_class: handle_follow_request_task_class,
+        deliver_task_class: deliver_task_class,
+      )
+    end
+
+    maintain(activity)
+
+    if recipients
+      forwarding = Ktistec::Recipients.forwarding(activity)
+
+      # the forwarding account signs the transfer -- they own the
+      # followers collection being expanded -- otherwise any
+      # implicated account supplies the fetch identity.
+
+      if (receiver = forwarding.try(&.account) || recipients.first?)
+        receive_task_class.new(
+          receiver: receiver.actor,
+          activity: activity,
+          recipients: forwarding.try(&.recipients) || [] of String,
+        ).schedule
+      end
+    elsif account
+      partition = Ktistec::Recipients.partition(
+        Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
+      )
+
+      # scheduled unconditionally.
+
+      receive_task_class.new(
+        receiver: account.actor,
+        activity: activity,
+        recipients: partition.remote,
+      ).schedule
+    end
+  end
+
+  # Produces the delivery artifacts for a local account and the side
+  # effects that belong to the account the activity implicates.
+  #
+  def self.deliver(
     account : Account,
     activity : ActivityPub::Activity,
     deliver_to : Array(String)? = nil,
     handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
-    receive_task_class : Task::Receive.class = Task::Receive,
     deliver_task_class : Task::Deliver.class = Task::Deliver,
-    processed : Set(String) = Set(String).new,
   )
     if Ktistec::Recipients.recipient?(activity, account.actor, deliver_to) && !filtered?(account.actor, activity)
       unless Relationship::Content::Inbox.find?(owner: account.actor, activity: activity)
@@ -47,7 +97,7 @@ class InboxActivityProcessor
 
     case activity
     when ActivityPub::Activity::Follow
-      if activity.object == account.actor
+      if Ktistec::Recipients.semantic_recipient?(activity, account.actor)
         unless Relationship::Social::Follow.find?(actor: activity.actor, object: activity.object)
           Relationship::Social::Follow.new(
             actor: activity.actor,
@@ -61,38 +111,53 @@ class InboxActivityProcessor
         ).schedule
       end
     when ActivityPub::Activity::QuoteRequest
-      process_quote_request(account, activity, deliver_task_class)
-    when ActivityPub::Activity::Accept
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: object.object))
-          follow.assign(confirmed: true).save
-        end
-      when ActivityPub::Activity::QuoteRequest
-        process_accept_quote_request(account, object, activity)
+      if Ktistec::Recipients.semantic_recipient?(activity, account.actor)
+        process_quote_request(account, activity, deliver_task_class)
       end
-    when ActivityPub::Activity::Reject
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: activity.object.actor, object: object.object))
+    when ActivityPub::Activity::Accept
+      if (object = activity.object).is_a?(ActivityPub::Activity::QuoteRequest)
+        if Ktistec::Recipients.semantic_recipient?(activity, account.actor)
+          process_accept_quote_request(account, object, activity)
+        end
+      end
+    end
+  end
+
+  # Corrects the local cache to match the state of the fediverse, and
+  # re-evaluates the materialized views.
+  #
+  def self.maintain(activity : ActivityPub::Activity)
+    case activity
+    when ActivityPub::Activity::Accept, ActivityPub::Activity::Reject
+      if (object = activity.object).is_a?(ActivityPub::Activity::Follow)
+        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
           follow.assign(confirmed: true).save
         end
-      when ActivityPub::Activity::QuoteRequest
-        # no action needed
       end
     when ActivityPub::Activity::Undo
-      case (object = activity.object)
-      when ActivityPub::Activity::Follow
-        if (follow = Relationship::Social::Follow.find?(actor: object.actor, object: object.object))
-          follow.destroy
+      object =
+        if (object_iri = activity.object_iri)
+          ActivityPub::Activity.find?(object_iri, include_undone: true)
         end
+      object ||= activity.object?(include_undone: true)
+      if object && !object.undone?
+        if object.is_a?(ActivityPub::Activity::Follow)
+          if (follow_actor = object.actor?) && (follow_object = object.object?(include_deleted: true))
+            if (follow = Relationship::Social::Follow.find?(actor: follow_actor, object: follow_object))
+              follow.destroy
+            end
+          end
+        end
+        object.undo!
       end
-      activity.object.undo!
     when ActivityPub::Activity::Delete
-      case (object = activity.object?)
-      when ActivityPub::Object
-        object.delete!
-      when ActivityPub::Actor
+      object =
+        if (object_iri = activity.object_iri)
+          ActivityPub::Object.find?(object_iri, include_deleted: true) ||
+            ActivityPub::Actor.find?(object_iri, include_deleted: true)
+        end
+      object ||= activity.object?(include_deleted: true)
+      if object && !object.deleted?
         object.delete!
       end
     end
@@ -100,33 +165,14 @@ class InboxActivityProcessor
     # re-evaluate the materialized views for the object this activity
     # concerns.
     Rules::Trigger.reconcile_for_activity(activity)
-
-    partition = Ktistec::Recipients.partition(
-      Ktistec::Recipients.for_receive(activity, account.actor, deliver_to),
-    )
-
-    # `processed` tracks the actors already handled in this delivery pass,
-    # breaking the `process` -> `process_locally` -> `process` recursion.
-    processed << account.actor.iri
-    process_locally(partition.local, activity, processed)
-
-    # scheduled unconditionally even when `partition.remote` is empty:
-    # `Task::Receive#perform` does per-receiver work (quote handling)
-    # that's needed regardless of remote forwarding.
-
-    receive_task_class.new(
-      receiver: account.actor,
-      activity: activity,
-      recipients: partition.remote,
-    ).schedule
   end
 
   # Processes local recipients in-process.
   #
-  def self.process_locally(actors_accounts : Array(Tuple(ActivityPub::Actor, Account)), activity : ActivityPub::Activity, processed : Set(String) = Set(String).new)
+  def self.process_locally(actors_accounts : Array(Tuple(ActivityPub::Actor, Account)), activity : ActivityPub::Activity)
     actors_accounts.each do |actor, account|
-      next if processed.includes?(actor.iri) || Relationship::Content::Inbox.find?(owner: actor, activity: activity)
-      process(account, activity, deliver_to: [actor.iri], processed: processed)
+      next if Relationship::Content::Inbox.find?(owner: actor, activity: activity)
+      process(account, activity, deliver_to: [actor.iri])
     end
   end
 
@@ -171,6 +217,14 @@ class InboxActivityProcessor
 
   private def self.process_quote_request(account, quote_request, deliver_task_class)
     now = Time.utc
+
+    # a request is answered once, and stays answered across a
+    # redelivery regardless of the current `manually_approve_quotes`
+    # setting.
+    if ActivityPub::Activity::Accept.where(actor_iri: account.actor.iri, object_iri: quote_request.iri).first? ||
+       ActivityPub::Activity::Reject.where(actor_iri: account.actor.iri, object_iri: quote_request.iri).first?
+      return
+    end
 
     if account.manually_approve_quotes
       reject = ActivityPub::Activity::Reject.new(

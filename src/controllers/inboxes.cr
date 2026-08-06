@@ -77,14 +77,16 @@ class InboxesController
   #
   # Returns `nil` on any failure.
   #
-  private def self.resolve_signer(key_pair, key_id : String, request_id)
+  private def self.resolve_signer(key_pair, key_id : String, request_id, transient)
     if key_id.includes?("#")
       # case 1: fragment URI
       {key_id.split("#", 2).first, nil}
     else
       # cases 2 & 3: path URI
       accept = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-      response = Ktistec::Network.get?(key_pair, key_id, accept)
+      response = try_dereference(transient, request_id) do
+        Ktistec::Network.get(key_pair, key_id, accept)
+      end
       unless response
         Log.warn { "[#{request_id}] failed to fetch key for #{key_id}" }
         return
@@ -108,13 +110,55 @@ class InboxesController
     Log.trace { "[#{request_id}] keyId resolution failed with exception: #{ex.message}" }
   end
 
+  # Records whether a dereference failed for a reason that may not
+  # reproduce on redelivery.
+  #
+  private class Transient
+    property? failure = false
+  end
+
+  # Dereferences the given IRI, noting whether failure was transient.
+  #
+  private def self.try_dereference(transient, request_id, &)
+    yield
+  rescue ex : Ktistec::JSON_LD::MismatchedIRI
+    Log.warn { "[#{request_id}] dereference failed (mismatched IRI): #{ex.message}" }
+    nil
+  rescue ex : Ktistec::Network::TransientError
+    Log.trace { "[#{request_id}] dereference failed (transient): #{ex.message}" }
+    transient.failure = true
+    nil
+  rescue ex : Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+    Log.trace { "[#{request_id}] dereference failed (permanent): #{ex.message}" }
+    nil
+  end
+
+  private macro bad_request_or_bad_gateway(message = nil)
+    # reads `transient` at the call site
+    if transient.failure?
+      {% if message %}
+        bad_gateway({{message}})
+      {% else %}
+        bad_gateway
+      {% end %}
+    else
+      {% if message %}
+        bad_request({{message}})
+      {% else %}
+        bad_request
+      {% end %}
+    end
+  end
+
   # Finds a cached actor by IRI, or dereferences and saves it.
   #
-  private def self.find_or_dereference_actor(key_pair, iri, request_id, require_key)
+  private def self.find_or_dereference_actor(key_pair, iri, request_id, transient, require_key)
     return unless iri
     actor = ActivityPub::Actor.find?(iri)
     return actor if actor && (!require_key || actor.pem_public_key)
-    ActivityPub::Actor.dereference?(key_pair, iri, ignore_cached: true, include_key: true).try do |dereferenced|
+    try_dereference(transient, request_id) do
+      ActivityPub::Actor.dereference(key_pair, iri, ignore_cached: true, include_key: true)
+    end.try do |dereferenced|
       dereferenced.verify_handle!
       dereferenced.save
     end
@@ -122,12 +166,12 @@ class InboxesController
 
   # Authorizes a community-relayed `Delete`.
   #
-  private def self.relay_delete_authorized?(key_pair, community, object)
+  private def self.relay_delete_authorized?(key_pair, community, object, transient)
     if (audience = object.audience) && audience.includes?(community.iri) &&
        Account.all.any? { |local| Relationship::Social::Follow.find?(actor: local.actor, object: community) }
       return true
     end
-    object_gone_at_origin?(key_pair, object.iri)
+    object_gone_at_origin?(key_pair, object.iri, transient)
   end
 
   # Returns true if both IRIs are on the same host.
@@ -150,9 +194,12 @@ class InboxesController
 
   # Returns true if the object is gone (404/410) at its own origin.
   #
-  private def self.object_gone_at_origin?(key_pair, iri)
+  private def self.object_gone_at_origin?(key_pair, iri, transient)
     headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
     Ktistec::Network.get(key_pair, iri, headers)
+    false
+  rescue Ktistec::Network::TransientError
+    transient.failure = true
     false
   rescue Ktistec::Network::NotFoundError
     true
@@ -254,9 +301,11 @@ class InboxesController
 
     signer = nil
 
-    if (key_id = parse_key_id(env.request.headers)) && (resolved = resolve_signer(fetch_identity, key_id, request_id))
+    transient = Transient.new
+
+    if (key_id = parse_key_id(env.request.headers)) && (resolved = resolve_signer(fetch_identity, key_id, request_id, transient))
       signer_iri, resolved_key = resolved
-      candidate = find_or_dereference_actor(fetch_identity, signer_iri, request_id, require_key: resolved_key.nil?)
+      candidate = find_or_dereference_actor(fetch_identity, signer_iri, request_id, transient, require_key: resolved_key.nil?)
       key_pair = resolved_key || candidate
       if candidate && key_pair && Ktistec::Signature.verify?(key_pair, "#{host}#{env.request.path}", env.request.headers, body)
         signer = candidate
@@ -280,16 +329,23 @@ class InboxesController
         via_community = signer
         verified = true
       end
-      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, require_key: false)
+      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, require_key: false)
     elsif !inner_ld && signer && outer_actor_iri && signer.iri == outer_actor_iri
       actor = signer
       verified = true
     else
-      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, require_key: false)
+      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, require_key: false)
 
       # 4
 
-      if activity.iri.presence && (temporary = ActivityPub::Activity.dereference?(fetch_identity, activity.iri))
+      temporary =
+        if activity.iri.presence
+          try_dereference(transient, request_id) do
+            ActivityPub::Activity.dereference(fetch_identity, activity.iri)
+          end
+        end
+
+      if temporary
         activity = temporary
         verified = true
       else
@@ -308,19 +364,25 @@ class InboxesController
         if (object_iri = activity.object_iri)
           if activity.is_a?(ActivityPub::Activity::Create)
             Log.trace { "[#{request_id}] checking object of create iri=#{object_iri}" }
-            if (temporary = ActivityPub::Object.dereference?(fetch_identity, object_iri, ignore_cached: true))
+            temporary = try_dereference(transient, request_id) do
+              ActivityPub::Object.dereference(fetch_identity, object_iri, ignore_cached: true)
+            end
+            if temporary
               activity.object = temporary
               verified = true
             end
           elsif activity.is_a?(ActivityPub::Activity::Update)
             Log.trace { "[#{request_id}] checking object of update iri=#{object_iri}" }
-            if (temporary = ActivityPub::Object.dereference?(fetch_identity, object_iri, ignore_cached: true))
+            temporary = try_dereference(transient, request_id) do
+              ActivityPub::Object.dereference(fetch_identity, object_iri, ignore_cached: true)
+            end
+            if temporary
               activity.object = temporary
               verified = true
             end
           elsif activity.is_a?(ActivityPub::Activity::Delete)
             Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
-            verified = true if object_gone_at_origin?(fetch_identity, object_iri)
+            verified = true if object_gone_at_origin?(fetch_identity, object_iri, transient)
           end
         end
       end
@@ -330,11 +392,11 @@ class InboxesController
     # community's signature is the authentication); every other path
     # requires the actor be present.
     unless actor || via_community
-      bad_request("Actor Not Present")
+      bad_request_or_bad_gateway("Actor Not Present")
     end
 
     unless activity && verified
-      bad_request("Can't Be Verified")
+      bad_request_or_bad_gateway("Can't Be Verified")
     end
 
     # an activity's own identifier must be on the same host as its
@@ -361,13 +423,16 @@ class InboxesController
 
     Log.trace { "[#{request_id}] processing type=#{activity.class} recipients=#{deliver_to}" }
 
+    # a verified activity's earlier failures must not turn a permanent rejection into a 502
+    transient = Transient.new
+
     case activity
     when ActivityPub::Activity::Announce
-      unless (object = activity.object?(fetch_identity, dereference: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true) })
+        bad_request_or_bad_gateway
       end
-      unless object.attributed_to?(fetch_identity, dereference: true)
-        bad_request
+      unless try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true) }
+        bad_request_or_bad_gateway
       end
     when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
       # DESIGN DECISION: Actors can both Like AND Dislike the same
@@ -375,22 +440,22 @@ class InboxesController
       # state. Some ActivityPub implementations may allow users to both
       # upvote and downvote the same content. Ktistec preserves this
       # state as received.
-      unless (object = activity.object?(fetch_identity, dereference: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true) })
+        bad_request_or_bad_gateway
       end
-      unless object.attributed_to?(fetch_identity, dereference: true)
-        bad_request
+      unless try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true) }
+        bad_request_or_bad_gateway
       end
     when ActivityPub::Activity::Create
-      unless (object = activity.object?(fetch_identity, dereference: true, ignore_cached: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, ignore_cached: true) })
+        bad_request_or_bad_gateway
       end
-      unless activity.actor == object.attributed_to?(fetch_identity, dereference: true)
-        bad_request
+      unless activity.actor == try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true) }
+        bad_request_or_bad_gateway
       end
       object.attributed_to = activity.actor
     when ActivityPub::Activity::Update
-      case (object = activity.object?(fetch_identity, dereference: true, ignore_cached: true))
+      case (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, ignore_cached: true) })
       when ActivityPub::Actor
         unless object.iri == activity.actor.iri
           bad_request
@@ -399,23 +464,23 @@ class InboxesController
         object.up!
         activity.actor = activity.object = object
       when ActivityPub::Object
-        unless activity.actor == object.attributed_to?(fetch_identity, dereference: true)
-          bad_request
+        unless activity.actor == try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true) }
+          bad_request_or_bad_gateway
         end
         object.attributed_to = activity.actor
       else
-        bad_request
+        bad_request_or_bad_gateway
       end
     when ActivityPub::Activity::Follow
       unless actor
         bad_request
       end
-      unless (object = activity.object?(fetch_identity, dereference: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true) })
+        bad_request_or_bad_gateway
       end
     when ActivityPub::Activity::QuoteRequest
-      unless (object = activity.object?(fetch_identity, dereference: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true) })
+        bad_request_or_bad_gateway
       end
       unless object.local? && object.visible
         bad_request
@@ -469,7 +534,7 @@ class InboxesController
          (persisted = ActivityPub::Activity.find?(object_iri, include_undone: true))
         activity.object = persisted
       end
-      case (object = activity.object?(fetch_identity, dereference: true, include_undone: true))
+      case (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, include_undone: true) })
       when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         unless object.actor == activity.actor
           bad_request
@@ -485,7 +550,7 @@ class InboxesController
           bad_request
         end
       else
-        bad_request
+        bad_request_or_bad_gateway
       end
     when ActivityPub::Activity::Delete
       # fetch the object from the database because we can't trust the
@@ -495,8 +560,8 @@ class InboxesController
         unless (object = ActivityPub::Object.find?(activity.object_iri, include_deleted: true))
           bad_request
         end
-        unless relay_delete_authorized?(fetch_identity, community, object)
-          bad_request
+        unless relay_delete_authorized?(fetch_identity, community, object, transient)
+          bad_request_or_bad_gateway
         end
         activity.object = object
       else

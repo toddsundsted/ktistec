@@ -192,7 +192,7 @@ class InboxesController
     try_dereference(transient, request_id) do
       ActivityPub::Actor.dereference(key_pair, iri, ignore_cached: true, include_key: true, deadline: deadline)
     end.try do |dereferenced|
-      dereferenced.verify_handle!
+      dereferenced.verify_handle!(deadline)
       dereferenced.save
     end
   end
@@ -495,7 +495,7 @@ class InboxesController
         unless object.iri == activity.actor.iri
           bad_request
         end
-        object.verify_handle!
+        object.verify_handle!(deadline)
         object.up!
         activity.actor = activity.object = object
       when ActivityPub::Object
@@ -645,7 +645,7 @@ class InboxesController
 
     Log.trace { "[#{request_id}] saved id=#{activity.id}" }
 
-    InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients)
+    InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients, deadline: deadline)
 
     Log.trace { "[#{request_id}] complete" }
 

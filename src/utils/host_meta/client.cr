@@ -25,8 +25,8 @@ module Ktistec
       # `Ktistec::HostMeta::RedirectionError` if redirection failed. Otherwise,
       # returns `Ktistec::HostMeta::Result`.
       #
-      def self.query(host, attempts = 10)
-        response = Ktistec::Network.get("https://#{host}/.well-known/host-meta", attempts: attempts, max_bytes: Ktistec::Network::MAX_DISCOVERY_RESPONSE_BYTES)
+      def self.query(host, attempts = 10, deadline : Time::Instant? = nil)
+        response = Ktistec::Network.get("https://#{host}/.well-known/host-meta", attempts: attempts, max_bytes: Ktistec::Network::MAX_DISCOVERY_RESPONSE_BYTES, deadline: deadline)
         mt = response.mime_type.try(&.media_type)
         if mt =~ /xml/
           Result.from_xml(response.body)

@@ -35,7 +35,7 @@ module Ktistec
       # and `Ktistec::WebFinger::RedirectionError` if redirection failed.
       # Otherwise, returns `Ktistec::WebFinger::Result`.
       #
-      def self.query(account, attempts = 10)
+      def self.query(account, attempts = 10, deadline : Time::Instant? = nil)
         unless account =~ ACCOUNT_REGEX
           raise Error.new("invalid account: #{account}")
         end
@@ -44,14 +44,14 @@ module Ktistec
 
         template =
           begin
-            Ktistec::HostMeta.query(host).links("lrdd").first.template.not_nil!
+            Ktistec::HostMeta.query(host, deadline: deadline).links("lrdd").first.template.not_nil!
           rescue Ktistec::HostMeta::Error | NilAssertionError | IndexError
             "https://#{host}/.well-known/webfinger?resource={uri}"
           end
 
         url = template.gsub("{uri}", URI.encode_www_form(account))
 
-        response = Ktistec::Network.get(url, attempts: attempts, max_bytes: Ktistec::Network::MAX_DISCOVERY_RESPONSE_BYTES)
+        response = Ktistec::Network.get(url, attempts: attempts, max_bytes: Ktistec::Network::MAX_DISCOVERY_RESPONSE_BYTES, deadline: deadline)
         mt = response.mime_type.try(&.media_type)
         if mt =~ /xml/
           Result.from_xml(response.body)

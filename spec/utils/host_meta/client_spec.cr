@@ -155,5 +155,20 @@ Spectator.describe Ktistec::HostMeta::Client do
       Ktistec::HostMeta::Client.query("example.com")
       expect(HTTP::Client.requests).to have("GET https://example.com/.well-known/host-meta")
     end
+
+    context "given a deadline that has passed" do
+      let(deadline) { Time.instant - 1.second }
+
+      it "makes no request" do
+        expect { Ktistec::HostMeta::Client.query("example.com", deadline: deadline) rescue nil }
+          .not_to change { HTTP::Client.requests.size }
+      end
+
+      it "raises an error" do
+        expect_raises(Ktistec::HostMeta::NotFoundError) do
+          Ktistec::HostMeta::Client.query("example.com", deadline: deadline)
+        end
+      end
+    end
   end
 end

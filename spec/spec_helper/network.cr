@@ -360,7 +360,7 @@ module Ktistec
       @@hrefs.clear
     end
 
-    def self.query(account)
+    def self.query(account, *args, **options)
       unless account =~ ACCOUNT_REGEX
         raise Ktistec::WebFinger::NotFoundError.new("Invalid account")
       end

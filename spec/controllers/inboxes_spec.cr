@@ -6,6 +6,16 @@ require "../spec_helper/controller"
 require "../spec_helper/factory"
 require "../spec_helper/network"
 
+class InboxesController
+  def self.resolve_signer(key_pair, key_id : String, deadline)
+    resolve_signer(key_pair, key_id, "spec", Transient.new, deadline)
+  end
+
+  def self.object_gone_at_origin?(key_pair, iri, deadline)
+    object_gone_at_origin?(key_pair, iri, Transient.new, deadline)
+  end
+end
+
 Spectator.describe InboxesController do
   setup_spec
 
@@ -14,6 +24,44 @@ Spectator.describe InboxesController do
   end
 
   PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+  describe ".resolve_signer" do
+    let_create(:actor, named: :other, with_keys: true)
+
+    let(expired) { Time.instant - 1.second }
+
+    let(key_id) { "https://remote/keys/key" }
+
+    context "when the time budget is exhausted" do
+      it "makes no request" do
+        expect { described_class.resolve_signer(other, key_id, expired) }
+          .not_to change { HTTP::Client.requests.size }
+      end
+
+      it "resolves no signer" do
+        expect(described_class.resolve_signer(other, key_id, expired)).to be_nil
+      end
+    end
+  end
+
+  describe ".object_gone_at_origin?" do
+    let_create(:actor, named: :other, with_keys: true)
+
+    let(expired) { Time.instant - 1.second }
+
+    let(iri) { "https://remote/objects/object" }
+
+    context "when the time budget is exhausted" do
+      it "makes no request" do
+        expect { described_class.object_gone_at_origin?(other, iri, expired) }
+          .not_to change { HTTP::Client.requests.size }
+      end
+
+      it "does not report the object gone" do
+        expect(described_class.object_gone_at_origin?(other, iri, expired)).to be_false
+      end
+    end
+  end
 
   describe "POST /inbox" do
     # actor with keys is cached
@@ -175,6 +223,48 @@ Spectator.describe InboxesController do
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
       expect(response.status_code).to eq(502)
+    end
+
+    context "when the time budget is exhausted" do
+      around_each do |proc|
+        previous = InboxesController.max_inbox_fetch_time
+        InboxesController.max_inbox_fetch_time = 0.seconds
+        proc.call
+        InboxesController.max_inbox_fetch_time = previous
+      end
+
+      context "and the failure is during verification" do
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+          expect(response.status_code).to eq(502)
+        end
+
+        it "makes no request" do
+          expect { post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld }
+            .not_to change { HTTP::Client.requests.size }
+        end
+      end
+
+      context "and the failure is during dispatch" do
+        # the signature verifies without a fetch. the activity type is arbitrary.
+
+        let_build(:announce, actor: other, object: nil, to: [actor.iri])
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", announce.to_json_ld(true), "application/json") }
+
+        before_each { announce.object_iri = "https://remote/objects/object" }
+
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+          expect(response.status_code).to eq(502)
+        end
+
+        it "makes no request" do
+          expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+            .not_to change { HTTP::Client.requests.size }
+        end
+      end
     end
 
     context "when activity was already received" do

@@ -108,8 +108,8 @@ module Ktistec
         # because they *do* exist and returning `nil` implies they do
         # not.
 
-        def self.dereference?(key_pair, iri, *, ignore_cached = false, include_deleted = false, **options) : self?
-          dereference(key_pair, iri, **options, ignore_cached: ignore_cached, include_deleted: include_deleted)
+        def self.dereference?(key_pair, iri, *, ignore_cached = false, include_deleted = false, deadline : ::Time::Instant? = nil, **options) : self?
+          dereference(key_pair, iri, **options, ignore_cached: ignore_cached, include_deleted: include_deleted, deadline: deadline)
         rescue ex : ::Ktistec::JSON_LD::MismatchedIRI
           Log.warn { "#{self}.dereference? - #{iri} - #{ex.message}" }
           nil
@@ -124,7 +124,7 @@ module Ktistec
           nil
         end
 
-        def self.dereference(key_pair, iri, *, ignore_cached = false, include_deleted = false, **options) : self
+        def self.dereference(key_pair, iri, *, ignore_cached = false, include_deleted = false, deadline : ::Time::Instant?, **options) : self
           if ignore_cached || (instance = self.find?(iri, include_deleted: include_deleted)).nil?
             if ::Ktistec::Model::Linked.local?(iri)
               instance = self.find(iri, include_deleted: include_deleted)
@@ -132,7 +132,7 @@ module Ktistec
               raise ::Ktistec::Model::Linked::FragmentIRI.new("URL with fragment is not dereferenceable")
             else
               headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-              Ktistec::Network.get(key_pair, iri, headers) do |response|
+              Ktistec::Network.get(key_pair, iri, headers, deadline: deadline) do |response|
                 if Ktistec::Model::Linked.json_response?(response)
                   instance = self.from_json_ld(response.body, **options)
                   if instance && !instance.iri_matches?(iri)
@@ -163,8 +163,8 @@ module Ktistec
                   {% foreign_key = method.body[2].id %}
                   {% clazz = method.body[3].id %}
                   class ::{{type}}
-                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, include_deleted = false, include_undone = false, **options)
-                      self.{{name}}(key_pair, **options, dereference: dereference, ignore_cached: ignore_cached, ignore_changed: ignore_changed, include_deleted: include_deleted, include_undone: include_undone)
+                    def {{name}}?(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, include_deleted = false, include_undone = false, deadline : ::Time::Instant? = nil, **options)
+                      self.{{name}}(key_pair, **options, dereference: dereference, ignore_cached: ignore_cached, ignore_changed: ignore_changed, include_deleted: include_deleted, include_undone: include_undone, deadline: deadline)
                     rescue ex : ::Ktistec::JSON_LD::MismatchedIRI
                       Log.warn { "#{self.class}##{{{name.stringify}}}? - #{self.{{foreign_key}}} - #{ex.message}" }
                       nil
@@ -179,7 +179,7 @@ module Ktistec
                       nil
                     end
 
-                    def {{name}}(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, include_deleted = false, include_undone = false, **options)
+                    def {{name}}(key_pair, *, dereference = false, ignore_cached = false, ignore_changed = false, include_deleted = false, include_undone = false, deadline : ::Time::Instant?, **options)
                       if dereference && ({{foreign_key}} = self.{{foreign_key}})
                         if ignore_changed || ({{name}}_ = self.{{name}}?(include_deleted: include_deleted, include_undone: include_undone)).nil? || (ignore_cached && !{{name}}_.changed?)
                           if ::Ktistec::Model::Linked.local?({{foreign_key}})
@@ -191,7 +191,7 @@ module Ktistec
                             cached = {{name}}_
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
                             begin
-                              Ktistec::Network.get(key_pair, {{foreign_key}}, headers) do |response|
+                              Ktistec::Network.get(key_pair, {{foreign_key}}, headers, deadline: deadline) do |response|
                                 if Ktistec::Model::Linked.json_response?(response)
                                   {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
                                   if {{name}}_ && !{{name}}_.iri_matches?({{foreign_key}})

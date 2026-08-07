@@ -401,6 +401,13 @@ Spectator.describe Ktistec::Model::Linked do
         expect { subject.linked_model?(key_pair, dereference: true) }.not_to raise_error
       end
     end
+
+    context "when the deadline has passed" do
+      it "does not fetch and does not return the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, deadline: Time.instant - 1.second)).to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
   end
 
   describe "the generated raising accessor" do
@@ -430,7 +437,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "fetches the object and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::Network::TransientError)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Network::TransientError)
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
@@ -442,7 +449,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "returns but does not fetch the object" do
-        expect(subject.linked_model(key_pair, dereference: true)).not_to be_nil
+        expect(subject.linked_model(key_pair, dereference: true, deadline: nil)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
     end
@@ -451,7 +458,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects << object }
 
       it "returns and fetches the object" do
-        expect(subject.linked_model(key_pair, dereference: true)).not_to be_nil
+        expect(subject.linked_model(key_pair, dereference: true, deadline: nil)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
@@ -460,21 +467,21 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { subject.linked_model_iri = nil }
 
       it "does not fetch and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::Model::NotFound)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Model::NotFound)
         expect(HTTP::Client.last?).to be_nil
       end
     end
 
     context "when dereference is false and the object is not cached" do
       it "does not fetch the object and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: false) }.to raise_error(Ktistec::Model::NotFound)
+        expect { subject.linked_model(key_pair, dereference: false, deadline: nil) }.to raise_error(Ktistec::Model::NotFound)
         expect(HTTP::Client.last?).to be_nil
       end
     end
 
     context "when the remote returns an error status" do
       it "fetches the object and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::Network::NotFoundError)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Network::NotFoundError)
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
@@ -483,8 +490,15 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { subject.linked_model_iri = "https://remote/timeout-error" }
 
       it "fetches the object and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::Network::TransientError)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Network::TransientError)
         expect(HTTP::Client.last?).to match("GET https://remote/timeout-error")
+      end
+    end
+
+    context "when the deadline has passed" do
+      it "does not fetch the object and raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: Time.instant - 1.second) }.to raise_error(Ktistec::Network::TransientError)
+        expect(HTTP::Client.last?).to be_nil
       end
     end
 
@@ -497,7 +511,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "fetches the object and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
         expect(HTTP::Client.last?).to match("GET #{requested_iri}")
       end
     end
@@ -508,7 +522,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { subject.linked_model_iri = iri }
 
       it "does not fetch the object and raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
         expect(HTTP::Client.last?).to be_nil
       end
 
@@ -516,7 +530,7 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { subject.linked_model = object.assign(iri: iri).save }
 
         it "returns but does not fetch the object" do
-          expect(subject.linked_model(key_pair, dereference: true)).not_to be_nil
+          expect(subject.linked_model(key_pair, dereference: true, deadline: nil)).not_to be_nil
           expect(HTTP::Client.last?).to be_nil
         end
       end
@@ -531,12 +545,12 @@ Spectator.describe Ktistec::Model::Linked do
       pre_condition { expect(object.changed?).to be_false }
 
       it "returns but does not fetch the object" do
-        expect(subject.linked_model(key_pair, dereference: true, ignore_cached: false)).not_to be_nil
+        expect(subject.linked_model(key_pair, dereference: true, ignore_cached: false, deadline: nil)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
 
       it "fetches and returns the object" do
-        expect(subject.linked_model(key_pair, dereference: true, ignore_cached: true)).not_to be_nil
+        expect(subject.linked_model(key_pair, dereference: true, ignore_cached: true, deadline: nil)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
 
@@ -544,7 +558,7 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { HTTP::Client.cache.delete(object.iri) }
 
         it "returns the cached object" do
-          expect(subject.linked_model(key_pair, dereference: true, ignore_cached: true)).to be(object) # object identity
+          expect(subject.linked_model(key_pair, dereference: true, ignore_cached: true, deadline: nil)).to be(object) # object identity
         end
       end
     end
@@ -556,7 +570,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true, ignore_cached: true) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+        expect { subject.linked_model(key_pair, dereference: true, ignore_cached: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
       end
     end
 
@@ -569,12 +583,12 @@ Spectator.describe Ktistec::Model::Linked do
       pre_condition { expect(object.changed?).to be_true }
 
       it "returns but does not fetch the object" do
-        expect(subject.linked_model(key_pair, dereference: true, ignore_changed: false)).not_to be_nil
+        expect(subject.linked_model(key_pair, dereference: true, ignore_changed: false, deadline: nil)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
 
       it "fetches and returns the object" do
-        expect(subject.linked_model(key_pair, dereference: true, ignore_changed: true)).not_to be_nil
+        expect(subject.linked_model(key_pair, dereference: true, ignore_changed: true, deadline: nil)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
 
@@ -582,7 +596,7 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { HTTP::Client.cache.delete(object.iri) }
 
         it "raises an error" do
-          expect { subject.linked_model(key_pair, dereference: true, ignore_changed: true) }.to raise_error(Ktistec::Network::NotFoundError)
+          expect { subject.linked_model(key_pair, dereference: true, ignore_changed: true, deadline: nil) }.to raise_error(Ktistec::Network::NotFoundError)
         end
       end
     end
@@ -594,7 +608,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(JSON::ParseException)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(JSON::ParseException)
       end
     end
 
@@ -605,7 +619,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(Ktistec::JSON_LD::Error)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
       end
     end
 
@@ -616,7 +630,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(TypeCastError)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(TypeCastError)
       end
     end
 
@@ -627,7 +641,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true) }.to raise_error(NotImplementedError)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(NotImplementedError)
       end
     end
   end
@@ -837,6 +851,13 @@ Spectator.describe Ktistec::Model::Linked do
         expect { subject.dereference?(key_pair, object.iri) }.not_to raise_error
       end
     end
+
+    context "when the deadline has passed" do
+      it "does not fetch and does not return the object" do
+        expect(subject.dereference?(key_pair, object.iri, deadline: Time.instant - 1.second)).to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
   end
 
   describe ".dereference" do
@@ -863,7 +884,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "fetches the object and raises an error" do
-        expect { subject.dereference(key_pair, object.iri) }.to raise_error(Ktistec::Network::TransientError)
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::Network::TransientError)
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
@@ -872,7 +893,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { object.assign(iri: "https://test.test/objects/object").save }
 
       it "returns but does not fetch the object" do
-        expect(subject.dereference(key_pair, object.iri)).not_to be_nil
+        expect(subject.dereference(key_pair, object.iri, deadline: nil)).not_to be_nil
         expect(HTTP::Client.last?).to be_nil
       end
 
@@ -880,12 +901,12 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { object.delete! }
 
         it "does not fetch the object and raises an error" do
-          expect { subject.dereference(key_pair, object.iri, include_deleted: false) }.to raise_error(Ktistec::Model::NotFound)
+          expect { subject.dereference(key_pair, object.iri, include_deleted: false, deadline: nil) }.to raise_error(Ktistec::Model::NotFound)
           expect(HTTP::Client.last?).to be_nil
         end
 
         it "returns but does not fetch the object" do
-          expect(subject.dereference(key_pair, object.iri, include_deleted: true)).not_to be_nil
+          expect(subject.dereference(key_pair, object.iri, include_deleted: true, deadline: nil)).not_to be_nil
           expect(HTTP::Client.last?).to be_nil
         end
       end
@@ -895,7 +916,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects << object }
 
       it "returns and fetches the object" do
-        expect(subject.dereference(key_pair, object.iri)).not_to be_nil
+        expect(subject.dereference(key_pair, object.iri, deadline: nil)).not_to be_nil
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
 
@@ -903,12 +924,12 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { object.save }
 
         it "returns but does not fetch the object" do
-          expect(subject.dereference(key_pair, object.iri, ignore_cached: false)).not_to be_nil
+          expect(subject.dereference(key_pair, object.iri, ignore_cached: false, deadline: nil)).not_to be_nil
           expect(HTTP::Client.last?).to be_nil
         end
 
         it "fetches and returns the object" do
-          expect(subject.dereference(key_pair, object.iri, ignore_cached: true)).not_to be_nil
+          expect(subject.dereference(key_pair, object.iri, ignore_cached: true, deadline: nil)).not_to be_nil
           expect(HTTP::Client.last?).to match("GET #{object.iri}")
         end
       end
@@ -918,14 +939,14 @@ Spectator.describe Ktistec::Model::Linked do
       let(missing_iri) { "https://test.test/objects/missing" }
 
       it "does not fetch and raises an error" do
-        expect { subject.dereference(key_pair, missing_iri) }.to raise_error(Ktistec::Model::NotFound)
+        expect { subject.dereference(key_pair, missing_iri, deadline: nil) }.to raise_error(Ktistec::Model::NotFound)
         expect(HTTP::Client.last?).to be_nil
       end
     end
 
     context "when the remote returns an error status" do
       it "fetches the object and raises an error" do
-        expect { subject.dereference(key_pair, object.iri) }.to raise_error(Ktistec::Network::NotFoundError)
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::Network::NotFoundError)
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
     end
@@ -934,8 +955,15 @@ Spectator.describe Ktistec::Model::Linked do
       let(unreachable_iri) { "https://remote/timeout-error" }
 
       it "fetches the object and raises an error" do
-        expect { subject.dereference(key_pair, unreachable_iri) }.to raise_error(Ktistec::Network::TransientError)
+        expect { subject.dereference(key_pair, unreachable_iri, deadline: nil) }.to raise_error(Ktistec::Network::TransientError)
         expect(HTTP::Client.last?).to match("GET #{unreachable_iri}")
+      end
+    end
+
+    context "when the deadline has passed" do
+      it "does not fetch the object and raises an error" do
+        expect { subject.dereference(key_pair, object.iri, deadline: Time.instant - 1.second) }.to raise_error(Ktistec::Network::TransientError)
+        expect(HTTP::Client.last?).to be_nil
       end
     end
 
@@ -945,7 +973,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects[requested_iri] = object.to_json_ld }
 
       it "fetches the object and raises an error" do
-        expect { subject.dereference(key_pair, requested_iri) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+        expect { subject.dereference(key_pair, requested_iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
         expect(HTTP::Client.last?).to match("GET #{requested_iri}")
       end
     end
@@ -954,7 +982,7 @@ Spectator.describe Ktistec::Model::Linked do
       let(iri) { "https://remote/objects/object#updates/123456" }
 
       it "does not fetch the object and raises an error" do
-        expect { subject.dereference(key_pair, iri) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
+        expect { subject.dereference(key_pair, iri, deadline: nil) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
         expect(HTTP::Client.last?).to be_nil
       end
 
@@ -962,12 +990,12 @@ Spectator.describe Ktistec::Model::Linked do
         before_each { object.assign(iri: iri).save }
 
         it "returns but does not fetch the object" do
-          expect(subject.dereference(key_pair, iri, ignore_cached: false)).not_to be_nil
+          expect(subject.dereference(key_pair, iri, ignore_cached: false, deadline: nil)).not_to be_nil
           expect(HTTP::Client.last?).to be_nil
         end
 
         it "fetches and raises an error" do
-          expect { subject.dereference(key_pair, iri, ignore_cached: true) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
+          expect { subject.dereference(key_pair, iri, ignore_cached: true, deadline: nil) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
           expect(HTTP::Client.last?).to be_nil
         end
       end
@@ -977,7 +1005,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects[object.iri] = "<html>" }
 
       it "raises an error" do
-        expect { subject.dereference(key_pair, object.iri) }.to raise_error(JSON::ParseException)
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(JSON::ParseException)
       end
     end
 
@@ -985,7 +1013,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects[object.iri] = "[]" }
 
       it "raises an error" do
-        expect { subject.dereference(key_pair, object.iri) }.to raise_error(Ktistec::JSON_LD::Error)
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
       end
     end
 
@@ -993,7 +1021,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects[object.iri] = %Q|{"@type":5}| }
 
       it "raises an error" do
-        expect { subject.dereference(key_pair, object.iri) }.to raise_error(TypeCastError)
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(TypeCastError)
       end
     end
 
@@ -1001,7 +1029,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects[object.iri] = %Q|{"as:linked":{"@type":"FooBarBaz"}}| }
 
       it "raises an error" do
-        expect { subject.dereference(key_pair, object.iri) }.to raise_error(Ktistec::JSON_LD::Error)
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
       end
     end
   end

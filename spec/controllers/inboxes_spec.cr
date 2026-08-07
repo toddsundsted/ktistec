@@ -256,7 +256,7 @@ Spectator.describe InboxesController do
 
         it "returns 502" do
           post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
-          expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+          expect(JSON.parse(response.body)["msg"]).to eq("object not present")
           expect(response.status_code).to eq(502)
         end
 
@@ -355,7 +355,7 @@ Spectator.describe InboxesController do
 
       it "returns 400" do
         post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
-        expect(JSON.parse(response.body)["msg"]).to eq("bad request")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
         expect(response.status_code).to eq(400)
       end
     end
@@ -963,7 +963,7 @@ Spectator.describe InboxesController do
       it "returns 502 if the fetch of the object fails transiently" do
         announce.object_iri = "https://remote/objects/timeout-error"
         post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -992,7 +992,7 @@ Spectator.describe InboxesController do
         announce.object = note
         note.attributed_to_iri = "https://remote/actors/timeout-error"
         post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -1126,7 +1126,7 @@ Spectator.describe InboxesController do
       it "returns 502 if the fetch of the object fails transiently" do
         like.object_iri = "https://remote/objects/timeout-error"
         post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -1155,7 +1155,7 @@ Spectator.describe InboxesController do
         like.object = note
         note.attributed_to_iri = "https://remote/actors/timeout-error"
         post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -1198,7 +1198,7 @@ Spectator.describe InboxesController do
       it "returns 502 if the fetch of the object fails transiently" do
         dislike.object_iri = "https://remote/objects/timeout-error"
         post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -1227,7 +1227,7 @@ Spectator.describe InboxesController do
         dislike.object = note
         note.attributed_to_iri = "https://remote/actors/timeout-error"
         post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -1281,7 +1281,7 @@ Spectator.describe InboxesController do
         create.object_iri = "https://remote/objects/timeout-error"
         headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(false), "application/json")
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(false)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -1289,7 +1289,7 @@ Spectator.describe InboxesController do
         create.object = note
         note.attributed_to_iri = "https://remote/actors/timeout-error"
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
         expect(response.status_code).to eq(502)
       end
 
@@ -1526,7 +1526,7 @@ Spectator.describe InboxesController do
         update.object_iri = "https://remote/objects/timeout-error"
         headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(false), "application/json")
         post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(false)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -1534,7 +1534,7 @@ Spectator.describe InboxesController do
         update.object = note
         note.attributed_to_iri = "https://remote/actors/timeout-error"
         post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
         expect(response.status_code).to eq(502)
       end
 
@@ -1769,7 +1769,7 @@ Spectator.describe InboxesController do
         follow.object_iri = "https://remote/actors/timeout-error"
         HTTP::Client.activities << follow
         post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -1941,7 +1941,7 @@ Spectator.describe InboxesController do
       it "returns 502 if the fetch of the object fails transiently" do
         quote_request.object_iri = "https://remote/objects/timeout-error"
         post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
-        expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
         expect(response.status_code).to eq(502)
       end
 
@@ -2244,7 +2244,7 @@ Spectator.describe InboxesController do
           undo.object = announce
           headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld(recursive: false), "application/json")
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld(recursive: false)
-          expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+          expect(JSON.parse(response.body)["msg"]).to eq("object not present")
           expect(response.status_code).to eq(502)
         end
 
@@ -3095,7 +3095,7 @@ Spectator.describe InboxesController do
 
           it "returns 502" do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
-            expect(JSON.parse(response.body)["msg"]).to eq("bad gateway")
+            expect(JSON.parse(response.body)["msg"]).to eq("relay delete not authorized")
             expect(response.status_code).to eq(502)
           end
         end

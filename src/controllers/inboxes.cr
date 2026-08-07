@@ -170,20 +170,27 @@ class InboxesController
     nil
   end
 
-  private macro bad_request_or_bad_gateway(message = nil)
-    # reads `transient` at the call site
+  # Rejects a delivery with a reason.
+  #
+  # Both macros read `request_id` and `activity` at the call site.
+  #
+  # Use `reject` when the delivery is permanently bad. Use
+  # `bad_request_or_bad_gateway` -- which additionally reads
+  # `transient` -- when an earlier fetch may have failed transiently.
+  #
+  private macro reject(message)
+    Log.debug { "[#{request_id}] rejected #{activity.class}: #{ {{message}} }" }
+    bad_request({{message}})
+  end
+
+  # :ditto:
+  private macro bad_request_or_bad_gateway(message)
     if transient.failure?
-      {% if message %}
-        bad_gateway({{message}})
-      {% else %}
-        bad_gateway
-      {% end %}
+      Log.debug { "[#{request_id}] rejected #{activity.class}: #{ {{message}} } (transient)" }
+      bad_gateway({{message}})
     else
-      {% if message %}
-        bad_request({{message}})
-      {% else %}
-        bad_request
-      {% end %}
+      Log.debug { "[#{request_id}] rejected #{activity.class}: #{ {{message}} }" }
+      bad_request({{message}})
     end
   end
 
@@ -445,7 +452,7 @@ class InboxesController
     if (activity_iri = activity.iri.presence) && (activity_actor_iri = activity.actor_iri)
       unless same_host?(activity_iri, activity_actor_iri)
         Log.trace { "[#{request_id}] activity iri=#{activity_iri} is not on the actor's host actor=#{activity_actor_iri}" }
-        bad_request("Origin Mismatch")
+        reject("Origin Mismatch")
       end
     end
 
@@ -468,10 +475,10 @@ class InboxesController
     case activity
     when ActivityPub::Activity::Announce
       unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, deadline: deadline) })
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Not Present")
       end
       unless try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true, deadline: deadline) }
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Attribution Not Present")
       end
     when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
       # DESIGN DECISION: Actors can both Like AND Dislike the same
@@ -480,91 +487,91 @@ class InboxesController
       # upvote and downvote the same content. Ktistec preserves this
       # state as received.
       unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, deadline: deadline) })
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Not Present")
       end
       unless try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true, deadline: deadline) }
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Attribution Not Present")
       end
     when ActivityPub::Activity::Create
       unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, ignore_cached: true, deadline: deadline) })
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Not Present")
       end
       unless activity.actor == try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true, deadline: deadline) }
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Not Attributed To Actor")
       end
       object.attributed_to = activity.actor
     when ActivityPub::Activity::Update
       case (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, ignore_cached: true, deadline: deadline) })
       when ActivityPub::Actor
         unless object.iri == activity.actor.iri
-          bad_request
+          reject("Actor Mismatch")
         end
         object.verify_handle!(deadline)
         object.up!
         activity.actor = activity.object = object
       when ActivityPub::Object
         unless activity.actor == try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true, deadline: deadline) }
-          bad_request_or_bad_gateway
+          bad_request_or_bad_gateway("Object Not Attributed To Actor")
         end
         object.attributed_to = activity.actor
       else
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Not Present")
       end
     when ActivityPub::Activity::Follow
       unless actor
-        bad_request
+        reject("Actor Not Present")
       end
       unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, deadline: deadline) })
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Not Present")
       end
     when ActivityPub::Activity::QuoteRequest
       unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, deadline: deadline) })
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Not Present")
       end
       unless object.local? && object.visible
-        bad_request
+        reject("Object Not Quotable")
       end
     when ActivityPub::Activity::Accept
       unless activity.object?.try(&.local?)
-        bad_request
+        reject("Object Not Local")
       end
       unless recipients.any? { |recipient| recipient.iri == activity.object.actor.iri }
-        bad_request
+        reject("Object Actor Not A Recipient")
       end
       case activity.object
       when ActivityPub::Activity::Follow
         unless Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.actor)
-          bad_request
+          reject("Follow Not Present")
         end
       when ActivityPub::Activity::QuoteRequest
         unless answer_quote_request_authorized?(activity)
-          bad_request
+          reject("Quote Request Not Authorized")
         end
       else
-        bad_request
+        reject("Object Type Not Supported")
       end
     when ActivityPub::Activity::Reject
       unless activity.object?.try(&.local?)
-        bad_request
+        reject("Object Not Local")
       end
       unless recipients.any? { |recipient| recipient.iri == activity.object.actor.iri }
-        bad_request
+        reject("Object Actor Not A Recipient")
       end
       case activity.object
       when ActivityPub::Activity::Follow
         unless Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.actor)
-          bad_request
+          reject("Follow Not Present")
         end
       when ActivityPub::Activity::QuoteRequest
         unless answer_quote_request_authorized?(activity)
-          bad_request
+          reject("Quote Request Not Authorized")
         end
       else
-        bad_request
+        reject("Object Type Not Supported")
       end
     when ActivityPub::Activity::Undo
       unless activity.actor?(fetch_identity, dereference: true, deadline: deadline)
-        bad_request
+        reject("Actor Not Present")
       end
       # prefer the database record over the payload: an embedded
       # object is parsed into a new instance that carries no
@@ -573,23 +580,26 @@ class InboxesController
          (persisted = ActivityPub::Activity.find?(object_iri, include_undone: true))
         activity.object = persisted
       end
-      case (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, include_undone: true, deadline: deadline) })
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, include_undone: true, deadline: deadline) })
+        bad_request_or_bad_gateway("Object Not Present")
+      end
+      case object
       when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         unless object.actor == activity.actor
-          bad_request
+          reject("Actor Mismatch")
         end
       when ActivityPub::Activity::Follow
         unless (followed = object.object?(include_deleted: true)) && followed.local?
-          bad_request
+          reject("Follow Object Not Local")
         end
         unless object.actor == activity.actor
-          bad_request
+          reject("Actor Mismatch")
         end
         unless object.undone? || Relationship::Social::Follow.find?(actor: object.actor, object: followed)
-          bad_request
+          reject("Follow Not Present")
         end
       else
-        bad_request_or_bad_gateway
+        bad_request_or_bad_gateway("Object Type Not Supported")
       end
     when ActivityPub::Activity::Delete
       # fetch the object from the database because we can't trust the
@@ -597,37 +607,37 @@ class InboxesController
       # be replaced by a tombstone (per the spec).
       if (community = via_community)
         unless (object = ActivityPub::Object.find?(activity.object_iri, include_deleted: true))
-          bad_request
+          reject("Object Not Present")
         end
         unless relay_delete_authorized?(fetch_identity, community, object, transient, deadline)
-          bad_request_or_bad_gateway
+          bad_request_or_bad_gateway("Relay Delete Not Authorized")
         end
         activity.object = object
       else
         unless activity.actor?(fetch_identity, dereference: true, deadline: deadline)
-          bad_request
+          reject("Actor Not Present")
         end
         if (object = ActivityPub::Object.find?(activity.object_iri))
           unless object.attributed_to? == activity.actor
-            bad_request
+            reject("Object Not Attributed To Actor")
           end
           activity.object = object
         elsif (object = ActivityPub::Actor.find?(activity.object_iri))
           unless object == activity.actor
-            bad_request
+            reject("Actor Mismatch")
           end
           activity.actor = activity.object = object
         else
-          bad_request
+          reject("Object Not Present")
         end
       end
     else
-      bad_request("Activity Not Supported")
+      reject("Activity Not Supported")
     end
 
     unless activity.is_a?(ActivityPub::Activity::Delete)
       if activity.responds_to?(:object?) && activity.object?.is_a?(ActivityPub::Object::QuoteAuthorization)
-        bad_request
+        reject("Quote Authorization Not Allowed")
       end
     end
 

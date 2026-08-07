@@ -229,8 +229,11 @@ Spectator.describe InboxesController do
       around_each do |proc|
         previous = InboxesController.max_inbox_fetch_time
         InboxesController.max_inbox_fetch_time = 0.seconds
-        proc.call
-        InboxesController.max_inbox_fetch_time = previous
+        begin
+          proc.call
+        ensure
+          InboxesController.max_inbox_fetch_time = previous
+        end
       end
 
       context "and the failure is during verification" do

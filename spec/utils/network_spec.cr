@@ -275,7 +275,7 @@ Spectator.describe Ktistec::Network do
 
       it "fails" do
         expect { described_class.get(key_pair, "https://external/specified-page", deadline: deadline) }
-          .to raise_error(Ktistec::Network::TransientError, /Deadline exceeded/)
+          .to raise_error(Ktistec::Network::DeadlineExceeded, /Deadline exceeded/)
       end
 
       it "makes no request" do
@@ -301,7 +301,7 @@ Spectator.describe Ktistec::Network do
 
       it "fails" do
         expect { described_class.read_strict_capped(IO::Memory.new("content"), 1024, "https://external/", deadline: deadline) }
-          .to raise_error(Ktistec::Network::TransientError, /Deadline exceeded/)
+          .to raise_error(Ktistec::Network::DeadlineExceeded, /Deadline exceeded/)
       end
     end
   end

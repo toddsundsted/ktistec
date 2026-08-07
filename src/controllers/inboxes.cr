@@ -157,6 +157,10 @@ class InboxesController
   rescue ex : Ktistec::JSON_LD::MismatchedIRI
     Log.warn { "[#{request_id}] dereference failed (mismatched IRI): #{ex.message}" }
     nil
+  rescue ex : Ktistec::Network::DeadlineExceeded
+    Log.debug { "[#{request_id}] dereference failed (deadline exceeded): #{ex.message}" }
+    transient.failure = true
+    nil
   rescue ex : Ktistec::Network::TransientError
     Log.trace { "[#{request_id}] dereference failed (transient): #{ex.message}" }
     transient.failure = true

@@ -289,14 +289,14 @@ module Ktistec
 
     # Bounds `timeout` so that it cannot overrun `deadline`.
     #
-    # Raises `TransientError` if the deadline has already passed.
+    # Raises `DeadlineExceeded` if the deadline has already passed.
     #
     # A `nil` deadline means no bound.
     #
     private def bounded(timeout : Time::Span, deadline : Time::Instant?) : Time::Span
       return timeout unless deadline
       remaining = deadline - Time.instant
-      raise TransientError.new("Deadline exceeded") unless remaining > Time::Span.zero
+      raise DeadlineExceeded.new("Deadline exceeded") unless remaining > Time::Span.zero
       {timeout, remaining}.min
     end
 
@@ -372,7 +372,7 @@ module Ktistec
     # past the cap.
     #
     # When `deadline` is supplied, every blocking operation is bounded
-    # by the time remaining, and `TransientError` is raised -- before
+    # by the time remaining, and `DeadlineExceeded` is raised -- before
     # any I/O -- once it is spent.
     #
     def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
@@ -473,6 +473,10 @@ module Ktistec
           break
         rescue Compress::Deflate::Error | Compress::Gzip::Error
           message = "Encoding error"
+          break
+        rescue ex : DeadlineExceeded
+          error_class = DeadlineExceeded
+          message = ex.message.to_s
           break
         rescue ex : TransientError
           message = ex.message.to_s
@@ -653,6 +657,11 @@ module Ktistec
     # Raised when retrying may succeed.
     #
     class TransientError < Error
+    end
+
+    # Raised when the fetch deadline is exceeded.
+    #
+    class DeadlineExceeded < TransientError
     end
 
     # Raised when the response status is 404 or 410.

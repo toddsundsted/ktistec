@@ -287,12 +287,25 @@ module Ktistec
     READ_TIMEOUT    = 5.seconds
     WRITE_TIMEOUT   = 5.seconds
 
+    # Bounds `timeout` so that it cannot overrun `deadline`.
+    #
+    # Raises `TransientError` if the deadline has already passed.
+    #
+    # A `nil` deadline means no bound.
+    #
+    private def bounded(timeout : Time::Span, deadline : Time::Instant?) : Time::Span
+      return timeout unless deadline
+      remaining = deadline - Time.instant
+      raise TransientError.new("Deadline exceeded") unless remaining > Time::Span.zero
+      {timeout, remaining}.min
+    end
+
     # Resolves `host` on `port` with a DNS timeout, validates every
     # returned address against the SSRF policy, and returns the first
     # validated `Addrinfo`.
     #
-    private def resolve_and_validate(host : String, port : Int32) : Socket::Addrinfo
-      addrinfos = Socket::Addrinfo.tcp(host, port, timeout: DNS_TIMEOUT)
+    private def resolve_and_validate(host : String, port : Int32, deadline : Time::Instant? = nil) : Socket::Addrinfo
+      addrinfos = Socket::Addrinfo.tcp(host, port, timeout: bounded(DNS_TIMEOUT, deadline))
       raise TransientError.new("No addresses found: #{host}") if addrinfos.empty?
       addrinfos.each do |addrinfo|
         unless safe_for_untrusted_outbound_http?(addrinfo.ip_address)
@@ -306,16 +319,16 @@ module Ktistec
     # wraps it in a TLS layer using the URL hostname for SNI and
     # peer-certificate verification.
     #
-    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo) : IO
+    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo, deadline : Time::Instant? = nil) : IO
       tcp = TCPSocket.new(addrinfo.family)
       begin
-        tcp.connect(addrinfo, timeout: CONNECT_TIMEOUT)
+        tcp.connect(addrinfo, timeout: bounded(CONNECT_TIMEOUT, deadline))
+        tcp.read_timeout = bounded(READ_TIMEOUT, deadline)
+        tcp.write_timeout = bounded(WRITE_TIMEOUT, deadline)
       rescue ex
         tcp.close
         raise ex
       end
-      tcp.read_timeout = READ_TIMEOUT
-      tcp.write_timeout = WRITE_TIMEOUT
       tcp.sync = false
       if uri.scheme == "https"
         begin
@@ -334,11 +347,11 @@ module Ktistec
       end
     end
 
-    private def make_client(uri : URI) : HTTP::Client
+    private def make_client(uri : URI, deadline : Time::Instant? = nil) : HTTP::Client
       host = uri.host.not_nil!
       port = uri.port || (uri.scheme == "https" ? 443 : 80)
-      addrinfo = resolve_and_validate(host, port)
-      io = open_socket(uri, addrinfo)
+      addrinfo = resolve_and_validate(host, port, deadline)
+      io = open_socket(uri, addrinfo, deadline)
       HTTP::Client.new(io: io, host: host, port: port)
     end
 
@@ -358,7 +371,11 @@ module Ktistec
     # bytes are read, and streamed bodies are aborted if they grow
     # past the cap.
     #
-    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
+    # When `deadline` is supplied, every blocking operation is bounded
+    # by the time remaining, and `TransientError` is raised -- before
+    # any I/O -- once it is spent.
+    #
+    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
       was = url
       error_class = TransientError # default error class
       message = "Failed"
@@ -372,7 +389,7 @@ module Ktistec
           unless uri.scheme == "http" || uri.scheme == "https"
             raise PermanentError.new("URL scheme not supported: #{url}")
           end
-          client = make_client(uri)
+          client = make_client(uri, deadline)
           request_headers =
             if key_pair
               Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
@@ -397,7 +414,7 @@ module Ktistec
                 raise PermanentError.new("Response body too large [Content-Length=#{n} > #{max_bytes}]: #{url}")
               end
               if (io = response.body_io?)
-                body_capped = read_strict_capped(io, max_bytes, url)
+                body_capped = read_strict_capped(io, max_bytes, url, deadline)
               end
             end
           end
@@ -457,6 +474,9 @@ module Ktistec
         rescue Compress::Deflate::Error | Compress::Gzip::Error
           message = "Encoding error"
           break
+        rescue ex : TransientError
+          message = ex.message.to_s
+          break
         rescue ex : Exception
           # an HTTP::Client built on an existing IO cannot reconnect;
           # when the peer drops the connection mid-request,
@@ -481,54 +501,64 @@ module Ktistec
     # Reads up to `max` bytes from `io` into a String. Raises if `io`
     # has more bytes available past the limit.
     #
-    private def read_strict_capped(io : IO, max : Int32, url) : String
+    # Rechecks `deadline` between reads.
+    #
+    private def read_strict_capped(io : IO, max : Int32, url, deadline : Time::Instant? = nil) : String
       buf = IO::Memory.new
-      bytes = IO.copy(io, buf, max + 1)
-      if bytes > max
+      buffer = Bytes.new(IO::DEFAULT_BUFFER_SIZE)
+      remaining = max + 1
+      while remaining > 0
+        bounded(READ_TIMEOUT, deadline)
+        len = io.read(buffer[0, Math.min(buffer.size, remaining)])
+        break if len == 0
+        buf.write(buffer[0, len])
+        remaining -= len
+      end
+      if buf.bytesize > max
         raise PermanentError.new("Response body too large [>#{max} bytes]: #{url}")
       end
       buf.to_s
     end
 
     # :ditto:
-    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
-      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes)
+    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil, &)
+      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     end
 
     # :ditto:
-    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
-      get(nil, url, headers, attempts, max_bytes: max_bytes)
+    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+      get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     end
 
     # :ditto:
-    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
-      yield get(nil, url, headers, attempts, max_bytes: max_bytes)
+    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil, &)
+      yield get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     end
 
     # :ditto:
-    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
-      get(key_pair, url, headers, attempts, max_bytes: max_bytes)
+    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+      get(key_pair, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
     # :ditto:
-    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
-      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes)
+    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil, &)
+      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
     # :ditto:
-    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
-      get(nil, url, headers, attempts, max_bytes: max_bytes)
+    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+      get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
     # :ditto:
-    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
-      yield get(nil, url, headers, attempts, max_bytes: max_bytes)
+    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil, &)
+      yield get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end

@@ -334,7 +334,7 @@ module Ktistec
       @@last_addrinfo = nil
     end
 
-    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo) : IO
+    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo, deadline : Time::Instant? = nil) : IO
       @@last_addrinfo = addrinfo
       IO::Memory.new
     end

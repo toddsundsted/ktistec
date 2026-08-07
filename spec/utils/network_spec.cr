@@ -10,6 +10,10 @@ module Ktistec
     def classify(addr : Socket::IPAddress)
       previous_def
     end
+
+    def read_strict_capped(io : IO, max : Int32, url, deadline : Time::Instant? = nil) : String
+      previous_def
+    end
   end
 end
 
@@ -257,11 +261,48 @@ Spectator.describe Ktistec::Network do
         expect(response.body).to eq(body)
       end
     end
+
+    context "given a deadline that has not passed" do
+      let(deadline) { Time.instant + 1.hour }
+
+      it "fetches the page" do
+        expect(described_class.get(key_pair, "https://external/specified-page", deadline: deadline).body).to eq("content")
+      end
+    end
+
+    context "given a deadline that has passed" do
+      let(deadline) { Time.instant - 1.second }
+
+      it "fails" do
+        expect { described_class.get(key_pair, "https://external/specified-page", deadline: deadline) }
+          .to raise_error(Ktistec::Network::TransientError, /Deadline exceeded/)
+      end
+
+      it "makes no request" do
+        expect { described_class.get?(key_pair, "https://external/specified-page", deadline: deadline) }
+          .not_to change { HTTP::Client.requests.size }
+      end
+    end
   end
 
   describe ".get?" do
     it "returns nil on errors" do
       expect { described_class.get?(key_pair, "https://external/returns-500") }.to be_nil
+    end
+  end
+
+  describe "#read_strict_capped" do
+    it "reads the body" do
+      expect(described_class.read_strict_capped(IO::Memory.new("content"), 1024, "https://external/")).to eq("content")
+    end
+
+    context "given a deadline that has passed" do
+      let(deadline) { Time.instant - 1.second }
+
+      it "fails" do
+        expect { described_class.read_strict_capped(IO::Memory.new("content"), 1024, "https://external/", deadline: deadline) }
+          .to raise_error(Ktistec::Network::TransientError, /Deadline exceeded/)
+      end
     end
   end
 

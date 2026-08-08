@@ -14,6 +14,39 @@ class InboxesController
 
   MAX_INBOX_REQUEST_BYTES = 1_048_576
 
+  # Maximum time to spend fetching resources.
+  #
+  # Verification and dispatch make several sequential fetches --
+  # signer key, signer, actor, the activity, its object, its
+  # attributed-to.
+  #
+  # Every figure below is from an analysis of the access log covering
+  # 2026-05-26 to 2026-08-04 -- 403,672 inbox POSTs, 95,144 of them
+  # 200s -- run on 2026-08-07.
+  #
+  # 4s is nowhere near the common case: 63.5% of deliveries never
+  # fetch at all (medians 0.1-1.0ms), and of all deliveries that
+  # succeed, 96.8% finish in under a second. Only a delivery that
+  # makes outbound fetches can reach 4s at all.
+  #
+  # Below 4s is real work: a fetch against a peer has a p75 of 462ms,
+  # and the chain of sequential fetches fills the 1-2s band for 2.25%
+  # of successful deliveries.
+  #
+  # Above 4s are our own timeouts: per-operation timeouts are 5s, and
+  # the histogram steps across 5s (36 requests in 4.5-5s, 372 in
+  # 5-5.5s, ...).
+  #
+  # Between 2.5s and 5s there is almost nothing -- 0.44% of successful
+  # deliveries, spread evenly rather than clustered -- so the cutoff
+  # can sit anywhere in that range without splitting a class of
+  # deliveries that belong together.
+  #
+  # The worst case observed is 45.7s. A 4s budget costs ~0.37% of
+  # successful deliveries (~5/day), which become 502s and are retried.
+  #
+  class_property max_inbox_fetch_time : Time::Span = 4.seconds
+
   skip_auth ["/inbox", "/actors/:username/inbox"], POST
 
   # Lightweight `KeyPair` for path-based `keyId` resolution.
@@ -77,14 +110,16 @@ class InboxesController
   #
   # Returns `nil` on any failure.
   #
-  private def self.resolve_signer(key_pair, key_id : String, request_id)
+  private def self.resolve_signer(key_pair, key_id : String, request_id, transient, deadline)
     if key_id.includes?("#")
       # case 1: fragment URI
       {key_id.split("#", 2).first, nil}
     else
       # cases 2 & 3: path URI
       accept = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-      response = Ktistec::Network.get?(key_pair, key_id, accept)
+      response = try_dereference(transient, request_id) do
+        Ktistec::Network.get(key_pair, key_id, accept, deadline: deadline)
+      end
       unless response
         Log.warn { "[#{request_id}] failed to fetch key for #{key_id}" }
         return
@@ -108,26 +143,79 @@ class InboxesController
     Log.trace { "[#{request_id}] keyId resolution failed with exception: #{ex.message}" }
   end
 
+  # Records whether a dereference failed for a reason that may not
+  # reproduce on redelivery.
+  #
+  private class Transient
+    property? failure = false
+  end
+
+  # Dereferences the given IRI, noting whether failure was transient.
+  #
+  private def self.try_dereference(transient, request_id, &)
+    yield
+  rescue ex : Ktistec::JSON_LD::MismatchedIRI
+    Log.warn { "[#{request_id}] dereference failed (mismatched IRI): #{ex.message}" }
+    nil
+  rescue ex : Ktistec::Network::DeadlineExceeded
+    Log.debug { "[#{request_id}] dereference failed (deadline exceeded): #{ex.message}" }
+    transient.failure = true
+    nil
+  rescue ex : Ktistec::Network::TransientError
+    Log.trace { "[#{request_id}] dereference failed (transient): #{ex.message}" }
+    transient.failure = true
+    nil
+  rescue ex : Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+    Log.trace { "[#{request_id}] dereference failed (permanent): #{ex.message}" }
+    nil
+  end
+
+  # Rejects a delivery with a reason.
+  #
+  # Both macros read `request_id` and `activity` at the call site.
+  #
+  # Use `reject` when the delivery is permanently bad. Use
+  # `bad_request_or_bad_gateway` -- which additionally reads
+  # `transient` -- when an earlier fetch may have failed transiently.
+  #
+  private macro reject(message)
+    Log.debug { "[#{request_id}] rejected #{activity.class}: #{ {{message}} }" }
+    bad_request({{message}})
+  end
+
+  # :ditto:
+  private macro bad_request_or_bad_gateway(message)
+    if transient.failure?
+      Log.debug { "[#{request_id}] rejected #{activity.class}: #{ {{message}} } (transient)" }
+      bad_gateway({{message}})
+    else
+      Log.debug { "[#{request_id}] rejected #{activity.class}: #{ {{message}} }" }
+      bad_request({{message}})
+    end
+  end
+
   # Finds a cached actor by IRI, or dereferences and saves it.
   #
-  private def self.find_or_dereference_actor(key_pair, iri, request_id, require_key)
+  private def self.find_or_dereference_actor(key_pair, iri, request_id, transient, deadline, require_key)
     return unless iri
     actor = ActivityPub::Actor.find?(iri)
     return actor if actor && (!require_key || actor.pem_public_key)
-    ActivityPub::Actor.dereference?(key_pair, iri, ignore_cached: true, include_key: true).try do |dereferenced|
-      dereferenced.verify_handle!
+    try_dereference(transient, request_id) do
+      ActivityPub::Actor.dereference(key_pair, iri, ignore_cached: true, include_key: true, deadline: deadline)
+    end.try do |dereferenced|
+      dereferenced.verify_handle!(deadline)
       dereferenced.save
     end
   end
 
   # Authorizes a community-relayed `Delete`.
   #
-  private def self.relay_delete_authorized?(key_pair, community, object)
+  private def self.relay_delete_authorized?(key_pair, community, object, transient, deadline)
     if (audience = object.audience) && audience.includes?(community.iri) &&
        Account.all.any? { |local| Relationship::Social::Follow.find?(actor: local.actor, object: community) }
       return true
     end
-    object_gone_at_origin?(key_pair, object.iri)
+    object_gone_at_origin?(key_pair, object.iri, transient, deadline)
   end
 
   # Returns true if both IRIs are on the same host.
@@ -150,9 +238,12 @@ class InboxesController
 
   # Returns true if the object is gone (404/410) at its own origin.
   #
-  private def self.object_gone_at_origin?(key_pair, iri)
+  private def self.object_gone_at_origin?(key_pair, iri, transient, deadline)
     headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-    Ktistec::Network.get(key_pair, iri, headers)
+    Ktistec::Network.get(key_pair, iri, headers, deadline: deadline)
+    false
+  rescue Ktistec::Network::TransientError
+    transient.failure = true
     false
   rescue Ktistec::Network::NotFoundError
     true
@@ -243,10 +334,11 @@ class InboxesController
     # body. 3a) a relayed Delete is authenticated by the relaying
     # community's (Group) Announce signature. 3b) a directly-delivered
     # activity is authenticated when the signer is its own actor.
-    # otherwise, verify the activity by 4) retrieving it from its
-    # origin, or 5) as a last resort, checking the existence of its
-    # object or actor. finally, 6) associate the verified activity
-    # with its actor.
+    # otherwise, verify the activity by 4) returning it from the
+    # database if we already hold it, and retrieving it from its
+    # origin if we do not, or 5) as a last resort, checking the
+    # existence of its object or actor. finally, 6) associate the
+    # verified activity with its actor.
 
     # important: never use/trust credentials in an embedded actor!
 
@@ -254,9 +346,13 @@ class InboxesController
 
     signer = nil
 
-    if (key_id = parse_key_id(env.request.headers)) && (resolved = resolve_signer(fetch_identity, key_id, request_id))
+    transient = Transient.new
+
+    deadline = Time.instant + max_inbox_fetch_time
+
+    if (key_id = parse_key_id(env.request.headers)) && (resolved = resolve_signer(fetch_identity, key_id, request_id, transient, deadline))
       signer_iri, resolved_key = resolved
-      candidate = find_or_dereference_actor(fetch_identity, signer_iri, request_id, require_key: resolved_key.nil?)
+      candidate = find_or_dereference_actor(fetch_identity, signer_iri, request_id, transient, deadline, require_key: resolved_key.nil?)
       key_pair = resolved_key || candidate
       if candidate && key_pair && Ktistec::Signature.verify?(key_pair, "#{host}#{env.request.path}", env.request.headers, body)
         signer = candidate
@@ -280,16 +376,23 @@ class InboxesController
         via_community = signer
         verified = true
       end
-      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, require_key: false)
+      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
     elsif !inner_ld && signer && outer_actor_iri && signer.iri == outer_actor_iri
       actor = signer
       verified = true
     else
-      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, require_key: false)
+      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
 
       # 4
 
-      if activity.iri.presence && (temporary = ActivityPub::Activity.dereference?(fetch_identity, activity.iri))
+      temporary =
+        if activity.iri.presence
+          try_dereference(transient, request_id) do
+            ActivityPub::Activity.dereference(fetch_identity, activity.iri, deadline: deadline)
+          end
+        end
+
+      if temporary
         activity = temporary
         verified = true
       else
@@ -308,19 +411,25 @@ class InboxesController
         if (object_iri = activity.object_iri)
           if activity.is_a?(ActivityPub::Activity::Create)
             Log.trace { "[#{request_id}] checking object of create iri=#{object_iri}" }
-            if (temporary = ActivityPub::Object.dereference?(fetch_identity, object_iri, ignore_cached: true))
+            temporary = try_dereference(transient, request_id) do
+              ActivityPub::Object.dereference(fetch_identity, object_iri, ignore_cached: true, deadline: deadline)
+            end
+            if temporary
               activity.object = temporary
               verified = true
             end
           elsif activity.is_a?(ActivityPub::Activity::Update)
             Log.trace { "[#{request_id}] checking object of update iri=#{object_iri}" }
-            if (temporary = ActivityPub::Object.dereference?(fetch_identity, object_iri, ignore_cached: true))
+            temporary = try_dereference(transient, request_id) do
+              ActivityPub::Object.dereference(fetch_identity, object_iri, ignore_cached: true, deadline: deadline)
+            end
+            if temporary
               activity.object = temporary
               verified = true
             end
           elsif activity.is_a?(ActivityPub::Activity::Delete)
             Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
-            verified = true if object_gone_at_origin?(fetch_identity, object_iri)
+            verified = true if object_gone_at_origin?(fetch_identity, object_iri, transient, deadline)
           end
         end
       end
@@ -330,11 +439,11 @@ class InboxesController
     # community's signature is the authentication); every other path
     # requires the actor be present.
     unless actor || via_community
-      bad_request("Actor Not Present")
+      bad_request_or_bad_gateway("Actor Not Present")
     end
 
     unless activity && verified
-      bad_request("Can't Be Verified")
+      bad_request_or_bad_gateway("Can't Be Verified")
     end
 
     # an activity's own identifier must be on the same host as its
@@ -344,7 +453,7 @@ class InboxesController
     if (activity_iri = activity.iri.presence) && (activity_actor_iri = activity.actor_iri)
       unless same_host?(activity_iri, activity_actor_iri)
         Log.trace { "[#{request_id}] activity iri=#{activity_iri} is not on the actor's host actor=#{activity_actor_iri}" }
-        bad_request("Origin Mismatch")
+        reject("Origin Mismatch")
       end
     end
 
@@ -361,13 +470,16 @@ class InboxesController
 
     Log.trace { "[#{request_id}] processing type=#{activity.class} recipients=#{deliver_to}" }
 
+    # a verified activity's earlier failures must not turn a permanent rejection into a 502
+    transient = Transient.new
+
     case activity
     when ActivityPub::Activity::Announce
-      unless (object = activity.object?(fetch_identity, dereference: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, deadline: deadline) })
+        bad_request_or_bad_gateway("Object Not Present")
       end
-      unless object.attributed_to?(fetch_identity, dereference: true)
-        bad_request
+      unless try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true, deadline: deadline) }
+        bad_request_or_bad_gateway("Object Attribution Not Present")
       end
     when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
       # DESIGN DECISION: Actors can both Like AND Dislike the same
@@ -375,92 +487,92 @@ class InboxesController
       # state. Some ActivityPub implementations may allow users to both
       # upvote and downvote the same content. Ktistec preserves this
       # state as received.
-      unless (object = activity.object?(fetch_identity, dereference: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, deadline: deadline) })
+        bad_request_or_bad_gateway("Object Not Present")
       end
-      unless object.attributed_to?(fetch_identity, dereference: true)
-        bad_request
+      unless try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true, deadline: deadline) }
+        bad_request_or_bad_gateway("Object Attribution Not Present")
       end
     when ActivityPub::Activity::Create
-      unless (object = activity.object?(fetch_identity, dereference: true, ignore_cached: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, ignore_cached: true, deadline: deadline) })
+        bad_request_or_bad_gateway("Object Not Present")
       end
-      unless activity.actor == object.attributed_to?(fetch_identity, dereference: true)
-        bad_request
+      unless activity.actor == try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true, deadline: deadline) }
+        bad_request_or_bad_gateway("Object Not Attributed To Actor")
       end
       object.attributed_to = activity.actor
     when ActivityPub::Activity::Update
-      case (object = activity.object?(fetch_identity, dereference: true, ignore_cached: true))
+      case (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, ignore_cached: true, deadline: deadline) })
       when ActivityPub::Actor
         unless object.iri == activity.actor.iri
-          bad_request
+          reject("Actor Mismatch")
         end
-        object.verify_handle!
+        object.verify_handle!(deadline)
         object.up!
         activity.actor = activity.object = object
       when ActivityPub::Object
-        unless activity.actor == object.attributed_to?(fetch_identity, dereference: true)
-          bad_request
+        unless activity.actor == try_dereference(transient, request_id) { object.attributed_to(fetch_identity, dereference: true, deadline: deadline) }
+          bad_request_or_bad_gateway("Object Not Attributed To Actor")
         end
         object.attributed_to = activity.actor
       else
-        bad_request
+        bad_request_or_bad_gateway("Object Not Present")
       end
     when ActivityPub::Activity::Follow
       unless actor
-        bad_request
+        reject("Actor Not Present")
       end
-      unless (object = activity.object?(fetch_identity, dereference: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, deadline: deadline) })
+        bad_request_or_bad_gateway("Object Not Present")
       end
     when ActivityPub::Activity::QuoteRequest
-      unless (object = activity.object?(fetch_identity, dereference: true))
-        bad_request
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, deadline: deadline) })
+        bad_request_or_bad_gateway("Object Not Present")
       end
       unless object.local? && object.visible
-        bad_request
+        reject("Object Not Quotable")
       end
     when ActivityPub::Activity::Accept
       unless activity.object?.try(&.local?)
-        bad_request
+        reject("Object Not Local")
       end
       unless recipients.any? { |recipient| recipient.iri == activity.object.actor.iri }
-        bad_request
+        reject("Object Actor Not A Recipient")
       end
       case activity.object
       when ActivityPub::Activity::Follow
         unless Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.actor)
-          bad_request
+          reject("Follow Not Present")
         end
       when ActivityPub::Activity::QuoteRequest
         unless answer_quote_request_authorized?(activity)
-          bad_request
+          reject("Quote Request Not Authorized")
         end
       else
-        bad_request
+        reject("Object Type Not Supported")
       end
     when ActivityPub::Activity::Reject
       unless activity.object?.try(&.local?)
-        bad_request
+        reject("Object Not Local")
       end
       unless recipients.any? { |recipient| recipient.iri == activity.object.actor.iri }
-        bad_request
+        reject("Object Actor Not A Recipient")
       end
       case activity.object
       when ActivityPub::Activity::Follow
         unless Relationship::Social::Follow.find?(actor: activity.object.actor, object: activity.actor)
-          bad_request
+          reject("Follow Not Present")
         end
       when ActivityPub::Activity::QuoteRequest
         unless answer_quote_request_authorized?(activity)
-          bad_request
+          reject("Quote Request Not Authorized")
         end
       else
-        bad_request
+        reject("Object Type Not Supported")
       end
     when ActivityPub::Activity::Undo
-      unless activity.actor?(fetch_identity, dereference: true)
-        bad_request
+      unless activity.actor?(fetch_identity, dereference: true, deadline: deadline)
+        reject("Actor Not Present")
       end
       # prefer the database record over the payload: an embedded
       # object is parsed into a new instance that carries no
@@ -469,23 +581,26 @@ class InboxesController
          (persisted = ActivityPub::Activity.find?(object_iri, include_undone: true))
         activity.object = persisted
       end
-      case (object = activity.object?(fetch_identity, dereference: true, include_undone: true))
+      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, include_undone: true, deadline: deadline) })
+        bad_request_or_bad_gateway("Object Not Present")
+      end
+      case object
       when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
         unless object.actor == activity.actor
-          bad_request
+          reject("Actor Mismatch")
         end
       when ActivityPub::Activity::Follow
         unless (followed = object.object?(include_deleted: true)) && followed.local?
-          bad_request
+          reject("Follow Object Not Local")
         end
         unless object.actor == activity.actor
-          bad_request
+          reject("Actor Mismatch")
         end
         unless object.undone? || Relationship::Social::Follow.find?(actor: object.actor, object: followed)
-          bad_request
+          reject("Follow Not Present")
         end
       else
-        bad_request
+        bad_request_or_bad_gateway("Object Type Not Supported")
       end
     when ActivityPub::Activity::Delete
       # fetch the object from the database because we can't trust the
@@ -493,37 +608,37 @@ class InboxesController
       # be replaced by a tombstone (per the spec).
       if (community = via_community)
         unless (object = ActivityPub::Object.find?(activity.object_iri, include_deleted: true))
-          bad_request
+          reject("Object Not Present")
         end
-        unless relay_delete_authorized?(fetch_identity, community, object)
-          bad_request
+        unless relay_delete_authorized?(fetch_identity, community, object, transient, deadline)
+          bad_request_or_bad_gateway("Relay Delete Not Authorized")
         end
         activity.object = object
       else
-        unless activity.actor?(fetch_identity, dereference: true)
-          bad_request
+        unless activity.actor?(fetch_identity, dereference: true, deadline: deadline)
+          reject("Actor Not Present")
         end
         if (object = ActivityPub::Object.find?(activity.object_iri))
           unless object.attributed_to? == activity.actor
-            bad_request
+            reject("Object Not Attributed To Actor")
           end
           activity.object = object
         elsif (object = ActivityPub::Actor.find?(activity.object_iri))
           unless object == activity.actor
-            bad_request
+            reject("Actor Mismatch")
           end
           activity.actor = activity.object = object
         else
-          bad_request
+          reject("Object Not Present")
         end
       end
     else
-      bad_request("Activity Not Supported")
+      reject("Activity Not Supported")
     end
 
     unless activity.is_a?(ActivityPub::Activity::Delete)
       if activity.responds_to?(:object?) && activity.object?.is_a?(ActivityPub::Object::QuoteAuthorization)
-        bad_request
+        reject("Quote Authorization Not Allowed")
       end
     end
 
@@ -545,7 +660,7 @@ class InboxesController
 
     Log.trace { "[#{request_id}] saved id=#{activity.id}" }
 
-    InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients)
+    InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients, deadline: deadline)
 
     Log.trace { "[#{request_id}] complete" }
 

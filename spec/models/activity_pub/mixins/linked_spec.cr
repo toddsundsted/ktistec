@@ -401,6 +401,249 @@ Spectator.describe Ktistec::Model::Linked do
         expect { subject.linked_model?(key_pair, dereference: true) }.not_to raise_error
       end
     end
+
+    context "when the deadline has passed" do
+      it "does not fetch and does not return the object" do
+        expect(subject.linked_model?(key_pair, dereference: true, deadline: Time.instant - 1.second)).to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+  end
+
+  describe "the generated raising accessor" do
+    let(subject) do
+      LinkedModel.new(
+        iri: "https://test.test/objects/subject",
+        linked_model_iri: "https://remote/objects/object",
+      )
+    end
+    let(object) do
+      LinkedModel.new(
+        iri: "https://remote/objects/object",
+      )
+    end
+    let(key_pair) do
+      KeyPair.new("https://key_pair")
+    end
+
+    context "when the response is an HTML page" do
+      # a valid JSON-LD body served with an HTML content type -- proves
+      # the guard skips on content type, not on unparseable bytes
+      before_each do
+        HTTP::Client.cache.set_response(
+          object.iri,
+          HTTP::Client::Response.new(200, headers: HTTP::Headers{"Content-Type" => "text/html"}, body: object.to_json_ld),
+        )
+      end
+
+      it "fetches the object and raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Network::TransientError)
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+    end
+
+    context "when linked object is local" do
+      before_each do
+        object.assign(iri: "https://test.test/objects/object").save
+        subject.linked_model_iri = object.iri
+      end
+
+      it "returns but does not fetch the object" do
+        expect(subject.linked_model(key_pair, dereference: true, deadline: nil)).not_to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+
+    context "when linked object is remote" do
+      before_each { HTTP::Client.objects << object }
+
+      it "returns and fetches the object" do
+        expect(subject.linked_model(key_pair, dereference: true, deadline: nil)).not_to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+    end
+
+    context "when there is no foreign key" do
+      before_each { subject.linked_model_iri = nil }
+
+      it "does not fetch and raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Model::NotFound)
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+
+    context "when dereference is false and the object is not cached" do
+      it "does not fetch the object and raises an error" do
+        expect { subject.linked_model(key_pair, dereference: false, deadline: nil) }.to raise_error(Ktistec::Model::NotFound)
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+
+    context "when the remote returns an error status" do
+      it "fetches the object and raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Network::NotFoundError)
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+    end
+
+    context "when the remote is unreachable" do
+      before_each { subject.linked_model_iri = "https://remote/timeout-error" }
+
+      it "fetches the object and raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Network::TransientError)
+        expect(HTTP::Client.last?).to match("GET https://remote/timeout-error")
+      end
+    end
+
+    context "when the deadline has passed" do
+      it "does not fetch the object and raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: Time.instant - 1.second) }.to raise_error(Ktistec::Network::TransientError)
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+
+    context "when linked object IRI does not match requested IRI" do
+      let(requested_iri) { "https://remote/objects/requested" }
+
+      before_each do
+        HTTP::Client.objects[requested_iri] = object.to_json_ld
+        subject.linked_model_iri = requested_iri
+      end
+
+      it "fetches the object and raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+        expect(HTTP::Client.last?).to match("GET #{requested_iri}")
+      end
+    end
+
+    context "when linked IRI contains a fragment" do
+      let(iri) { "https://remote/objects/object#activity/like/12345" }
+
+      before_each { subject.linked_model_iri = iri }
+
+      it "does not fetch the object and raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      context "and linked object is cached" do
+        before_each { subject.linked_model = object.assign(iri: iri).save }
+
+        it "returns but does not fetch the object" do
+          expect(subject.linked_model(key_pair, dereference: true, deadline: nil)).not_to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+      end
+    end
+
+    context "when linked object is cached and unchanged" do
+      before_each do
+        HTTP::Client.objects << object
+        subject.linked_model = object.save
+      end
+
+      pre_condition { expect(object.changed?).to be_false }
+
+      it "returns but does not fetch the object" do
+        expect(subject.linked_model(key_pair, dereference: true, ignore_cached: false, deadline: nil)).not_to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "fetches and returns the object" do
+        expect(subject.linked_model(key_pair, dereference: true, ignore_cached: true, deadline: nil)).not_to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+
+      context "and the forced fetch fails" do
+        before_each { HTTP::Client.cache.delete(object.iri) }
+
+        it "raises an error" do
+          expect { subject.linked_model(key_pair, dereference: true, ignore_cached: true, deadline: nil) }.to raise_error(Ktistec::Network::NotFoundError)
+        end
+      end
+    end
+
+    context "when linked object is cached and the remote returns a mismatched document" do
+      before_each do
+        subject.linked_model = object.save
+        HTTP::Client.objects[object.iri] = LinkedModel.new(iri: "https://remote/objects/other").to_json_ld
+      end
+
+      it "raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, ignore_cached: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+      end
+    end
+
+    context "when linked object is changed" do
+      before_each do
+        HTTP::Client.objects << object
+        subject.linked_model = object
+      end
+
+      pre_condition { expect(object.changed?).to be_true }
+
+      it "returns but does not fetch the object" do
+        expect(subject.linked_model(key_pair, dereference: true, ignore_changed: false, deadline: nil)).not_to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      it "fetches and returns the object" do
+        expect(subject.linked_model(key_pair, dereference: true, ignore_changed: true, deadline: nil)).not_to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+
+      context "and a forced refresh fails" do
+        before_each { HTTP::Client.cache.delete(object.iri) }
+
+        it "raises an error" do
+          expect { subject.linked_model(key_pair, dereference: true, ignore_changed: true, deadline: nil) }.to raise_error(Ktistec::Network::NotFoundError)
+        end
+      end
+    end
+
+    context "given bad JSON" do
+      before_each do
+        HTTP::Client.objects[object.iri] = "<html>"
+        subject.linked_model_iri = object.iri
+      end
+
+      it "raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(JSON::ParseException)
+      end
+    end
+
+    context "given bad JSON-LD" do
+      before_each do
+        HTTP::Client.objects[object.iri] = "[]"
+        subject.linked_model_iri = object.iri
+      end
+
+      it "raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
+      end
+    end
+
+    context "given a bad JSON-LD value" do
+      before_each do
+        HTTP::Client.objects[object.iri] = %Q|{"@type":5}|
+        subject.linked_model_iri = object.iri
+      end
+
+      it "raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(TypeCastError)
+      end
+    end
+
+    context "given an unsupported type" do
+      before_each do
+        HTTP::Client.objects[object.iri] = %Q|{"as:linked":{"@type":"FooBarBaz"}}|
+        subject.linked_model_iri = object.iri
+      end
+
+      it "raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(NotImplementedError)
+      end
+    end
   end
 
   describe ".dereference?" do
@@ -606,6 +849,187 @@ Spectator.describe Ktistec::Model::Linked do
 
       it "does not raise an error" do
         expect { subject.dereference?(key_pair, object.iri) }.not_to raise_error
+      end
+    end
+
+    context "when the deadline has passed" do
+      it "does not fetch and does not return the object" do
+        expect(subject.dereference?(key_pair, object.iri, deadline: Time.instant - 1.second)).to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+  end
+
+  describe ".dereference" do
+    let(subject) do
+      LinkedModel
+    end
+    let(object) do
+      LinkedModel.new(
+        iri: "https://remote/objects/object",
+      )
+    end
+    let(key_pair) do
+      KeyPair.new("https://key_pair")
+    end
+
+    context "when the response is an HTML page" do
+      # a valid JSON-LD body served with an HTML content type -- proves
+      # the guard skips on content type, not on unparseable bytes
+      before_each do
+        HTTP::Client.cache.set_response(
+          object.iri,
+          HTTP::Client::Response.new(200, headers: HTTP::Headers{"Content-Type" => "text/html"}, body: object.to_json_ld),
+        )
+      end
+
+      it "fetches the object and raises an error" do
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::Network::TransientError)
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+    end
+
+    context "when linked object is local" do
+      before_each { object.assign(iri: "https://test.test/objects/object").save }
+
+      it "returns but does not fetch the object" do
+        expect(subject.dereference(key_pair, object.iri, deadline: nil)).not_to be_nil
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      context "when object is deleted" do
+        before_each { object.delete! }
+
+        it "does not fetch the object and raises an error" do
+          expect { subject.dereference(key_pair, object.iri, include_deleted: false, deadline: nil) }.to raise_error(Ktistec::Model::NotFound)
+          expect(HTTP::Client.last?).to be_nil
+        end
+
+        it "returns but does not fetch the object" do
+          expect(subject.dereference(key_pair, object.iri, include_deleted: true, deadline: nil)).not_to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+      end
+    end
+
+    context "when linked object is remote" do
+      before_each { HTTP::Client.objects << object }
+
+      it "returns and fetches the object" do
+        expect(subject.dereference(key_pair, object.iri, deadline: nil)).not_to be_nil
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+
+      context "when object is cached" do
+        before_each { object.save }
+
+        it "returns but does not fetch the object" do
+          expect(subject.dereference(key_pair, object.iri, ignore_cached: false, deadline: nil)).not_to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+
+        it "fetches and returns the object" do
+          expect(subject.dereference(key_pair, object.iri, ignore_cached: true, deadline: nil)).not_to be_nil
+          expect(HTTP::Client.last?).to match("GET #{object.iri}")
+        end
+      end
+    end
+
+    context "when a local object does not exist" do
+      let(missing_iri) { "https://test.test/objects/missing" }
+
+      it "does not fetch and raises an error" do
+        expect { subject.dereference(key_pair, missing_iri, deadline: nil) }.to raise_error(Ktistec::Model::NotFound)
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+
+    context "when the remote returns an error status" do
+      it "fetches the object and raises an error" do
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::Network::NotFoundError)
+        expect(HTTP::Client.last?).to match("GET #{object.iri}")
+      end
+    end
+
+    context "when the remote is unreachable" do
+      let(unreachable_iri) { "https://remote/timeout-error" }
+
+      it "fetches the object and raises an error" do
+        expect { subject.dereference(key_pair, unreachable_iri, deadline: nil) }.to raise_error(Ktistec::Network::TransientError)
+        expect(HTTP::Client.last?).to match("GET #{unreachable_iri}")
+      end
+    end
+
+    context "when the deadline has passed" do
+      it "does not fetch the object and raises an error" do
+        expect { subject.dereference(key_pair, object.iri, deadline: Time.instant - 1.second) }.to raise_error(Ktistec::Network::TransientError)
+        expect(HTTP::Client.last?).to be_nil
+      end
+    end
+
+    context "when linked object IRI does not match requested IRI" do
+      let(requested_iri) { "https://remote/objects/requested" }
+
+      before_each { HTTP::Client.objects[requested_iri] = object.to_json_ld }
+
+      it "fetches the object and raises an error" do
+        expect { subject.dereference(key_pair, requested_iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+        expect(HTTP::Client.last?).to match("GET #{requested_iri}")
+      end
+    end
+
+    context "when IRI contains a fragment" do
+      let(iri) { "https://remote/objects/object#updates/123456" }
+
+      it "does not fetch the object and raises an error" do
+        expect { subject.dereference(key_pair, iri, deadline: nil) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
+        expect(HTTP::Client.last?).to be_nil
+      end
+
+      context "and object is cached" do
+        before_each { object.assign(iri: iri).save }
+
+        it "returns but does not fetch the object" do
+          expect(subject.dereference(key_pair, iri, ignore_cached: false, deadline: nil)).not_to be_nil
+          expect(HTTP::Client.last?).to be_nil
+        end
+
+        it "fetches and raises an error" do
+          expect { subject.dereference(key_pair, iri, ignore_cached: true, deadline: nil) }.to raise_error(Ktistec::Model::Linked::FragmentIRI)
+          expect(HTTP::Client.last?).to be_nil
+        end
+      end
+    end
+
+    context "given bad JSON" do
+      before_each { HTTP::Client.objects[object.iri] = "<html>" }
+
+      it "raises an error" do
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(JSON::ParseException)
+      end
+    end
+
+    context "given bad JSON-LD" do
+      before_each { HTTP::Client.objects[object.iri] = "[]" }
+
+      it "raises an error" do
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
+      end
+    end
+
+    context "given a bad JSON-LD value" do
+      before_each { HTTP::Client.objects[object.iri] = %Q|{"@type":5}| }
+
+      it "raises an error" do
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(TypeCastError)
+      end
+    end
+
+    context "given an unsupported type" do
+      before_each { HTTP::Client.objects[object.iri] = %Q|{"as:linked":{"@type":"FooBarBaz"}}| }
+
+      it "raises an error" do
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
       end
     end
   end

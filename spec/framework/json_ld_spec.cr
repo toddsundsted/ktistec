@@ -645,11 +645,15 @@ Spectator.describe Ktistec::JSON_LD do
 
     context "with fetching enabled" do
       around_each do |proc|
+        previous = Ktistec::JSON_LD::Loader.fetch_contexts?
         Ktistec::JSON_LD::Loader.clear_memo
         Ktistec::JSON_LD::Loader.fetch_contexts = true
-        proc.call
-        Ktistec::JSON_LD::Loader.fetch_contexts = false
-        Ktistec::JSON_LD::Loader.clear_memo
+        begin
+          proc.call
+        ensure
+          Ktistec::JSON_LD::Loader.fetch_contexts = previous
+          Ktistec::JSON_LD::Loader.clear_memo
+        end
       end
 
       it "expands terms defined by the self-hosted context" do
@@ -677,9 +681,13 @@ Spectator.describe Ktistec::JSON_LD do
 
       context "and the memo expires" do
         around_each do |proc|
+          previous = Ktistec::JSON_LD::Loader.memo_ttl
           Ktistec::JSON_LD::Loader.memo_ttl = 0.seconds
-          proc.call
-          Ktistec::JSON_LD::Loader.memo_ttl = 1.hour
+          begin
+            proc.call
+          ensure
+            Ktistec::JSON_LD::Loader.memo_ttl = previous
+          end
         end
 
         it "fetches the context twice" do
@@ -785,11 +793,15 @@ Spectator.describe Ktistec::JSON_LD do
     before_each { HTTP::Client.cache[context_url] = context_body }
 
     around_each do |proc|
+      previous = Ktistec::JSON_LD::Loader.fetch_contexts?
       Ktistec::JSON_LD::Loader.clear_memo
       Ktistec::JSON_LD::Loader.fetch_contexts = true
-      proc.call
-      Ktistec::JSON_LD::Loader.fetch_contexts = false
-      Ktistec::JSON_LD::Loader.clear_memo
+      begin
+        proc.call
+      ensure
+        Ktistec::JSON_LD::Loader.fetch_contexts = previous
+        Ktistec::JSON_LD::Loader.clear_memo
+      end
     end
 
     pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#object", "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }

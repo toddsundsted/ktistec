@@ -227,6 +227,13 @@ Spectator.describe InboxActivityProcessor do
             end
           end
 
+          context "given a time budget that is spent" do
+            it "does not dereference the quote authorization" do
+              InboxActivityProcessor.process(account, accept_activity, deadline: Time.instant - 1.second)
+              expect(HTTP::Client.requests).not_to have("GET #{authorization_iri}")
+            end
+          end
+
           it "saves the quote authorization" do
             expect { InboxActivityProcessor.process(account, accept_activity) }
               .to change { ActivityPub::Object::QuoteAuthorization.find?(iri: authorization_iri) }

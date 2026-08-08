@@ -6,6 +6,16 @@ require "../spec_helper/controller"
 require "../spec_helper/factory"
 require "../spec_helper/network"
 
+class InboxesController
+  def self.resolve_signer(key_pair, key_id : String, deadline)
+    resolve_signer(key_pair, key_id, "spec", Transient.new, deadline)
+  end
+
+  def self.object_gone_at_origin?(key_pair, iri, deadline)
+    object_gone_at_origin?(key_pair, iri, Transient.new, deadline)
+  end
+end
+
 Spectator.describe InboxesController do
   setup_spec
 
@@ -14,6 +24,44 @@ Spectator.describe InboxesController do
   end
 
   PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+  describe ".resolve_signer" do
+    let_create(:actor, named: :other, with_keys: true)
+
+    let(expired) { Time.instant - 1.second }
+
+    let(key_id) { "https://remote/keys/key" }
+
+    context "when the time budget is exhausted" do
+      it "makes no request" do
+        expect { described_class.resolve_signer(other, key_id, expired) }
+          .not_to change { HTTP::Client.requests.size }
+      end
+
+      it "resolves no signer" do
+        expect(described_class.resolve_signer(other, key_id, expired)).to be_nil
+      end
+    end
+  end
+
+  describe ".object_gone_at_origin?" do
+    let_create(:actor, named: :other, with_keys: true)
+
+    let(expired) { Time.instant - 1.second }
+
+    let(iri) { "https://remote/objects/object" }
+
+    context "when the time budget is exhausted" do
+      it "makes no request" do
+        expect { described_class.object_gone_at_origin?(other, iri, expired) }
+          .not_to change { HTTP::Client.requests.size }
+      end
+
+      it "does not report the object gone" do
+        expect(described_class.object_gone_at_origin?(other, iri, expired)).to be_false
+      end
+    end
+  end
 
   describe "POST /inbox" do
     # actor with keys is cached
@@ -170,12 +218,71 @@ Spectator.describe InboxesController do
       expect(response.status_code).to eq(400)
     end
 
-    context "when activity was already received" do
+    it "returns 502 if the fetch of the activity fails transiently" do
+      activity.iri = "https://remote/activities/timeout-error"
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+      expect(response.status_code).to eq(502)
+    end
+
+    context "when the time budget is exhausted" do
+      around_each do |proc|
+        previous = InboxesController.max_inbox_fetch_time
+        InboxesController.max_inbox_fetch_time = 0.seconds
+        begin
+          proc.call
+        ensure
+          InboxesController.max_inbox_fetch_time = previous
+        end
+      end
+
+      context "and the failure is during verification" do
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+          expect(response.status_code).to eq(502)
+        end
+
+        it "makes no request" do
+          expect { post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld }
+            .not_to change { HTTP::Client.requests.size }
+        end
+      end
+
+      context "and the failure is during dispatch" do
+        # the signature verifies without a fetch. the activity type is arbitrary.
+
+        let_build(:announce, actor: other, object: nil, to: [actor.iri])
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", announce.to_json_ld(true), "application/json") }
+
+        before_each { announce.object_iri = "https://remote/objects/object" }
+
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+          expect(response.status_code).to eq(502)
+        end
+
+        it "makes no request" do
+          expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+            .not_to change { HTTP::Client.requests.size }
+        end
+      end
+    end
+
+    context "when the activity is already in an inbox" do
       let_create!(:create)
+
+      before_each { put_in_inbox(actor, create) }
 
       it "returns 200" do
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true)
         expect(response.status_code).to eq(200)
+      end
+
+      it "makes no request" do
+        expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true) }
+          .not_to change { HTTP::Client.requests.size }
       end
     end
 
@@ -199,6 +306,68 @@ Spectator.describe InboxesController do
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(JSON.parse(response.body)["msg"]).to eq("actor not present")
       expect(response.status_code).to eq(400)
+    end
+
+    it "returns 502 if the fetch of the actor fails transiently" do
+      activity.actor_iri = "https://remote/actors/timeout-error"
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(JSON.parse(response.body)["msg"]).to eq("actor not present")
+      expect(response.status_code).to eq(502)
+    end
+
+    context "given a Signature header" do
+      let(key_id) { nil }
+
+      let(headers) do
+        HTTP::Headers{
+          "Content-Type" => "application/json",
+          "Signature"    => %Q|keyId="#{key_id}",headers="(request-target)",signature="bogus"|,
+        }
+      end
+
+      # the fragment keyId names the actor
+      context "with a fragment keyId naming an unreachable signer" do
+        let(key_id) { "https://remote/actors/timeout-error#main-key" }
+
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+          expect(response.status_code).to eq(502)
+        end
+      end
+
+      # a path keyId names a key document
+      context "with a path keyId naming an unreachable key" do
+        let(key_id) { "https://remote/keys/timeout-error" }
+
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+          expect(response.status_code).to eq(502)
+        end
+      end
+    end
+
+    # pins the transient/permanent reset behavior at the
+    # verification/dispatch boundary. a like is arbitrary -- we just
+    # need an activity with no object.
+    context "given a transient verification failure and a permanent dispatch rejection" do
+      let_build(:like, named: :activity, actor: other, object: nil)
+
+      let(headers) do
+        HTTP::Headers{
+          "Content-Type" => "application/json",
+          "Signature"    => %q|keyId="https://remote/keys/timeout-error",headers="(request-target)",signature="bogus"|,
+        }
+      end
+
+      before_each { HTTP::Client.activities << activity }
+
+      it "returns 400" do
+        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(400)
+      end
     end
 
     it "does not save the activity on failure" do
@@ -801,6 +970,13 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 502 if the fetch of the object fails transiently" do
+        announce.object_iri = "https://remote/objects/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
       it "fetches object if remote" do
         announce.object_iri = note.iri
         HTTP::Client.objects << note
@@ -820,6 +996,14 @@ Spectator.describe InboxesController do
         note.attributed_to_iri = "https://remote/actors/123"
         post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        announce.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
+        expect(response.status_code).to eq(502)
       end
 
       it "saves the object" do
@@ -949,6 +1133,13 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 502 if the fetch of the object fails transiently" do
+        like.object_iri = "https://remote/objects/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
       it "fetches object if remote" do
         like.object_iri = note.iri
         HTTP::Client.objects << note
@@ -968,6 +1159,14 @@ Spectator.describe InboxesController do
         note.attributed_to_iri = "https://remote/actors/123"
         post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        like.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
+        expect(response.status_code).to eq(502)
       end
 
       it "saves the object" do
@@ -1006,6 +1205,13 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 502 if the fetch of the object fails transiently" do
+        dislike.object_iri = "https://remote/objects/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
       it "fetches object if remote" do
         dislike.object_iri = note.iri
         HTTP::Client.objects << note
@@ -1025,6 +1231,14 @@ Spectator.describe InboxesController do
         note.attributed_to_iri = "https://remote/actors/123"
         post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        dislike.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
+        expect(response.status_code).to eq(502)
       end
 
       it "saves the object" do
@@ -1071,6 +1285,22 @@ Spectator.describe InboxesController do
         note.attributed_to = actor
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
         expect(response.status_code).to eq(400)
+      end
+
+      it "returns 502 if the fetch of the object fails transiently" do
+        create.object_iri = "https://remote/objects/timeout-error"
+        headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(false), "application/json")
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(false)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        create.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
+        expect(response.status_code).to eq(502)
       end
 
       it "fetches object if remote" do
@@ -1263,6 +1493,15 @@ Spectator.describe InboxesController do
           post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
           expect(response.status_code).to eq(200)
         end
+
+        context "but the fetch of the object fails transiently" do
+          let_build(:note, attributed_to: other, iri: "https://remote/objects/timeout-error")
+
+          it "returns 502" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(502)
+          end
+        end
       end
 
       it "is successful" do
@@ -1291,6 +1530,22 @@ Spectator.describe InboxesController do
         note.attributed_to = actor
         post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
         expect(response.status_code).to eq(400)
+      end
+
+      it "returns 502 if the fetch of the object fails transiently" do
+        update.object_iri = "https://remote/objects/timeout-error"
+        headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(false), "application/json")
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(false)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        update.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
+        expect(response.status_code).to eq(502)
       end
 
       it "fetches object if remote" do
@@ -1342,6 +1597,15 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
           expect(response.status_code).to eq(200)
+        end
+
+        context "but the fetch of the object fails transiently" do
+          let_build(:note, attributed_to: other, iri: "https://remote/objects/timeout-error")
+
+          it "returns 502" do
+            post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+            expect(response.status_code).to eq(502)
+          end
         end
       end
 
@@ -1510,6 +1774,15 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 502 if the fetch of the object fails transiently" do
+        follow.actor = other
+        follow.object_iri = "https://remote/actors/timeout-error"
+        HTTP::Client.activities << follow
+        post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
       context "when object is this account" do
         before_each do
           follow.actor = other
@@ -1673,6 +1946,13 @@ Spectator.describe InboxesController do
       it "returns 400 if no object is included" do
         post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
         expect(response.status_code).to eq(400)
+      end
+
+      it "returns 502 if the fetch of the object fails transiently" do
+        quote_request.object_iri = "https://remote/objects/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
       end
 
       it "returns 400 if object is not local" do
@@ -1966,6 +2246,16 @@ Spectator.describe InboxesController do
           announce.destroy
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld(recursive: false)
           expect(response.status_code).to eq(400)
+        end
+
+        it "returns 502 if the fetch of the related activity fails transiently" do
+          announce.destroy
+          announce.iri = "https://remote/activities/timeout-error"
+          undo.object = announce
+          headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld(recursive: false), "application/json")
+          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld(recursive: false)
+          expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+          expect(response.status_code).to eq(502)
         end
 
         it "returns 400 if the announce and undo aren't from the same actor" do
@@ -2358,6 +2648,15 @@ Spectator.describe InboxesController do
           it "succeeds" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)
             expect(response.status_code).to eq(200)
+          end
+
+          context "and the check fails transiently" do
+            let_create(:note, iri: "https://remote/objects/timeout-error")
+
+            it "returns 502" do
+              post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)
+              expect(response.status_code).to eq(502)
+            end
           end
         end
       end
@@ -2798,6 +3097,16 @@ Spectator.describe InboxesController do
           it "is successful" do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
             expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "when the origin check for the object fails transiently" do
+          let_create(:object, attributed_to: lemmy_user, audience: [community.iri], iri: "https://lemmy.ml/post/timeout-error")
+
+          it "returns 502" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(JSON.parse(response.body)["msg"]).to eq("relay delete not authorized")
+            expect(response.status_code).to eq(502)
           end
         end
 

@@ -11,8 +11,8 @@ module Ktistec
     # `Ktistec::HostMeta::RedirectionError` if redirection fails. Otherwise,
     # returns `Ktistec::HostMeta::Result`.
     #
-    def self.query(host, *args)
-      Client.query(host, *args)
+    def self.query(host, *args, **options)
+      Client.query(host, *args, **options)
     end
   end
 end

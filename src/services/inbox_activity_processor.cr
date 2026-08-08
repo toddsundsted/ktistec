@@ -39,12 +39,14 @@ class InboxActivityProcessor
     handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
     receive_task_class : Task::Receive.class = Task::Receive,
     deliver_task_class : Task::Deliver.class = Task::Deliver,
+    deadline : Time::Instant? = nil,
   )
     (recipients || [account].compact).each do |recipient|
       deliver(
         recipient, activity, deliver_to,
         handle_follow_request_task_class: handle_follow_request_task_class,
         deliver_task_class: deliver_task_class,
+        deadline: deadline,
       )
     end
 
@@ -88,6 +90,7 @@ class InboxActivityProcessor
     deliver_to : Array(String)? = nil,
     handle_follow_request_task_class : Task::HandleFollowRequest.class = Task::HandleFollowRequest,
     deliver_task_class : Task::Deliver.class = Task::Deliver,
+    deadline : Time::Instant? = nil,
   )
     if Ktistec::Recipients.recipient?(activity, account.actor, deliver_to) && !filtered?(account.actor, activity)
       unless Relationship::Content::Inbox.find?(owner: account.actor, activity: activity)
@@ -117,7 +120,7 @@ class InboxActivityProcessor
     when ActivityPub::Activity::Accept
       if (object = activity.object).is_a?(ActivityPub::Activity::QuoteRequest)
         if Ktistec::Recipients.semantic_recipient?(activity, account.actor)
-          process_accept_quote_request(account, object, activity)
+          process_accept_quote_request(account, object, activity, deadline)
         end
       end
     end
@@ -189,7 +192,7 @@ class InboxActivityProcessor
     end
   end
 
-  private def self.process_accept_quote_request(account, quote_request, accept)
+  private def self.process_accept_quote_request(account, quote_request, accept, deadline = nil)
     return unless (quoted_post = quote_request.object?)
     return unless (actor_iri = accept.actor_iri) && actor_iri == quoted_post.attributed_to_iri
 
@@ -201,7 +204,7 @@ class InboxActivityProcessor
       Log.info { "quote post not released: accept has no result: #{quote_post.iri}" }
       return
     end
-    unless (quote_authorization = ActivityPub::Object::QuoteAuthorization.dereference?(account.actor, quote_authorization_iri))
+    unless (quote_authorization = ActivityPub::Object::QuoteAuthorization.dereference?(account.actor, quote_authorization_iri, deadline: deadline))
       Log.info { "quote post not released: authorization could not be dereferenced: #{quote_post.iri} #{quote_authorization_iri}" }
       return
     end

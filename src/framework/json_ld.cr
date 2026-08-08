@@ -20,6 +20,12 @@ module Ktistec
     class Error < Exception
     end
 
+    # Raised when a dereferenced document's `id` does not match the
+    # requested IRI.
+    #
+    class MismatchedIRI < Error
+    end
+
     # JSON-LD keywords that expansion acts on. Every other keyword
     # (`@graph`, `@included`, `@reverse`, `@list`, `@nest`, …) is
     # dropped and logged, rather than passed through unexpanded where

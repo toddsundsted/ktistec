@@ -554,11 +554,11 @@ Spectator.describe Ktistec::Model::Linked do
         expect(HTTP::Client.last?).to match("GET #{object.iri}")
       end
 
-      context "and the forced refresh fails" do
+      context "and the forced fetch fails" do
         before_each { HTTP::Client.cache.delete(object.iri) }
 
-        it "returns the cached object" do
-          expect(subject.linked_model(key_pair, dereference: true, ignore_cached: true, deadline: nil)).to be(object) # object identity
+        it "raises an error" do
+          expect { subject.linked_model(key_pair, dereference: true, ignore_cached: true, deadline: nil) }.to raise_error(Ktistec::Network::NotFoundError)
         end
       end
     end

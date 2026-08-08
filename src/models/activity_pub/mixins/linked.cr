@@ -188,30 +188,22 @@ module Ktistec
                             {{name}}_ = self.{{name}}?(include_deleted: include_deleted, include_undone: include_undone) ||
                               raise ::Ktistec::Model::Linked::FragmentIRI.new("URL with fragment is not dereferenceable")
                           else
-                            cached = {{name}}_
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-                            begin
-                              Ktistec::Network.get(key_pair, {{foreign_key}}, headers, deadline: deadline) do |response|
-                                if Ktistec::Model::Linked.json_response?(response)
-                                  {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
-                                  if {{name}}_ && !{{name}}_.iri_matches?({{foreign_key}})
-                                    raise ::Ktistec::JSON_LD::MismatchedIRI.new("IRI mismatch: requested #{{{foreign_key}}}, got #{{{name}}_.iri}")
-                                  else
-                                    self.{{name}} = {{name}}_
-                                  end
+                            Ktistec::Network.get(key_pair, {{foreign_key}}, headers, deadline: deadline) do |response|
+                              if Ktistec::Model::Linked.json_response?(response)
+                                {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
+                                if {{name}}_ && !{{name}}_.iri_matches?({{foreign_key}})
+                                  raise ::Ktistec::JSON_LD::MismatchedIRI.new("IRI mismatch: requested #{{{foreign_key}}}, got #{{{name}}_.iri}")
                                 else
-                                  # a 200 carrying a non-JSON body means
-                                  # no document was served to parse -- an
-                                  # auth wall or a captive portal, as
-                                  # often transient as not.
-                                  raise ::Ktistec::Network::TransientError.new("non-JSON response (#{response.headers["Content-Type"]?})")
+                                  self.{{name}} = {{name}}_
                                 end
+                              else
+                                # a 200 carrying a non-JSON body means
+                                # no document was served to parse -- an
+                                # auth wall or a captive portal, as
+                                # often transient as not.
+                                raise ::Ktistec::Network::TransientError.new("non-JSON response (#{response.headers["Content-Type"]?})")
                               end
-                            rescue ex : ::Ktistec::JSON_LD::MismatchedIRI
-                              raise ex
-                            rescue ex : ::Ktistec::Network::Error | ::Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
-                              raise ex unless cached
-                              {{name}}_ = cached
                             end
                           end
                         else

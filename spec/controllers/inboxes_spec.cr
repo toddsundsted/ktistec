@@ -270,12 +270,19 @@ Spectator.describe InboxesController do
       end
     end
 
-    context "when activity was already received" do
+    context "when the activity is already in an inbox" do
       let_create!(:create)
+
+      before_each { put_in_inbox(actor, create) }
 
       it "returns 200" do
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true)
         expect(response.status_code).to eq(200)
+      end
+
+      it "makes no request" do
+        expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true) }
+          .not_to change { HTTP::Client.requests.size }
       end
     end
 

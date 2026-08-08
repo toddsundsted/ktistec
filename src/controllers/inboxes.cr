@@ -334,10 +334,11 @@ class InboxesController
     # body. 3a) a relayed Delete is authenticated by the relaying
     # community's (Group) Announce signature. 3b) a directly-delivered
     # activity is authenticated when the signer is its own actor.
-    # otherwise, verify the activity by 4) retrieving it from its
-    # origin, or 5) as a last resort, checking the existence of its
-    # object or actor. finally, 6) associate the verified activity
-    # with its actor.
+    # otherwise, verify the activity by 4) returning it from the
+    # database if we already hold it, and retrieving it from its
+    # origin if we do not, or 5) as a last resort, checking the
+    # existence of its object or actor. finally, 6) associate the
+    # verified activity with its actor.
 
     # important: never use/trust credentials in an embedded actor!
 

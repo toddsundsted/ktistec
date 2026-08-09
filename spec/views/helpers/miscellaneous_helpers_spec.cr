@@ -178,6 +178,110 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".name_and_summary" do
+    let_create(:object, name: nil, summary: nil, content: "<p>#{"word " * 10}</p>", media_type: "text/html")
+
+    let(_name_and_summary) { self.class.name_and_summary(object) }
+    let(name) { _name_and_summary.first }
+    let(summary) { _name_and_summary.last }
+
+    it "returns no name" do
+      expect(name).to be_nil
+    end
+
+    it "returns no summary" do
+      expect(summary).to be_nil
+    end
+
+    context "given a name" do
+      before_each { object.assign(name: "A Title") }
+
+      it "returns the name" do
+        expect(name).to eq("A Title")
+      end
+
+      it "returns no summary" do
+        expect(summary).to be_nil
+      end
+    end
+
+    context "given a summary" do
+      before_each { object.assign(summary: "<p>A Summary</p>") }
+
+      it "returns no name" do
+        expect(name).to be_nil
+      end
+
+      it "returns the summary" do
+        expect(summary).to eq("<p>A Summary</p>")
+      end
+    end
+
+    context "given long content" do
+      before_each { object.assign(content: "<p>Content Beginning. #{"word " * 1000}</p>") }
+
+      it "generates a summary from the content" do
+        expect(summary.to_s).to eq("Content Beginning. #{"word " * 36}…")
+      end
+
+      it "escapes the generated summary" do
+        object.assign(content: "<p>Tags Like &lt;script&gt; #{"word " * 1000}</p>")
+        expect(summary.to_s).to start_with("Tags Like &lt;script&gt;")
+      end
+
+      context "and Markdown content" do
+        before_each { object.assign(content: "**Content Beginning.** #{"word " * 1000}", media_type: "text/markdown") }
+
+        it "generates a summary from the content" do
+          expect(summary.to_s).to eq("Content Beginning. #{"word " * 36}…")
+        end
+
+        it "escapes the generated summary" do
+          object.assign(content: "**Tags Like `<script>`** #{"word " * 1000}", media_type: "text/markdown")
+          expect(summary.to_s).to start_with("Tags Like &lt;script&gt;")
+        end
+      end
+
+      context "and a name" do
+        before_each { object.assign(name: "A Title") }
+
+        it "returns the name" do
+          expect(name).to eq("A Title")
+        end
+
+        it "generates a summary from the content" do
+          expect(summary.to_s).to start_with("Content Beginning. word")
+        end
+
+        context "and a summary" do
+          before_each { object.assign(summary: "<p>A Summary</p>") }
+
+          it "returns the name" do
+            expect(name).to eq("A Title")
+          end
+
+          it "returns the summary" do
+            expect(summary).to eq("<p>A Summary</p>")
+          end
+        end
+      end
+
+      context "and a translation" do
+        before_each { object.assign(name: "A Title") }
+
+        let_create!(:translation, origin: object, name: "Un Titre", content: "<p>Tradúction Commence. #{"mot " * 1000}</p>")
+
+        it "returns the translated name" do
+          expect(name).to eq("Un Titre")
+        end
+
+        it "generates a summary from the translated content" do
+          expect(summary.to_s).to start_with("Tradúction Commence. mot")
+        end
+      end
+    end
+  end
+
   describe ".wrap_filter_term" do
     let(term) { "%f\\%o\\_o_" }
 

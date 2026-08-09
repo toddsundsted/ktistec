@@ -287,16 +287,29 @@ module Ktistec
     READ_TIMEOUT    = 5.seconds
     WRITE_TIMEOUT   = 5.seconds
 
+    # Bounds `timeout` so that it cannot overrun `deadline`.
+    #
+    # Raises `DeadlineExceeded` if the deadline has already passed.
+    #
+    # A `nil` deadline means no bound.
+    #
+    private def bounded(timeout : Time::Span, deadline : Time::Instant?) : Time::Span
+      return timeout unless deadline
+      remaining = deadline - Time.instant
+      raise DeadlineExceeded.new("Deadline exceeded") unless remaining > Time::Span.zero
+      {timeout, remaining}.min
+    end
+
     # Resolves `host` on `port` with a DNS timeout, validates every
     # returned address against the SSRF policy, and returns the first
     # validated `Addrinfo`.
     #
-    private def resolve_and_validate(host : String, port : Int32) : Socket::Addrinfo
-      addrinfos = Socket::Addrinfo.tcp(host, port, timeout: DNS_TIMEOUT)
-      raise Error.new("No addresses found: #{host}") if addrinfos.empty?
+    private def resolve_and_validate(host : String, port : Int32, deadline : Time::Instant? = nil) : Socket::Addrinfo
+      addrinfos = Socket::Addrinfo.tcp(host, port, timeout: bounded(DNS_TIMEOUT, deadline))
+      raise TransientError.new("No addresses found: #{host}") if addrinfos.empty?
       addrinfos.each do |addrinfo|
         unless safe_for_untrusted_outbound_http?(addrinfo.ip_address)
-          raise Error.new("Request to private address denied: #{host}")
+          raise PermanentError.new("Request to private address denied: #{host}")
         end
       end
       addrinfos.first
@@ -306,16 +319,16 @@ module Ktistec
     # wraps it in a TLS layer using the URL hostname for SNI and
     # peer-certificate verification.
     #
-    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo) : IO
+    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo, deadline : Time::Instant? = nil) : IO
       tcp = TCPSocket.new(addrinfo.family)
       begin
-        tcp.connect(addrinfo, timeout: CONNECT_TIMEOUT)
+        tcp.connect(addrinfo, timeout: bounded(CONNECT_TIMEOUT, deadline))
+        tcp.read_timeout = bounded(READ_TIMEOUT, deadline)
+        tcp.write_timeout = bounded(WRITE_TIMEOUT, deadline)
       rescue ex
         tcp.close
         raise ex
       end
-      tcp.read_timeout = READ_TIMEOUT
-      tcp.write_timeout = WRITE_TIMEOUT
       tcp.sync = false
       if uri.scheme == "https"
         begin
@@ -334,11 +347,11 @@ module Ktistec
       end
     end
 
-    private def make_client(uri : URI) : HTTP::Client
+    private def make_client(uri : URI, deadline : Time::Instant? = nil) : HTTP::Client
       host = uri.host.not_nil!
       port = uri.port || (uri.scheme == "https" ? 443 : 80)
-      addrinfo = resolve_and_validate(host, port)
-      io = open_socket(uri, addrinfo)
+      addrinfo = resolve_and_validate(host, port, deadline)
+      io = open_socket(uri, addrinfo, deadline)
       HTTP::Client.new(io: io, host: host, port: port)
     end
 
@@ -358,9 +371,13 @@ module Ktistec
     # bytes are read, and streamed bodies are aborted if they grow
     # past the cap.
     #
-    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
+    # When `deadline` is supplied, every blocking operation is bounded
+    # by the time remaining, and `DeadlineExceeded` is raised -- before
+    # any I/O -- once it is spent.
+    #
+    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
       was = url
-      error_class = Error # default error class
+      error_class = TransientError # default error class
       message = "Failed"
       attempts.times do
         start = Time.instant
@@ -368,11 +385,11 @@ module Ktistec
         begin
           uri = URI.parse(url)
           host = uri.host.presence
-          raise Error.new("URL has no host: #{url}") unless host
+          raise PermanentError.new("URL has no host: #{url}") unless host
           unless uri.scheme == "http" || uri.scheme == "https"
-            raise Error.new("URL scheme not supported: #{url}")
+            raise PermanentError.new("URL scheme not supported: #{url}")
           end
-          client = make_client(uri)
+          client = make_client(uri, deadline)
           request_headers =
             if key_pair
               Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
@@ -394,10 +411,10 @@ module Ktistec
             response_headers = response.headers
             if status_code == 200
               if (cl = response_headers["Content-Length"]?) && (n = cl.to_i?) && n > max_bytes
-                raise Error.new("Response body too large [Content-Length=#{n} > #{max_bytes}]: #{url}")
+                raise PermanentError.new("Response body too large [Content-Length=#{n} > #{max_bytes}]: #{url}")
               end
               if (io = response.body_io?)
-                body_capped = read_strict_capped(io, max_bytes, url)
+                body_capped = read_strict_capped(io, max_bytes, url, deadline)
               end
             end
           end
@@ -409,13 +426,20 @@ module Ktistec
             if (tmp = response_headers["Location"]?) && (url = uri.resolve(tmp).to_s)
               next
             else
+              error_class = PermanentError
               message = "Could not redirect [#{status_code}] [#{tmp}]"
               break
             end
           when 401
+            # deliberately transient: Mastodon's authorized fetch
+            # returns 401 when it cannot verify the fetcher's
+            # signature, which includes failing to fetch our key on
+            # their side -- so a 401 is not reliably a refusal
+            error_class = TransientError
             message = "Unauthorized [#{status_code}]"
             break
           when 403
+            error_class = RefusedError
             message = "Forbidden [#{status_code}]"
             break
           when 404, 410
@@ -429,6 +453,7 @@ module Ktistec
             break
           end
         rescue URI::Error
+          error_class = PermanentError
           message = "Invalid URI"
           break
         rescue Socket::Addrinfo::Error
@@ -448,6 +473,13 @@ module Ktistec
           break
         rescue Compress::Deflate::Error | Compress::Gzip::Error
           message = "Encoding error"
+          break
+        rescue ex : DeadlineExceeded
+          error_class = DeadlineExceeded
+          message = ex.message.to_s
+          break
+        rescue ex : TransientError
+          message = ex.message.to_s
           break
         rescue ex : Exception
           # an HTTP::Client built on an existing IO cannot reconnect;
@@ -473,54 +505,64 @@ module Ktistec
     # Reads up to `max` bytes from `io` into a String. Raises if `io`
     # has more bytes available past the limit.
     #
-    private def read_strict_capped(io : IO, max : Int32, url) : String
+    # Rechecks `deadline` between reads.
+    #
+    private def read_strict_capped(io : IO, max : Int32, url, deadline : Time::Instant? = nil) : String
       buf = IO::Memory.new
-      bytes = IO.copy(io, buf, max + 1)
-      if bytes > max
-        raise Error.new("Response body too large [>#{max} bytes]: #{url}")
+      buffer = Bytes.new(IO::DEFAULT_BUFFER_SIZE)
+      remaining = max + 1
+      while remaining > 0
+        bounded(READ_TIMEOUT, deadline)
+        len = io.read(buffer[0, Math.min(buffer.size, remaining)])
+        break if len == 0
+        buf.write(buffer[0, len])
+        remaining -= len
+      end
+      if buf.bytesize > max
+        raise PermanentError.new("Response body too large [>#{max} bytes]: #{url}")
       end
       buf.to_s
     end
 
     # :ditto:
-    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
-      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes)
+    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil, &)
+      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     end
 
     # :ditto:
-    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
-      get(nil, url, headers, attempts, max_bytes: max_bytes)
+    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+      get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     end
 
     # :ditto:
-    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
-      yield get(nil, url, headers, attempts, max_bytes: max_bytes)
+    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil, &)
+      yield get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     end
 
     # :ditto:
-    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
-      get(key_pair, url, headers, attempts, max_bytes: max_bytes)
+    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+      get(key_pair, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
     # :ditto:
-    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
-      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes)
+    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil, &)
+      yield get(key_pair, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
     # :ditto:
-    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES)
-      get(nil, url, headers, attempts, max_bytes: max_bytes)
+    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+      get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
 
     # :ditto:
-    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, &)
-      yield get(nil, url, headers, attempts, max_bytes: max_bytes)
+    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil, &)
+      yield get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
     end
@@ -542,9 +584,9 @@ module Ktistec
       begin
         uri = URI.parse(url)
         host = uri.host.presence
-        raise Error.new("URL has no host: #{url}") unless host
+        raise PermanentError.new("URL has no host: #{url}") unless host
         unless uri.scheme == "http" || uri.scheme == "https"
-          raise Error.new("URL scheme not supported: #{url}")
+          raise PermanentError.new("URL scheme not supported: #{url}")
         end
         client = make_client(uri)
         request_headers = Ktistec::Signature.sign(key_pair, url, body, content_type).merge!(headers)
@@ -570,26 +612,26 @@ module Ktistec
           HTTP::Client::Response.new(status, headers: response_headers)
         end
       rescue URI::Error
-        raise Error.new("Invalid URI: #{url}")
+        raise PermanentError.new("Invalid URI: #{url}")
       rescue Socket::Addrinfo::Error
-        raise Error.new("Hostname lookup failure: #{url}")
+        raise TransientError.new("Hostname lookup failure: #{url}")
       rescue Socket::ConnectError
-        raise Error.new("Connection failure: #{url}")
+        raise TransientError.new("Connection failure: #{url}")
       rescue OpenSSL::Error
-        raise Error.new("Secure connection failure: #{url}")
+        raise TransientError.new("Secure connection failure: #{url}")
       rescue IO::TimeoutError # subclass of IO::Error
-        raise Error.new("Timeout [#{(Time.instant - start).to_i}s]: #{url}")
+        raise TransientError.new("Timeout [#{(Time.instant - start).to_i}s]: #{url}")
       rescue IO::Error
-        raise Error.new("I/O error: #{url}")
+        raise TransientError.new("I/O error: #{url}")
       rescue Compress::Deflate::Error | Compress::Gzip::Error
-        raise Error.new("Encoding error: #{url}")
+        raise TransientError.new("Encoding error: #{url}")
       rescue ex : Exception
         # an HTTP::Client built on an existing IO cannot reconnect;
         # when the peer drops the connection mid-request,
         # HTTP::Client's internal one-shot retry raises a bare
         # exception.
         raise ex unless ex.message == "This HTTP::Client cannot be reconnected"
-        raise Error.new("Connection failure: #{url}")
+        raise TransientError.new("Connection failure: #{url}")
       ensure
         client.try(&.close)
       end
@@ -607,9 +649,29 @@ module Ktistec
     class Error < Exception
     end
 
+    # Raised when retrying will not change the outcome.
+    #
+    class PermanentError < Error
+    end
+
+    # Raised when retrying may succeed.
+    #
+    class TransientError < Error
+    end
+
+    # Raised when the fetch deadline is exceeded.
+    #
+    class DeadlineExceeded < TransientError
+    end
+
     # Raised when the response status is 404 or 410.
     #
-    class NotFoundError < Error
+    class NotFoundError < PermanentError
+    end
+
+    # Raised when the response status is 403.
+    #
+    class RefusedError < PermanentError
     end
   end
 end

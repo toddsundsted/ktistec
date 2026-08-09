@@ -86,20 +86,39 @@ class Relationship
         Ktistec.database.scalar(query, actor_iri, since).as(Int64)
       end
 
+      private RESPONSE_QUERY = <<-QUERY
+        object_iri IN (
+          SELECT iri FROM activities
+           WHERE type = '#{ActivityPub::Activity::Follow}'
+             AND actor_iri = ?
+             AND object_iri = ?
+             AND undone_at IS NULL
+        )
+        AND type IN ('#{ActivityPub::Activity::Accept}', '#{ActivityPub::Activity::Reject}')
+        ORDER BY id DESC LIMIT 1
+        QUERY
+
+      # Returns the response to the associated follow activities.
+      #
+      # Returns the most recent accept or reject of any follow
+      # activity from the actor to the object.
+      #
+      # Ignores follow activities that have been undone.
+      #
+      def response?
+        ActivityPub::Activity.where(RESPONSE_QUERY, from_iri, to_iri).first?
+      end
+
       # Returns true if the follow relationship has been accepted.
       #
       def accepted?
-        if (follow_activity = self.activity?)
-          follow_activity.accepted_or_rejected?.is_a?(ActivityPub::Activity::Accept)
-        end
+        response?.is_a?(ActivityPub::Activity::Accept)
       end
 
       # Returns true if the follow relationship has been rejected.
       #
       def rejected?
-        if (follow_activity = self.activity?)
-          follow_activity.accepted_or_rejected?.is_a?(ActivityPub::Activity::Reject)
-        end
+        response?.is_a?(ActivityPub::Activity::Reject)
       end
 
       # Returns true if the follow relationship is pending.

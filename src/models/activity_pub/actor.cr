@@ -250,11 +250,11 @@ module ActivityPub
 
     VALID_HANDLE = /\A[a-zA-Z0-9_.~-]+@[a-zA-Z0-9.-]+\z/
 
-    def verify_handle!
+    def verify_handle!(deadline : Time::Instant? = nil)
       if (claimed = webfinger.presence)
         if claimed.matches?(VALID_HANDLE)
           begin
-            href = Ktistec::WebFinger.query("acct:#{claimed}").link("self").href
+            href = Ktistec::WebFinger.query("acct:#{claimed}", deadline: deadline).link("self").href
             if href == iri
               self.verified_handle = claimed
             else

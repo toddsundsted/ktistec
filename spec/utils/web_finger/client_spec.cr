@@ -237,5 +237,20 @@ Spectator.describe Ktistec::WebFinger::Client do
         Ktistec::WebFinger::Client.query("acct:foobar@example.com")
       end
     end
+
+    context "given a deadline that has passed" do
+      let(deadline) { Time.instant - 1.second }
+
+      it "makes no request" do
+        expect { Ktistec::WebFinger::Client.query("acct:foobar@example.com", deadline: deadline) rescue nil }
+          .not_to change { HTTP::Client.requests.size }
+      end
+
+      it "raises an error" do
+        expect_raises(Ktistec::WebFinger::NotFoundError) do
+          Ktistec::WebFinger::Client.query("acct:foobar@example.com", deadline: deadline)
+        end
+      end
+    end
   end
 end

@@ -10,6 +10,10 @@ module Ktistec
     def classify(addr : Socket::IPAddress)
       previous_def
     end
+
+    def read_strict_capped(io : IO, max : Int32, url, deadline : Time::Instant? = nil) : String
+      previous_def
+    end
   end
 end
 
@@ -111,6 +115,76 @@ Spectator.describe Ktistec::Network do
       expect { described_class.get(key_pair, "urn:isbn:12345") }.to raise_error(Ktistec::Network::Error, /URL has no host/)
     end
 
+    context "given a request that cannot be made" do
+      it "raises PermanentError when the scheme is unsupported" do
+        expect { described_class.get(key_pair, "ftp://example.com/foo") }.to raise_error(Ktistec::Network::PermanentError)
+      end
+
+      it "raises PermanentError when the URL has no host" do
+        expect { described_class.get(key_pair, "urn:isbn:12345") }.to raise_error(Ktistec::Network::PermanentError)
+      end
+
+      it "raises PermanentError when the URI is invalid" do
+        expect { described_class.get(key_pair, "https://external:abacab/") }.to raise_error(Ktistec::Network::PermanentError)
+      end
+
+      it "raises PermanentError when the address is private" do
+        expect { described_class.get(key_pair, "https://private-ip.example/path") }.to raise_error(Ktistec::Network::PermanentError)
+      end
+    end
+
+    context "given a failure that will recur" do
+      it "raises NotFoundError when the resource is absent" do
+        expect { described_class.get(key_pair, "https://external/returns-404") }.to raise_error(Ktistec::Network::NotFoundError)
+      end
+
+      it "raises NotFoundError when the resource is gone" do
+        expect { described_class.get(key_pair, "https://external/returns-410") }.to raise_error(Ktistec::Network::NotFoundError)
+      end
+
+      it "raises RefusedError when the origin denies access" do
+        expect { described_class.get(key_pair, "https://external/returns-403") }.to raise_error(Ktistec::Network::RefusedError)
+      end
+
+      it "raises PermanentError when the redirect has no location" do
+        expect { described_class.get(key_pair, "https://external/redirected-no-location") }.to raise_error(Ktistec::Network::PermanentError)
+      end
+    end
+
+    context "given a failure that may not recur" do
+      it "raises TransientError when the origin errors" do
+        expect { described_class.get(key_pair, "https://external/returns-500") }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the status is unrecognized" do
+        expect { described_class.get(key_pair, "https://external/returns-429") }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the request times out" do
+        expect { described_class.get(key_pair, "https://external/timeout-error") }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the connection fails" do
+        expect { described_class.get(key_pair, "https://external/socket-connect-error") }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the name does not resolve" do
+        expect { described_class.get(key_pair, "https://external/socket-addrinfo-error") }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the connection is not secure" do
+        expect { described_class.get(key_pair, "https://external/openssl-error") }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the client cannot reconnect" do
+        expect { described_class.get(key_pair, "https://external/reconnect-error") }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the origin requires authorization" do
+        expect { described_class.get(key_pair, "https://external/returns-401") }.to raise_error(Ktistec::Network::TransientError)
+      end
+    end
+
     context "given a remote object" do
       class MockObject
         property iri : String
@@ -149,7 +223,7 @@ Spectator.describe Ktistec::Network do
       end
 
       it "rejects the response" do
-        expect { described_class.get(key_pair, "https://external/oversize") }.to raise_error(Ktistec::Network::Error, /Response body too large/)
+        expect { described_class.get(key_pair, "https://external/oversize") }.to raise_error(Ktistec::Network::PermanentError, /Response body too large/)
       end
     end
 
@@ -160,7 +234,7 @@ Spectator.describe Ktistec::Network do
       end
 
       it "rejects the response" do
-        expect { described_class.get(key_pair, "https://external/oversize") }.to raise_error(Ktistec::Network::Error, /Response body too large/)
+        expect { described_class.get(key_pair, "https://external/oversize") }.to raise_error(Ktistec::Network::PermanentError, /Response body too large/)
       end
     end
 
@@ -171,7 +245,7 @@ Spectator.describe Ktistec::Network do
       end
 
       it "rejects the response" do
-        expect { described_class.get(key_pair, "https://external/oversize", max_bytes: 1024) }.to raise_error(Ktistec::Network::Error, /Response body too large/)
+        expect { described_class.get(key_pair, "https://external/oversize", max_bytes: 1024) }.to raise_error(Ktistec::Network::PermanentError, /Response body too large/)
       end
     end
 
@@ -187,11 +261,48 @@ Spectator.describe Ktistec::Network do
         expect(response.body).to eq(body)
       end
     end
+
+    context "given a deadline that has not passed" do
+      let(deadline) { Time.instant + 1.hour }
+
+      it "fetches the page" do
+        expect(described_class.get(key_pair, "https://external/specified-page", deadline: deadline).body).to eq("content")
+      end
+    end
+
+    context "given a deadline that has passed" do
+      let(deadline) { Time.instant - 1.second }
+
+      it "fails" do
+        expect { described_class.get(key_pair, "https://external/specified-page", deadline: deadline) }
+          .to raise_error(Ktistec::Network::DeadlineExceeded, /Deadline exceeded/)
+      end
+
+      it "makes no request" do
+        expect { described_class.get?(key_pair, "https://external/specified-page", deadline: deadline) }
+          .not_to change { HTTP::Client.requests.size }
+      end
+    end
   end
 
   describe ".get?" do
     it "returns nil on errors" do
       expect { described_class.get?(key_pair, "https://external/returns-500") }.to be_nil
+    end
+  end
+
+  describe "#read_strict_capped" do
+    it "reads the body" do
+      expect(described_class.read_strict_capped(IO::Memory.new("content"), 1024, "https://external/")).to eq("content")
+    end
+
+    context "given a deadline that has passed" do
+      let(deadline) { Time.instant - 1.second }
+
+      it "fails" do
+        expect { described_class.read_strict_capped(IO::Memory.new("content"), 1024, "https://external/", deadline: deadline) }
+          .to raise_error(Ktistec::Network::DeadlineExceeded, /Deadline exceeded/)
+      end
     end
   end
 
@@ -274,6 +385,50 @@ Spectator.describe Ktistec::Network do
 
     it "fails on errors" do
       expect { described_class.post(key_pair, "https://external/reconnect-error", body, content_type) }.to raise_error(Ktistec::Network::Error, /Connection failure/)
+    end
+
+    context "given a request that cannot be made" do
+      it "raises PermanentError when the scheme is unsupported" do
+        expect { described_class.post(key_pair, "ftp://example.com/foo", body, content_type) }.to raise_error(Ktistec::Network::PermanentError)
+      end
+
+      it "raises PermanentError when the URL has no host" do
+        expect { described_class.post(key_pair, "urn:isbn:12345", body, content_type) }.to raise_error(Ktistec::Network::PermanentError)
+      end
+
+      it "raises PermanentError when the URI is invalid" do
+        expect { described_class.post(key_pair, "https://external:abacab/", body, content_type) }.to raise_error(Ktistec::Network::PermanentError)
+      end
+
+      it "raises PermanentError when the address is private" do
+        expect { described_class.post(key_pair, "https://private-ip.example/path", body, content_type) }.to raise_error(Ktistec::Network::PermanentError)
+      end
+    end
+
+    context "given a failure that may not recur" do
+      it "raises TransientError when the connection fails" do
+        expect { described_class.post(key_pair, "https://external/socket-connect-error", body, content_type) }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the name does not resolve" do
+        expect { described_class.post(key_pair, "https://external/socket-addrinfo-error", body, content_type) }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the connection is not secure" do
+        expect { described_class.post(key_pair, "https://external/openssl-error", body, content_type) }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the client cannot reconnect" do
+        expect { described_class.post(key_pair, "https://external/reconnect-error", body, content_type) }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError when the request times out" do
+        expect { described_class.post(key_pair, "https://external/timeout-error", body, content_type) }.to raise_error(Ktistec::Network::TransientError)
+      end
+
+      it "raises TransientError on an I/O error" do
+        expect { described_class.post(key_pair, "https://external/io-error", body, content_type) }.to raise_error(Ktistec::Network::TransientError)
+      end
     end
 
     {% unless flag?(:allow_private_addresses) %}

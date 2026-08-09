@@ -266,12 +266,31 @@ module Ktistec
       end
     end
 
+    # Truncates text to the given length.
+    #
+    private def truncate(text : String, length : Int, *, ellipsis = "…")
+      text.size > length ? text[0, length - ellipsis.size] + ellipsis : text
+    end
+
     # Renders content as simple text and truncates to the given
     # length.
     #
     def render_as_text_and_truncate(content : String, length : Int, *, ellipsis = "…")
-      text = render_as_text(content)
-      text.size > length ? text[0, length - ellipsis.size] + ellipsis : text
+      truncate(render_as_text(content), length, ellipsis: ellipsis)
+    end
+
+    private LONG_CONTENT_THRESHOLD = 3000
+
+    private GENERATED_SUMMARY_LENGTH = 200
+
+    # Generates a summary from long content.
+    #
+    # Whitespace is collapsed and the result is a single line.
+    #
+    def generate_summary(content : String?, *, threshold = LONG_CONTENT_THRESHOLD, length = GENERATED_SUMMARY_LENGTH, ellipsis = "…") : String?
+      text = render_as_text(content).gsub(/\s+/, " ").strip
+      return unless text.size > threshold
+      truncate(text, length, ellipsis: ellipsis)
     end
 
     # Wraps a URL in a link, in the format used by Mastodon:

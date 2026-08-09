@@ -66,6 +66,12 @@
             - if (_follow = follow_relationship.activity?)
               .ui.grey.segment
                 = activity_button "Accept Instead", outbox_path(_account), _follow.iri, type: "Accept", button_class: "ui green button"
+        - else
+          / confirmed, but the activities are gone.
+          details
+            summary
+              i.grey.question.circle.icon
+              | You answered #{actor.display_name}'s follow request
     .ui.basic.footer.segment
       - _follow = _account.actor.follows?(actor).try(&.activity?)
       - if _follow
@@ -81,11 +87,11 @@
         - if _follow && (follow_relationship = _account.actor.follows?(actor))
           - if follow_relationship.pending?
             | Follow request is pending
-          - elsif (accepted_or_rejected = follow_relationship.activity?.try(&.accepted_or_rejected?))
+          - elsif (_response = follow_relationship.response?)
             - if follow_relationship.accepted?
-              | Follow request accepted #{distance_of_time_in_words(accepted_or_rejected.created_at, Time.utc)} ago
+              | Follow request accepted #{distance_of_time_in_words(_response.created_at, Time.utc)} ago
             - elsif follow_relationship.rejected?
-              | Follow request rejected #{distance_of_time_in_words(accepted_or_rejected.created_at, Time.utc)} ago
+              | Follow request rejected #{distance_of_time_in_words(_response.created_at, Time.utc)} ago
         br
         | Profile refreshed #{distance_of_time_in_words(actor.updated_at, Time.utc)} ago
   - elsif !_account && actor.local?

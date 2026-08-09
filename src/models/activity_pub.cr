@@ -15,6 +15,18 @@ module ActivityPub
   # the only logging in this module is related to mapping JSON-LD.
   Log = ::Log.for("ktistec.json_ld")
 
+  # Returns the instance or builds a new one.
+  #
+  private def self.find_or_build(base : B.class, clazz : C.class, iri, attrs) forall B, C
+    if (found = base.find?(iri, include_deleted: true, include_undone: true))
+      return found if found.responds_to?(:deleted?) && found.deleted?
+      return found if found.responds_to?(:undone?) && found.undone?
+      found.assign(attrs)
+    else
+      clazz.new(attrs)
+    end
+  end
+
   # Note: Take care when modifying this method. In particular,
   # avoid calling `map` on a subclass directly unless the subclass
   # explicitly defines it!
@@ -42,15 +54,13 @@ module ActivityPub
           else
             attrs["type"] = "{{includer}}::#{type}"
           end
-          {{subclass}}.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
-            {{subclass}}.new(attrs)
+          find_or_build({{includer}}, {{subclass}}, json["@id"]?.try(&.as_s), attrs)
         {% end %}
       {% end %}
       else
         if (default = options[:default]?)
           attrs = default.map(json, **options)
-          default.find?(json["@id"]?.try(&.as_s)).try(&.assign(attrs)) ||
-            default.new(attrs)
+          find_or_build(default, default, json["@id"]?.try(&.as_s), attrs)
         elsif (type = json["@type"]?)
           raise NotImplementedError.new(type.as_s)
         else

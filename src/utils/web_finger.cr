@@ -16,8 +16,8 @@ module Ktistec
     # `Ktistec::WebFinger::RedirectionError` if redirection fails.  Otherwise,
     # returns `Ktistec::WebFinger::Result`.
     #
-    def self.query(account, *args)
-      Client.query(account, *args)
+    def self.query(account, *args, **options)
+      Client.query(account, *args, **options)
     end
 
     # Resolves the name of a resource to the network IRI of the

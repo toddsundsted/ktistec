@@ -469,6 +469,18 @@ Spectator.describe "partials" do
         it "renders a button to block" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
         end
+
+        context "and the actor sends a second follow request" do
+          let_create!(:follow, named: repeat_follow, actor: actor, object: account.actor)
+
+          it "renders the accepted status" do
+            expect(subject.xpath_nodes("//summary/text()")).to have(/You accepted .* follow request/)
+          end
+
+          it "renders a button to reject instead" do
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Reject Instead")
+          end
+        end
       end
 
       context "having rejected a follow" do
@@ -498,6 +510,26 @@ Spectator.describe "partials" do
 
         it "renders a button to block" do
           expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Block")
+        end
+
+        context "and the actor sends a second follow request" do
+          let_create!(:follow, named: repeat_follow, actor: actor, object: account.actor)
+
+          it "renders the rejected status" do
+            expect(subject.xpath_nodes("//summary/text()")).to have(/You rejected .* follow request/)
+          end
+
+          it "renders a button to accept instead" do
+            expect(subject.xpath_nodes("//button[@type='submit']/text()")).to have("Accept Instead")
+          end
+        end
+      end
+
+      context "having a confirmed follow but no activities" do
+        let_create!(:follow_relationship, actor: actor, object: account.actor, confirmed: true)
+
+        it "renders the answered status" do
+          expect(subject.xpath_nodes("//summary/text()")).to have("You answered #{actor.display_name}'s follow request")
         end
       end
 

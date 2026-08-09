@@ -137,6 +137,27 @@ Spectator.describe "object partials" do
       end
     end
 
+    context "given long content" do
+      before_each { object.assign(content: "<p>Content Beginning. #{"word " * 1000}</p>", media_type: "text/html", summary: nil) }
+
+      it "renders the generated summary" do
+        expect(subject.xpath_nodes("//details/summary/text()").first.text).to eq("Content Beginning. #{"word " * 36}…")
+      end
+
+      it "collapses the content behind it" do
+        expect(subject.xpath_nodes("//details//*[@class='extra text']//text()").first.text).to eq("Content Beginning. #{"word " * 1000}")
+      end
+    end
+
+    context "given long content with escaped markup" do
+      before_each { object.assign(content: "<p>see &lt;script&gt;alert(1)&lt;/script&gt; now #{"word " * 1000}</p>", media_type: "text/html", summary: nil) }
+
+      it "does not render markup" do
+        expect(subject.xpath_nodes("//details/summary/text()").first.text).to start_with("see <script>alert(1)</script> now")
+        expect(subject.xpath_nodes("//script")).to be_empty
+      end
+    end
+
     context "given a name" do
       before_each { object.assign(name: "Foo Bar Baz") }
 

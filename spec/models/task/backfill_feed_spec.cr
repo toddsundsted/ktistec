@@ -15,9 +15,13 @@ Spectator.describe Task::BackfillFeed do
 
   describe ".schedule_for" do
     around_each do |proc|
+      previous = described_class.schedule_but_dont_perform
       described_class.schedule_but_dont_perform = true
-      proc.call
-      described_class.schedule_but_dont_perform = false
+      begin
+        proc.call
+      ensure
+        described_class.schedule_but_dont_perform = previous
+      end
     end
 
     it "schedules a backfill" do

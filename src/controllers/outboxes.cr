@@ -152,39 +152,45 @@ class OutboxesController
       unless object_iri && (object = ActivityPub::Activity::Follow.find?(object_iri))
         bad_request
       end
-      unless object.object == account.actor
+      unless object.object? == account.actor
         bad_request
       end
-      unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
+      unless (follower = object.actor?)
+        bad_request
+      end
+      unless Relationship::Social::Follow.find?(actor: follower, object: object.object)
         bad_request
       end
       activity = ActivityPub::Activity::Accept.new(
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
-        to: [object.actor.iri],
+        to: [follower.iri],
       )
     when "Reject"
       unless object_iri && (object = ActivityPub::Activity::Follow.find?(object_iri))
         bad_request
       end
-      unless object.object == account.actor
+      unless object.object? == account.actor
         bad_request
       end
-      unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
+      unless (follower = object.actor?)
+        bad_request
+      end
+      unless Relationship::Social::Follow.find?(actor: follower, object: object.object)
         bad_request
       end
       activity = ActivityPub::Activity::Reject.new(
         iri: "#{host}/activities/#{id}",
         actor: account.actor,
         object: object,
-        to: [object.actor.iri],
+        to: [follower.iri],
       )
     when "Undo"
       unless object_iri && (object = ActivityPub::Activity.find?(object_iri))
         bad_request
       end
-      unless object.actor == account.actor
+      unless object.actor? == account.actor
         bad_request
       end
       to = [] of String
@@ -198,8 +204,11 @@ class OutboxesController
         cc.concat(object.cc || [] of String)
         audience = object.audience
       when ActivityPub::Activity::Follow
-        to << object.object.iri
-        unless Relationship::Social::Follow.find?(actor: object.actor, object: object.object)
+        unless (followed = object.object?(include_deleted: true))
+          bad_request
+        end
+        to << followed.iri
+        unless Relationship::Social::Follow.find?(actor: object.actor, object: followed)
           bad_request
         end
       else

@@ -190,6 +190,8 @@ class HTTP::Client
         raise Socket::ConnectError.from_os_error(nil, nil)
       when /openssl-error/
         raise OpenSSL::Error.new
+      when /timeout-error/
+        raise IO::TimeoutError.new
       when /io-error/
         raise IO::Error.new
       when /reconnect-error/
@@ -257,6 +259,8 @@ class HTTP::Client
         raise Socket::ConnectError.from_os_error(nil, nil)
       when /openssl-error/
         raise OpenSSL::Error.new
+      when /timeout-error/
+        raise IO::TimeoutError.new
       when /io-error/
         raise IO::Error.new
       when /reconnect-error/
@@ -330,7 +334,7 @@ module Ktistec
       @@last_addrinfo = nil
     end
 
-    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo) : IO
+    private def open_socket(uri : URI, addrinfo : Socket::Addrinfo, deadline : Time::Instant? = nil) : IO
       @@last_addrinfo = addrinfo
       IO::Memory.new
     end
@@ -356,7 +360,7 @@ module Ktistec
       @@hrefs.clear
     end
 
-    def self.query(account)
+    def self.query(account, *args, **options)
       unless account =~ ACCOUNT_REGEX
         raise Ktistec::WebFinger::NotFoundError.new("Invalid account")
       end

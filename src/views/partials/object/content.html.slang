@@ -47,14 +47,15 @@ crystal:
           | posted
         a.date< data-turbo-frame="_top" title=object.display_date(timezone) href=object.display_link = object.short_date(timezone)
   - unless is_blocked
-    - if (name = object.translations.first?.try(&.name).presence || object.name.presence)
+    - name, summary = name_and_summary(object)
+    - if name
       .extra.text
         - if object.external?
           a href=object.display_link target="_blank"
             strong = name
         - else
           strong = name
-    - if (summary = object.translations.first?.try(&.summary).presence || object.summary.presence)
+    - if summary
       details open=(with_detail || as_context)
         summary
           - if object.sensitive

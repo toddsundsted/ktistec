@@ -6,6 +6,16 @@ require "../spec_helper/controller"
 require "../spec_helper/factory"
 require "../spec_helper/network"
 
+class InboxesController
+  def self.resolve_signer(key_pair, key_id : String, deadline)
+    resolve_signer(key_pair, key_id, "spec", Transient.new, deadline)
+  end
+
+  def self.object_gone_at_origin?(key_pair, iri, deadline)
+    object_gone_at_origin?(key_pair, iri, Transient.new, deadline)
+  end
+end
+
 Spectator.describe InboxesController do
   setup_spec
 
@@ -14,6 +24,151 @@ Spectator.describe InboxesController do
   end
 
   PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+  describe ".resolve_signer" do
+    let_create(:actor, named: :other, with_keys: true)
+
+    let(expired) { Time.instant - 1.second }
+
+    let(key_id) { "https://remote/keys/key" }
+
+    context "when the time budget is exhausted" do
+      it "makes no request" do
+        expect { described_class.resolve_signer(other, key_id, expired) }
+          .not_to change { HTTP::Client.requests.size }
+      end
+
+      it "resolves no signer" do
+        expect(described_class.resolve_signer(other, key_id, expired)).to be_nil
+      end
+    end
+  end
+
+  describe ".object_gone_at_origin?" do
+    let_create(:actor, named: :other, with_keys: true)
+
+    let(expired) { Time.instant - 1.second }
+
+    let(iri) { "https://remote/objects/object" }
+
+    context "when the time budget is exhausted" do
+      it "makes no request" do
+        expect { described_class.object_gone_at_origin?(other, iri, expired) }
+          .not_to change { HTTP::Client.requests.size }
+      end
+
+      it "does not report the object gone" do
+        expect(described_class.object_gone_at_origin?(other, iri, expired)).to be_false
+      end
+    end
+  end
+
+  describe "POST /inbox" do
+    # actor with keys is cached
+    let_create(:actor, named: :other, with_keys: true)
+
+    let_build(:create, actor: other)
+
+    let(json_ld) { create.to_json_ld(true) }
+
+    let(headers) { Ktistec::Signature.sign(other, "https://test.test/inbox", json_ld, "application/json") }
+
+    it "returns 503 if the server has no accounts" do
+      post "/inbox", headers, json_ld
+      expect(response.status_code).to eq(503)
+    end
+
+    context "given an account" do
+      let!(actor) { register.actor }
+
+      it "is successful" do
+        post "/inbox", headers, json_ld
+        expect(response.status_code).to eq(200)
+      end
+
+      it "saves the activity" do
+        expect { post "/inbox", headers, json_ld }
+          .to change { ActivityPub::Activity.count(iri: create.iri) }.by(1)
+      end
+
+      it "does not put the activity in an inbox" do
+        post "/inbox", headers, json_ld
+        expect(Relationship::Content::Inbox.count).to eq(0)
+      end
+
+      context "and the activity is unsigned" do
+        let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
+        before_each { HTTP::Client.activities << create }
+
+        it "retrieves the activity from the origin" do
+          post "/inbox", headers, json_ld
+          expect(HTTP::Client.requests).to have("GET #{create.iri}")
+        end
+
+        it "signs the retrieval with the local account" do
+          post "/inbox", headers, json_ld
+          expect(HTTP::Client.last?.not_nil!.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
+        end
+      end
+
+      let!(second_account) { register.actor }
+
+      context "and the activity addresses the account" do
+        before_each { create.to = [actor.iri] }
+
+        it "puts the activity in the first account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not put the activity in the second account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: second_account.iri) }
+        end
+      end
+
+      context "and the activity addresses both accounts" do
+        before_each { create.to = [actor.iri, second_account.iri] }
+
+        it "puts the activity in the first account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "puts the activity in the second account's inbox" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: second_account.iri) }.by(1)
+        end
+      end
+
+      context "and the activity undoes a follow of a terminated account" do
+        let!(terminated) { register }
+
+        let_create!(:follow, actor: other, object: terminated.actor)
+        let_create!(:follow_relationship, actor: other, object: terminated.actor)
+
+        let_build(:undo, actor: other, object: follow)
+
+        let(json_ld) { undo.to_json_ld(true) }
+
+        before_each do
+          terminated.actor.delete!
+          terminated.destroy
+        end
+
+        it "destroys the follow relationship" do
+          expect { post "/inbox", headers, json_ld }
+            .to change { Relationship::Social::Follow.count(from_iri: other.iri) }.by(-1)
+        end
+
+        it "is successful" do
+          post "/inbox", headers, json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
+    end
+  end
 
   describe "POST /actors/:username/inbox" do
     let!(actor) { register.actor }
@@ -63,12 +218,71 @@ Spectator.describe InboxesController do
       expect(response.status_code).to eq(400)
     end
 
-    context "when activity was already received" do
+    it "returns 502 if the fetch of the activity fails transiently" do
+      activity.iri = "https://remote/activities/timeout-error"
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+      expect(response.status_code).to eq(502)
+    end
+
+    context "when the time budget is exhausted" do
+      around_each do |proc|
+        previous = InboxesController.max_inbox_fetch_time
+        InboxesController.max_inbox_fetch_time = 0.seconds
+        begin
+          proc.call
+        ensure
+          InboxesController.max_inbox_fetch_time = previous
+        end
+      end
+
+      context "and the failure is during verification" do
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+          expect(response.status_code).to eq(502)
+        end
+
+        it "makes no request" do
+          expect { post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld }
+            .not_to change { HTTP::Client.requests.size }
+        end
+      end
+
+      context "and the failure is during dispatch" do
+        # the signature verifies without a fetch. the activity type is arbitrary.
+
+        let_build(:announce, actor: other, object: nil, to: [actor.iri])
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", announce.to_json_ld(true), "application/json") }
+
+        before_each { announce.object_iri = "https://remote/objects/object" }
+
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+          expect(response.status_code).to eq(502)
+        end
+
+        it "makes no request" do
+          expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+            .not_to change { HTTP::Client.requests.size }
+        end
+      end
+    end
+
+    context "when the activity is already in an inbox" do
       let_create!(:create)
+
+      before_each { put_in_inbox(actor, create) }
 
       it "returns 200" do
         post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true)
         expect(response.status_code).to eq(200)
+      end
+
+      it "makes no request" do
+        expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true) }
+          .not_to change { HTTP::Client.requests.size }
       end
     end
 
@@ -94,6 +308,68 @@ Spectator.describe InboxesController do
       expect(response.status_code).to eq(400)
     end
 
+    it "returns 502 if the fetch of the actor fails transiently" do
+      activity.actor_iri = "https://remote/actors/timeout-error"
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(JSON.parse(response.body)["msg"]).to eq("actor not present")
+      expect(response.status_code).to eq(502)
+    end
+
+    context "given a Signature header" do
+      let(key_id) { nil }
+
+      let(headers) do
+        HTTP::Headers{
+          "Content-Type" => "application/json",
+          "Signature"    => %Q|keyId="#{key_id}",headers="(request-target)",signature="bogus"|,
+        }
+      end
+
+      # the fragment keyId names the actor
+      context "with a fragment keyId naming an unreachable signer" do
+        let(key_id) { "https://remote/actors/timeout-error#main-key" }
+
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+          expect(response.status_code).to eq(502)
+        end
+      end
+
+      # a path keyId names a key document
+      context "with a path keyId naming an unreachable key" do
+        let(key_id) { "https://remote/keys/timeout-error" }
+
+        it "returns 502" do
+          post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+          expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")
+          expect(response.status_code).to eq(502)
+        end
+      end
+    end
+
+    # pins the transient/permanent reset behavior at the
+    # verification/dispatch boundary. a like is arbitrary -- we just
+    # need an activity with no object.
+    context "given a transient verification failure and a permanent dispatch rejection" do
+      let_build(:like, named: :activity, actor: other, object: nil)
+
+      let(headers) do
+        HTTP::Headers{
+          "Content-Type" => "application/json",
+          "Signature"    => %q|keyId="https://remote/keys/timeout-error",headers="(request-target)",signature="bogus"|,
+        }
+      end
+
+      before_each { HTTP::Client.activities << activity }
+
+      it "returns 400" do
+        post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(400)
+      end
+    end
+
     it "does not save the activity on failure" do
       expect { post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld }
         .not_to change { ActivityPub::Activity.count }
@@ -111,6 +387,11 @@ Spectator.describe InboxesController do
       it "retrieves the activity from the origin" do
         post "/actors/#{actor.username}/inbox", headers, json_ld
         expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+      end
+
+      it "signs the retrieval with the account in the path" do
+        post "/actors/#{actor.username}/inbox", headers, json_ld
+        expect(HTTP::Client.last?.not_nil!.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
       end
 
       it "does not retrieve the actor from the origin" do
@@ -689,6 +970,13 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 502 if the fetch of the object fails transiently" do
+        announce.object_iri = "https://remote/objects/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
       it "fetches object if remote" do
         announce.object_iri = note.iri
         HTTP::Client.objects << note
@@ -708,6 +996,14 @@ Spectator.describe InboxesController do
         note.attributed_to_iri = "https://remote/actors/123"
         post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        announce.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
+        expect(response.status_code).to eq(502)
       end
 
       it "saves the object" do
@@ -770,6 +1066,12 @@ Spectator.describe InboxesController do
             .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
+        it "is successful" do
+          announce.object = note
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+
         context "and the actor follows other" do
           before_each do
             actor.follow(other, confirmed: true).save
@@ -792,6 +1094,12 @@ Spectator.describe InboxesController do
           announce.object = note
           expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
             .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
+        end
+
+        it "is successful" do
+          announce.object = note
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(response.status_code).to eq(200)
         end
 
         context "and the actor follows other" do
@@ -825,6 +1133,13 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 502 if the fetch of the object fails transiently" do
+        like.object_iri = "https://remote/objects/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
       it "fetches object if remote" do
         like.object_iri = note.iri
         HTTP::Client.objects << note
@@ -844,6 +1159,14 @@ Spectator.describe InboxesController do
         note.attributed_to_iri = "https://remote/actors/123"
         post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        like.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
+        expect(response.status_code).to eq(502)
       end
 
       it "saves the object" do
@@ -882,6 +1205,13 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 502 if the fetch of the object fails transiently" do
+        dislike.object_iri = "https://remote/objects/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
       it "fetches object if remote" do
         dislike.object_iri = note.iri
         HTTP::Client.objects << note
@@ -901,6 +1231,14 @@ Spectator.describe InboxesController do
         note.attributed_to_iri = "https://remote/actors/123"
         post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        dislike.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
+        expect(response.status_code).to eq(502)
       end
 
       it "saves the object" do
@@ -949,6 +1287,22 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 502 if the fetch of the object fails transiently" do
+        create.object_iri = "https://remote/objects/timeout-error"
+        headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(false), "application/json")
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(false)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        create.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
+        expect(response.status_code).to eq(502)
+      end
+
       it "fetches object if remote" do
         create.object_iri = note.iri
         headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(false), "application/json")
@@ -993,6 +1347,30 @@ Spectator.describe InboxesController do
           create.object = note
           expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
             .not_to change { Timeline.count(from_iri: actor.iri) }
+        end
+      end
+
+      context "and it is delivered to another account's inbox" do
+        let!(other_account) { register.actor }
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{other_account.username}/inbox", create.to_json_ld(true), "application/json") }
+
+        it "puts the activity in the addressed account's inbox" do
+          create.object = note
+          expect { post "/actors/#{other_account.username}/inbox", headers, create.to_json_ld(true) }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not put the activity in the inbox it was delivered to" do
+          create.object = note
+          post "/actors/#{other_account.username}/inbox", headers, create.to_json_ld(true)
+          expect(Relationship::Content::Inbox.count(from_iri: other_account.iri)).to eq(0)
+        end
+
+        it "is successful" do
+          create.object = note
+          post "/actors/#{other_account.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
         end
       end
 
@@ -1047,6 +1425,12 @@ Spectator.describe InboxesController do
             .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
+        it "is successful" do
+          create.object = note
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+
         context "and the actor follows other" do
           before_each do
             actor.follow(other, confirmed: true).save
@@ -1069,6 +1453,12 @@ Spectator.describe InboxesController do
           create.object = note
           expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
             .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
+        end
+
+        it "is successful" do
+          create.object = note
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
         end
 
         context "and the actor follows other" do
@@ -1103,6 +1493,15 @@ Spectator.describe InboxesController do
           post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
           expect(response.status_code).to eq(200)
         end
+
+        context "but the fetch of the object fails transiently" do
+          let_build(:note, attributed_to: other, iri: "https://remote/objects/timeout-error")
+
+          it "returns 502" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(502)
+          end
+        end
       end
 
       it "is successful" do
@@ -1131,6 +1530,22 @@ Spectator.describe InboxesController do
         note.attributed_to = actor
         post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
         expect(response.status_code).to eq(400)
+      end
+
+      it "returns 502 if the fetch of the object fails transiently" do
+        update.object_iri = "https://remote/objects/timeout-error"
+        headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(false), "application/json")
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(false)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
+      it "returns 502 if the fetch of the attributed to actor fails transiently" do
+        update.object = note
+        note.attributed_to_iri = "https://remote/actors/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
+        expect(response.status_code).to eq(502)
       end
 
       it "fetches object if remote" do
@@ -1182,6 +1597,15 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
           expect(response.status_code).to eq(200)
+        end
+
+        context "but the fetch of the object fails transiently" do
+          let_build(:note, attributed_to: other, iri: "https://remote/objects/timeout-error")
+
+          it "returns 502" do
+            post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+            expect(response.status_code).to eq(502)
+          end
         end
       end
 
@@ -1350,6 +1774,15 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 502 if the fetch of the object fails transiently" do
+        follow.actor = other
+        follow.object_iri = "https://remote/actors/timeout-error"
+        HTTP::Client.activities << follow
+        post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
+      end
+
       context "when object is this account" do
         before_each do
           follow.actor = other
@@ -1387,6 +1820,11 @@ Spectator.describe InboxesController do
             expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
               .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
           end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
         end
       end
 
@@ -1423,9 +1861,76 @@ Spectator.describe InboxesController do
             follow.to.try(&.clear)
           end
 
-          it "puts the activity in the actor's inbox" do
+          it "does not put the activity in the actor's inbox" do
             expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
-              .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+              .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+      end
+
+      context "when object is another local account" do
+        let(followed) { register.actor }
+
+        before_each do
+          follow.actor = other
+          follow.object = followed
+        end
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", follow.to_json_ld(true), "application/json") }
+
+        it "creates an unconfirmed follow relationship for the followed account" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Relationship::Social::Follow.count(to_iri: followed.iri, confirmed: false) }.by(1)
+        end
+
+        it "puts the activity in the followed account's inbox" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Relationship::Content::Inbox.count(from_iri: followed.iri) }.by(1)
+        end
+
+        it "puts the activity in the followed account's notifications" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Notification.count(from_iri: followed.iri) }.by(1)
+        end
+
+        it "puts the activity in the receiving account's inbox" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not create a follow relationship for the receiving account" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .not_to change { Relationship::Social::Follow.count(to_iri: actor.iri) }
+        end
+
+        it "does not put the activity in the receiving account's notifications" do
+          expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+            .not_to change { Notification.count(from_iri: actor.iri) }
+        end
+
+        context "and activity isn't addressed" do
+          before_each do
+            follow.to.try(&.clear)
+          end
+
+          it "puts the activity in the followed account's inbox" do
+            expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+              .to change { Relationship::Content::Inbox.count(from_iri: followed.iri) }.by(1)
+          end
+
+          it "does not put the activity in the receiving account's inbox" do
+            expect { post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true) }
+              .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, follow.to_json_ld(true)
+            expect(response.status_code).to eq(200)
           end
         end
       end
@@ -1441,6 +1946,13 @@ Spectator.describe InboxesController do
       it "returns 400 if no object is included" do
         post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
         expect(response.status_code).to eq(400)
+      end
+
+      it "returns 502 if the fetch of the object fails transiently" do
+        quote_request.object_iri = "https://remote/objects/timeout-error"
+        post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+        expect(JSON.parse(response.body)["msg"]).to eq("object not present")
+        expect(response.status_code).to eq(502)
       end
 
       it "returns 400 if object is not local" do
@@ -1461,6 +1973,20 @@ Spectator.describe InboxesController do
         it "accepts the quote request" do
           post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the request has already been received" do
+          before_each { post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true) }
+
+          it "does not answer it a second time" do
+            expect { post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true) }
+              .not_to change { ActivityPub::Activity::Reject.count }
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, quote_request.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
         end
       end
 
@@ -1507,6 +2033,32 @@ Spectator.describe InboxesController do
         expect { post "/actors/#{actor.username}/inbox", headers, accept.to_json_ld }
           .to change { relationship.reload!.confirmed }
         expect(response.status_code).to eq(200)
+      end
+
+      context "and it is delivered to another account's inbox" do
+        let(other_account) { register.actor }
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{other_account.username}/inbox", accept.to_json_ld, "application/json") }
+
+        it "accepts the relationship" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, accept.to_json_ld }
+            .to change { relationship.reload!.confirmed }
+        end
+
+        it "puts the activity in the following account's inbox" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, accept.to_json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not put the activity in the receiving account's inbox" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, accept.to_json_ld }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: other_account.iri) }
+        end
+
+        it "succeeds" do
+          post "/actors/#{other_account.username}/inbox", headers, accept.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
       end
     end
 
@@ -1598,6 +2150,32 @@ Spectator.describe InboxesController do
           .to change { relationship.reload!.confirmed }
         expect(response.status_code).to eq(200)
       end
+
+      context "and it is delivered to another account's inbox" do
+        let(other_account) { register.actor }
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{other_account.username}/inbox", reject.to_json_ld, "application/json") }
+
+        it "accepts the relationship" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, reject.to_json_ld }
+            .to change { relationship.reload!.confirmed }
+        end
+
+        it "puts the activity in the following account's inbox" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, reject.to_json_ld }
+            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+        end
+
+        it "does not put the activity in the receiving account's inbox" do
+          expect { post "/actors/#{other_account.username}/inbox", headers, reject.to_json_ld }
+            .not_to change { Relationship::Content::Inbox.count(from_iri: other_account.iri) }
+        end
+
+        it "succeeds" do
+          post "/actors/#{other_account.username}/inbox", headers, reject.to_json_ld
+          expect(response.status_code).to eq(200)
+        end
+      end
     end
 
     context "on reject (quote request)" do
@@ -1657,6 +2235,11 @@ Spectator.describe InboxesController do
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld, "application/json") }
 
+      it "returns 400 when the undo names no object" do
+        post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
       context "an announce" do
         let_create(:announce, actor: other)
 
@@ -1676,9 +2259,9 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "puts the activity in the actor's inbox" do
+        it "does not put the activity in the actor's inbox" do
           expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
-            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         it "marks the announce as undone" do
@@ -1689,6 +2272,49 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the undo has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          end
+
+          pre_condition { expect(announce.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { announce.reload!.undone_at }
+          end
+        end
+
+        context "but the embedded announce is incomplete" do
+          let_build(:announce, named: :incomplete, iri: announce.iri, actor: nil, object: nil)
+
+          before_each { undo.assign(object: incomplete) }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "marks the announce as undone" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .to change { announce.reload!.undone_at }
+          end
+
+          context "but there is no record of the announce" do
+            before_each { announce.destroy }
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+              expect(response.status_code).to eq(400)
+            end
+          end
         end
       end
 
@@ -1711,9 +2337,9 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "puts the activity in the actor's inbox" do
+        it "does not put the activity in the actor's inbox" do
           expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
-            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         it "marks the like as undone" do
@@ -1724,6 +2350,24 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the undo has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          end
+
+          pre_condition { expect(like.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { like.reload!.undone_at }
+          end
         end
       end
 
@@ -1746,9 +2390,9 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "puts the activity in the actor's inbox" do
+        it "does not put the activity in the actor's inbox" do
           expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
-            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         it "marks the dislike as undone" do
@@ -1759,6 +2403,24 @@ Spectator.describe InboxesController do
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the undo has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+          end
+
+          pre_condition { expect(dislike.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { dislike.reload!.undone_at }
+          end
         end
       end
 
@@ -1781,7 +2443,7 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "returns 400 if the follow to undo isn't for this actor" do
+        it "returns 400 if the follow to undo isn't for a local actor" do
           follow.assign(object: other).save
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(400)
@@ -1793,9 +2455,31 @@ Spectator.describe InboxesController do
           expect(response.status_code).to eq(400)
         end
 
-        it "puts the activity in the actor's inbox" do
+        context "and the follow is for a local actor" do
+          let(other_account) { register.actor }
+          let_create!(:follow_relationship, named: :other_relationship, actor: other, object: other_account)
+
+          before_each { follow.assign(object: other_account).save }
+
+          it "destroys the relationship" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .to change { Relationship::Social::Follow.count(from_iri: other.iri, to_iri: other_account.iri) }.by(-1)
+          end
+
+          it "marks the follow as undone" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .to change { follow.reload!.undone_at }
+          end
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        it "does not put the activity in the actor's inbox" do
           expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
-            .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
+            .not_to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }
         end
 
         it "destroys the relationship" do
@@ -1812,6 +2496,50 @@ Spectator.describe InboxesController do
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
           expect(response.status_code).to eq(200)
         end
+
+        context "and the undo has already been delivered" do
+          let(body) { undo.to_json_ld }
+          let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", body, "application/json") }
+
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, body
+          end
+
+          pre_condition { expect(follow.reload!.undone_at).not_to be_nil }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, body
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the undo timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, body }
+              .not_to change { follow.reload!.undone_at }
+          end
+
+          context "and the payload does not embed the follow" do
+            let(body) { undo.to_json_ld(recursive: false) }
+
+            it "succeeds" do
+              post "/actors/#{actor.username}/inbox", headers, body
+              expect(response.status_code).to eq(200)
+            end
+          end
+        end
+
+        context "and the follow is already undone" do
+          before_each { follow.undo! }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not destroy the relationship" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .not_to change { Relationship::Social::Follow.count(from_iri: other.iri, to_iri: actor.iri) }
+          end
+        end
       end
     end
 
@@ -1827,12 +2555,12 @@ Spectator.describe InboxesController do
 
           it "accepts the delete without verifying" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
           end
 
           it "makes no outbound requests" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
             expect(HTTP::Client.requests).to be_empty
           end
 
@@ -1853,9 +2581,32 @@ Spectator.describe InboxesController do
             .to change { note.reload!.deleted_at }
         end
 
+        it "does not put the activity in the actor's inbox" do
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(Relationship::Content::Inbox.count(from_iri: actor.iri)).to eq(0)
+        end
+
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the delete has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          end
+
+          pre_condition { expect(note.reload!.deleted_at).not_to be_nil }
+
+          it "accepts the delete" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the deletion timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { note.reload!.deleted_at }
+          end
         end
 
         context "and the object was a reply to the actor's object" do
@@ -1918,6 +2669,15 @@ Spectator.describe InboxesController do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)
             expect(response.status_code).to eq(200)
           end
+
+          context "and the check fails transiently" do
+            let_create(:note, iri: "https://remote/objects/timeout-error")
+
+            it "returns 502" do
+              post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld(recursive: true)
+              expect(response.status_code).to eq(502)
+            end
+          end
         end
       end
 
@@ -1931,12 +2691,12 @@ Spectator.describe InboxesController do
 
           it "accepts the delete without verifying" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
           end
 
           it "makes no outbound requests" do
             post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
-            expect(response.status_code).to eq(202)
+            expect(response.status_code).to eq(200)
             expect(HTTP::Client.requests).to be_empty
           end
 
@@ -1957,9 +2717,32 @@ Spectator.describe InboxesController do
             .to change { other.reload!.deleted_at }
         end
 
+        it "does not put the activity in the actor's inbox" do
+          post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          expect(Relationship::Content::Inbox.count(from_iri: actor.iri)).to eq(0)
+        end
+
         it "succeeds" do
           post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
           expect(response.status_code).to eq(200)
+        end
+
+        context "and the delete has already been delivered" do
+          before_each do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+          end
+
+          pre_condition { expect(other.reload!.deleted_at).not_to be_nil }
+
+          it "accepts the delete" do
+            post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not move the deletion timestamp" do
+            expect { post "/actors/#{actor.username}/inbox", headers, delete.to_json_ld }
+              .not_to change { other.reload!.deleted_at }
+          end
         end
 
         context "signature is not valid but the remote actor no longer exists" do
@@ -2294,6 +3077,56 @@ Spectator.describe InboxesController do
               post "/actors/#{actor.username}/inbox", headers, wrapped_json
               expect(response.status_code).to eq(400)
             end
+          end
+
+          context "and the delete has already been delivered" do
+            before_each do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            end
+
+            pre_condition { expect(object.reload!.deleted_at).not_to be_nil }
+
+            it "is successful" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(200)
+            end
+
+            it "does not move the deletion timestamp" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .not_to change { object.reload!.deleted_at }
+            end
+          end
+        end
+
+        context "when community is in the audience and another local account follows it" do
+          let(other_account) { register.actor }
+          let_create!(:follow_relationship, named: :other_follow, actor: other_account, object: community)
+
+          pre_condition { expect(Relationship::Social::Follow.find?(actor: actor, object: community)).to be_nil }
+
+          it "saves the Delete activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { ActivityPub::Activity::Delete.count }.by(1)
+          end
+
+          it "deletes the object" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { object.reload!.deleted_at }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "when the origin check for the object fails transiently" do
+          let_create(:object, attributed_to: lemmy_user, audience: [community.iri], iri: "https://lemmy.ml/post/timeout-error")
+
+          it "returns 502" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(JSON.parse(response.body)["msg"]).to eq("relay delete not authorized")
+            expect(response.status_code).to eq(502)
           end
         end
 

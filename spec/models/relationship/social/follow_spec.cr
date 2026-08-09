@@ -213,6 +213,82 @@ Spectator.describe Relationship::Social::Follow do
     end
   end
 
+  describe "#response?" do
+    let_create!(:follow_relationship)
+
+    it "returns nil" do
+      expect(follow_relationship.response?).to be_nil
+    end
+
+    context "given an associated follow activity" do
+      let_create!(:follow, actor: follow_relationship.actor, object: follow_relationship.object)
+
+      it "returns nil" do
+        expect(follow_relationship.response?).to be_nil
+      end
+
+      context "that has been accepted" do
+        let_create!(:accept, actor: follow_relationship.object, object: follow)
+
+        it "returns the accept activity" do
+          expect(follow_relationship.response?).to eq(accept)
+        end
+
+        context "and the follow activity has been undone" do
+          before_each { follow.undo! }
+
+          it "returns nil" do
+            expect(follow_relationship.response?).to be_nil
+          end
+        end
+
+        context "and a second associated follow activity" do
+          let_create!(:follow, named: repeat_follow, actor: follow_relationship.actor, object: follow_relationship.object)
+
+          it "still returns the accept activity" do
+            expect(follow_relationship.response?).to eq(accept)
+          end
+
+          context "that has also been accepted" do
+            let_create!(:accept, named: repeat_accept, actor: follow_relationship.object, object: repeat_follow)
+
+            it "returns the most recent accept activity" do
+              expect(follow_relationship.response?).to eq(repeat_accept)
+            end
+          end
+        end
+      end
+
+      context "that has been rejected" do
+        let_create!(:reject, actor: follow_relationship.object, object: follow)
+
+        it "returns the reject activity" do
+          expect(follow_relationship.response?).to eq(reject)
+        end
+      end
+
+      context "and an accepted follow activity from another actor" do
+        let_create!(:actor, named: other)
+        let_create!(:follow, named: other_follow, actor: other, object: follow_relationship.object)
+        let_create!(:accept, actor: follow_relationship.object, object: other_follow)
+
+        it "returns nil" do
+          expect(follow_relationship.response?).to be_nil
+        end
+      end
+
+      context "and an accepted follow activity to another actor" do
+        let_create!(:actor, named: other)
+        let_create!(:follow, named: other_follow, actor: follow_relationship.actor, object: other)
+        let_create!(:accept, actor: other, object: other_follow)
+
+        it "returns nil" do
+          expect(follow_relationship.response?).to be_nil
+        end
+      end
+    end
+  end
+
   describe "#accepted?" do
     let_create!(:follow_relationship)
 
@@ -236,6 +312,14 @@ Spectator.describe Relationship::Social::Follow do
 
       it "returns true" do
         expect(follow_relationship.accepted?).to be_truthy
+      end
+
+      context "and the actor sends a second follow activity" do
+        let_create!(:follow, named: repeat_follow, actor: follow_relationship.actor, object: follow_relationship.object)
+
+        it "returns true" do
+          expect(follow_relationship.accepted?).to be_truthy
+        end
       end
     end
 
@@ -281,6 +365,14 @@ Spectator.describe Relationship::Social::Follow do
 
       it "returns true" do
         expect(follow_relationship.rejected?).to be_truthy
+      end
+
+      context "and the actor sends a second follow activity" do
+        let_create!(:follow, named: repeat_follow, actor: follow_relationship.actor, object: follow_relationship.object)
+
+        it "returns true" do
+          expect(follow_relationship.rejected?).to be_truthy
+        end
       end
     end
   end

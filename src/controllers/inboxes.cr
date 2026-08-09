@@ -482,11 +482,6 @@ class InboxesController
         bad_request_or_bad_gateway("Object Attribution Not Present")
       end
     when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
-      # DESIGN DECISION: Actors can both Like AND Dislike the same
-      # object. This is intentional - it accurately captures federated
-      # state. Some ActivityPub implementations may allow users to both
-      # upvote and downvote the same content. Ktistec preserves this
-      # state as received.
       unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, deadline: deadline) })
         bad_request_or_bad_gateway("Object Not Present")
       end

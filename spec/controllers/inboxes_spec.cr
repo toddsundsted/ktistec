@@ -2235,6 +2235,11 @@ Spectator.describe InboxesController do
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld, "application/json") }
 
+      it "returns 400 when the undo names no object" do
+        post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+        expect(response.status_code).to eq(400)
+      end
+
       context "an announce" do
         let_create(:announce, actor: other)
 
@@ -2246,16 +2251,6 @@ Spectator.describe InboxesController do
           announce.destroy
           post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld(recursive: false)
           expect(response.status_code).to eq(400)
-        end
-
-        it "returns 502 if the fetch of the related activity fails transiently" do
-          announce.destroy
-          announce.iri = "https://remote/activities/timeout-error"
-          undo.object = announce
-          headers = Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", undo.to_json_ld(recursive: false), "application/json")
-          post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld(recursive: false)
-          expect(JSON.parse(response.body)["msg"]).to eq("object not present")
-          expect(response.status_code).to eq(502)
         end
 
         it "returns 400 if the announce and undo aren't from the same actor" do
@@ -2294,6 +2289,31 @@ Spectator.describe InboxesController do
           it "does not move the undo timestamp" do
             expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
               .not_to change { announce.reload!.undone_at }
+          end
+        end
+
+        context "but the embedded announce is incomplete" do
+          let_build(:announce, named: :incomplete, iri: announce.iri, actor: nil, object: nil)
+
+          before_each { undo.assign(object: incomplete) }
+
+          it "succeeds" do
+            post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          it "marks the announce as undone" do
+            expect { post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld }
+              .to change { announce.reload!.undone_at }
+          end
+
+          context "but there is no record of the announce" do
+            before_each { announce.destroy }
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, undo.to_json_ld
+              expect(response.status_code).to eq(400)
+            end
           end
         end
       end

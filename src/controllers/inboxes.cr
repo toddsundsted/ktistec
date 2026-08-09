@@ -574,33 +574,29 @@ class InboxesController
       unless activity.actor?(fetch_identity, dereference: true, deadline: deadline)
         reject("Actor Not Present")
       end
-      # prefer the database record over the payload: an embedded
-      # object is parsed into a new instance that carries no
-      # `undone_at`.
-      if (object_iri = activity.object_iri) &&
-         (persisted = ActivityPub::Activity.find?(object_iri, include_undone: true))
-        activity.object = persisted
+      # an undo names a prior activity (as its `object`). if there is
+      # no database record, there is nothing to undo.
+      unless (object = ActivityPub::Activity.find?(activity.object_iri, include_undone: true))
+        reject("Object Not Present")
       end
-      unless (object = try_dereference(transient, request_id) { activity.object(fetch_identity, dereference: true, include_undone: true, deadline: deadline) })
-        bad_request_or_bad_gateway("Object Not Present")
-      end
+      activity.object = object
       case object
       when ActivityPub::Activity::Announce, ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
-        unless object.actor == activity.actor
+        unless object.actor_iri == activity.actor_iri
           reject("Actor Mismatch")
         end
       when ActivityPub::Activity::Follow
         unless (followed = object.object?(include_deleted: true)) && followed.local?
           reject("Follow Object Not Local")
         end
-        unless object.actor == activity.actor
+        unless object.actor_iri == activity.actor_iri
           reject("Actor Mismatch")
         end
-        unless object.undone? || Relationship::Social::Follow.find?(actor: object.actor, object: followed)
+        unless object.undone? || Relationship::Social::Follow.find?(actor: activity.actor, object: followed)
           reject("Follow Not Present")
         end
       else
-        bad_request_or_bad_gateway("Object Type Not Supported")
+        reject("Object Type Not Supported")
       end
     when ActivityPub::Activity::Delete
       # fetch the object from the database because we can't trust the

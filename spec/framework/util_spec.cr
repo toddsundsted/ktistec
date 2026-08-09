@@ -45,6 +45,55 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ".generate_summary" do
+    it "ignores nil content" do
+      expect(described_class.generate_summary(nil)).to be_nil
+    end
+
+    it "ignores empty content" do
+      expect(described_class.generate_summary("")).to be_nil
+    end
+
+    it "ignores blank content" do
+      expect(described_class.generate_summary("<p>   </p>")).to be_nil
+    end
+
+    it "ignores content at the threshold" do
+      content = "<p>#{"x" * 3000}</p>"
+      expect(described_class.generate_summary(content)).to be_nil
+    end
+
+    it "summarizes content over the threshold" do
+      content = "<p>#{"x" * 3001}</p>"
+      expect(described_class.generate_summary(content)).not_to be_nil
+    end
+
+    it "measures the text not the markup" do
+      content = "<p class=\"#{"x" * 4000}\">short</p>"
+      expect(described_class.generate_summary(content)).to be_nil
+    end
+
+    it "removes markup" do
+      content = "<p><strong>foo</strong> bar #{"x" * 3000}</p>"
+      expect(described_class.generate_summary(content)).to eq("foo bar #{"x" * 191}…")
+    end
+
+    it "collapses whitespace" do
+      content = "<p>foo</p><p>bar</p><p>#{"x" * 3000}</p>"
+      expect(described_class.generate_summary(content)).to eq("foo bar #{"x" * 191}…")
+    end
+
+    it "honors the specified threshold" do
+      content = "<p>#{"x" * 100}</p>"
+      expect(described_class.generate_summary(content, threshold: 50)).to eq("x" * 100)
+    end
+
+    it "honors the specified length" do
+      content = "<p>#{"x" * 3001}</p>"
+      expect(described_class.generate_summary(content, length: 10)).to eq("#{"x" * 9}…")
+    end
+  end
+
   describe ".sanitize" do
     it "ignores empty content" do
       expect(described_class.sanitize("")).to eq("")

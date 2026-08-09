@@ -1,3 +1,5 @@
+require "markd"
+
 require "../../safe/safe_html"
 
 module Ktistec::ViewHelper
@@ -63,6 +65,25 @@ module Ktistec::ViewHelper
       else
         "public"
       end
+    end
+
+    # Returns the name and summary to display for an object.
+    #
+    # Long content that has no summary of its own gets a generated
+    # one -- the beginning of the content -- so that the body is
+    # collapsed when the object is rendered in a feed.
+    #
+    def name_and_summary(object, translation = object.translations.first?)
+      name = translation.try(&.name).presence || object.name.presence
+      summary = translation.try(&.summary).presence || object.summary.presence
+      unless summary
+        content = translation.try(&.content).presence || object.content.presence
+        content = ::Markd.to_html(content) if content && object.media_type == "text/markdown"
+        if (generated = ::Ktistec::Util.generate_summary(content))
+          summary = ::HTML.escape(generated)
+        end
+      end
+      {name, summary}
     end
 
     def wrap_filter_term(str) : ::Ktistec::SafeHTML

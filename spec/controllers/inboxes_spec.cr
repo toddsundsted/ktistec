@@ -284,6 +284,17 @@ Spectator.describe InboxesController do
         expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true) }
           .not_to change { HTTP::Client.requests.size }
       end
+
+      context "and it is also in another inbox" do
+        let!(another) { register.actor }
+
+        before_each { put_in_inbox(another, create) }
+
+        it "returns 200" do
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(recursive: true)
+          expect(response.status_code).to eq(200)
+        end
+      end
     end
 
     it "returns 400 if the activity cannot be deserialized due to an unsupported type" do

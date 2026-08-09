@@ -310,7 +310,7 @@ class InboxesController
     # this is, strictly speaking, not required because this method
     # should be idempotent, but it avoids a lot of unnecessary work.
 
-    if Relationship::Content::Inbox.find?(activity: activity)
+    if Relationship::Content::Inbox.count(activity: activity) > 0
       ok
     end
 

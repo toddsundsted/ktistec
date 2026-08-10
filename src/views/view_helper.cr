@@ -97,16 +97,17 @@ module Ktistec::ViewHelper
     # - `for_actor`: Actor for whom view is being rendered.
     # - `highlight`: Whether or not to highlight this object in the feed.
     # - `themed`: Whether or not to emit custom-theme metadata (feed rendering only; ignored when `for_thread`/`with_detail` is set).
+    # - `scope`: Prefix for the element's id.
     #
-    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, as_context = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false, themed = true, content_io)
+    def object_partial(env, object, actor = object.attributed_to(include_deleted: true), author = actor, *, activity = nil, with_detail = false, as_context = false, show_quote = true, for_thread = nil, for_actor = nil, highlight = false, themed = true, scope = nil, content_io)
       partial "partials/object/wrapper"
     end
 
-    def object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, content_io)
+    def object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, scope, content_io)
       partial "partials/object/content"
     end
 
-    def body_partial(env, object, with_detail, show_quote, timezone, content_io)
+    def body_partial(env, object, with_detail, show_quote, timezone, scope, content_io)
       partial "partials/object/content/body"
     end
 

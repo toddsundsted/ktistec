@@ -414,6 +414,18 @@ Spectator.describe Feed do
         expect(feed.contents(min_id: object1.id, limit: 2)).to eq([object3, object2])
         expect(feed.contents(min_id: object1.id, limit: 2).has_prev?).to be_true
       end
+
+      context "given a cursor naming a deleted object" do
+        before_each { object3.delete! }
+
+        it "returns an empty collection for a max_id cursor" do
+          expect(feed.contents(max_id: object3.id, limit: 2)).to be_empty
+        end
+
+        it "returns an empty collection for a min_id cursor" do
+          expect(feed.contents(min_id: object3.id, limit: 2)).to be_empty
+        end
+      end
     end
   end
 end

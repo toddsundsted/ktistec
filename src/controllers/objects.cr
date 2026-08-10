@@ -310,6 +310,15 @@ class ObjectsController
     end
   end
 
+  # Recovers the scope from the frame the client is navigating.
+  #
+  private def self.quote_frame_scope(env, object)
+    suffix = "quote-#{object.id}"
+    if (frame = env.request.headers["Turbo-Frame"]?) && frame.ends_with?("-#{suffix}")
+      frame.rchop("-#{suffix}").presence
+    end
+  end
+
   get "/remote/objects/:id/fetch/quote" do |env|
     unless (object = get_object(env, id_param(env))) && !object.draft?
       not_found
@@ -322,7 +331,7 @@ class ObjectsController
     object.save if quote && attributed_to
 
     if in_turbo_frame?
-      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: !(quote && attributed_to), error_message: nil, show_quote: true
+      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: !(quote && attributed_to), error_message: nil, show_quote: true, scope: quote_frame_scope(env, object)
     else
       redirect back_path
     end
@@ -348,7 +357,7 @@ class ObjectsController
     end
 
     if in_turbo_frame?
-      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: false, error_message: error_message, show_quote: true
+      ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: false, error_message: error_message, show_quote: true, scope: quote_frame_scope(env, object)
     else
       redirect back_path
     end

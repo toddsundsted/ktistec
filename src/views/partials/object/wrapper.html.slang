@@ -1,3 +1,4 @@
+- _anchor = scoped_id(scope, anchor(object))
 - if for_thread
   crystal:
     classes = [
@@ -6,9 +7,9 @@
       object_states(object, author, actor),
       depth(object),
     ].compact.flatten.join(" ")
-  turbo-frame.threaded.event id=anchor(object) class=classes
+  turbo-frame.threaded.event id=_anchor class=classes
     - partial "partials/object/label"
-    - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor)
+    - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, scope)
 - elsif with_detail
   crystal:
     classes = [
@@ -16,9 +17,9 @@
       object_type_class(object),
       object_states(object, author, actor),
     ].compact.flatten.join(" ")
-  turbo-frame.detailed.event id=anchor(object) class=classes
+  turbo-frame.detailed.event id=_anchor class=classes
     - partial "partials/object/label"
-    - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor)
+    - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, scope)
 - elsif themed
   crystal:
     viewing_actor = env.account?.try(&.actor)
@@ -36,10 +37,10 @@
       actor_states(object, author, actor, followed_actors),
     ].compact.flatten.join(" ")
     attrs = object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
-  turbo-frame.event id=anchor(object) class=classes *attrs
+  turbo-frame.event id=_anchor class=classes *attrs
     - partial "partials/object/label"
-    - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor)
+    - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, scope)
 - else
-  turbo-frame.event id=anchor(object)
+  turbo-frame.event id=_anchor
     - partial "partials/object/label"
-    - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor)
+    - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, scope)

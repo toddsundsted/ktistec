@@ -322,6 +322,36 @@ module Ktistec
       end
     end
 
+    # Digs out the first member of a set and parses it as a
+    # timestamp.
+    #
+    # See `dig_first?` for the set-collapse behavior and `parse_time?`
+    # for the accepted formats.
+    #
+    def self.dig_time?(json : JSON::Any, *selector) : Time?
+      if (value = dig?(json, *selector))
+        parse_time?(value)
+      end
+    end
+
+    # Parses a timestamp.
+    #
+    # AS2 Core §2.3 requires RFC 3339, relaxed to let seconds be
+    # omitted, and requires a `time-offset`. `Time.parse_rfc3339`
+    # implements RFC 3339 exactly, so it rejects both the conformant
+    # timestamps AS2 permits (seconds omitted) and the non-conformant
+    # ones peers emit -- notably an ISO 8601 basic-format offset
+    # (`+0000` rather than `+00:00`).
+    #
+    # Returns `nil` when the value can't be parsed.
+    #
+    def self.parse_time?(value : String) : Time?
+      Time::Format::ISO_8601_DATE_TIME.parse(value)
+    rescue ex
+      Log.warn { "parse_time?: unparseable timestamp: #{value.inspect} (#{ex.class})" }
+      nil
+    end
+
     # Loads context from cache.
     #
     # Exposed for testing. Should not be used directly.

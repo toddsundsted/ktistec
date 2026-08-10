@@ -111,7 +111,7 @@ module ActivityPub
         {
           "iri"       => json.dig?("@id").try(&.as_s),
           "_type"     => json.dig?("@type").try(&.as_s.split("#").last),
-          "published" => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
+          "published" => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#published"),
           # pick up the actor's id and the embedded actor if the hosts match
           "actor_iri" => if (actor = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#actor"))
             actor.as_s? || actor.dig?("@id").try(&.as_s?)

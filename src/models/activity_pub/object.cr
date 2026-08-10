@@ -1258,8 +1258,8 @@ module ActivityPub
         {
           "iri"               => json.dig?("@id").try(&.as_s),
           "_type"             => json.dig?("@type").try(&.as_s.split("#").last),
-          "published"         => (p = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#published")) ? Time.parse_rfc3339(p) : nil,
-          "updated"           => (u = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#updated")) ? Time.parse_rfc3339(u) : nil,
+          "published"         => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#published"),
+          "updated"           => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#updated"),
           "attributed_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
           "in_reply_to_iri"   => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
           "quote_iri"         => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quote") ||

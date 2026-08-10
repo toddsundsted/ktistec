@@ -1034,4 +1034,70 @@ Spectator.describe Ktistec::JSON_LD do
       end
     end
   end
+
+  describe ".dig_time?" do
+    it "parses the value" do
+      json = JSON.parse(%<{"foo":["2016-02-15T10:20:30Z"]}>)
+      expect(described_class.dig_time?(json, "foo")).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
+    end
+
+    it "returns nil if the key does not exist" do
+      json = JSON.parse(%<{"foo":["2016-02-15T10:20:30Z"]}>)
+      expect(described_class.dig_time?(json, "bar")).to be_nil
+    end
+
+    it "returns nil if the value is not a string" do
+      json = JSON.parse(%<{"foo":[5]}>)
+      expect(described_class.dig_time?(json, "foo")).to be_nil
+    end
+
+    it "returns nil if the value is unparseable" do
+      json = JSON.parse(%<{"foo":["not a timestamp"]}>)
+      expect(described_class.dig_time?(json, "foo")).to be_nil
+    end
+  end
+
+  describe ".parse_time?" do
+    it "parses an RFC 3339 timestamp" do
+      expect(described_class.parse_time?("2016-02-15T10:20:30Z")).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
+    end
+
+    it "parses fractional seconds" do
+      expect(described_class.parse_time?("2016-02-15T10:20:30.123Z")).to eq(Time.utc(2016, 2, 15, 10, 20, 30, nanosecond: 123000000))
+    end
+
+    it "applies the offset" do
+      expect(described_class.parse_time?("2016-02-15T10:20:30+05:00")).to eq(Time.utc(2016, 2, 15, 5, 20, 30))
+    end
+
+    # AS2 Core §2.3 permits omitting seconds
+    context "given a timestamp without seconds" do
+      it "parses the timestamp" do
+        expect(described_class.parse_time?("2016-02-15T10:20Z")).to eq(Time.utc(2016, 2, 15, 10, 20, 0))
+      end
+    end
+
+    context "given an offset written as -0500 rather than -05:00" do
+      it "parses fractional seconds" do
+        expect(described_class.parse_time?("2016-02-15T10:20:30.123-0500")).to eq(Time.utc(2016, 2, 15, 15, 20, 30, nanosecond: 123000000))
+      end
+
+      it "applies the offset" do
+        expect(described_class.parse_time?("2016-02-15T10:20:30-0500")).to eq(Time.utc(2016, 2, 15, 15, 20, 30))
+      end
+    end
+
+    context "given an unparseable value" do
+      it "returns nil" do
+        [
+          "not a timestamp",          # Time::Format::Error
+          "2016-02-30T10:20:30Z",     # ArgumentError, impossible date
+          "2016-02-15T10:20:30+9999", # Time::Error, offset out of range
+          "2016-02",                  # IndexError, truncated value
+        ].each do |value|
+          expect(described_class.parse_time?(value)).to be_nil, "expected #{value.inspect} to be unparseable"
+        end
+      end
+    end
+  end
 end

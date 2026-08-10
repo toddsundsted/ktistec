@@ -38,7 +38,14 @@ body.deck-page {
         display: flex;
         overflow-x: auto;
         justify-content: safe center;
+        overscroll-behavior-x: contain;
     }
+}
+
+@media (max-width: 60rem) {
+    body.deck-page > .deck { scroll-snap-type: x mandatory; }
+
+    .deck-pane { scroll-snap-align: start; }
 }
 
 .deck-pane {

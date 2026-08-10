@@ -4,7 +4,7 @@
   .ui.basic.very.padded.center.aligned.segment
     .ui.icon.header
       i.exclamation.icon
-      | There is nothing here, yet.
+      | There is nothing here yet.
     .ui.text
       | This page lists notifications about mentions, replies, follows, etc. that you've received.
 - else

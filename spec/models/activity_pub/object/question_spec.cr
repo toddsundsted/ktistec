@@ -179,6 +179,14 @@ Spectator.describe ActivityPub::Object::Question do
         expect(poll.closed_at.to_s).to contain("2025-12-31")
         expect(poll.closed_at.to_s).to contain("23:59:59")
       end
+
+      context "and an offset written as +0100 rather than +01:00" do
+        let(json_string) { super.gsub("2025-12-31T23:59:59Z", "2025-12-31T23:59:59+0100") }
+
+        it "extracts endTime as closed_at" do
+          expect(poll.closed_at).to eq(Time.utc(2025, 12, 31, 22, 59, 59))
+        end
+      end
     end
 
     context "with closed timestamp" do
@@ -197,6 +205,32 @@ Spectator.describe ActivityPub::Object::Question do
         expect(poll.closed_at).to_not be_nil
         expect(poll.closed_at.to_s).to contain("2025-01-15")
         expect(poll.closed_at.to_s).to contain("10:00:00")
+      end
+
+      context "and an offset written as +0100 rather than +01:00" do
+        let(json_string) { super.gsub("2025-01-15T10:00:00Z", "2025-01-15T10:00:00+0100") }
+
+        it "extracts closed as closed_at" do
+          expect(poll.closed_at).to eq(Time.utc(2025, 1, 15, 9, 0, 0))
+        end
+      end
+    end
+
+    context "when closed is invalid" do
+      let(json_string) do
+        <<-JSON
+        {
+          "@context": "https://www.w3.org/ns/activitystreams",
+          "type": "Question",
+          "id": "https://remote/questions/5",
+          "closed": "not a timestamp",
+          "endTime": "2025-12-31T23:59:59Z"
+        }
+        JSON
+      end
+
+      it "falls back to endTime" do
+        expect(poll.closed_at).to eq(Time.utc(2025, 12, 31, 23, 59, 59))
       end
     end
 

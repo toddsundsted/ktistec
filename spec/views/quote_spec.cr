@@ -15,6 +15,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
       failed = self.failed               # ameba:disable Lint/UselessAssign
       error_message = self.error_message # ameba:disable Lint/UselessAssign
       show_quote = self.show_quote       # ameba:disable Lint/UselessAssign
+      scope = self.scope                 # ameba:disable Lint/UselessAssign
       body = String.build { |content_io| Slang.embed("src/views/partials/object/content/quote.html.slang", content_io) }
       XML.parse_html(body)
     rescue XML::Error
@@ -33,6 +34,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
   let(failed) { false }
   let(error_message) { nil }
   let(show_quote) { true }
+  let(scope) { nil }
 
   let(env) { make_env("GET", "/objects") }
 
@@ -53,6 +55,15 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
     it "does not render quoted post" do
       expect(subject.xpath_nodes(CONTENT_XPATH)).to be_empty
+    end
+
+    context "given a scope" do
+      let(scope) { "feed-1" }
+
+      it "scopes the turbo-frame attribute values" do
+        expect(subject.xpath_nodes("//turbo-frame/@id | //form/@data-turbo-frame").map(&.text))
+          .to eq(["feed-1-quote-#{object.id}", "feed-1-quote-#{object.id}"])
+      end
     end
   end
 
@@ -169,6 +180,15 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
         it "renders a verify button" do
           expect(subject.xpath_nodes(BUTTON_TEXT_XPATH)).to contain_exactly("Verify quote")
+        end
+
+        context "given a scope" do
+          let(scope) { "feed-1" }
+
+          it "scopes the turbo-frame attribute values" do
+            expect(subject.xpath_nodes("//turbo-frame/@id | //form/@data-turbo-frame").map(&.text))
+              .to eq(["feed-1-quote-#{object.id}", "feed-1-quote-#{object.id}"])
+          end
         end
       end
 

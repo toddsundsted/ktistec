@@ -2065,6 +2065,31 @@ Spectator.describe ObjectsController do
         expect(response.status_code).to eq(200)
       end
 
+      context "when the quote renders in a frame" do
+        before_each do
+          HTTP::Client.objects << quote
+          HTTP::Client.actors << quote.attributed_to
+        end
+
+        it "renders an unscoped frame" do
+          get "/remote/objects/#{visible.id}/fetch/quote", HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "quote-#{visible.id}"}
+          ids = XML.parse_html(response.body).xpath_nodes("//turbo-frame/@id").map(&.text)
+          expect(ids).to contain("quote-#{visible.id}")
+        end
+
+        it "renders a scoped frame" do
+          get "/remote/objects/#{visible.id}/fetch/quote", HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "feed-9-quote-#{visible.id}"}
+          ids = XML.parse_html(response.body).xpath_nodes("//turbo-frame/@id").map(&.text)
+          expect(ids).to contain("feed-9-quote-#{visible.id}")
+        end
+
+        it "renders an unscoped frame given any other frame" do
+          get "/remote/objects/#{visible.id}/fetch/quote", HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "foobarbaz"}
+          ids = XML.parse_html(response.body).xpath_nodes("//turbo-frame/@id").map(&.text)
+          expect(ids).to contain("quote-#{visible.id}")
+        end
+      end
+
       context "when quote is not cached" do
         context "when fetchable" do
           before_each do

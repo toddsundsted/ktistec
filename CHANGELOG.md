@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.11.0]
+### Added
+- Accept inbound activities at a shared inbox.
+- Bound the time an inbound activity spends fetching remote objects.
+- Collapse long posts behind a generated summary.
+
+### Fixed
+- Keep a repeat follow request from ignoring the response already sent.
+- Fix poll's `closed` namespace, and treat `closed` and `endTime` interchangeably.
+- Remove geometry adjustments from the `highlighted` CSS class.
+
+### Changed
+- Be more liberal with the timestamp formats accepted.
+
 ## [v3.10.0]
 ### Added
 - Link to feeds index page from secondary menu.
@@ -909,6 +923,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.11.0]: https://github.com/toddsundsted/ktistec/compare/ffd86278...9577f80b
 [v3.10.0]: https://github.com/toddsundsted/ktistec/compare/5b66aaad...b8245e87
 [v3.9.0]: https://github.com/toddsundsted/ktistec/compare/1a47aa6e...56ecc835
 [v3.8.0]: https://github.com/toddsundsted/ktistec/compare/aec6139a...c3605dc6

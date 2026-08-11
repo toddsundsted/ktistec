@@ -153,6 +153,18 @@ Ktistec performs **full JSON-LD expansion** using cached contexts. The server ca
 - Shared inbox (`/inbox`) is supported for efficiency
 - Failed deliveries are retried with exponential backoff
 
+**Receiving:**
+- Inbound activities are accepted at both the shared inbox (`/inbox`) and per-actor inboxes
+- Processing is idempotent
+
+### Inbox responses
+
+A POST to an inbox is answered with a status code that tells the sender whether to retry:
+
+- `200 OK` - The activity was accepted, or had already been applied
+- `400 Bad Request` - The activity is permanently unacceptable: the body is blank or malformed, the type is unsupported, the signature cannot be verified. Do not retry.
+- `502 Bad Gateway` - Processing could not complete because a remote fetch it depended on timed out or failed transiently. Try again.
+
 ### Collections
 
 **Standard collections:**

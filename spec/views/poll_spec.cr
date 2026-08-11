@@ -11,6 +11,7 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
 
   subject do
     begin
+      scope = self.scope # ameba:disable Lint/UselessAssign
       body = String.build { |io| Slang.embed("src/views/partials/object/content/poll.html.slang", io) }
       XML.parse_html(body)
     rescue XML::Error
@@ -36,6 +37,7 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
   let(object_emojis) { [] of Tag::Emoji }
 
   let(timezone) { Time::Location.local }
+  let(scope) { nil }
 
   context "anonymous user" do
     it "renders vote counts" do
@@ -190,6 +192,14 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
 
     it "uses the ID of the question in the attribute" do
       expect(subject.xpath_nodes("//turbo-frame/@id")).to contain_exactly("poll-#{poll.question.id}")
+    end
+
+    context "given a scope" do
+      let(scope) { "feed-1" }
+
+      it "prefixes the attribute value with the scope" do
+        expect(subject.xpath_nodes("//turbo-frame/@id")).to contain_exactly("feed-1-poll-#{poll.question.id}")
+      end
     end
   end
 end

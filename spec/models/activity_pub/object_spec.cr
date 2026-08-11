@@ -537,6 +537,22 @@ Spectator.describe ActivityPub::Object do
       expect(object.urls).to eq(["url-link"])
     end
 
+    context "given offsets written as +0100 rather than +01:00" do
+      let(json) do
+        super
+          .gsub("2016-02-15T10:20:30Z", "2016-02-15T10:20:30+0100")
+          .gsub("2016-02-15T11:30:45Z", "2016-02-15T11:30:45+0100")
+      end
+
+      it "parses the published timestamp" do
+        expect(described_class.from_json_ld(json).published).to eq(Time.utc(2016, 2, 15, 9, 20, 30))
+      end
+
+      it "parses the updated timestamp" do
+        expect(described_class.from_json_ld(json).updated).to eq(Time.utc(2016, 2, 15, 10, 30, 45))
+      end
+    end
+
     context "when natural-language properties are sent only as language maps" do
       let(json) do
         <<-JSON
@@ -833,6 +849,22 @@ Spectator.describe ActivityPub::Object do
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
       expect(object.urls).to eq(["url-link"])
+    end
+
+    context "given offsets written as +0100 rather than +01:00" do
+      let(json) do
+        super
+          .gsub("2016-02-15T10:20:30Z", "2016-02-15T10:20:30+0100")
+          .gsub("2016-02-15T11:30:45Z", "2016-02-15T11:30:45+0100")
+      end
+
+      it "parses the published timestamp" do
+        expect(described_class.new.from_json_ld(json).published).to eq(Time.utc(2016, 2, 15, 9, 20, 30))
+      end
+
+      it "parses the updated timestamp" do
+        expect(described_class.new.from_json_ld(json).updated).to eq(Time.utc(2016, 2, 15, 10, 30, 45))
+      end
     end
 
     context "when natural-language properties are sent only as language maps" do

@@ -5,25 +5,25 @@
     - if env.account?
       .ui.icon.header
         i.exclamation.icon
-        | No one is following you, yet.
+        | No one is following you yet.
       .ui.text
         | This page lists your followers.
     - else
       .ui.icon.header
         i.exclamation.icon
-        | There is nothing here, yet.
+        | There is nothing here yet.
 - elsif related.empty? && title == "Following"
   .ui.basic.very.padded.center.aligned.segment
     - if env.account?
       .ui.icon.header
         i.exclamation.icon
-        | You're not following anyone, yet.
+        | You're not following anyone yet.
       .ui.text
         | This page lists people you are following.
     - else
       .ui.icon.header
         i.exclamation.icon
-        | There is nothing here, yet.
+        | There is nothing here yet.
 - else
   h1= title
   section.ui.two.doubling.cards

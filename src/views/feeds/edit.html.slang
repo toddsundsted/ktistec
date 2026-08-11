@@ -8,7 +8,7 @@ h1 = heading
   .ui.segment.feed-preview
     - if contents.empty?
       h3.ui.header Preview
-      .ui.text There is nothing here, yet. Adjust the criteria and <em>preview</em> again.
+      .ui.text There is nothing here yet. Adjust the criteria and <em>preview</em> again.
     - else
       h3.ui.header Preview
         - if contents.size >= Feed::Window::MATCH_CAP

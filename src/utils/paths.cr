@@ -362,6 +362,18 @@ module Utils::Paths
     {% end %}
   end
 
+  macro actor_deck_path(actor = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/deck")
+  end
+
+  macro actor_deck_pane_path(actor = nil, feed = nil, max_id = nil)
+    {% if max_id %}
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_deck_path({{actor}})}/panes/#{::URI.encode_path_segment({{feed}}.id.to_s)}?max_id=#{::URI.encode_www_form({{max_id}}.to_s)}")
+    {% else %}
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_deck_path({{actor}})}/panes/#{::URI.encode_path_segment({{feed}}.id.to_s)}")
+    {% end %}
+  end
+
   macro actor_relationships_path(actor = nil, relationship = nil)
     {% if relationship %}
       ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/#{::URI.encode_path_segment({{relationship}})}")

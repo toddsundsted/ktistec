@@ -61,9 +61,9 @@ crystal:
           - if object.sensitive
             i.red.eye.slash.icon
           = t summary
-        - partial body_partial(env, object, with_detail, show_quote, timezone)
+        - partial body_partial(env, object, with_detail, show_quote, timezone, scope)
     - else
-      - partial body_partial(env, object, with_detail, show_quote, timezone)
+      - partial body_partial(env, object, with_detail, show_quote, timezone, scope)
     - if with_detail && !as_context && account
       crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq!

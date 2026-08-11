@@ -69,6 +69,14 @@ Spectator.describe ActivityPub::Activity do
       expect(activity.summary).to eq("abc")
     end
 
+    context "given a published offset written as +0100 rather than +01:00" do
+      let(json) { super.gsub("2016-02-15T10:20:30Z", "2016-02-15T10:20:30+0100") }
+
+      it "parses the timestamp" do
+        expect(described_class.from_json_ld(json).published).to eq(Time.utc(2016, 2, 15, 9, 20, 30))
+      end
+    end
+
     context "when addressed to the public collection" do
       it "is visible" do
         json = self.json.gsub("to link", "https://www.w3.org/ns/activitystreams#Public")
@@ -108,6 +116,14 @@ Spectator.describe ActivityPub::Activity do
       expect(activity.cc).to eq(["cc link"])
       expect(activity.audience).to eq(["audience link"])
       expect(activity.summary).to eq("abc")
+    end
+
+    context "given a published offset written as +0100 rather than +01:00" do
+      let(json) { super.gsub("2016-02-15T10:20:30Z", "2016-02-15T10:20:30+0100") }
+
+      it "parses the timestamp" do
+        expect(described_class.new.from_json_ld(json).published).to eq(Time.utc(2016, 2, 15, 9, 20, 30))
+      end
     end
 
     context "when addressed to the public collection" do

@@ -198,6 +198,8 @@ class Feed
   def contents(max_id : Int64? = nil, min_id : Int64? = nil, limit : Int32 = 10)
     max_cursor = translate_object_id_to_feed_created_at_and_id(max_id) if max_id
     min_cursor = translate_object_id_to_feed_created_at_and_id(min_id) if min_id
+    # a dropped cursor would otherwise return page one
+    return Ktistec::Util::PaginatedArray(ActivityPub::Object).new if (max_id && !max_cursor) || (min_id && !min_cursor)
     # the pinned index is the only one with a `(from_iri, type)`
     # equality prefix; the broader composites over `created_at` were
     # dropped because they regressed other queries' plans, and the

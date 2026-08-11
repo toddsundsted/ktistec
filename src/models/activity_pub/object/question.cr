@@ -79,16 +79,8 @@ class ActivityPub::Object
     end
 
     private def self.parse_closed_at(json)
-      if (closed = Ktistec::JSON_LD.dig_first?(json, "http://joinmastodon.org/ns#closed"))
-        if (closed_str = closed.as_s?)
-          Time.parse_rfc3339(closed_str)
-        else
-          Time.utc
-        end
-      elsif (end_time = Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#endTime"))
-        Time.parse_rfc3339(end_time)
-      end
-    rescue Time::Format::Error
+      Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#closed") ||
+        Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#endTime")
     end
   end
 end

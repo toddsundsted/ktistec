@@ -907,7 +907,7 @@ Spectator.describe FeedsController do
 
       it "renders an empty preview" do
         get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'feed-preview')]//text()").map(&.text).join).to contain("There is nothing here, yet")
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'feed-preview')]//text()").map(&.text).join).to contain("There is nothing here yet")
       end
 
       it "renders an empty preview" do

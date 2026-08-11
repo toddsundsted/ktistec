@@ -4,7 +4,7 @@
   .ui.basic.very.padded.center.aligned.segment
     .ui.icon.header
       i.bookmark.icon
-      | There is nothing here, yet.
+      | There is nothing here yet.
     .ui.text
       | This page lists your bookmarked posts.
         You can bookmark posts by clicking the bookmark button on any post.

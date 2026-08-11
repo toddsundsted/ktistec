@@ -16,15 +16,15 @@
       em This post is blocked!
   - else
     - if !error_message && (object.draft? || object.quote_approved?(quote))
-      turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
+      turbo-frame.ui.segment.quoted-object id=scoped_id(scope, "quote-#{object.id}")
         section.ui.feed data-controller="icon-load-error"
-          - partial object_partial(env, quote, show_quote: false)
+          - partial object_partial(env, quote, show_quote: false, scope: scope)
     - else
-      turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
+      turbo-frame.ui.segment.quoted-object id=scoped_id(scope, "quote-#{object.id}")
         - if error_message
           em = error_message
         - elsif object.quote_authorization_iri
-          form.ui.form method="GET" action=fetch_quote_authorization_path(object) data-turbo-frame="quote-#{object.id}"
+          form.ui.form method="GET" action=fetch_quote_authorization_path(object) data-turbo-frame=scoped_id(scope, "quote-#{object.id}")
             button.ui.tiny.button type="submit"
               i.redo.icon
               | Verify quote
@@ -32,8 +32,8 @@
         - else
           em This quote cannot be verified.
 - else
-  turbo-frame.ui.segment.quoted-object id="quote-#{object.id}"
-    form.ui.form method="GET" action=fetch_quote_path(object) data-turbo-frame="quote-#{object.id}"
+  turbo-frame.ui.segment.quoted-object id=scoped_id(scope, "quote-#{object.id}")
+    form.ui.form method="GET" action=fetch_quote_path(object) data-turbo-frame=scoped_id(scope, "quote-#{object.id}")
       button.ui.tiny.button type="submit"
         i.redo.icon
         | Load quoted post

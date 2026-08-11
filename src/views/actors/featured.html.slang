@@ -4,7 +4,7 @@
   .ui.basic.very.padded.center.aligned.segment
     .ui.icon.header
       i.pin.icon
-      | There is nothing here, yet.
+      | There is nothing here yet.
     - if env.account?
       .ui.text
         | This page lists your featured posts.

@@ -6,6 +6,12 @@ module Ktistec::ViewHelper
   module ClassMethods
     PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
 
+    # Prefixes a DOM id with a scope, when one is given.
+    #
+    def scoped_id(scope : String?, id : String) : String
+      scope ? "#{scope}-#{id}" : id
+    end
+
     # Classifies an activity time into a liveness signal.
     #
     def activity_status(activity_at : Time?) : Symbol

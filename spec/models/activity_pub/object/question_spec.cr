@@ -185,10 +185,7 @@ Spectator.describe ActivityPub::Object::Question do
       let(json_string) do
         <<-JSON
         {
-          "@context": [
-            "https://www.w3.org/ns/activitystreams",
-            {"closed": "http://joinmastodon.org/ns#closed"}
-          ],
+          "@context": "https://www.w3.org/ns/activitystreams",
           "type": "Question",
           "id": "https://remote/questions/4",
           "closed": "2025-01-15T10:00:00Z"

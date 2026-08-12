@@ -3,6 +3,7 @@ require "markd"
 
 require "./actor"
 require "./collection"
+require "../../framework/util"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
@@ -1254,7 +1255,7 @@ module ActivityPub
 
       def self.from_json_ld(json : JSON::Any | String | IO)
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
-        object_host = (object_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(object_iri) : nil
+        object_iri = json.dig?("@id").try(&.as_s?)
         {
           "iri"               => json.dig?("@id").try(&.as_s),
           "_type"             => json.dig?("@type").try(&.as_s.split("#").last),
@@ -1267,13 +1268,13 @@ module ActivityPub
             Ktistec::JSON_LD.dig_id?(json, "http://fedibird.com/ns#quoteUri") ||
             Ktistec::JSON_LD.dig_id?(json, "https://misskey-hub.net/ns#_misskey_quote"),
           "quote_authorization_iri" => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quoteAuthorization"),
-          # pick up the replies' id and the embedded replies if the hosts match
+          # pick up the replies' id and the embedded replies if the origins match
           "replies_iri" => if (replies = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#replies"))
             replies.as_s? || replies.dig?("@id").try(&.as_s?)
           end,
           "replies" => if replies && replies.as_h?
             if (replies_iri = replies.dig?("@id").try(&.as_s?))
-              if parse_host(replies_iri) == object_host
+              if Ktistec::Util.same_origin?(replies_iri, object_iri)
                 ActivityPub::Collection.from_json_ld(replies)
               end
             else
@@ -1343,11 +1344,6 @@ module ActivityPub
             end
           end
         end.compact
-      end
-
-      private def self.parse_host(uri)
-        URI.parse(uri).host
-      rescue URI::Error
       end
 
       private def self.infer_media_type(url : String) : String?

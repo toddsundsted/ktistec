@@ -18,21 +18,8 @@ module Ktistec
       class FragmentIRI < ::Ktistec::Model::NotFound
       end
 
-      def origin
-        uri = URI.parse(iri)
-        "#{uri.scheme}://#{uri.host}"
-      end
-
       def self.local?(iri : String) : Bool
-        iri_uri = URI.parse(iri)
-        host_uri = URI.parse(Ktistec.host)
-        iri_uri.scheme == host_uri.scheme &&
-          iri_uri.host == host_uri.host &&
-          port(iri_uri) == port(host_uri)
-      end
-
-      private def self.port(uri : URI) : Int32?
-        uri.port || uri.scheme.try { |s| URI.default_port(s) }
+        Ktistec::Util.same_origin?(iri, Ktistec.host)
       end
 
       def local?

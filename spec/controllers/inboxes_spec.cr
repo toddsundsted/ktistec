@@ -936,10 +936,28 @@ Spectator.describe InboxesController do
       end
     end
 
+    # the gate runs before the per-type dispatch, so the activity type is immaterial.
+
     context "given an activity whose id is not on the actor's host" do
       let_create!(:object, attributed_to: actor)
-      # the gate runs before the per-type dispatch, so the activity type is immaterial.
       let_build(:like, actor: other, object: object, iri: "https://elsewhere.test/activities/#{random_string}")
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", like.to_json_ld(true), "application/json") }
+
+      it "returns 400" do
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "does not save the activity" do
+        expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
+          .not_to change { ActivityPub::Activity.count }
+      end
+    end
+
+    context "given an activity whose id is on the actor's host but another scheme" do
+      let_create!(:object, attributed_to: actor)
+      let_build(:like, actor: other, object: object, iri: "http://remote/activities/#{random_string}")
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", like.to_json_ld(true), "application/json") }
 

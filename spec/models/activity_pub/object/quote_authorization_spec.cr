@@ -256,6 +256,16 @@ Spectator.describe ActivityPub::Object::QuoteAuthorization do
       end
     end
 
+    context "when the authorization is served on another scheme" do
+      let_build(:quote_authorization,
+        iri: "http://remote/objects/#{random_string}",
+        quote_decision: quote_decision, attributed_to: quoted_author)
+
+      it "returns false" do
+        expect(quote_authorization.valid_for?(quoting_object, quoted_object)).to be_false
+      end
+    end
+
     context "when the decision is a rejection" do
       let_build(:quote_decision,
         interacting_object_iri: quoting_object.iri, interaction_target_iri: quoted_object.iri, decision: "reject")

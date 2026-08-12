@@ -3,6 +3,7 @@ require "../framework/controller"
 require "../framework/json_ld"
 require "../utils/network"
 require "../framework/signature"
+require "../framework/util"
 require "../ktistec/constants"
 require "../models/activity_pub/activity/**" # ameba:disable Ktistec/NoRequireGlob
 require "../services/inbox_activity_processor"
@@ -216,15 +217,6 @@ class InboxesController
       return true
     end
     object_gone_at_origin?(key_pair, object.iri, transient, deadline)
-  end
-
-  # Returns true if both IRIs are on the same host.
-  #
-  private def self.same_host?(first : String, second : String) : Bool
-    host = URI.parse(first).host.try(&.presence)
-    !!(host && host == URI.parse(second).host)
-  rescue URI::Error
-    false
   end
 
   # Authorizes an `Accept` or `Reject` of a `QuoteRequest`.
@@ -446,13 +438,13 @@ class InboxesController
       bad_request_or_bad_gateway("Can't Be Verified")
     end
 
-    # an activity's own identifier must be on the same host as its
+    # an activity's own identifier must have the same origin as its
     # actor. this holds for a relayed activity too, where the inner
     # activity's `@id` and actor both belong to the original author
     # rather than to the relaying community.
     if (activity_iri = activity.iri.presence) && (activity_actor_iri = activity.actor_iri)
-      unless same_host?(activity_iri, activity_actor_iri)
-        Log.trace { "[#{request_id}] activity iri=#{activity_iri} is not on the actor's host actor=#{activity_actor_iri}" }
+      unless Ktistec::Util.same_origin?(activity_iri, activity_actor_iri)
+        Log.trace { "[#{request_id}] activity iri=#{activity_iri} is not on the actor's origin actor=#{activity_actor_iri}" }
         reject("Origin Mismatch")
       end
     end

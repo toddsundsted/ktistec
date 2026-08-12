@@ -1048,13 +1048,6 @@ Spectator.describe Ktistec::Model::Linked do
     end
   end
 
-  describe "#origin" do
-    it "returns the origin" do
-      expect(LinkedModel.new(iri: "https://test.test/foo_bar").origin).to eq("https://test.test")
-      expect(LinkedModel.new(iri: "https://remote/foo_bar").origin).to eq("https://remote")
-    end
-  end
-
   describe "#uid" do
     it "returns the unique identifier" do
       expect(LinkedModel.new(iri: "https://test.test/foo_bar").uid).to eq("foo_bar")
@@ -1082,6 +1075,10 @@ Spectator.describe Ktistec::Model::Linked do
 
     it "treats an explicit default port and no port as equivalent" do
       expect(LinkedModel.new(iri: "https://test.test:443/foo").local?).to be_true
+    end
+
+    it "treats a host that differs in case as local" do
+      expect(LinkedModel.new(iri: "https://TEST.TEST/foo_bar").local?).to be_true
     end
   end
 

@@ -294,6 +294,17 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
         expect(activity["object"]).to be_a(ActivityPub::Object)
         expect(activity["object"].as(ActivityPub::Object).iri).to eq("https://test.test/object")
       end
+
+      context "but a different scheme" do
+        let(json) do
+          super.gsub(%q|"@id":"https://test.test/object"|, %q|"@id":"http://test.test/object"|)
+        end
+
+        it "does not populate object" do
+          expect(activity["object_iri"]).to eq("http://test.test/object")
+          expect(activity.has_key?("object")).to be_false
+        end
+      end
     end
 
     context "given an object on the activity's host but not the actor's" do

@@ -4,6 +4,7 @@ require "log"
 require "uri"
 
 require "../utils/network"
+require "./util"
 
 private def wrap(value)
   JSON::Any.new(value)
@@ -38,7 +39,7 @@ module Ktistec
     def self.expand(body : JSON::Any | String | IO, loader = Loader.new)
       body = JSON.parse(body) if body.is_a?(String | IO)
       Log.debug { body }
-      loader.document_host = document_host(body)
+      loader.document_origin = document_origin(body)
       expand(
         body,
         context(body["@context"]?, loader),
@@ -101,14 +102,12 @@ module Ktistec
       wrap(normalized)
     end
 
-    # Returns the host of the document's own identifier.
+    # Returns the origin of the document's own identifier.
     #
-    private def self.document_host(body)
+    private def self.document_origin(body)
       if (id = (body["@id"]? || body["id"]?).try(&.as_s?))
-        URI.parse(id).host
+        Ktistec::Util.origin?(id)
       end
-    rescue URI::Error
-      nil
     end
 
     private def self.context(context, loader, url = "https://www.w3.org/ns/activitystreams")
@@ -236,8 +235,8 @@ module Ktistec
     # the inherited context.
     #
     private def self.expand_embedded(node, context, loader)
-      saved = loader.document_host
-      loader.document_host = document_host(node) || saved
+      saved = loader.document_origin
+      loader.document_origin = document_origin(node) || saved
       new_context = context
       if node["@context"]?
         c = context(node["@context"]?, loader)
@@ -245,7 +244,7 @@ module Ktistec
       end
       expand(node, new_context, loader)
     ensure
-      loader.document_host = saved
+      loader.document_origin = saved
     end
 
     # Digs out the first member of a set.
@@ -368,7 +367,7 @@ module Ktistec
 
       private ACCEPT_HEADER = HTTP::Headers{"Accept" => "application/ld+json, application/json"}
 
-      property document_host : String?
+      property document_origin : String?
 
       def load(url)
         uri = URI.parse(url)
@@ -388,7 +387,7 @@ module Ktistec
       #
       private def resolve_uncached(url, uri)
         key = digest = nil
-        if uri && Loader.fetch_contexts? && (host = document_host) && uri.host.try(&.downcase) == host.downcase
+        if uri && Loader.fetch_contexts? && (origin = document_origin) && Ktistec::Util.origin?(uri.to_s) == origin
           if (entry = @@memo[url]?) && entry[1] > Time.utc
             key = entry[0]
           else

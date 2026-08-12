@@ -2716,6 +2716,15 @@ Spectator.describe ActivityPub::Object::ModelHelper do
         expect(object["replies"]).to be_a(ActivityPub::Collection)
         expect(object["replies"].as(ActivityPub::Collection).iri).to eq("https://test.test/replies")
       end
+
+      context "but a different scheme" do
+        let(json) { super.gsub(%q|"@id":"https://test.test/replies",|, %q|"@id":"http://test.test/replies",|) }
+
+        it "does not populate replies" do
+          expect(object["replies_iri"]).to eq("http://test.test/replies")
+          expect(object.has_key?("replies")).to be_false
+        end
+      end
     end
 
     context "given object without an id" do # should never happen, but...

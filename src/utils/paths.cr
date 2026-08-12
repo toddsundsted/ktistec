@@ -28,13 +28,12 @@ module Utils::Paths
     return fallback if referer.starts_with?("//")
     if ::Ktistec::Util.url_scheme(referer)
       # absolute -- accept only if same-origin
+      return fallback unless ::Ktistec::Util.same_origin?(referer, ::Ktistec.host)
       begin
         uri = ::URI.parse(referer)
-        server = ::URI.parse(::Ktistec.host)
       rescue ::URI::Error
         return fallback
       end
-      return fallback unless uri.scheme == server.scheme && uri.host == server.host && uri.port == server.port
       path = ::String.build do |io|
         io << (uri.path.presence || "/")
         if (q = uri.query.presence)

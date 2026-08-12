@@ -473,6 +473,74 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ".origin?" do
+    it "returns the scheme, host and port" do
+      expect(described_class.origin?("https://example.com:8443/foo")).to eq("https://example.com:8443")
+    end
+
+    it "elides the default port" do
+      expect(described_class.origin?("https://example.com:443/foo")).to eq("https://example.com")
+    end
+
+    it "lowercases the scheme" do
+      expect(described_class.origin?("HTTPS://example.com/foo")).to eq("https://example.com")
+    end
+
+    it "lowercases the host" do
+      expect(described_class.origin?("https://EXAMPLE.COM/foo")).to eq("https://example.com")
+    end
+
+    it "preserves the brackets around an IPv6 host" do
+      expect(described_class.origin?("https://[::1]:8443/foo")).to eq("https://[::1]:8443")
+    end
+
+    it "returns nil given a URI without a scheme" do
+      expect(described_class.origin?("//example.com/foo")).to be_nil
+    end
+
+    it "returns nil given a URI without a host" do
+      expect(described_class.origin?("urn:uuid:9e3f0d1c")).to be_nil
+    end
+
+    it "returns nil given a scheme other than http or https" do
+      expect(described_class.origin?("foo://example.com/bar")).to be_nil
+    end
+
+    it "ignores userinfo" do
+      expect(described_class.origin?("https://evil@example.com/foo")).to eq("https://example.com")
+    end
+
+    it "returns nil given an unparseable URI" do
+      expect(described_class.origin?("https://exa mple.com:port/foo")).to be_nil
+    end
+
+    it "returns nil given nil" do
+      expect(described_class.origin?(nil)).to be_nil
+    end
+  end
+
+  describe ".same_origin?" do
+    it "returns true given identical origins" do
+      expect(described_class.same_origin?("https://example.com/foo", "https://example.com/bar")).to be_true
+    end
+
+    it "returns true when case differs" do
+      expect(described_class.same_origin?("HTTPS://EXAMPLE.COM/foo", "https://example.com/bar")).to be_true
+    end
+
+    it "returns false when the origins differ" do
+      expect(described_class.same_origin?("http://example.com/foo", "https://example.com/foo")).to be_false
+    end
+
+    it "returns false when neither URI has an origin" do
+      expect(described_class.same_origin?("first link", "last link")).to be_false
+    end
+
+    it "returns false given nil" do
+      expect(described_class.same_origin?("https://example.com/foo", nil)).to be_false
+    end
+  end
+
   describe ".to_sentence" do
     it "returns an empty string" do
       expect(described_class.to_sentence([] of String)).to eq("")

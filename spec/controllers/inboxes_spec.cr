@@ -1036,6 +1036,8 @@ Spectator.describe InboxesController do
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", announce.to_json_ld(true), "application/json") }
 
+      before_each { HTTP::Client.objects << note }
+
       it "returns 400 if no object is included" do
         post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
         expect(response.status_code).to eq(400)
@@ -1048,6 +1050,12 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(502)
       end
 
+      it "fetches the object if embedded" do
+        announce.object = note
+        post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+        expect(HTTP::Client.requests).to have("GET #{note.iri}")
+      end
+
       it "fetches object if remote" do
         announce.object_iri = note.iri
         HTTP::Client.objects << note
@@ -1055,16 +1063,18 @@ Spectator.describe InboxesController do
         expect(HTTP::Client.last?).to match("GET #{note.iri}")
       end
 
-      it "doesn't fetch the object if embedded" do
-        announce.object = note
-        HTTP::Client.objects << note
+      it "does not overwrite the cached object" do
+        note.assign(content: "cached").save
+        announce.object = note.dup.assign(content: "embedded")
         post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
-        expect(HTTP::Client.last?).to be_nil
+        expect(response.status_code).to eq(200)
+        expect(ActivityPub::Object.find(note.iri).content).to eq("cached")
       end
 
       it "fetches the attributed to actor" do
         announce.object = note
         note.attributed_to_iri = "https://remote/actors/123"
+        HTTP::Client.objects << note
         post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
       end
@@ -1072,6 +1082,7 @@ Spectator.describe InboxesController do
       it "returns 502 if the fetch of the attributed to actor fails transiently" do
         announce.object = note
         note.attributed_to_iri = "https://remote/actors/timeout-error"
+        HTTP::Client.objects << note
         post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
         expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
         expect(response.status_code).to eq(502)
@@ -1091,6 +1102,7 @@ Spectator.describe InboxesController do
 
       it "puts the activity in the actor's notifications" do
         announce.object = note.assign(attributed_to: actor)
+        HTTP::Client.objects << note
         expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
           .to change { Notification.count(from_iri: actor.iri) }.by(1)
       end
@@ -1199,6 +1211,8 @@ Spectator.describe InboxesController do
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", like.to_json_ld(true), "application/json") }
 
+      before_each { HTTP::Client.objects << note }
+
       it "returns 400 if no object is included" do
         post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
         expect(response.status_code).to eq(400)
@@ -1211,6 +1225,12 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(502)
       end
 
+      it "fetches the object if embedded" do
+        like.object = note
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(HTTP::Client.requests).to have("GET #{note.iri}")
+      end
+
       it "fetches object if remote" do
         like.object_iri = note.iri
         HTTP::Client.objects << note
@@ -1218,16 +1238,18 @@ Spectator.describe InboxesController do
         expect(HTTP::Client.last?).to match("GET #{note.iri}")
       end
 
-      it "doesn't fetch the object if embedded" do
-        like.object = note
-        HTTP::Client.objects << note
+      it "does not overwrite the cached object" do
+        note.assign(content: "cached").save
+        like.object = note.dup.assign(content: "embedded")
         post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
-        expect(HTTP::Client.last?).to be_nil
+        expect(response.status_code).to eq(200)
+        expect(ActivityPub::Object.find(note.iri).content).to eq("cached")
       end
 
       it "fetches the attributed to actor" do
         like.object = note
         note.attributed_to_iri = "https://remote/actors/123"
+        HTTP::Client.objects << note
         post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
       end
@@ -1235,6 +1257,7 @@ Spectator.describe InboxesController do
       it "returns 502 if the fetch of the attributed to actor fails transiently" do
         like.object = note
         note.attributed_to_iri = "https://remote/actors/timeout-error"
+        HTTP::Client.objects << note
         post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
         expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
         expect(response.status_code).to eq(502)
@@ -1254,12 +1277,14 @@ Spectator.describe InboxesController do
 
       it "puts the activity in the actor's notifications" do
         like.object = note.assign(attributed_to: actor)
+        HTTP::Client.objects << note
         expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
           .to change { Notification.count(from_iri: actor.iri) }.by(1)
       end
 
       it "does not put the object in the actor's timeline" do
         like.object = note.assign(attributed_to: actor)
+        HTTP::Client.objects << note
         expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
           .not_to change { Timeline.count(from_iri: actor.iri) }
       end
@@ -1270,6 +1295,8 @@ Spectator.describe InboxesController do
       let_build(:dislike, actor: other, object: nil, to: [actor.iri])
 
       let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", dislike.to_json_ld(true), "application/json") }
+
+      before_each { HTTP::Client.objects << note }
 
       it "returns 400 if no object is included" do
         post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
@@ -1283,6 +1310,12 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(502)
       end
 
+      it "fetches the object if embedded" do
+        dislike.object = note
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(HTTP::Client.requests).to have("GET #{note.iri}")
+      end
+
       it "fetches object if remote" do
         dislike.object_iri = note.iri
         HTTP::Client.objects << note
@@ -1290,16 +1323,18 @@ Spectator.describe InboxesController do
         expect(HTTP::Client.last?).to match("GET #{note.iri}")
       end
 
-      it "doesn't fetch the object if embedded" do
-        dislike.object = note
-        HTTP::Client.objects << note
+      it "does not overwrite the cached object" do
+        note.assign(content: "cached").save
+        dislike.object = note.dup.assign(content: "embedded")
         post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
-        expect(HTTP::Client.last?).to be_nil
+        expect(response.status_code).to eq(200)
+        expect(ActivityPub::Object.find(note.iri).content).to eq("cached")
       end
 
       it "fetches the attributed to actor" do
         dislike.object = note
         note.attributed_to_iri = "https://remote/actors/123"
+        HTTP::Client.objects << note
         post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
         expect(HTTP::Client.last?).to match("GET https://remote/actors/123")
       end
@@ -1307,6 +1342,7 @@ Spectator.describe InboxesController do
       it "returns 502 if the fetch of the attributed to actor fails transiently" do
         dislike.object = note
         note.attributed_to_iri = "https://remote/actors/timeout-error"
+        HTTP::Client.objects << note
         post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
         expect(JSON.parse(response.body)["msg"]).to eq("object attribution not present")
         expect(response.status_code).to eq(502)
@@ -1326,12 +1362,14 @@ Spectator.describe InboxesController do
 
       it "puts the activity in the actor's notifications" do
         dislike.object = note.assign(attributed_to: actor)
+        HTTP::Client.objects << note
         expect { post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true) }
           .to change { Notification.count(from_iri: actor.iri) }.by(1)
       end
 
       it "does not put the object in the actor's timeline" do
         dislike.object = note.assign(attributed_to: actor)
+        HTTP::Client.objects << note
         expect { post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true) }
           .not_to change { Timeline.count(from_iri: actor.iri) }
       end

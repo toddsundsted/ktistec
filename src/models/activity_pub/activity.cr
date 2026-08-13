@@ -105,8 +105,14 @@ module ActivityPub
         render "src/views/activities/activity.json.ecr"
       end
 
+      MAY_EMBED_OBJECT = [
+        "https://www.w3.org/ns/activitystreams#Create",
+        "https://www.w3.org/ns/activitystreams#Update",
+      ]
+
       def self.from_json_ld(json : JSON::Any | String | IO)
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+        may_embed_object = json.dig?("@type").try(&.as_s?).in?(MAY_EMBED_OBJECT)
         activity_origin = Ktistec::Util.origin?(json.dig?("@id").try(&.as_s?))
         actor_origin = Ktistec::Util.origin?(Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#actor"))
         {
@@ -126,7 +132,7 @@ module ActivityPub
           "object_iri" => if (object = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#object"))
             object.as_s? || object.dig?("@id").try(&.as_s?)
           end,
-          "object" => if object && object.as_h?
+          "object" => if may_embed_object && object && object.as_h?
             if anchored?(object.dig?("@id").try(&.as_s?), activity_origin, actor_origin)
               ActivityPub.from_json_ld(object, default: ActivityPub::Object)
             end

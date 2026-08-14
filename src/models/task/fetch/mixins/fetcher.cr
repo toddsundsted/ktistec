@@ -83,7 +83,7 @@ class Task
                 RANDOM.rand(min..max).hours.from_now
               end
           else
-            Log.warn { "set_next_attempt_at [#{id}] - #{self.class}/#{subject_iri} - missing follow; not rescheduling, task will be marked complete" }
+            Log.debug { "set_next_attempt_at [#{id}] - #{self.class}/#{subject_iri} - missing follow; not rescheduling, task will be marked complete" }
           end
         elsif count < maximum
           if follow?
@@ -93,7 +93,7 @@ class Task
                 RANDOM.rand(90..150).minutes.from_now
               end
           else
-            Log.warn { "set_next_attempt_at [#{id}] - #{self.class}/#{subject_iri} - missing follow; not rescheduling, task will be marked complete" }
+            Log.debug { "set_next_attempt_at [#{id}] - #{self.class}/#{subject_iri} - missing follow; not rescheduling, task will be marked complete" }
           end
         else
           self.next_attempt_at =

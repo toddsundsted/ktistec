@@ -43,7 +43,7 @@ module Ktistec
       # Override in subclasses to implement custom matching heuristics.
       #
       def iri_matches?(requested_iri : String) : Bool
-        iri.compare(requested_iri, case_insensitive: true) == 0
+        iri.rstrip('/').compare(requested_iri.rstrip('/'), case_insensitive: true) == 0
       end
 
       # Raises unless a dereferenced document's IRI and the location

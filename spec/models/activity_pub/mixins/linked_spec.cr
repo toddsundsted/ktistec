@@ -309,6 +309,14 @@ Spectator.describe Ktistec::Model::Linked do
         result = subject.linked_model?(key_pair, dereference: true)
         expect(result).to be_nil
       end
+
+      context "but the IRIs differ only by a trailing slash" do
+        let(requested_iri) { "#{object.iri}/" }
+
+        it "returns the object" do
+          expect(subject.linked_model?(key_pair, dereference: true)).not_to be_nil
+        end
+      end
     end
 
     context "when the object is served after a redirect" do
@@ -551,6 +559,14 @@ Spectator.describe Ktistec::Model::Linked do
       it "fetches the object and raises an error" do
         expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
         expect(HTTP::Client.last?).to match("GET #{requested_iri}")
+      end
+
+      context "but the IRIs differ only by a trailing slash" do
+        let(requested_iri) { "#{object.iri}/" }
+
+        it "returns the object" do
+          expect(subject.linked_model(key_pair, dereference: true, deadline: nil)).not_to be_nil
+        end
       end
     end
 
@@ -818,6 +834,14 @@ Spectator.describe Ktistec::Model::Linked do
         result = subject.dereference?(key_pair, requested_iri)
         expect(result).to be_nil
       end
+
+      context "but the IRIs differ only by a trailing slash" do
+        let(requested_iri) { "#{object.iri}/" }
+
+        it "returns the object" do
+          expect(subject.dereference?(key_pair, requested_iri)).not_to be_nil
+        end
+      end
     end
 
     context "when the object is served after a redirect" do
@@ -1051,6 +1075,14 @@ Spectator.describe Ktistec::Model::Linked do
       it "fetches the object and raises an error" do
         expect { subject.dereference(key_pair, requested_iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
         expect(HTTP::Client.last?).to match("GET #{requested_iri}")
+      end
+
+      context "but the IRIs differ only by a trailing slash" do
+        let(requested_iri) { "#{object.iri}/" }
+
+        it "returns the object" do
+          expect(subject.dereference(key_pair, requested_iri, deadline: nil)).not_to be_nil
+        end
       end
     end
 

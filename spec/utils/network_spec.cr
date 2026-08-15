@@ -37,6 +37,33 @@ Spectator.describe Ktistec::Network do
       expect(described_class.get(key_pair, "https://external/redirected-page-relative").body).to eq("content")
     end
 
+    it "returns the requested URL as the final URL" do
+      expect(described_class.get(key_pair, "https://external/specified-page").final_url).to eq("https://external/specified-page")
+    end
+
+    context "given a redirect" do
+      it "returns the redirect target as the final URL" do
+        expect(described_class.get(key_pair, "https://external/redirected-page-absolute").final_url).to eq("https://external/specified-page")
+      end
+
+      it "returns the redirect target as the final URL" do
+        expect(described_class.get(key_pair, "https://external/redirected-page-relative").final_url).to eq("https://external/specified-page")
+      end
+
+      context "that crosses origins" do
+        before_each do
+          HTTP::Client.cache.set_response(
+            "https://external/redirected-off-origin",
+            HTTP::Client::Response.new(301, headers: HTTP::Headers{"Location" => "https://elsewhere/specified-page"}),
+          )
+        end
+
+        it "returns the redirect target as the final URL" do
+          expect(described_class.get(key_pair, "https://external/redirected-off-origin").final_url).to eq("https://elsewhere/specified-page")
+        end
+      end
+    end
+
     it "fails on errors" do
       expect { described_class.get(key_pair, "https://external/redirected-no-location") }.to raise_error(Ktistec::Network::Error, /Could not redirect/)
     end

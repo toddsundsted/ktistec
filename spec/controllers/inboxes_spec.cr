@@ -955,6 +955,51 @@ Spectator.describe InboxesController do
           end
         end
 
+        context "and the key document is served from another origin" do
+          let_create(:actor, named: :impersonator, with_keys: true,
+            iri: "https://elsewhere.test/actors/#{random_string}")
+
+          let(key_document) do
+            {
+              "@context"     => "https://w3id.org/security/v1",
+              "id"           => key_id,
+              "owner"        => other.iri,
+              "publicKeyPem" => impersonator.pem_public_key,
+            }.to_json
+          end
+
+          let(headers) do
+            Ktistec::Signature.sign(impersonator, actor.inbox.not_nil!, json_ld, "application/json").tap do |hdrs|
+              hdrs["Signature"] = hdrs["Signature"].gsub(/keyId="[^"]*"/, %Q<keyId="#{key_id}">)
+            end
+          end
+
+          before_each do
+            HTTP::Client.cache.set_response(
+              key_id,
+              HTTP::Client::Response.new(301, headers: HTTP::Headers{"Location" => "https://elsewhere.test/keys/main-key"}),
+            )
+            HTTP::Client.cache["https://elsewhere.test/keys/main-key"] = key_document
+            HTTP::Client.activities.delete(activity.iri)
+            HTTP::Client.objects.delete(note.iri)
+          end
+
+          it "retrieves the activity from the origin" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+          end
+
+          it "does not save the activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+              .not_to change { ActivityPub::Activity.count }
+          end
+
+          it "returns 400" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(400)
+          end
+        end
+
         context "and the resolved key id does not match the keyId" do
           let(key_document) do
             {

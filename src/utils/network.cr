@@ -359,6 +359,19 @@ module Ktistec
 
     MAX_DISCOVERY_RESPONSE_BYTES = 65_536
 
+    # A response, plus the URL it was ultimately fetched from.
+    #
+    # `final_url` is the last URL in the chain of redirects -- what
+    # FEP-fe34 calls the object's "location".
+    #
+    class Response < HTTP::Client::Response
+      getter final_url : String
+
+      def initialize(@final_url : String, status : HTTP::Status, body : String? = nil, headers : HTTP::Headers = HTTP::Headers.new)
+        super(status, body, headers)
+      end
+    end
+
     # Fetches the specified URL via HTTP GET.
     #
     # When `key_pair` is supplied, the request is signed; pass `nil`
@@ -375,7 +388,7 @@ module Ktistec
     # by the time remaining, and `DeadlineExceeded` is raised -- before
     # any I/O -- once it is spent.
     #
-    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+    def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil) : Response
       was = url
       error_class = TransientError # default error class
       message = "Failed"
@@ -421,7 +434,7 @@ module Ktistec
           case status_code
           when 200
             status = HTTP::Status.new(status_code)
-            return HTTP::Client::Response.new(status, body: body_capped, headers: response_headers)
+            return Response.new(url.to_s, status, body: body_capped, headers: response_headers)
           when 301, 302, 303, 307, 308
             if (tmp = response_headers["Location"]?) && (url = uri.resolve(tmp).to_s)
               next
@@ -530,7 +543,7 @@ module Ktistec
     end
 
     # :ditto:
-    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+    def get(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil) : Response
       get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     end
 
@@ -540,7 +553,7 @@ module Ktistec
     end
 
     # :ditto:
-    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+    def get?(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil) : Response?
       get(key_pair, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }
@@ -554,7 +567,7 @@ module Ktistec
     end
 
     # :ditto:
-    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil)
+    def get?(url : String | URI, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil) : Response?
       get(nil, url, headers, attempts, max_bytes: max_bytes, deadline: deadline)
     rescue ex : Error
       Log.info { "#{self}.get? - #{ex.message}" }

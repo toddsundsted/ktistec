@@ -21,8 +21,10 @@ module Ktistec
     class Error < Exception
     end
 
-    # Raised when a dereferenced document's `id` does not match the
-    # requested IRI.
+    # Raised when a dereferenced document is not authoritatively the
+    # document that was asked for: either its `id` does not match the
+    # requested IRI, or its `id` and the location it was fetched from
+    # have different origins.
     #
     class MismatchedIRI < Error
     end

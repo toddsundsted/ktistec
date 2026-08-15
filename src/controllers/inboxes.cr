@@ -105,8 +105,9 @@ class InboxesController
   #    `publicKeyPem` and `owner`.
   #
   # For cases 2 and 3, the signer is the key's `owner`, the resolved
-  # key's id must match the `keyId`, and the owner must have the same
-  # origin as the key.
+  # key's id must match the `keyId`, the key must have been served
+  # from its own origin, and the owner must have the same origin as
+  # the key.
   #
   # Returns `nil` on any failure.
   #
@@ -136,6 +137,10 @@ class InboxesController
         resolved_key_id = json_ld.dig?("@id").try(&.as_s)
       end
       if pem && owner && resolved_key_id && resolved_key_id == key_id
+        unless Ktistec::Util.same_origin?(resolved_key_id, response.final_url)
+          Log.warn { "[#{request_id}] key #{resolved_key_id} was served from #{response.final_url}, on another origin" }
+          return
+        end
         unless Ktistec::Util.same_origin?(owner, resolved_key_id)
           Log.warn { "[#{request_id}] key #{resolved_key_id} claims owner #{owner} on another origin" }
           return

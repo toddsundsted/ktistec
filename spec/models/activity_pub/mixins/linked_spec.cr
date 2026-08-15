@@ -311,6 +311,44 @@ Spectator.describe Ktistec::Model::Linked do
       end
     end
 
+    context "when the object is served after a redirect" do
+      let(redirect_to) { "https://remote/objects/canonical" }
+
+      before_each do
+        HTTP::Client.cache.set_response(
+          object.iri,
+          HTTP::Client::Response.new(301, headers: HTTP::Headers{"Location" => redirect_to}),
+        )
+        HTTP::Client.objects[redirect_to] = object.to_json_ld
+      end
+
+      # a redirect within an origin is ordinary (canonicalization, a
+      # CDN, etc.), and the origin's server is authoritative for its
+      # own IRIs, so the check must not reject it.
+
+      it "returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: true)).not_to be_nil
+      end
+
+      context "and the document claims the redirect target" do
+        before_each do
+          HTTP::Client.objects[redirect_to] = LinkedModel.new(iri: redirect_to).to_json_ld
+        end
+
+        it "returns the object" do
+          expect(subject.linked_model?(key_pair, dereference: true)).not_to be_nil
+        end
+      end
+
+      context "and the redirect crosses origins" do
+        let(redirect_to) { "https://elsewhere/objects/canonical" }
+
+        it "does not return the object" do
+          expect(subject.linked_model?(key_pair, dereference: true)).to be_nil
+        end
+      end
+    end
+
     context "when linked IRI contains a fragment" do
       let(iri) { "https://remote/objects/object#activity/like/12345" }
 
@@ -779,6 +817,44 @@ Spectator.describe Ktistec::Model::Linked do
       it "does not return the object" do
         result = subject.dereference?(key_pair, requested_iri)
         expect(result).to be_nil
+      end
+    end
+
+    context "when the object is served after a redirect" do
+      let(redirect_to) { "https://remote/objects/canonical" }
+
+      before_each do
+        HTTP::Client.cache.set_response(
+          object.iri,
+          HTTP::Client::Response.new(301, headers: HTTP::Headers{"Location" => redirect_to}),
+        )
+        HTTP::Client.objects[redirect_to] = object.to_json_ld
+      end
+
+      # a redirect within an origin is ordinary (canonicalization, a
+      # CDN, etc.), and the origin's server is authoritative for its
+      # own IRIs, so the check must not reject it.
+
+      it "returns the object" do
+        expect(subject.dereference?(key_pair, object.iri)).not_to be_nil
+      end
+
+      context "and the document claims the redirect target" do
+        before_each do
+          HTTP::Client.objects[redirect_to] = LinkedModel.new(iri: redirect_to).to_json_ld
+        end
+
+        it "returns the object" do
+          expect(subject.dereference?(key_pair, object.iri)).not_to be_nil
+        end
+      end
+
+      context "and the redirect crosses origins" do
+        let(redirect_to) { "https://elsewhere/objects/canonical" }
+
+        it "does not return the object" do
+          expect(subject.dereference?(key_pair, object.iri)).to be_nil
+        end
       end
     end
 

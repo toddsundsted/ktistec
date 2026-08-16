@@ -45,7 +45,11 @@ body.deck-page {
 @media (max-width: 60rem) {
     body.deck-page > .deck { scroll-snap-type: x mandatory; }
 
-    .deck-pane { scroll-snap-align: start; }
+    .deck-pane {
+        scroll-snap-align: start;
+        content-visibility: auto;
+        contain-intrinsic-size: auto 100vh;
+    }
 }
 
 .deck-pane {

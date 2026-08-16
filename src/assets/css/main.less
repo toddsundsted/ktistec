@@ -194,6 +194,9 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
             -webkit-hyphens: auto;
             hyphens: auto;
 
+            /* a bare URL has no break opportunity WebKit will take */
+            a { word-break: break-all; }
+
             > details {
                 margin-top: 0.5em;
                 > summary + * {

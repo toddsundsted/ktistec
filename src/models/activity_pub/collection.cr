@@ -4,6 +4,7 @@ require "../../framework/json_ld"
 require "../../framework/ext/sqlite3"
 require "../../framework/model"
 require "../../framework/model/common"
+require "../../framework/util"
 require "../activity_pub"
 
 require "../../views/view_helper"
@@ -104,13 +105,7 @@ module ActivityPub
     # Allows same-origin matching for collections.
     #
     def iri_matches?(requested_iri : String) : Bool
-      self_uri = URI.parse(self.iri).normalize!
-      requested_uri = URI.parse(requested_iri).normalize!
-      self_uri.scheme == requested_uri.scheme &&
-        self_uri.host == requested_uri.host &&
-        self_uri.port == requested_uri.port
-    rescue URI::Error
-      false
+      Ktistec::Util.same_origin?(self.iri, requested_iri)
     end
 
     def to_json_ld(recursive = true)
@@ -134,73 +129,73 @@ module ActivityPub
 
       def self.from_json_ld(json : JSON::Any | String | IO)
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
-        collection_host = (collection_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(collection_iri) : nil
+        collection_iri = json.dig?("@id").try(&.as_s?)
         {
           "iri"        => json.dig?("@id").try(&.as_s),
           "items_iris" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
           "items"      => if (items = json.dig?("https://www.w3.org/ns/activitystreams#items"))
-            map_items(items, collection_host)
+            map_items(items, collection_iri)
           end,
           "total_items" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#totalItems", as: Int64),
-          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          # pick up the collection's id and the embedded collection if origins match or anonymous
           "first_iri" => if (first = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#first"))
             first.as_s? || first.dig?("@id").try(&.as_s?)
           end,
           "first" => if first && first.as_h?
             if (first_iri = first.dig?("@id").try(&.as_s?))
-              if parse_host(first_iri) == collection_host
+              if Ktistec::Util.same_origin?(first_iri, collection_iri)
                 ActivityPub::Collection.from_json_ld(first)
               end
             else
               ActivityPub::Collection.from_json_ld(first)
             end
           end,
-          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          # pick up the collection's id and the embedded collection if origins match or anonymous
           "last_iri" => if (last = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#last"))
             last.as_s? || last.dig?("@id").try(&.as_s?)
           end,
           "last" => if last && last.as_h?
             if (last_iri = last.dig?("@id").try(&.as_s?))
-              if parse_host(last_iri) == collection_host
+              if Ktistec::Util.same_origin?(last_iri, collection_iri)
                 ActivityPub::Collection.from_json_ld(last)
               end
             else
               ActivityPub::Collection.from_json_ld(last)
             end
           end,
-          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          # pick up the collection's id and the embedded collection if origins match or anonymous
           "prev_iri" => if (prev = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#prev"))
             prev.as_s? || prev.dig?("@id").try(&.as_s?)
           end,
           "prev" => if prev && prev.as_h?
             if (prev_iri = prev.dig?("@id").try(&.as_s?))
-              if parse_host(prev_iri) == collection_host
+              if Ktistec::Util.same_origin?(prev_iri, collection_iri)
                 ActivityPub::Collection.from_json_ld(prev)
               end
             else
               ActivityPub::Collection.from_json_ld(prev)
             end
           end,
-          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          # pick up the collection's id and the embedded collection if origins match or anonymous
           "next_iri" => if (_next = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#next"))
             _next.as_s? || _next.dig?("@id").try(&.as_s?)
           end,
           "next" => if _next && _next.as_h?
             if (next_iri = _next.dig?("@id").try(&.as_s?))
-              if parse_host(next_iri) == collection_host
+              if Ktistec::Util.same_origin?(next_iri, collection_iri)
                 ActivityPub::Collection.from_json_ld(_next)
               end
             else
               ActivityPub::Collection.from_json_ld(_next)
             end
           end,
-          # pick up the collection's id and the embedded collection if hosts match or anonymous
+          # pick up the collection's id and the embedded collection if origins match or anonymous
           "current_iri" => if (current = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#current"))
             current.as_s? || current.dig?("@id").try(&.as_s?)
           end,
           "current" => if current && current.as_h?
             if (current_iri = current.dig?("@id").try(&.as_s?))
-              if parse_host(current_iri) == collection_host
+              if Ktistec::Util.same_origin?(current_iri, collection_iri)
                 ActivityPub::Collection.from_json_ld(current)
               end
             else
@@ -210,14 +205,14 @@ module ActivityPub
         }.compact
       end
 
-      private def self.map_items(items, collection_host)
+      private def self.map_items(items, collection_iri)
         ([] of ActivityPub | String).tap do |array|
           items.as_a.each do |item|
             if item.as_s?
               array << item.as_s
             elsif item.as_h?
               if (item_id = item.dig?("@id").try(&.as_s?))
-                if parse_host(item_id) == collection_host
+                if Ktistec::Util.same_origin?(item_id, collection_iri)
                   array << ActivityPub.from_json_ld(item)
                 else
                   array << item_id
@@ -228,11 +223,6 @@ module ActivityPub
             end
           end
         end
-      end
-
-      private def self.parse_host(uri)
-        URI.parse(uri).host
-      rescue URI::Error
       end
     end
   end

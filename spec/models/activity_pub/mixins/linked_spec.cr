@@ -309,6 +309,52 @@ Spectator.describe Ktistec::Model::Linked do
         result = subject.linked_model?(key_pair, dereference: true)
         expect(result).to be_nil
       end
+
+      context "but the IRIs differ only by a trailing slash" do
+        let(requested_iri) { "#{object.iri}/" }
+
+        it "returns the object" do
+          expect(subject.linked_model?(key_pair, dereference: true)).not_to be_nil
+        end
+      end
+    end
+
+    context "when the object is served after a redirect" do
+      let(redirect_to) { "https://remote/objects/canonical" }
+
+      before_each do
+        HTTP::Client.cache.set_response(
+          object.iri,
+          HTTP::Client::Response.new(301, headers: HTTP::Headers{"Location" => redirect_to}),
+        )
+        HTTP::Client.objects[redirect_to] = object.to_json_ld
+      end
+
+      # a redirect within an origin is ordinary (canonicalization, a
+      # CDN, etc.), and the origin's server is authoritative for its
+      # own IRIs, so the check must not reject it.
+
+      it "returns the object" do
+        expect(subject.linked_model?(key_pair, dereference: true)).not_to be_nil
+      end
+
+      context "and the document claims the redirect target" do
+        before_each do
+          HTTP::Client.objects[redirect_to] = LinkedModel.new(iri: redirect_to).to_json_ld
+        end
+
+        it "returns the object" do
+          expect(subject.linked_model?(key_pair, dereference: true)).not_to be_nil
+        end
+      end
+
+      context "and the redirect crosses origins" do
+        let(redirect_to) { "https://elsewhere/objects/canonical" }
+
+        it "does not return the object" do
+          expect(subject.linked_model?(key_pair, dereference: true)).to be_nil
+        end
+      end
     end
 
     context "when linked IRI contains a fragment" do
@@ -513,6 +559,14 @@ Spectator.describe Ktistec::Model::Linked do
       it "fetches the object and raises an error" do
         expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
         expect(HTTP::Client.last?).to match("GET #{requested_iri}")
+      end
+
+      context "but the IRIs differ only by a trailing slash" do
+        let(requested_iri) { "#{object.iri}/" }
+
+        it "returns the object" do
+          expect(subject.linked_model(key_pair, dereference: true, deadline: nil)).not_to be_nil
+        end
       end
     end
 
@@ -780,6 +834,52 @@ Spectator.describe Ktistec::Model::Linked do
         result = subject.dereference?(key_pair, requested_iri)
         expect(result).to be_nil
       end
+
+      context "but the IRIs differ only by a trailing slash" do
+        let(requested_iri) { "#{object.iri}/" }
+
+        it "returns the object" do
+          expect(subject.dereference?(key_pair, requested_iri)).not_to be_nil
+        end
+      end
+    end
+
+    context "when the object is served after a redirect" do
+      let(redirect_to) { "https://remote/objects/canonical" }
+
+      before_each do
+        HTTP::Client.cache.set_response(
+          object.iri,
+          HTTP::Client::Response.new(301, headers: HTTP::Headers{"Location" => redirect_to}),
+        )
+        HTTP::Client.objects[redirect_to] = object.to_json_ld
+      end
+
+      # a redirect within an origin is ordinary (canonicalization, a
+      # CDN, etc.), and the origin's server is authoritative for its
+      # own IRIs, so the check must not reject it.
+
+      it "returns the object" do
+        expect(subject.dereference?(key_pair, object.iri)).not_to be_nil
+      end
+
+      context "and the document claims the redirect target" do
+        before_each do
+          HTTP::Client.objects[redirect_to] = LinkedModel.new(iri: redirect_to).to_json_ld
+        end
+
+        it "returns the object" do
+          expect(subject.dereference?(key_pair, object.iri)).not_to be_nil
+        end
+      end
+
+      context "and the redirect crosses origins" do
+        let(redirect_to) { "https://elsewhere/objects/canonical" }
+
+        it "does not return the object" do
+          expect(subject.dereference?(key_pair, object.iri)).to be_nil
+        end
+      end
     end
 
     context "when IRI contains a fragment" do
@@ -976,6 +1076,14 @@ Spectator.describe Ktistec::Model::Linked do
         expect { subject.dereference(key_pair, requested_iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
         expect(HTTP::Client.last?).to match("GET #{requested_iri}")
       end
+
+      context "but the IRIs differ only by a trailing slash" do
+        let(requested_iri) { "#{object.iri}/" }
+
+        it "returns the object" do
+          expect(subject.dereference(key_pair, requested_iri, deadline: nil)).not_to be_nil
+        end
+      end
     end
 
     context "when IRI contains a fragment" do
@@ -1048,13 +1156,6 @@ Spectator.describe Ktistec::Model::Linked do
     end
   end
 
-  describe "#origin" do
-    it "returns the origin" do
-      expect(LinkedModel.new(iri: "https://test.test/foo_bar").origin).to eq("https://test.test")
-      expect(LinkedModel.new(iri: "https://remote/foo_bar").origin).to eq("https://remote")
-    end
-  end
-
   describe "#uid" do
     it "returns the unique identifier" do
       expect(LinkedModel.new(iri: "https://test.test/foo_bar").uid).to eq("foo_bar")
@@ -1082,6 +1183,10 @@ Spectator.describe Ktistec::Model::Linked do
 
     it "treats an explicit default port and no port as equivalent" do
       expect(LinkedModel.new(iri: "https://test.test:443/foo").local?).to be_true
+    end
+
+    it "treats a host that differs in case as local" do
+      expect(LinkedModel.new(iri: "https://TEST.TEST/foo_bar").local?).to be_true
     end
   end
 

@@ -71,7 +71,11 @@ class SearchesController
   #
   private def self.fetch_activity_pub(key_pair, url, headers, *, follow_alternate = true)
     response = Ktistec::Network.get(key_pair, url, headers)
-    return ActivityPub.from_json_ld(response.body, include_key: true) unless html_response?(response)
+    unless html_response?(response)
+      instance = ActivityPub.from_json_ld(response.body, include_key: true)
+      Ktistec::Model::Linked.check_origin!(instance.iri, response.final_url)
+      return instance
+    end
     if follow_alternate && (href = discover_activity_pub_link(response.body, url))
       fetch_activity_pub(key_pair, href, headers, follow_alternate: false)
     else
@@ -95,5 +99,5 @@ class SearchesController
 
   private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |
                          Ktistec::HostMeta::Error | Ktistec::WebFinger::Error | Ktistec::Network::Error |
-                         NilAssertionError
+                         Ktistec::JSON_LD::MismatchedIRI | NilAssertionError
 end

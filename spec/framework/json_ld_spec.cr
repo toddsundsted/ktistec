@@ -118,10 +118,10 @@ Spectator.describe Ktistec::JSON_LD do
   end
 
   double loader do
-    stub def document_host
+    stub def document_origin
     end
 
-    stub def document_host=(host : String?)
+    stub def document_origin=(origin : String?)
     end
 
     stub def load(url)
@@ -725,6 +725,17 @@ Spectator.describe Ktistec::JSON_LD do
 
       context "and the document's id is on a different host" do
         before_each { document.as_h["id"] = JSON::Any.new("https://elsewhere.example/m/random/t/1") }
+
+        pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
+
+        it "does not fetch the context" do
+          json
+          expect(HTTP::Client.requests).to be_empty
+        end
+      end
+
+      context "and the document's id is on a different scheme" do
+        before_each { document.as_h["id"] = JSON::Any.new("http://threadbin.example/m/random/t/1") }
 
         pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
 

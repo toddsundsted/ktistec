@@ -18,21 +18,8 @@ module Ktistec
       class FragmentIRI < ::Ktistec::Model::NotFound
       end
 
-      def origin
-        uri = URI.parse(iri)
-        "#{uri.scheme}://#{uri.host}"
-      end
-
       def self.local?(iri : String) : Bool
-        iri_uri = URI.parse(iri)
-        host_uri = URI.parse(Ktistec.host)
-        iri_uri.scheme == host_uri.scheme &&
-          iri_uri.host == host_uri.host &&
-          port(iri_uri) == port(host_uri)
-      end
-
-      private def self.port(uri : URI) : Int32?
-        uri.port || uri.scheme.try { |s| URI.default_port(s) }
+        Ktistec::Util.same_origin?(iri, Ktistec.host)
       end
 
       def local?
@@ -56,7 +43,16 @@ module Ktistec
       # Override in subclasses to implement custom matching heuristics.
       #
       def iri_matches?(requested_iri : String) : Bool
-        iri.compare(requested_iri, case_insensitive: true) == 0
+        iri.rstrip('/').compare(requested_iri.rstrip('/'), case_insensitive: true) == 0
+      end
+
+      # Raises unless a dereferenced document's IRI and the location
+      # it was fetched from have the same origin.
+      #
+      def self.check_origin!(iri : String, final_url : String) : Nil
+        unless Ktistec::Util.same_origin?(iri, final_url)
+          raise ::Ktistec::JSON_LD::MismatchedIRI.new("origin mismatch: #{iri} served from #{final_url}")
+        end
       end
 
       # Returns `true` if the response carries an ActivityPub /
@@ -135,8 +131,11 @@ module Ktistec
               Ktistec::Network.get(key_pair, iri, headers, deadline: deadline) do |response|
                 if Ktistec::Model::Linked.json_response?(response)
                   instance = self.from_json_ld(response.body, **options)
-                  if instance && !instance.iri_matches?(iri)
-                    raise ::Ktistec::JSON_LD::MismatchedIRI.new("IRI mismatch: requested #{iri}, got #{instance.iri}")
+                  if instance
+                    unless instance.iri_matches?(iri) || instance.iri_matches?(response.final_url)
+                      raise ::Ktistec::JSON_LD::MismatchedIRI.new("IRI mismatch: requested #{iri}, served from #{response.final_url}, got #{instance.iri}")
+                    end
+                    Ktistec::Model::Linked.check_origin!(instance.iri, response.final_url)
                   end
                 else
                   # a 200 carrying a non-JSON body means no document
@@ -192,11 +191,13 @@ module Ktistec
                             Ktistec::Network.get(key_pair, {{foreign_key}}, headers, deadline: deadline) do |response|
                               if Ktistec::Model::Linked.json_response?(response)
                                 {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
-                                if {{name}}_ && !{{name}}_.iri_matches?({{foreign_key}})
-                                  raise ::Ktistec::JSON_LD::MismatchedIRI.new("IRI mismatch: requested #{{{foreign_key}}}, got #{{{name}}_.iri}")
-                                else
-                                  self.{{name}} = {{name}}_
+                                if {{name}}_
+                                  unless {{name}}_.iri_matches?({{foreign_key}}) || {{name}}_.iri_matches?(response.final_url)
+                                    raise ::Ktistec::JSON_LD::MismatchedIRI.new("IRI mismatch: requested #{{{foreign_key}}}, served from #{response.final_url}, got #{{{name}}_.iri}")
+                                  end
+                                  ::Ktistec::Model::Linked.check_origin!({{name}}_.iri, response.final_url)
                                 end
+                                self.{{name}} = {{name}}_
                               else
                                 # a 200 carrying a non-JSON body means
                                 # no document was served to parse -- an

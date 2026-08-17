@@ -3,6 +3,7 @@ require "xml"
 require "libxml_ext"
 
 require "./web_finger"
+require "../framework/util"
 
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
@@ -76,10 +77,7 @@ module Ktistec
         xml.xpath_nodes("//a[contains(@href, '/remote/')]").each do |anchor|
           uri = URI.parse(anchor["href"])
           if uri.host
-            server = URI.parse(Ktistec.host)
-            unless uri.scheme == server.scheme && uri.host == server.host && uri.port == server.port
-              next
-            end
+            next unless Ktistec::Util.same_origin?(anchor["href"], Ktistec.host)
           end
           parts = uri.path.split('/')
           unless parts.size == 4

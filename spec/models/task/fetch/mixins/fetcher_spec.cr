@@ -125,10 +125,10 @@ Spectator.describe Task::Fetch::Fetcher do
         end
       end
 
-      context "that can't be dereferenced" do
+      context "with an actor that can't be dereferenced" do
         before_each do
-          HTTP::Client.objects << object.assign(attributed_to_iri: "https://example.com/invalid")
-          actor.assign(iri: "https://example.com/invalid")
+          HTTP::Client.objects << object.assign(attributed_to_iri: "https://remote/actors/invalid")
+          actor.assign(iri: "https://remote/actors/invalid")
         end
 
         it "fetches the actor" do

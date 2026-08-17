@@ -597,6 +597,15 @@ Spectator.describe ActivityPub::Collection::ModelHelper do
           expect(activity["first"]).to be_a(ActivityPub::Collection)
           expect(activity["first"].as(ActivityPub::Collection).iri).to eq("https://test.test/first")
         end
+
+        context "but a different scheme" do
+          let(json) { super.gsub(%q|"id":"https://test.test/first",|, %q|"id":"http://test.test/first",|) }
+
+          it "does not populate first" do
+            expect(activity["first_iri"]).to eq("http://test.test/first")
+            expect(activity.has_key?("first")).to be_false
+          end
+        end
       end
 
       context "given collection without an id" do
@@ -838,6 +847,26 @@ Spectator.describe ActivityPub::Collection::ModelHelper do
 
         it "populates items" do
           expect(activity["items"]).to eq(["string item id", "https://different.host/object", "https://test.test/object"])
+        end
+      end
+
+      context "given an item on a different scheme" do
+        let(json) { super.gsub(%q|"@id":"https://test.test/object",|, %q|"@id":"http://test.test/object",|) }
+
+        it "does not embed the item" do
+          expect(activity["items"]).to eq(["string item id", "https://different.host/object", "http://test.test/object"])
+        end
+      end
+
+      context "given a collection and an item with opaque ids" do
+        let(json) do
+          super
+            .gsub(%q|"@id":"https://test.test/collection",|, %q|"@id":"urn:uuid:collection",|)
+            .gsub(%q|"@id":"https://test.test/object",|, %q|"@id":"urn:uuid:object",|)
+        end
+
+        it "does not embed the item" do
+          expect(activity["items"]).to eq(["string item id", "https://different.host/object", "urn:uuid:object"])
         end
       end
     end

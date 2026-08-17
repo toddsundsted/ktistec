@@ -1,5 +1,6 @@
 require "../object"
 require "../../quote_decision"
+require "../../../framework/util"
 
 class ActivityPub::Object
   class QuoteAuthorization < ActivityPub::Object
@@ -22,14 +23,7 @@ class ActivityPub::Object
         quote_decision.interacting_object_iri == quoting_object.iri &&
         quote_decision.interaction_target_iri == quoted_object.iri &&
         author_iri == quoted_object.attributed_to_iri &&
-        same_host?(iri, author_iri)
-    end
-
-    private def same_host?(first : String, second : String) : Bool
-      host = URI.parse(first).host.try(&.presence)
-      !!(host && host == URI.parse(second).host)
-    rescue URI::Error
-      false
+        Ktistec::Util.same_origin?(iri, author_iri)
     end
 
     def self.map(json, **options)

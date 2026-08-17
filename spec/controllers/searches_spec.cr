@@ -226,6 +226,34 @@ Spectator.describe SearchesController do
           expect(JSON.parse(response.body).as_h.dig("actor", "username")).to eq("foo_bar")
         end
 
+        context "that is served from another origin" do
+          before_each do
+            HTTP::Client.cache.set_response(
+              other.iri,
+              HTTP::Client::Response.new(301, headers: HTTP::Headers{"Location" => "https://elsewhere/actors/foo_bar"}),
+            )
+            HTTP::Client.cache["https://elsewhere/actors/foo_bar"] = other.to_json_ld
+          end
+
+          it "does not save the actor" do
+            expect { get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS }.not_to change { ActivityPub::Actor.count }
+          end
+
+          it "does not save the actor" do
+            expect { get "/search?query=https://remote/actors/foo_bar", JSON_HEADERS }.not_to change { ActivityPub::Actor.count }
+          end
+
+          it "returns 400" do
+            get "/search?query=https://remote/actors/foo_bar", HTML_HEADERS
+            expect(response.status_code).to eq(400)
+          end
+
+          it "returns 400" do
+            get "/search?query=https://remote/actors/foo_bar", JSON_HEADERS
+            expect(response.status_code).to eq(400)
+          end
+        end
+
         context "that already exists" do
           before_each { other.assign(username: "bar_foo").save }
 

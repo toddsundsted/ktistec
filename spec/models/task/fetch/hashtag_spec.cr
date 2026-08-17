@@ -494,7 +494,7 @@ Spectator.describe Task::Fetch::Hashtag do
         HTTP::Client.actors << object2.attributed_to
         HTTP::Client.actors << object3.attributed_to
         HTTP::Client.collections << hashtag # intentionally empty
-        HTTP::Client.collections["#{object1.origin}/api/v1/timelines/tag/hashtag"] = %Q|[{"uri": "#{object1.iri}"},{"uri": "#{object2.iri}"},{"uri": "#{object3.iri}"}]|
+        HTTP::Client.collections["https://remote/api/v1/timelines/tag/hashtag"] = %Q|[{"uri": "#{object1.iri}"},{"uri": "#{object2.iri}"},{"uri": "#{object3.iri}"}]|
       end
 
       let(node) { subject.state.nodes.first }
@@ -506,7 +506,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
       it "fetches the API response" do
         subject.perform(1)
-        expect(HTTP::Client.requests).to have("GET #{object1.origin}/api/v1/timelines/tag/hashtag")
+        expect(HTTP::Client.requests).to have("GET https://remote/api/v1/timelines/tag/hashtag")
       end
 
       it "fetches an object from the API" do
@@ -538,7 +538,7 @@ Spectator.describe Task::Fetch::Hashtag do
 
       it "fetches the API response" do
         subject.perform
-        expect(HTTP::Client.requests).to have("GET #{object1.origin}/api/v1/timelines/tag/hashtag")
+        expect(HTTP::Client.requests).to have("GET https://remote/api/v1/timelines/tag/hashtag")
       end
 
       it "fetches all the objects from the API" do
@@ -564,12 +564,12 @@ Spectator.describe Task::Fetch::Hashtag do
       end
 
       it "does not raise an error" do
-        HTTP::Client.collections["#{object1.origin}/api/v1/timelines/tag/hashtag"] = %Q|[]|
+        HTTP::Client.collections["https://remote/api/v1/timelines/tag/hashtag"] = %Q|[]|
         expect { subject.perform }.not_to raise_error
       end
 
       it "does not raise an error" do
-        HTTP::Client.collections["#{object1.origin}/api/v1/timelines/tag/hashtag"] = %Q|[[]]|
+        HTTP::Client.collections["https://remote/api/v1/timelines/tag/hashtag"] = %Q|[[]]|
         expect { subject.perform }.not_to raise_error
       end
     end

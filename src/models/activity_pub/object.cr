@@ -3,6 +3,7 @@ require "markd"
 
 require "./actor"
 require "./collection"
+require "../../framework/util"
 require "../activity_pub"
 require "../activity_pub/mixins/blockable"
 require "../relationship/content/approved"
@@ -1254,26 +1255,31 @@ module ActivityPub
 
       def self.from_json_ld(json : JSON::Any | String | IO)
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
-        object_host = (object_iri = json.dig?("@id").try(&.as_s?)) ? parse_host(object_iri) : nil
+        object_iri = json.dig?("@id").try(&.as_s?)
+        attributed_to_iri = Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo")
+        if attributed_to_iri && !Ktistec::Util.same_origin?(attributed_to_iri, object_iri)
+          raise Ktistec::JSON_LD::MismatchedIRI.new("owner mismatch: #{object_iri} is attributed to #{attributed_to_iri}")
+        end
         {
-          "iri"               => json.dig?("@id").try(&.as_s),
+          "iri"               => object_iri,
           "_type"             => json.dig?("@type").try(&.as_s.split("#").last),
           "published"         => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#published"),
           "updated"           => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#updated"),
-          "attributed_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
+          "attributed_to_iri" => attributed_to_iri,
           "in_reply_to_iri"   => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
           "quote_iri"         => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quote") ||
             Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#quoteUrl") ||
             Ktistec::JSON_LD.dig_id?(json, "http://fedibird.com/ns#quoteUri") ||
             Ktistec::JSON_LD.dig_id?(json, "https://misskey-hub.net/ns#_misskey_quote"),
           "quote_authorization_iri" => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quoteAuthorization"),
-          # pick up the replies' id and the embedded replies if the hosts match
+          # pick up the replies' id and the embedded replies if the origins match
           "replies_iri" => if (replies = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#replies"))
-            replies.as_s? || replies.dig?("@id").try(&.as_s?)
+            replies_iri = replies.as_s? || replies.dig?("@id").try(&.as_s?)
+            replies_iri if Ktistec::Util.same_origin?(replies_iri, object_iri)
           end,
           "replies" => if replies && replies.as_h?
             if (replies_iri = replies.dig?("@id").try(&.as_s?))
-              if parse_host(replies_iri) == object_host
+              if Ktistec::Util.same_origin?(replies_iri, object_iri)
                 ActivityPub::Collection.from_json_ld(replies)
               end
             else
@@ -1343,11 +1349,6 @@ module ActivityPub
             end
           end
         end.compact
-      end
-
-      private def self.parse_host(uri)
-        URI.parse(uri).host
-      rescue URI::Error
       end
 
       private def self.infer_media_type(url : String) : String?

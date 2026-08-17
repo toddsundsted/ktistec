@@ -84,8 +84,14 @@ class InteractionsController
         ActivityPub::Object.find(uri)
       else
         headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
-        Ktistec::Network.get?(env.account.actor, uri, headers) do |response|
-          ActivityPub.from_json_ld(response.body, include_key: true)
+        begin
+          Ktistec::Network.get?(env.account.actor, uri, headers) do |response|
+            instance = ActivityPub.from_json_ld(response.body, include_key: true)
+            Ktistec::Model::Linked.check_origin!(instance.iri, response.final_url)
+            instance
+          end
+        rescue Ktistec::JSON_LD::MismatchedIRI
+          nil
         end
       end
     case actor_or_object

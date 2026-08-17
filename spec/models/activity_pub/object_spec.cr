@@ -365,7 +365,7 @@ Spectator.describe ActivityPub::Object do
           "@id":"https://remote/foo_bar",
           "@type":"FooBarObject",
           "attributedTo":{
-            "id":"attributed to link"
+            "id":"https://remote/attributed_to"
           },
           "inReplyTo":{
             "id":"in reply to link"
@@ -380,7 +380,7 @@ Spectator.describe ActivityPub::Object do
 
     it "gets the ids" do
       object = described_class.from_json_ld(json)
-      expect(object.attributed_to_iri).to eq("attributed to link")
+      expect(object.attributed_to_iri).to eq("https://remote/attributed_to")
       expect(object.in_reply_to_iri).to eq("in reply to link")
     end
   end
@@ -463,11 +463,11 @@ Spectator.describe ActivityPub::Object do
         "@type":"FooBarObject",
         "published":"2016-02-15T10:20:30Z",
         "updated":"2016-02-15T11:30:45Z",
-        "attributedTo":"attributed to link",
+        "attributedTo":"https://remote/attributed_to",
         "inReplyTo":"in reply to link",
         "quote":"quote link",
         "quoteAuthorization":"quote authorization link",
-        "replies":"replies link",
+        "replies":"https://remote/replies",
         "to":"to link",
         "cc":["cc link"],
         "audience":["audience link"],
@@ -516,11 +516,11 @@ Spectator.describe ActivityPub::Object do
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
       expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
-      expect(object.attributed_to_iri).to eq("attributed to link")
+      expect(object.attributed_to_iri).to eq("https://remote/attributed_to")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.quote_iri).to eq("quote link")
       expect(object.quote_authorization_iri).to eq("quote authorization link")
-      expect(object.replies_iri).to eq("replies link")
+      expect(object.replies_iri).to eq("https://remote/replies")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
       expect(object.audience).to eq(["audience link"])
@@ -535,6 +535,14 @@ Spectator.describe ActivityPub::Object do
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
       expect(object.urls).to eq(["url-link"])
+    end
+
+    context "given an owner on another origin" do
+      let(json) { super.gsub(%q|"attributedTo":"https://remote/attributed_to",|, %q|"attributedTo":"https://elsewhere/attributed_to",|) }
+
+      it "raises an error" do
+        expect { described_class.from_json_ld(json) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+      end
     end
 
     context "given offsets written as +0100 rather than +01:00" do
@@ -830,11 +838,11 @@ Spectator.describe ActivityPub::Object do
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
       expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
-      expect(object.attributed_to_iri).to eq("attributed to link")
+      expect(object.attributed_to_iri).to eq("https://remote/attributed_to")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.quote_iri).to eq("quote link")
       expect(object.quote_authorization_iri).to eq("quote authorization link")
-      expect(object.replies_iri).to eq("replies link")
+      expect(object.replies_iri).to eq("https://remote/replies")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
       expect(object.audience).to eq(["audience link"])
@@ -849,6 +857,14 @@ Spectator.describe ActivityPub::Object do
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
       expect(object.urls).to eq(["url-link"])
+    end
+
+    context "given an owner on another origin" do
+      let(json) { super.gsub(%q|"attributedTo":"https://remote/attributed_to",|, %q|"attributedTo":"https://elsewhere/attributed_to",|) }
+
+      it "raises an error" do
+        expect { described_class.new.from_json_ld(json) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+      end
     end
 
     context "given offsets written as +0100 rather than +01:00" do
@@ -2691,7 +2707,7 @@ Spectator.describe ActivityPub::Object::ModelHelper do
         "@id":"https://test.test/object",
         "@type":"FooBarObject",
         "replies":{
-          "@id":"replies link",
+          "@id":"https://test.test/replies",
           "@type":"Collection"
         }
       }
@@ -2702,24 +2718,19 @@ Spectator.describe ActivityPub::Object::ModelHelper do
     let(object) { described_class.from_json_ld(json) }
 
     it "populates replies_iri" do
-      expect(object["replies_iri"]).to eq("replies link")
+      expect(object["replies_iri"]).to eq("https://test.test/replies")
     end
 
-    it "does not populate replies" do
-      expect(object.has_key?("replies")).to be_false
+    it "populates replies" do
+      expect(object["replies"].as(ActivityPub::Collection).iri).to eq("https://test.test/replies")
     end
 
-    context "given a replies collection with the same host" do
-      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"@id":"https://test.test/replies",|) }
+    context "given replies with a different scheme" do
+      let(json) { super.gsub(%q|"@id":"https://test.test/replies",|, %q|"@id":"http://test.test/replies",|) }
 
-      it "populates replies" do
-        expect(object["replies"]).to be_a(ActivityPub::Collection)
-        expect(object["replies"].as(ActivityPub::Collection).iri).to eq("https://test.test/replies")
+      it "does not populate replies_iri" do
+        expect(object.has_key?("replies_iri")).to be_false
       end
-    end
-
-    context "given object without an id" do # should never happen, but...
-      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"@id":"https://test.test/replies",|).gsub(%q|"@id":"https://test.test/object",|, "") }
 
       it "does not populate replies" do
         expect(object.has_key?("replies")).to be_false
@@ -2727,7 +2738,23 @@ Spectator.describe ActivityPub::Object::ModelHelper do
     end
 
     context "given replies with a different host" do
-      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"id":"https://different/replies",|) }
+      let(json) { super.gsub(%q|"@id":"https://test.test/replies",|, %q|"@id":"https://different/replies",|) }
+
+      it "does not populate replies_iri" do
+        expect(object.has_key?("replies_iri")).to be_false
+      end
+
+      it "does not populate replies" do
+        expect(object.has_key?("replies")).to be_false
+      end
+    end
+
+    context "given object without an id" do # should never happen, but...
+      let(json) { super.gsub(%q|"@id":"https://test.test/object",|, "") }
+
+      it "does not populate replies_iri" do
+        expect(object.has_key?("replies_iri")).to be_false
+      end
 
       it "does not populate replies" do
         expect(object.has_key?("replies")).to be_false
@@ -2735,7 +2762,7 @@ Spectator.describe ActivityPub::Object::ModelHelper do
     end
 
     context "given replies without an id" do
-      let(json) { super.gsub(%q|"@id":"replies link",|, "") }
+      let(json) { super.gsub(%q|"@id":"https://test.test/replies",|, "") }
 
       it "populates replies" do
         expect(object["replies"]).to be_a(ActivityPub::Collection)

@@ -194,6 +194,39 @@ module Ktistec
       scheme.nil? || allowlist.includes?(scheme)
     end
 
+    # Returns the origin of the given URI.
+    #
+    # An origin is the scheme, host and port, as defined by
+    # [RFC 6454](https://www.rfc-editor.org/rfc/rfc6454) and required
+    # by [FEP-fe34](https://w3id.org/fep/fe34).
+    #
+    # Returns `nil` if the URI cannot be parsed, if it does not
+    # specify both a scheme and a host, or if the scheme is not one
+    # an IRI may use.
+    #
+    def origin?(uri : String?) : String?
+      return if uri.nil?
+      uri = URI.parse(uri)
+      scheme = uri.scheme.try(&.downcase).presence
+      host = uri.host.try(&.downcase).presence
+      return if scheme.nil? || host.nil?
+      return unless scheme.in?(SAFE_IRI_SCHEMES)
+      port = uri.port
+      port = nil if port == URI.default_port(scheme)
+      port ? "#{scheme}://#{host}:#{port}" : "#{scheme}://#{host}"
+    rescue URI::Error
+      nil
+    end
+
+    # Returns true if both URIs have the same, non-`nil` origin.
+    #
+    # See `origin?`.
+    #
+    def same_origin?(uri : String?, other : String?) : Bool
+      origin = origin?(uri)
+      !origin.nil? && origin == origin?(other)
+    end
+
     private def sanitize(html, build)
       name = html.name.downcase
       if html.element? && name.in?(STRIP)
@@ -221,9 +254,8 @@ module Ktistec
               # attributes rather than crashing the sanitizer.
               begin
                 uri = URI.parse(value.text)
-                server = URI.parse(Ktistec.host)
                 (!uri.scheme && !uri.host && !uri.port) ||
-                  (uri.scheme == server.scheme && uri.host == server.host && uri.port == server.port)
+                  same_origin?(value.text, Ktistec.host)
               rescue URI::Error
                 false
               end

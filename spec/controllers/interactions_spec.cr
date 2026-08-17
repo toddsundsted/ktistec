@@ -304,6 +304,26 @@ Spectator.describe InteractionsController do
             expect { get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", HTML_HEADERS }
               .to change { foobar.reload!.pem_public_key }.to("NEW PEM PUBLIC KEY")
           end
+
+          context "served from another origin" do
+            before_each do
+              HTTP::Client.cache.set_response(
+                foobar.iri,
+                HTTP::Client::Response.new(301, headers: HTTP::Headers{"Location" => "https://elsewhere/actors/foobar"}),
+              )
+              HTTP::Client.cache["https://elsewhere/actors/foobar"] = foobar.to_json_ld
+            end
+
+            it "does not update the public key" do
+              expect { get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", HTML_HEADERS }
+                .not_to change { foobar.reload!.pem_public_key }
+            end
+
+            it "returns 400" do
+              get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Factors%2Ffoobar", HTML_HEADERS
+              expect(response.status_code).to eq(400)
+            end
+          end
         end
 
         context "that is local" do

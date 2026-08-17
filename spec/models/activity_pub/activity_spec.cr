@@ -222,13 +222,14 @@ end
 
 Spectator.describe ActivityPub::Activity::ModelHelper do
   let(json) do
+    # `@type` must be a type in `MAY_EMBED_OBJECT`
     <<-JSON
       {
         "@context":[
           "https://www.w3.org/ns/activitystreams"
         ],
         "@id":"https://test.test/foo_bar",
-        "@type":"FooBarActivity",
+        "@type":"Create",
         "actor":{
           "id":"actor link",
           "type":"Actor"
@@ -293,6 +294,43 @@ Spectator.describe ActivityPub::Activity::ModelHelper do
       it "populates object" do
         expect(activity["object"]).to be_a(ActivityPub::Object)
         expect(activity["object"].as(ActivityPub::Object).iri).to eq("https://test.test/object")
+      end
+
+      context "but a different scheme" do
+        let(json) do
+          super.gsub(%q|"@id":"https://test.test/object"|, %q|"@id":"http://test.test/object"|)
+        end
+
+        it "does not populate object" do
+          expect(activity["object_iri"]).to eq("http://test.test/object")
+          expect(activity.has_key?("object")).to be_false
+        end
+      end
+
+      # the other member of `MAY_EMBED_OBJECT`
+      context "and the activity is an update" do
+        let(json) do
+          super.gsub(%q|"@type":"Create"|, %q|"@type":"Update"|)
+        end
+
+        it "populates object" do
+          expect(activity["object"]).to be_a(ActivityPub::Object)
+        end
+      end
+
+      # not a member of `MAY_EMBED_OBJECT`
+      context "but the activity is a like" do
+        let(json) do
+          super.gsub(%q|"@type":"Create"|, %q|"@type":"Like"|)
+        end
+
+        it "does not populate object" do
+          expect(activity.has_key?("object")).to be_false
+        end
+
+        it "populates object_iri" do
+          expect(activity["object_iri"]).to eq("https://test.test/object")
+        end
       end
     end
 

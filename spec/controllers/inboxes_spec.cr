@@ -1139,17 +1139,42 @@ Spectator.describe InboxesController do
           .to change { ActivityPub::Object.count(iri: note.iri) }.by(1)
       end
 
+      context "and the object is attributed to an actor on another origin" do
+        let_create(:actor, named: :victim, iri: "https://victim/actors/#{random_string}")
+        let_build(:note, iri: "https://remote/objects/#{random_string}", attributed_to: victim)
+
+        before_each { announce.object_iri = note.iri }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(response.status_code).to eq(400)
+        end
+
+        it "fetches the object" do
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(HTTP::Client.requests).to have("GET #{note.iri}")
+        end
+
+        it "does not save the object" do
+          post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true)
+          expect(ActivityPub::Object.count(iri: note.iri)).to eq(0)
+        end
+      end
+
       it "puts the activity in the actor's inbox" do
         announce.object = note
         expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
           .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
       end
 
-      it "puts the activity in the actor's notifications" do
-        announce.object = note.assign(attributed_to: actor)
-        HTTP::Client.objects << note
-        expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
-          .to change { Notification.count(from_iri: actor.iri) }.by(1)
+      context "and the object is the account's own post" do
+        let_create(:note, attributed_to: actor)
+
+        it "puts the activity in the actor's notifications" do
+          announce.object = note
+          expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+            .to change { Notification.count(from_iri: actor.iri) }.by(1)
+        end
       end
 
       it "puts the object in the actor's timeline" do
@@ -1320,18 +1345,26 @@ Spectator.describe InboxesController do
           .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
       end
 
-      it "puts the activity in the actor's notifications" do
-        like.object = note.assign(attributed_to: actor)
-        HTTP::Client.objects << note
-        expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
-          .to change { Notification.count(from_iri: actor.iri) }.by(1)
+      context "and the object is the account's own post" do
+        let_create(:note, attributed_to: actor)
+
+        it "puts the activity in the actor's notifications" do
+          like.object = note
+          expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
+            .to change { Notification.count(from_iri: actor.iri) }.by(1)
+        end
       end
 
       it "does not put the object in the actor's timeline" do
-        like.object = note.assign(attributed_to: actor)
-        HTTP::Client.objects << note
+        like.object = note
         expect { post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true) }
           .not_to change { Timeline.count(from_iri: actor.iri) }
+      end
+
+      it "is successful" do
+        like.object = note
+        post "/actors/#{actor.username}/inbox", headers, like.to_json_ld(true)
+        expect(response.status_code).to eq(200)
       end
     end
 
@@ -1405,18 +1438,26 @@ Spectator.describe InboxesController do
           .to change { Relationship::Content::Inbox.count(from_iri: actor.iri) }.by(1)
       end
 
-      it "puts the activity in the actor's notifications" do
-        dislike.object = note.assign(attributed_to: actor)
-        HTTP::Client.objects << note
-        expect { post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true) }
-          .to change { Notification.count(from_iri: actor.iri) }.by(1)
+      context "and the object is the account's own post" do
+        let_create(:note, attributed_to: actor)
+
+        it "puts the activity in the actor's notifications" do
+          dislike.object = note
+          expect { post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true) }
+            .to change { Notification.count(from_iri: actor.iri) }.by(1)
+        end
       end
 
       it "does not put the object in the actor's timeline" do
-        dislike.object = note.assign(attributed_to: actor)
-        HTTP::Client.objects << note
+        dislike.object = note
         expect { post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true) }
           .not_to change { Timeline.count(from_iri: actor.iri) }
+      end
+
+      it "is successful" do
+        dislike.object = note
+        post "/actors/#{actor.username}/inbox", headers, dislike.to_json_ld(true)
+        expect(response.status_code).to eq(200)
       end
     end
 
@@ -1434,11 +1475,32 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
-      it "returns 400 if object is not attributed to activity's actor" do
-        create.object = note
-        note.attributed_to = actor
-        post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
-        expect(response.status_code).to eq(400)
+      context "and the object is attributed to an actor on another origin" do
+        let_create(:actor, named: :victim, iri: "https://victim/actors/#{random_string}")
+
+        before_each { create.object = note.assign(attributed_to: victim) }
+
+        pre_condition { expect(Ktistec::Util.same_origin?(victim.iri, note.iri)).to be_false }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(JSON.parse(response.body)["msg"]).to eq("owner mismatch")
+          expect(response.status_code).to eq(400)
+        end
+      end
+
+      context "and the object is attributed to another actor on other's origin" do
+        let_create(:actor, named: :third)
+
+        before_each { create.object = note.assign(attributed_to: third) }
+
+        pre_condition { expect(Ktistec::Util.same_origin?(third.iri, note.iri)).to be_true }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
+          expect(response.status_code).to eq(400)
+        end
       end
 
       it "returns 502 if the fetch of the object fails transiently" do
@@ -1679,11 +1741,18 @@ Spectator.describe InboxesController do
         expect(response.status_code).to eq(400)
       end
 
-      it "returns 400 if object is not attributed to activity's actor" do
-        update.object = note
-        note.attributed_to = actor
-        post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
-        expect(response.status_code).to eq(400)
+      context "and the object is attributed to another actor on other's origin" do
+        let_create(:actor, named: :third)
+
+        before_each { update.object = note.assign(attributed_to: third) }
+
+        pre_condition { expect(Ktistec::Util.same_origin?(third.iri, note.iri)).to be_true }
+
+        it "returns 400" do
+          post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+          expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
+          expect(response.status_code).to eq(400)
+        end
       end
 
       it "returns 502 if the fetch of the object fails transiently" do

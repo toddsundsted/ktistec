@@ -1256,12 +1256,16 @@ module ActivityPub
       def self.from_json_ld(json : JSON::Any | String | IO)
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
         object_iri = json.dig?("@id").try(&.as_s?)
+        attributed_to_iri = Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo")
+        if attributed_to_iri && !Ktistec::Util.same_origin?(attributed_to_iri, object_iri)
+          raise Ktistec::JSON_LD::MismatchedIRI.new("owner mismatch: #{object_iri} is attributed to #{attributed_to_iri}")
+        end
         {
-          "iri"               => json.dig?("@id").try(&.as_s),
+          "iri"               => object_iri,
           "_type"             => json.dig?("@type").try(&.as_s.split("#").last),
           "published"         => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#published"),
           "updated"           => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#updated"),
-          "attributed_to_iri" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#attributedTo"),
+          "attributed_to_iri" => attributed_to_iri,
           "in_reply_to_iri"   => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#inReplyTo"),
           "quote_iri"         => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quote") ||
             Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#quoteUrl") ||

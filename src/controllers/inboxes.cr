@@ -296,6 +296,9 @@ class InboxesController
         ActivityPub::Activity.from_json_ld(inner_ld || json_ld)
       rescue Ktistec::Model::TypeError
         bad_request("Unsupported Type")
+      rescue ex : Ktistec::JSON_LD::MismatchedIRI
+        Log.debug { "[#{request_id}] owner mismatch: #{ex.message}" }
+        bad_request("Owner Mismatch")
       end
 
     outer_actor_iri =

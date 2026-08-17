@@ -365,7 +365,7 @@ Spectator.describe ActivityPub::Object do
           "@id":"https://remote/foo_bar",
           "@type":"FooBarObject",
           "attributedTo":{
-            "id":"attributed to link"
+            "id":"https://remote/attributed_to"
           },
           "inReplyTo":{
             "id":"in reply to link"
@@ -380,7 +380,7 @@ Spectator.describe ActivityPub::Object do
 
     it "gets the ids" do
       object = described_class.from_json_ld(json)
-      expect(object.attributed_to_iri).to eq("attributed to link")
+      expect(object.attributed_to_iri).to eq("https://remote/attributed_to")
       expect(object.in_reply_to_iri).to eq("in reply to link")
     end
   end
@@ -463,7 +463,7 @@ Spectator.describe ActivityPub::Object do
         "@type":"FooBarObject",
         "published":"2016-02-15T10:20:30Z",
         "updated":"2016-02-15T11:30:45Z",
-        "attributedTo":"attributed to link",
+        "attributedTo":"https://remote/attributed_to",
         "inReplyTo":"in reply to link",
         "quote":"quote link",
         "quoteAuthorization":"quote authorization link",
@@ -516,7 +516,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
       expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
-      expect(object.attributed_to_iri).to eq("attributed to link")
+      expect(object.attributed_to_iri).to eq("https://remote/attributed_to")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.quote_iri).to eq("quote link")
       expect(object.quote_authorization_iri).to eq("quote authorization link")
@@ -535,6 +535,14 @@ Spectator.describe ActivityPub::Object do
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
       expect(object.urls).to eq(["url-link"])
+    end
+
+    context "given an owner on another origin" do
+      let(json) { super.gsub(%q|"attributedTo":"https://remote/attributed_to",|, %q|"attributedTo":"https://elsewhere/attributed_to",|) }
+
+      it "raises an error" do
+        expect { described_class.from_json_ld(json) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+      end
     end
 
     context "given offsets written as +0100 rather than +01:00" do
@@ -830,7 +838,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.iri).to eq("https://remote/foo_bar")
       expect(object.published).to eq(Time.utc(2016, 2, 15, 10, 20, 30))
       expect(object.updated).to eq(Time.utc(2016, 2, 15, 11, 30, 45))
-      expect(object.attributed_to_iri).to eq("attributed to link")
+      expect(object.attributed_to_iri).to eq("https://remote/attributed_to")
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.quote_iri).to eq("quote link")
       expect(object.quote_authorization_iri).to eq("quote authorization link")
@@ -849,6 +857,14 @@ Spectator.describe ActivityPub::Object do
       expect(object.emojis.first).to match(Tag::Emoji.new(name: "batman", href: "https://example.com/batman.png"))
       expect(object.attachments).to eq([ActivityPub::Object::Attachment.new("attachment-link", "type", "caption")])
       expect(object.urls).to eq(["url-link"])
+    end
+
+    context "given an owner on another origin" do
+      let(json) { super.gsub(%q|"attributedTo":"https://remote/attributed_to",|, %q|"attributedTo":"https://elsewhere/attributed_to",|) }
+
+      it "raises an error" do
+        expect { described_class.new.from_json_ld(json) }.to raise_error(Ktistec::JSON_LD::MismatchedIRI)
+      end
     end
 
     context "given offsets written as +0100 rather than +01:00" do

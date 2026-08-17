@@ -467,7 +467,7 @@ Spectator.describe ActivityPub::Object do
         "inReplyTo":"in reply to link",
         "quote":"quote link",
         "quoteAuthorization":"quote authorization link",
-        "replies":"replies link",
+        "replies":"https://remote/replies",
         "to":"to link",
         "cc":["cc link"],
         "audience":["audience link"],
@@ -520,7 +520,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.quote_iri).to eq("quote link")
       expect(object.quote_authorization_iri).to eq("quote authorization link")
-      expect(object.replies_iri).to eq("replies link")
+      expect(object.replies_iri).to eq("https://remote/replies")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
       expect(object.audience).to eq(["audience link"])
@@ -842,7 +842,7 @@ Spectator.describe ActivityPub::Object do
       expect(object.in_reply_to_iri).to eq("in reply to link")
       expect(object.quote_iri).to eq("quote link")
       expect(object.quote_authorization_iri).to eq("quote authorization link")
-      expect(object.replies_iri).to eq("replies link")
+      expect(object.replies_iri).to eq("https://remote/replies")
       expect(object.to).to eq(["to link"])
       expect(object.cc).to eq(["cc link"])
       expect(object.audience).to eq(["audience link"])
@@ -2707,7 +2707,7 @@ Spectator.describe ActivityPub::Object::ModelHelper do
         "@id":"https://test.test/object",
         "@type":"FooBarObject",
         "replies":{
-          "@id":"replies link",
+          "@id":"https://test.test/replies",
           "@type":"Collection"
         }
       }
@@ -2718,33 +2718,19 @@ Spectator.describe ActivityPub::Object::ModelHelper do
     let(object) { described_class.from_json_ld(json) }
 
     it "populates replies_iri" do
-      expect(object["replies_iri"]).to eq("replies link")
+      expect(object["replies_iri"]).to eq("https://test.test/replies")
     end
 
-    it "does not populate replies" do
-      expect(object.has_key?("replies")).to be_false
+    it "populates replies" do
+      expect(object["replies"].as(ActivityPub::Collection).iri).to eq("https://test.test/replies")
     end
 
-    context "given a replies collection with the same host" do
-      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"@id":"https://test.test/replies",|) }
+    context "given replies with a different scheme" do
+      let(json) { super.gsub(%q|"@id":"https://test.test/replies",|, %q|"@id":"http://test.test/replies",|) }
 
-      it "populates replies" do
-        expect(object["replies"]).to be_a(ActivityPub::Collection)
-        expect(object["replies"].as(ActivityPub::Collection).iri).to eq("https://test.test/replies")
+      it "does not populate replies_iri" do
+        expect(object.has_key?("replies_iri")).to be_false
       end
-
-      context "but a different scheme" do
-        let(json) { super.gsub(%q|"@id":"https://test.test/replies",|, %q|"@id":"http://test.test/replies",|) }
-
-        it "does not populate replies" do
-          expect(object["replies_iri"]).to eq("http://test.test/replies")
-          expect(object.has_key?("replies")).to be_false
-        end
-      end
-    end
-
-    context "given object without an id" do # should never happen, but...
-      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"@id":"https://test.test/replies",|).gsub(%q|"@id":"https://test.test/object",|, "") }
 
       it "does not populate replies" do
         expect(object.has_key?("replies")).to be_false
@@ -2752,7 +2738,23 @@ Spectator.describe ActivityPub::Object::ModelHelper do
     end
 
     context "given replies with a different host" do
-      let(json) { super.gsub(%q|"@id":"replies link",|, %q|"id":"https://different/replies",|) }
+      let(json) { super.gsub(%q|"@id":"https://test.test/replies",|, %q|"@id":"https://different/replies",|) }
+
+      it "does not populate replies_iri" do
+        expect(object.has_key?("replies_iri")).to be_false
+      end
+
+      it "does not populate replies" do
+        expect(object.has_key?("replies")).to be_false
+      end
+    end
+
+    context "given object without an id" do # should never happen, but...
+      let(json) { super.gsub(%q|"@id":"https://test.test/object",|, "") }
+
+      it "does not populate replies_iri" do
+        expect(object.has_key?("replies_iri")).to be_false
+      end
 
       it "does not populate replies" do
         expect(object.has_key?("replies")).to be_false
@@ -2760,7 +2762,7 @@ Spectator.describe ActivityPub::Object::ModelHelper do
     end
 
     context "given replies without an id" do
-      let(json) { super.gsub(%q|"@id":"replies link",|, "") }
+      let(json) { super.gsub(%q|"@id":"https://test.test/replies",|, "") }
 
       it "populates replies" do
         expect(object["replies"]).to be_a(ActivityPub::Collection)

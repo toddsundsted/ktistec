@@ -1274,7 +1274,8 @@ module ActivityPub
           "quote_authorization_iri" => Ktistec::JSON_LD.dig_id?(json, "https://w3id.org/fep/044f#quoteAuthorization"),
           # pick up the replies' id and the embedded replies if the origins match
           "replies_iri" => if (replies = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#replies"))
-            replies.as_s? || replies.dig?("@id").try(&.as_s?)
+            replies_iri = replies.as_s? || replies.dig?("@id").try(&.as_s?)
+            replies_iri if Ktistec::Util.same_origin?(replies_iri, object_iri)
           end,
           "replies" => if replies && replies.as_h?
             if (replies_iri = replies.dig?("@id").try(&.as_s?))

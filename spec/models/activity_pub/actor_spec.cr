@@ -290,7 +290,7 @@ Spectator.describe ActivityPub::Actor do
         "outbox": "outbox link",
         "following": "following link",
         "followers": "followers link",
-        "featured": "featured link",
+        "featured": "https://remote/foo_bar/featured",
         "name":"Foo Bar",
         "summary": "<p></p>",
         "icon": {
@@ -410,7 +410,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
       expect(actor.followers).to eq("followers link")
-      expect(actor.featured).to eq("featured link")
+      expect(actor.featured).to eq("https://remote/foo_bar/featured")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon-link")
@@ -518,6 +518,14 @@ Spectator.describe ActivityPub::Actor do
         expect(attachments.map(&.type).uniq!).to eq(["http://schema.org/PropertyValue"])
       end
     end
+
+    context "given a featured collection on another origin" do
+      let(json) { super.gsub("https://remote/foo_bar/featured", "https://elsewhere/foo_bar/featured") }
+
+      it "does not assign featured" do
+        expect(described_class.from_json_ld(json).featured).to be_nil
+      end
+    end
   end
 
   describe "#from_json_ld" do
@@ -530,7 +538,7 @@ Spectator.describe ActivityPub::Actor do
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
       expect(actor.followers).to eq("followers link")
-      expect(actor.featured).to eq("featured link")
+      expect(actor.featured).to eq("https://remote/foo_bar/featured")
       expect(actor.name).to eq("Foo Bar")
       expect(actor.summary).to eq("<p></p>")
       expect(actor.icon).to eq("icon-link")
@@ -585,6 +593,15 @@ Spectator.describe ActivityPub::Actor do
       it "updates `shared_inbox`" do
         actor = described_class.new.from_json_ld(json).save
         expect(actor.shared_inbox).to eq("https://remote/shared-inbox")
+      end
+    end
+
+    context "given a featured collection on another origin" do
+      let(json) { super.gsub("https://remote/foo_bar/featured", "https://elsewhere/foo_bar/featured") }
+
+      it "does not update featured" do
+        actor = described_class.new.from_json_ld(json).save
+        expect(actor.featured).to be_nil
       end
     end
   end

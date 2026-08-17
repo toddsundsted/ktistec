@@ -1442,8 +1442,9 @@ private module ActorModelHelper
 
   def self.from_json_ld(json : JSON::Any | String | IO, include_key)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+    actor_iri = json.dig?("@id").try(&.as_s?)
     {
-      "iri"            => json.dig?("@id").try(&.as_s),
+      "iri"            => actor_iri,
       "_type"          => json.dig?("@type").try(&.as_s.split("#").last),
       "username"       => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
       "webfinger"      => Ktistec::JSON_LD.dig?(json, "https://purl.archive.org/socialweb/webfinger#webfinger").try(&.lchop("acct:")),
@@ -1455,13 +1456,15 @@ private module ActorModelHelper
       "outbox"       => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
       "following"    => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
       "followers"    => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
-      "featured"     => Ktistec::JSON_LD.dig_id?(json, "http://joinmastodon.org/ns#featured"),
-      "name"         => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#name"),
-      "summary"      => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#summary"),
-      "icon"         => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
-      "image"        => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
-      "urls"         => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
-      "attachments"  => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
+      "featured"     => Ktistec::JSON_LD.dig_id?(json, "http://joinmastodon.org/ns#featured").try do |featured|
+        featured if Ktistec::Util.same_origin?(featured, actor_iri)
+      end,
+      "name"        => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#name"),
+      "summary"     => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#summary"),
+      "icon"        => map_icon?(json, "https://www.w3.org/ns/activitystreams#icon"),
+      "image"       => map_icon?(json, "https://www.w3.org/ns/activitystreams#image"),
+      "urls"        => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),
+      "attachments" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#attachment") do |attachment|
         name = ActivityPub.dig_text?(attachment, "https://www.w3.org/ns/activitystreams#name").presence
         type = Ktistec::JSON_LD.dig?(attachment, "@type").presence
         value = (

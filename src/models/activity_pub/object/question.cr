@@ -37,6 +37,23 @@ class ActivityPub::Object
       votes_by(actor).compact_map(&.name)
     end
 
+    # Returns `true` if the vote is acceptable.
+    #
+    # Implements the checks in FEP-9967 ("Receiving a vote").
+    #
+    def accepts_vote?(vote : ActivityPub::Object::Note) : Bool
+      return false unless (actor = vote.attributed_to?)
+      return false unless addressed?(actor)
+      return false unless (poll = self.poll?)
+      return false if poll.expired?
+      if poll.multiple_choice
+        return false if options_by(actor).includes?(vote.name)
+      else
+        return false if voted_by?(actor)
+      end
+      true
+    end
+
     def voters : Array(ActivityPub::Actor)
       query = <<-QUERY
           SELECT #{Actor.columns(prefix: "a")}

@@ -163,6 +163,65 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#addressed?" do
+    let_create(:actor, named: author)
+    let_create(:actor, named: other)
+
+    let_build(:object, attributed_to: author, visible: true, to: nil, cc: nil, audience: nil)
+
+    it "returns true if the object is public" do
+      expect(object.addressed?(other)).to be_true
+    end
+
+    context "when the object is not public" do
+      before_each { object.assign(visible: false) }
+
+      it "returns false" do
+        expect(object.addressed?(other)).to be_false
+      end
+
+      context "and the actor is addressed" do
+        before_each { object.assign(to: [other.iri]) }
+
+        it "returns true" do
+          expect(object.addressed?(other)).to be_true
+        end
+      end
+
+      context "and the author's followers are addressed" do
+        before_each { object.assign(cc: [author.followers.not_nil!]) }
+
+        it "returns false" do
+          expect(object.addressed?(other)).to be_false
+        end
+
+        context "and the actor follows the author" do
+          let_create!(:follow_relationship, actor: other, object: author, confirmed: true)
+
+          it "returns true" do
+            expect(object.addressed?(other)).to be_true
+          end
+        end
+
+        context "but the actor's follow is unconfirmed" do
+          let_create!(:follow_relationship, actor: other, object: author, confirmed: false)
+
+          it "returns false" do
+            expect(object.addressed?(other)).to be_false
+          end
+        end
+      end
+
+      context "and the actor is in the audience" do
+        before_each { object.assign(audience: [other.iri]) }
+
+        it "returns true" do
+          expect(object.addressed?(other)).to be_true
+        end
+      end
+    end
+  end
+
   describe "#supported_editors" do
     RichText = ActivityPub::Object::EditorType::RichText
     Markdown = ActivityPub::Object::EditorType::Markdown

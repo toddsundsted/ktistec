@@ -101,6 +101,18 @@ module ActivityPub
     @[Persistent]
     property audience : Array(String)?
 
+    # Returns `true` if the object is addressed to the given actor.
+    #
+    def addressed?(actor : ActivityPub::Actor) : Bool
+      return true if visible
+      recipients = [self.to, self.cc, self.audience].compact.flatten
+      return true if recipients.includes?(actor.iri)
+      if (attributed_to = self.attributed_to?) && (followers = attributed_to.followers)
+        return true if recipients.includes?(followers) && !actor.follows?(attributed_to, confirmed: true).nil?
+      end
+      false
+    end
+
     @[Persistent]
     property name : String? # plain text
 

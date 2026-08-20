@@ -28,6 +28,21 @@ Spectator.describe ActivityPub::Activity::QuoteRequest do
 
   alias Status = ActivityPub::Activity::QuoteRequest::Status
 
+  describe "Status#label" do
+    it "distinguishes an unanswered request from an answered one" do
+      {
+        Status::Invalid                 => "invalid",
+        Status::Awaiting                => "awaiting approval",
+        Status::Declined                => "declined",
+        Status::AuthorizationMissing    => "approved, cannot be verified",
+        Status::AuthorizationUnresolved => "approved, not verified",
+        Status::Authorized              => "approved",
+      }.each do |status, label|
+        expect(status.label).to eq(label), "expected #{status} to label as #{label.inspect}"
+      end
+    end
+  end
+
   describe "#status" do
     let_create(:actor, named: :author)
     let_create(:object, named: :quoted, attributed_to: author)

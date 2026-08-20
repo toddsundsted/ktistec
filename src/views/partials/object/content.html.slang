@@ -15,7 +15,9 @@ crystal:
       a.in-reply-to.float-right data-turbo-frame="_top" href=parent_href title=parent_text
         i.arrow.up.icon
     - if object.draft?
-      - if object.responds_to?(:delayed?) && (delayed = object.delayed?)
+      - if object.responds_to?(:quote_request?) && (quote_request = object.quote_request?)
+        span.ui.mini.label.float-right = quote_request.status.label
+      - elsif object.responds_to?(:delayed?) && (delayed = object.delayed?)
         span.ui.mini.label.float-right = delayed.reason.to_s.gsub(/([A-Z])/, " \\1").strip.downcase
       | draft created
       a.date< = object.short_date(timezone)

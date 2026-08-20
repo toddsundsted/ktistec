@@ -24,6 +24,17 @@ class ActivityPub::Activity
       AuthorizationMissing    # accepted, but named no authorization
       AuthorizationUnresolved # named an authorization, but not yet resolved
       Authorized
+
+      def label : String
+        case self
+        in .invalid?                  then "invalid"
+        in .awaiting?                 then "awaiting approval"
+        in .declined?                 then "declined"
+        in .authorization_missing?    then "approved, cannot be verified"
+        in .authorization_unresolved? then "approved, not verified"
+        in .authorized?               then "approved"
+        end
+      end
     end
 
     def status : Status

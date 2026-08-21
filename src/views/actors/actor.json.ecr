@@ -27,9 +27,6 @@
   },
   <%- end -%>
   <%- endpoints = {} of String => String -%>
-  <%- if actor.local? -%>
-    <%- endpoints["proxyUrl"] = "#{host}/proxy" -%>
-  <%- end -%>
   <%- if (shared_inbox = actor.shared_inbox) -%>
     <%- endpoints["sharedInbox"] = shared_inbox -%>
   <%- elsif actor.local? -%>

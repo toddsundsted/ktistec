@@ -83,9 +83,17 @@ Spectator.describe PollsController do
         expect(question.votes_by(actor).all?(&.published.is_a?(Time))).to be_true
       end
 
+      let(replies) do
+        ActivityPub::Object::Note.where(
+          "in_reply_to_iri = ? AND attributed_to_iri = ?",
+          question.iri,
+          actor.iri,
+        )
+      end
+
       it "assigns special" do
         post "/polls/#{question.id}/vote", HTML_HEADERS, "options=Yes"
-        expect(question.votes_by(actor).all?(&.special.==("vote"))).to be_true
+        expect(replies.map(&.special)).to eq(["vote"])
       end
 
       it "assigns to" do

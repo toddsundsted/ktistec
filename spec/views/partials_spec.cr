@@ -1,4 +1,5 @@
 require "../../src/models/activity_pub/activity/follow"
+require "../../src/models/activity_pub/activity/quote_request"
 require "../../src/views/view_helper"
 
 require "../spec_helper/factory"
@@ -1578,6 +1579,43 @@ Spectator.describe "partials" do
 
         it "disables multiple choice field" do
           expect(subject.xpath_nodes("//form//input[@name='poll-multiple-choice']/parent::div/parent::div[contains(@class,'disabled')]")).not_to be_empty
+        end
+      end
+
+      context "given a draft quote" do
+        let_create(:actor, named: :quoted_author)
+        let_create(:object, named: :quoted, attributed_to: quoted_author, published: Time.utc)
+
+        before_each { object.assign(quote: quoted).save }
+
+        pre_condition { expect(object.draft?).to be_true }
+
+        it "includes an input to publish the quote" do
+          expect(subject.xpath_nodes("//button[text()='Publish Quote']"))
+            .not_to be_empty
+        end
+
+        context "and a quote request awaiting an answer" do
+          let_create!(:quote_request, object: quoted, instrument: object)
+
+          it "does not include an input to publish the quote" do
+            expect(subject.xpath_nodes("//button[text()='Update Draft']")).not_to be_empty
+            expect(subject.xpath_nodes("//button[text()='Publish Quote']")).to be_empty
+          end
+
+          context "and the author accepted" do
+            let_create!(:accept, object: quote_request, actor: quoted_author, result_iri: "https://remote/authorizations/abc")
+
+            it "includes an input to verify the quote" do
+              expect(subject.xpath_nodes("//button[text()='Verify Quote']"))
+                .not_to be_empty
+            end
+
+            it "does not make the verify input the autosave target" do
+              expect(subject.xpath_nodes("//button[contains(@data-has-content-target,'saveDraftButton')]/text()").map(&.text))
+                .to contain_exactly("Update Draft")
+            end
+          end
         end
       end
     end

@@ -4,8 +4,15 @@
       button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
         | Send Reply
     - elsif object.quote_iri
-      button.ui.primary.button data-has-content-target="button" type="submit" formaction=quote_path(object.quote)
-        | Publish Quote
+      crystal:
+        _object = object
+        quote_status = _object.responds_to?(:quote_request?) ? _object.quote_request?.try(&.status) : nil
+      - if quote_status.nil?
+        button.ui.primary.button data-has-content-target="button" type="submit" formaction=quote_path(object.quote)
+          | Publish Quote
+      - elsif quote_status.authorization_unresolved?
+        button.ui.primary.button data-has-content-target="button" type="submit" formaction=verify_quote_path(object)
+          | Verify Quote
     - else
       button.ui.primary.button data-has-content-target="button" type="submit" formaction=outbox_path(actor)
         | Publish Post

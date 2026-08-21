@@ -383,7 +383,7 @@ Spectator.describe ActivityPub::Object::Question do
 
   let(question) { poll.question }
 
-  macro vote(index, actor = actor)
+  macro vote(index, actor = actor, special = "vote")
     let_create!(
       :note,
       named: vote{{index}},
@@ -391,7 +391,7 @@ Spectator.describe ActivityPub::Object::Question do
       in_reply_to: question,
       attributed_to: {{actor}},
       content: nil,
-      special: "vote",
+      special: {{special}},
     )
   end
 
@@ -407,6 +407,18 @@ Spectator.describe ActivityPub::Object::Question do
         votes = question.votes
         expect(votes.size).to eq(1)
         expect(votes.map(&.name)).to contain_exactly("Yes")
+      end
+
+      context "and an ignored vote" do
+        let_create(:actor, named: other, local: true)
+
+        vote(1, other, special: "ignored_vote")
+
+        it "returns only the counted votes" do
+          votes = question.votes
+          expect(votes.size).to eq(1)
+          expect(votes.map(&.name)).to contain_exactly("Yes")
+        end
       end
     end
 
@@ -554,6 +566,18 @@ Spectator.describe ActivityPub::Object::Question do
         voters = question.voters
         expect(voters.size).to eq(1)
         expect(voters).to contain_exactly(actor)
+      end
+
+      context "with an ignored vote" do
+        let_create(:actor, named: other, local: true)
+
+        vote(1, other, special: "ignored_vote")
+
+        it "returns only the counted voters" do
+          voters = question.voters
+          expect(voters.size).to eq(1)
+          expect(voters).to contain_exactly(actor)
+        end
       end
     end
 

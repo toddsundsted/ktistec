@@ -2287,6 +2287,55 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "POST /objects/:id/quote/verify" do
+    it "returns 401" do
+      post "/objects/0/quote/verify"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      alias State = Task::DeliverDelayedObject::State
+
+      let(authorization_iri) { "https://remote/authorizations/#{random_string}" }
+
+      let_create(:actor, named: :quoted_author)
+      let_create(:object, named: :quoted_object, attributed_to: quoted_author, published: published)
+      let_create!(:object, named: :quote_post, attributed_to: actor, quote: quoted_object, local: true)
+      let_create!(:quote_request, named: :request, actor: actor, object: quoted_object, instrument: quote_post)
+      let_create!(:accept, object: request, actor: quoted_author, result_iri: authorization_iri)
+      let(state) { State.new(State::Reason::PendingQuoteAuthorization, State::PendingQuoteAuthorizationContext.new(request.iri)) }
+      let_create!(:deliver_delayed_object_task, actor: actor, object: quote_post, state: state)
+
+      pre_condition { expect(request.status.authorization_unresolved?).to be_true }
+
+      it "does not publish the post" do
+        expect { post "/objects/#{quote_post.uid}/quote/verify" }.not_to change { ActivityPub::Object.find(quote_post.id).published }
+      end
+
+      context "given an authorization" do
+        let_build(:quote_decision, named: :decision, interacting_object: quote_post, interaction_target: quoted_object, decision: "accept")
+        let_build(:quote_authorization, named: :authorization, quote_decision: decision, iri: authorization_iri, attributed_to: quoted_author)
+
+        before_each { HTTP::Client.objects << authorization }
+
+        it "publishes the post" do
+          expect { post "/objects/#{quote_post.uid}/quote/verify" }.to change { ActivityPub::Object.find(quote_post.id).published }
+        end
+
+        it "applies the authorization" do
+          expect { post "/objects/#{quote_post.uid}/quote/verify" }.to change { ActivityPub::Object.find(quote_post.id).quote_authorization_iri }.to(authorization_iri)
+        end
+
+        it "suceeds" do
+          post "/objects/#{quote_post.uid}/quote/verify"
+          expect(response.status_code).to eq(302)
+        end
+      end
+    end
+  end
+
   describe "POST /remote/objects/:id/approve" do
     it "returns 401" do
       post "/remote/objects/0/approve"

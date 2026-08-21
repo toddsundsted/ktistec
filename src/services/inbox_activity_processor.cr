@@ -13,6 +13,7 @@ require "../models/relationship/social/follow"
 require "../models/relationship/content/notification/quote"
 require "../models/activity_pub/object/quote_authorization"
 require "../models/quote_decision"
+require "./quote_post_releaser"
 require "../utils/recipients"
 
 class InboxActivityProcessor
@@ -204,18 +205,8 @@ class InboxActivityProcessor
       Log.info { "quote post not released: accept has no result: #{quote_post.iri}" }
       return
     end
-    unless (quote_authorization = ActivityPub::Object::QuoteAuthorization.dereference?(account.actor, quote_authorization_iri, deadline: deadline))
-      Log.info { "quote post not released: authorization could not be dereferenced: #{quote_post.iri} #{quote_authorization_iri}" }
-      return
-    end
-    unless (quote = quote_post.quote?) && quote_authorization.valid_for?(quote_post, quote)
-      Log.info { "quote post not released: authorization is not valid: #{quote_post.iri} #{quote_authorization_iri}" }
-      return
-    end
 
-    quote_authorization.save
-    quote_post.assign(quote_authorization_iri: quote_authorization_iri).save
-    Task::DeliverDelayedObject.find?(object: quote_post).try(&.schedule)
+    QuotePostReleaser.release(account.actor, quote_request, quote_authorization_iri, deadline: deadline)
   end
 
   private def self.process_quote_request(account, quote_request, deliver_task_class)

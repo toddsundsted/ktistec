@@ -5,6 +5,7 @@ require "../../src/models/activity_pub/activity/like"
 require "../../src/models/activity_pub/activity/dislike"
 require "../../src/models/translation"
 require "../../src/models/task/deliver_delayed_object"
+require "../../src/models/activity_pub/activity/quote_request"
 require "../../src/framework/controller"
 require "../../src/utils/translator"
 
@@ -548,15 +549,6 @@ Spectator.describe "object partials" do
           expect(subject.xpath_nodes("//span[contains(@class,'label')]")).to be_empty
         end
 
-        context "with a pending quote authorization task" do
-          let(state) { State.new(State::Reason::PendingQuoteAuthorization, State::PendingQuoteAuthorizationContext.new("https://example.com/activities/abc")) }
-          let_create!(:deliver_delayed_object_task, actor: actor, object: object, state: state)
-
-          it "renders a delayed reason" do
-            expect(subject.xpath_nodes("//span[contains(@class,'label')]").map(&.text)).to contain_exactly("pending quote authorization")
-          end
-        end
-
         context "with a scheduled task" do
           let(state) { State.new(State::Reason::Scheduled, State::ScheduledContext.new(1.hour.from_now)) }
           let_create!(:deliver_delayed_object_task, actor: actor, object: object, state: state)
@@ -830,13 +822,15 @@ Spectator.describe "object partials" do
 
     # quotes
 
-    context "given a quote" do
+    context "given a published quote" do
       let(with_detail) { true }
 
       let_create(:object, named: :quote, attributed_to: actor, content: "i am quote", published: Time.utc)
       let_create(:object, named: :other, attributed_to: actor, content: "i am other", published: Time.utc)
 
       before_each { object.assign(quote: quote).save }
+
+      pre_condition { expect(object.draft?).to be_false }
 
       it "renders a quote section" do
         expect(subject.xpath_nodes("//*[contains(@class,'quoted-object')]").size).to eq(1)
@@ -897,6 +891,48 @@ Spectator.describe "object partials" do
                 .to contain("has not been verified")
             end
           end
+        end
+      end
+    end
+
+    context "given an unpublished quote" do
+      alias State = Task::DeliverDelayedObject::State
+
+      let_create(:actor, named: :author)
+      let_create(:object, named: :quoted, attributed_to: author, published: Time.utc)
+      let_create!(:quote_request, object: quoted, instrument: object)
+      let(state) { State.new(State::Reason::PendingQuoteAuthorization, State::PendingQuoteAuthorizationContext.new(quote_request.iri)) }
+      let_create!(:deliver_delayed_object_task, actor: actor, object: object, state: state)
+
+      before_each { object.assign(quote: quoted, published: nil).save }
+
+      pre_condition { expect(object.draft?).to be_true }
+
+      it "renders the quote request status" do
+        expect(subject.xpath_nodes("//span[contains(@class,'label')]").map(&.text)).to contain_exactly("awaiting approval")
+      end
+
+      context "and the author accepted, naming an authorization" do
+        let_create!(:accept, object: quote_request, actor: author, result_iri: "https://remote/authorizations/abc")
+
+        it "renders the quote request status" do
+          expect(subject.xpath_nodes("//span[contains(@class,'label')]").map(&.text)).to contain_exactly("approved, not verified")
+        end
+      end
+
+      context "and the author declined" do
+        let_create!(:reject, object: quote_request, actor: author)
+
+        it "renders the quote request status" do
+          expect(subject.xpath_nodes("//span[contains(@class,'label')]").map(&.text)).to contain_exactly("declined")
+        end
+      end
+
+      context "and the quoted post no longer exists" do
+        before_each { quoted.destroy }
+
+        it "renders the quote request status" do
+          expect(subject.xpath_nodes("//span[contains(@class,'label')]").map(&.text)).to contain_exactly("invalid")
         end
       end
     end

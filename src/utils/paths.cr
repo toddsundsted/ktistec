@@ -245,6 +245,10 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/fetch/quote-authorization")
   end
 
+  macro verify_quote_path(object = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.object_path({{object}})}/quote/verify")
+  end
+
   macro bookmark_path(object = nil)
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/bookmark")
   end

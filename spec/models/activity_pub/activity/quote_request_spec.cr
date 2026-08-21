@@ -26,6 +26,47 @@ Spectator.describe ActivityPub::Activity::QuoteRequest do
     end
   end
 
+  describe "#accepted_authorization_iri" do
+    let_create(:actor, named: :author)
+    let_create(:object, named: :quoted, attributed_to: author)
+    let_create(:object, named: :quoting)
+
+    let_create!(:quote_request, object: quoted, instrument: quoting)
+
+    let(authorization_iri) { "https://remote/authorizations/#{random_string}" }
+
+    subject { described_class.find(quote_request.id) }
+
+    it "returns nil" do
+      expect(subject.accepted_authorization_iri).to be_nil
+    end
+
+    context "given an accept from the quoted post's author" do
+      let_create!(:accept, object: quote_request, actor: author)
+
+      it "returns nil" do
+        expect(subject.accepted_authorization_iri).to be_nil
+      end
+
+      context "and the accept names an authorization" do
+        before_each { accept.assign(result_iri: authorization_iri).save }
+
+        it "returns the authorization" do
+          expect(subject.accepted_authorization_iri).to eq(authorization_iri)
+        end
+      end
+    end
+
+    context "given an accept from another actor" do
+      let_create(:actor, named: :other)
+      let_create!(:accept, object: quote_request, actor: other, result_iri: authorization_iri)
+
+      it "returns nil" do
+        expect(subject.accepted_authorization_iri).to be_nil
+      end
+    end
+  end
+
   alias Status = ActivityPub::Activity::QuoteRequest::Status
 
   describe "Status#label" do

@@ -17,6 +17,13 @@ class ActivityPub::Activity
     belongs_to object, class_name: ActivityPub::Object, foreign_key: object_iri, primary_key: iri
     belongs_to instrument, class_name: ActivityPub::Object, foreign_key: instrument_iri, primary_key: iri
 
+    # Returns the accepted authorization, if one exists.
+    #
+    def accepted_authorization_iri : String?
+      return unless (author = object?(include_deleted: true).try(&.attributed_to(include_deleted: true)))
+      Accept.where(object: self, actor: author).first?.try(&.result_iri)
+    end
+
     enum Status
       Invalid
       Awaiting

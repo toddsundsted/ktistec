@@ -8,6 +8,7 @@ require "../models/task/fetch/thread"
 require "../models/translation"
 require "../services/object_factory"
 require "../services/outbox_activity_processor"
+require "../services/quote_post_releaser"
 
 class ObjectsController
   include Ktistec::Controller
@@ -360,6 +361,25 @@ class ObjectsController
       ok "partials/object/content/quote", env: env, object: object, quote: quote, failed: false, error_message: error_message, show_quote: true, scope: quote_frame_scope(env, object)
     else
       redirect back_path
+    end
+  end
+
+  post "/objects/:id/quote/verify" do |env|
+    unless (object = get_object_editable(env, iri_param(env, "/objects"))) && object.draft?
+      not_found
+    end
+
+    unless (quote_request = object.quote_request?) && quote_request.status.authorization_unresolved? &&
+           (authorization_iri = quote_request.accepted_authorization_iri)
+      bad_request
+    end
+
+    if QuotePostReleaser.release(env.account.actor, quote_request, authorization_iri)
+      redirect object_path(object)
+    else
+      object.errors["quote"] = ["could not be verified"]
+
+      unprocessable_entity "objects/edit", env: env, object: object, recursive: false
     end
   end
 

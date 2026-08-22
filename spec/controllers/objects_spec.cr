@@ -60,6 +60,7 @@ Spectator.describe ObjectsController do
     :object, named: :draft,
     content: "this is a test",
     attributed_to: actor,
+    published: nil,
     local: true,
   )
   let_create(
@@ -2302,7 +2303,7 @@ Spectator.describe ObjectsController do
 
       let_create(:actor, named: :quoted_author)
       let_create(:object, named: :quoted_object, attributed_to: quoted_author, published: published)
-      let_create!(:object, named: :quote_post, attributed_to: actor, quote: quoted_object, local: true)
+      let_create!(:object, named: :quote_post, attributed_to: actor, quote: quoted_object, published: nil, local: true)
       let_create!(:quote_request, named: :request, actor: actor, object: quoted_object, instrument: quote_post)
       let_create!(:accept, object: request, actor: quoted_author, result_iri: authorization_iri)
       let(state) { State.new(State::Reason::PendingQuoteAuthorization, State::PendingQuoteAuthorizationContext.new(request.iri)) }

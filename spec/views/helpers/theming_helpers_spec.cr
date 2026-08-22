@@ -72,7 +72,7 @@ Spectator.describe "helpers" do
     end
 
     context "when object is local" do
-      let_build(:note, local: true)
+      let_build(:note, local: true, published: nil)
 
       it "includes is-draft" do
         expect(subject).to contain("is-draft")

@@ -143,6 +143,7 @@ def object_factory(clazz = ActivityPub::Object, iri = nil, attributed_to_iri = n
     "attributed_to_iri" => attributed_to_iri,
     "attributed_to"     => attributed_to,
     "visible"           => visible,
+    "published"         => options[:created_at]? || KTISTEC_EPOCH,
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
@@ -182,7 +183,7 @@ end
 
 def announce_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
-  object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
+  object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
   activity_factory(ActivityPub::Activity::Announce, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(announce_addressing(actor, object)).merge(options))
 end
 
@@ -200,13 +201,13 @@ end
 
 def like_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
-  object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
+  object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
   activity_factory(ActivityPub::Activity::Like, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(social_addressing_to(object)).merge(options))
 end
 
 def dislike_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
-  object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
+  object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
   activity_factory(ActivityPub::Activity::Dislike, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(social_addressing_to(object)).merge(options))
 end
 
@@ -220,13 +221,13 @@ end
 
 def create_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
-  object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
+  object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
   activity_factory(ActivityPub::Activity::Create, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
 end
 
 def update_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
-  object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
+  object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
   activity_factory(ActivityPub::Activity::Update, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
 end
 
@@ -238,7 +239,7 @@ end
 
 def delete_factory(actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
-  object = object_factory(attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
+  object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, attributed_to: actor) unless object_iri || object.nil? || object
   activity_factory(ActivityPub::Activity::Delete, **{actor_iri: actor_iri, actor: actor, object_iri: object_iri, object: object}.merge(options))
 end
 
@@ -330,7 +331,7 @@ end
 
 def timeline_factory(clazz, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
-  object = object_factory(attributed_to_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, attributed_to: owner) unless object_iri || object.nil? || object
+  object = object_factory(created_at: options[:created_at]?, attributed_to_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, attributed_to: owner) unless object_iri || object.nil? || object
   relationship_factory(clazz, **{from_iri: owner_iri, owner: owner, to_iri: object_iri, object: object}.merge(options))
 end
 
@@ -389,13 +390,13 @@ end
 
 def bookmark_relationship_factory(object_iri = nil, object = false, actor_iri = nil, actor = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
-  object = object_factory(attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
+  object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
   relationship_factory(Relationship::Content::Bookmark, **{from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
 end
 
 def pin_relationship_factory(object_iri = nil, object = false, actor_iri = nil, actor = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
-  object = object_factory(attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
+  object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
   relationship_factory(Relationship::Content::Pin, **{from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
 end
 

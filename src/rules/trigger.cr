@@ -3,8 +3,10 @@ require "./view/follow_thread"
 require "./view/follow_hashtag"
 require "./view/follow_mention"
 require "./view/public_tagged"
+require "./view/feed"
 require "../services/feed/judging"
 require "../models/activity_pub/activity"
+require "../models/activity_pub/object"
 require "../models/activity_pub/activity/create"
 require "../models/activity_pub/activity/announce"
 require "../models/activity_pub/activity/dislike"
@@ -47,17 +49,33 @@ module Rules
           activity.object_iri
         end
       if object_iri
-        # a `Create`/`Announce` delivers a new object; judge it
-        # against the registered feeds first, so their verdicts exist
-        # as base facts before the reconcile materializes them.
-        case activity
-        when ActivityPub::Activity::Create, ActivityPub::Activity::Announce
-          if (object = activity.object?)
-            Feed::Judging.judge_arrival(object)
-          end
+        # judge the object against the registered feeds first, so
+        # their verdicts exist as base facts before the reconcile
+        # materializes them.
+        if (object = ActivityPub::Object.find?(iri: object_iri))
+          Feed::Judging.judge_arrival(object)
         end
         notify(Rules::Maintainer.reconcile_object(object_iri))
       end
+    end
+
+    # Re-evaluates the feeds a changed object may belong to.
+    #
+    # An object write can change content, addressing, or publication,
+    # any of which can move the object into or out of a feed, so
+    # judging is not restricted to arrival.
+    #
+    # Only the feed views are reconciled: an object write moves only
+    # the views whose membership derives from the object's own state.
+    #
+    def reconcile_for_object(object : ActivityPub::Object) : Nil
+      Feed::Judging.judge_arrival(object)
+      changed = [] of {Rules::View, String}
+      Rules::View.registry.each do |view|
+        next unless view.is_a?(Rules::View::Feed)
+        changed.concat(Rules::Maintainer.reconcile_object_for(view, object.iri))
+      end
+      notify(changed)
     end
 
     # Re-evaluates the materialized views affected by a change to an
@@ -168,6 +186,8 @@ module Rules
     end
   end
 end
+
+ActivityPub::Object::OBSERVERS.observe(:save) { |object| Rules::Trigger.reconcile_for_object(object) }
 
 # re-select representatives when a sender is blocked or unblocked.
 ActivityPub::Actor::OBSERVERS.observe(:block) { |actor| Rules::Trigger.reconcile_for_actor(actor) }

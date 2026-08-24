@@ -385,8 +385,15 @@ Spectator.describe Feed::Judging do
 
     let_build(:object, named: hit, content: "<p>something alpha something</p>")
     let_create(:create, named: hit_create, object: hit)
+    let_build(:object, named: miss, content: "<p>something gamma something</p>")
+    let_create(:create, named: miss_create, object: miss)
 
-    before_each { put_in_inbox(actor, hit_create) }
+    before_each do
+      put_in_inbox(actor, hit_create)
+      put_in_inbox(actor, miss_create)
+    end
+
+    pre_condition { expect(Feed::Verdict.count).to eq(0) }
 
     context "when the feed is not registered" do
       pre_condition { expect(Feed::Candidates.arrival_for(feed, hit)).not_to be_nil }
@@ -436,10 +443,6 @@ Spectator.describe Feed::Judging do
       end
 
       context "given a non-matching object" do
-        let_build(:object, named: miss, content: "<p>something gamma something</p>")
-        let_create(:create, named: miss_create, object: miss)
-        before_each { put_in_inbox(actor, miss_create) }
-
         it "writes a verdict" do
           expect { Feed::Judging.judge_arrival(miss) }
             .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: miss.iri) }.from(0).to(1)

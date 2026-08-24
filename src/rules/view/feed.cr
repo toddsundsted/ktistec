@@ -38,7 +38,6 @@ module Rules
             JOIN objects o ON o.iri = v.object_iri
            WHERE v.feed_id = ?
              AND v.included = 1
-             AND o.deleted_at IS NULL
              #{scope}
         SQL
         {sql, args}

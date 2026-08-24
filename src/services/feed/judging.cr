@@ -128,17 +128,20 @@ class Feed
       )
     end
 
-    # Judges a single newly-arrived object against every registered
-    # feed, writing (or refreshing) each feed's verdict.
+    # Judges a single object against every registered feed, writing
+    # (or refreshing) each feed's verdict.
     #
     def judge_arrival(object : ActivityPub::Object) : Nil
       Rules::View.registry.each do |view|
         next unless view.is_a?(Rules::View::Feed)
         next unless (feed = ::Feed.find?(view.feed_id))
         next unless (backend = Backend.find?(feed.backend))
-        next unless (arrival = Candidates.arrival_for(feed, object))
-        judgment = backend.judge(feed, [object]).first
-        write_verdict(feed, object, arrival, judgment)
+        if (arrival = Candidates.arrival_for(feed, object))
+          judgment = backend.judge(feed, [object]).first
+          write_verdict(feed, object, arrival, judgment)
+        elsif (verdict = Verdict.find?(feed_id: feed.id, object_iri: object.iri))
+          verdict.assign(included: false, reason: "not a candidate").save
+        end
       end
     end
 

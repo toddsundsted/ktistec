@@ -16,6 +16,8 @@ module Rules
 
     Log = ::Log.for(self)
 
+    private SLOW_OPERATION_MS = 50
+
     # Rebuilds a view's stored rows to exactly equal its membership query.
     #
     # Returns `true` if any rows changed, `false` otherwise.
@@ -75,11 +77,13 @@ module Rules
            AND relationships.created_at <> m.position
       SQL
       changed = false
-      transaction do
-        inserted = Ktistec.database.exec(insert, args: Array(DB::Any){now, type} + query_args + Array(DB::Any){type}).rows_affected
-        deleted = Ktistec.database.exec(delete, args: Array(DB::Any){type} + scope_args + query_args).rows_affected
-        repositioned = repositions ? Ktistec.database.exec(reposition, args: Array(DB::Any){now} + query_args + Array(DB::Any){type}).rows_affected : 0_i64
-        changed = (inserted + deleted + repositioned) > 0
+      log_operation(type) do
+        transaction do
+          inserted = Ktistec.database.exec(insert, args: Array(DB::Any){now, type} + query_args + Array(DB::Any){type}).rows_affected
+          deleted = Ktistec.database.exec(delete, args: Array(DB::Any){type} + scope_args + query_args).rows_affected
+          repositioned = repositions ? Ktistec.database.exec(reposition, args: Array(DB::Any){now} + query_args + Array(DB::Any){type}).rows_affected : 0_i64
+          changed = (inserted + deleted + repositioned) > 0
+        end
       end
       changed
     end
@@ -148,6 +152,24 @@ module Rules
         raise ex
       ensure
         Ktistec.database.exec("RELEASE rules_maintainer")
+      end
+    end
+
+    # Logs the total time spent applying a view.
+    #
+    private def log_operation(type : String, &) : Nil
+      started = Time.instant
+      status = "failed"
+      begin
+        yield
+        status = "succeeded"
+      ensure
+        elapsed = (Time.instant - started).total_milliseconds
+        if elapsed > SLOW_OPERATION_MS
+          Log.notice { |log| log.emit("Slow operation [#{sprintf("%10.3fms", elapsed)}] -- #{type}", status: status) }
+        else
+          Log.debug { |log| log.emit("Operation [#{sprintf("%10.3fms", elapsed)}] -- #{type}", status: status) }
+        end
       end
     end
   end

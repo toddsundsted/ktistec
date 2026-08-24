@@ -314,16 +314,27 @@ Spectator.describe Feed::Judging do
         end
       end
 
-      context "when the floor is above the oldest post" do
-        let(floor) { miss.created_at }
+      context "when the floor is at the oldest post" do
+        let(floor) { hit.created_at }
 
-        it "does not scan the post below the floor" do
+        it "does not scan the post at the floor" do
           expect(subject.scanned).to eq(1)
         end
 
         it "writes no verdict for it" do
           subject
           expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri)).to be_nil
+        end
+      end
+
+      context "when every post was delivered above the floor but created at or below it" do
+        let(limit) { 2 }
+        let(floor) { miss.created_at }
+
+        pre_condition { expect(miss_row.created_at).to be > floor }
+
+        it "is not done" do
+          expect(subject.done).to be_false
         end
       end
 

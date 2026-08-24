@@ -63,23 +63,16 @@ Spectator.describe Feed::Candidates do
         end
       end
 
-      context "when the activity is undone" do
-        before_each { create.undo! }
-
-        pre_condition { expect(create.undone?).to be_true }
-
-        it "does not return the object" do
-          expect(candidates).to be_empty
-        end
-      end
+      # deletion and blocking are reversible, and neither goes through
+      # `save`, so nothing would re-judge on reversal
 
       context "when the object is deleted" do
         before_each { object.delete! }
 
         pre_condition { expect(object.deleted?).to be_true }
 
-        it "does not return the object" do
-          expect(candidates).to be_empty
+        it "returns the object" do
+          expect(candidates.map(&.first)).to eq([object])
         end
       end
 
@@ -88,8 +81,18 @@ Spectator.describe Feed::Candidates do
 
         pre_condition { expect(object.blocked?).to be_true }
 
-        it "does not return the object" do
-          expect(candidates).to be_empty
+        it "returns the object" do
+          expect(candidates.map(&.first)).to eq([object])
+        end
+      end
+
+      context "when the object's author is deleted" do
+        before_each { object.attributed_to.delete! }
+
+        pre_condition { expect(object.attributed_to.deleted?).to be_true }
+
+        it "returns the object" do
+          expect(candidates.map(&.first)).to eq([object])
         end
       end
 
@@ -98,15 +101,33 @@ Spectator.describe Feed::Candidates do
 
         pre_condition { expect(object.attributed_to.blocked?).to be_true }
 
-        it "does not return the object" do
-          expect(candidates).to be_empty
+        it "returns the object" do
+          expect(candidates.map(&.first)).to eq([object])
         end
       end
 
-      context "when the object's author is deleted" do
-        before_each { object.attributed_to.delete! }
+      context "when the activity is undone" do
+        before_each { create.undo! }
 
-        pre_condition { expect(object.attributed_to.deleted?).to be_true }
+        pre_condition { expect(create.undone?).to be_true }
+
+        it "returns the object" do
+          expect(candidates.map(&.first)).to eq([object])
+        end
+
+        context "and the object is not visible" do
+          before_each { object.assign(visible: false).save }
+
+          it "does not return the object" do
+            expect(candidates).to be_empty
+          end
+        end
+      end
+
+      context "when the object is not published" do
+        before_each { object.assign(published: nil).save }
+
+        pre_condition { expect(object.published).to be_nil }
 
         it "does not return the object" do
           expect(candidates).to be_empty
@@ -117,6 +138,14 @@ Spectator.describe Feed::Candidates do
         before_each { object.assign(special: "vote").save }
 
         pre_condition { expect(object.special).to eq("vote") }
+
+        it "does not return the object" do
+          expect(candidates).to be_empty
+        end
+      end
+
+      context "when the object is below the feed's floor" do
+        before_each { feed.assign(floor: object.created_at).save }
 
         it "does not return the object" do
           expect(candidates).to be_empty
@@ -184,11 +213,11 @@ Spectator.describe Feed::Candidates do
     end
   end
 
-  describe ".mailbox_rows_for" do
+  describe ".candidate_rows_for" do
     let(cursor) { nil }
     let(limit) { 10 }
 
-    let(rows) { Feed::Candidates.mailbox_rows_for(feed, cursor, limit) }
+    let(rows) { Feed::Candidates.candidate_rows_for(feed, cursor, limit) }
 
     it "returns no rows" do
       expect(rows).to be_empty
@@ -211,12 +240,16 @@ Spectator.describe Feed::Candidates do
         expect(rows.map(&.object)).to eq([object3, object2, object1])
       end
 
-      it "carries the mailbox row id" do
-        expect(rows.map(&.id)).to eq([row3.id, row2.id, row1.id])
+      it "carries the mailbox row id as the cursor" do
+        expect(rows.map(&.cursor)).to eq([row3.id, row2.id, row1.id])
       end
 
-      it "carries the time the post arrived" do
-        expect(rows.map(&.created_at)).to eq([row3.created_at, row2.created_at, row1.created_at])
+      it "carries the time the post was delivered" do
+        expect(rows.map(&.delivered_at)).to eq([row3.created_at, row2.created_at, row1.created_at])
+      end
+
+      it "carries the object's creation time" do
+        expect(rows.map(&.position)).to eq([object3.created_at, object2.created_at, object1.created_at])
       end
 
       context "with a limit" do
@@ -252,13 +285,29 @@ Spectator.describe Feed::Candidates do
         end
 
         it "returns a row per arrival" do
-          expect(rows.map(&.id)).to eq([row4.id, row3.id, row2.id, row1.id])
+          expect(rows.map(&.cursor)).to eq([row4.id, row3.id, row2.id, row1.id])
+        end
+      end
+
+      context "when a post is not a candidate" do
+        before_each { object3.assign(special: "vote").save }
+
+        it "does not return its row" do
+          expect(rows.map(&.object)).to eq([object2, object1])
+        end
+      end
+
+      context "when a post is below the feed's floor" do
+        before_each { feed.assign(floor: object3.created_at).save }
+
+        it "still returns its row" do
+          expect(rows.map(&.object)).to eq([object3, object2, object1])
         end
       end
     end
 
     it "raises an error" do
-      expect { Feed::Candidates.mailbox_rows_for(feed, cursor, 0) }.to raise_error(ArgumentError, "limit must be positive")
+      expect { Feed::Candidates.candidate_rows_for(feed, cursor, 0) }.to raise_error(ArgumentError, "limit must be positive")
     end
   end
 

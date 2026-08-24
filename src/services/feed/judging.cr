@@ -99,22 +99,21 @@ class Feed
         raise "is not a registered backend: #{feed.backend}"
       end
       view = Rules::Feeds.view_for(feed)
-      rows = Candidates.mailbox_rows_for(feed, cursor, limit)
+      rows = Candidates.candidate_rows_for(feed, cursor, limit)
       seen = Set(String).new
       scanned = 0
       included = 0
       above_floor = false
       rows.each do |row|
-        next if row.created_at < floor
+        next if row.delivered_at < floor
         above_floor = true
         object = row.object
         next unless seen.add?(object.iri)
-        next unless (position = Candidates.arrival_for(feed, object))
-        next if position < floor
+        next if row.position <= floor
         judgment = backend.judge(feed, [object]).first
         scanned += 1
         if judgment.included
-          write_verdict(feed, object, position, judgment)
+          write_verdict(feed, object, row.position, judgment)
           Rules::Maintainer.reconcile_object_for(view, object.iri)
           included += 1
         end
@@ -123,7 +122,7 @@ class Feed
       Batch.new(
         scanned: scanned,
         included: included,
-        cursor: rows.last?.try(&.id),
+        cursor: rows.last?.try(&.cursor),
         done: rows.size < limit || !above_floor,
       )
     end

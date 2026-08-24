@@ -4,6 +4,7 @@ require "../../models/activity_pub/object"
 require "../../models/activity_pub/activity/create"
 require "../../models/activity_pub/activity/announce"
 require "../../models/relationship/content/inbox"
+require "../../models/relationship/content/outbox"
 
 class Feed
   # The candidate source.
@@ -114,36 +115,56 @@ class Feed
       }
     end
 
-    # Returns `object`'s arrival time in the feed owner's inbox.
+    # The candidate predicate.
+    #
+    # An object is a candidate when it is published, is not special,
+    # was created after the feed's floor, and is either visible or was
+    # delivered to the feed owner's mailbox. A feed with no floor is
+    # unbounded.
+    #
+    private CANDIDATE_SQL = <<-SQL
+             o.published IS NOT NULL
+             AND o.special IS NULL
+             AND (? IS NULL OR o.created_at > ?)
+             AND (
+               o.visible = 1
+               OR EXISTS (
+                 SELECT 1
+                   FROM relationships m
+                   JOIN activities a ON a.iri = m.to_iri
+                  WHERE m.type IN (?, ?)
+                    AND m.from_iri = ?
+                    AND a.object_iri = o.iri
+                    AND a.undone_at IS NULL
+               )
+             )
+      SQL
+
+    # Returns `object`'s position in the feed, or `nil` if the object
+    # is not a candidate.
     #
     def arrival_for(feed : ::Feed, object : ActivityPub::Object) : Time?
-      # filters differ from `candidates_for`.
-      # `Task::CollectFeedOrphans` collects verdicts for objects
-      # deleted after they were judged.  this keeps us from judging
-      # objects that were already deleted.
       query = <<-SQL
-        SELECT MIN(m.created_at)
-          FROM relationships m
-          JOIN activities a ON a.iri = m.to_iri
-          JOIN objects o ON o.iri = a.object_iri
-          JOIN actors c ON c.iri = o.attributed_to_iri
-         WHERE m.type = ?
-           AND m.from_iri = ?
-           AND a.object_iri = ?
-           AND a.type IN (?, ?)
-           AND a.undone_at IS NULL
-           AND o.deleted_at IS NULL
-           AND c.deleted_at IS NULL
-           AND o.special IS NULL
+        SELECT o.created_at
+          FROM objects o
+         WHERE o.iri = ?
+           AND #{CANDIDATE_SQL}
       SQL
-      Ktistec.database.query_one(
+      Ktistec.database.query_one?(
         query,
-        Relationship::Content::Inbox.to_s,
-        feed.owner_iri,
         object.iri,
-        ActivityPub::Activity::Create.to_s,
-        ActivityPub::Activity::Announce.to_s,
-        as: Time?)
+        *candidate_parameters(feed),
+        as: Time)
+    end
+
+    private def candidate_parameters(feed : ::Feed)
+      {
+        feed.floor,
+        feed.floor,
+        Relationship::Content::Inbox.to_s,
+        Relationship::Content::Outbox.to_s,
+        feed.owner_iri,
+      }
     end
   end
 end

@@ -27,8 +27,9 @@ Spectator.describe Feed::Judging do
       let_build(:object, named: miss, content: "<p>something gamma something</p>")
       let_create(:create, named: hit_create, object: hit)
       let_create(:create, named: miss_create, object: miss)
-      let!(hit_arrival) { put_in_inbox(actor, hit_create).created_at }
-      let!(miss_arrival) { put_in_inbox(actor, miss_create).created_at }
+
+      before_each { put_in_inbox(actor, hit_create) }
+      before_each { put_in_inbox(actor, miss_create) }
 
       it "judges the candidates" do
         expect(Feed::Judging.judge(feed)).to eq(2)
@@ -44,7 +45,7 @@ Spectator.describe Feed::Judging do
         verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri)
         expect(verdict.included).to be_true
         expect(verdict.reason).to match(/alpha/)
-        expect(verdict.position).to eq(hit_arrival)
+        expect(verdict.position).to eq(hit.created_at)
       end
 
       it "excludes the non-matching post" do
@@ -53,9 +54,9 @@ Spectator.describe Feed::Judging do
         expect(verdict.included).to be_false
       end
 
-      it "materializes the matching post at its arrival time" do
+      it "materializes the matching post at its position" do
         Feed::Judging.judge(feed)
-        expect(materialized).to eq([{hit.iri, hit_arrival}])
+        expect(materialized).to eq([{hit.iri, hit.created_at}])
       end
 
       it "judges nothing on a second run" do
@@ -114,12 +115,12 @@ Spectator.describe Feed::Judging do
 
         it "repopulates the feed under the new policy" do
           Feed::Judging.judge(feed)
-          expect(materialized).to eq([{miss.iri, miss_arrival}])
+          expect(materialized).to eq([{miss.iri, miss.created_at}])
         end
 
         it "leaves no stale rows after a bounded re-judge" do
           Feed::Judging.judge(feed, match_limit: 1)
-          expect(materialized).to eq([{miss.iri, miss_arrival}])
+          expect(materialized).to eq([{miss.iri, miss.created_at}])
         end
       end
     end
@@ -296,9 +297,9 @@ Spectator.describe Feed::Judging do
         expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: miss.iri)).to be_nil
       end
 
-      it "materializes the matching post at its arrival time" do
+      it "materializes the matching post at its position" do
         subject
-        expect(materialized).to eq([{hit.iri, hit_row.created_at}])
+        expect(materialized).to eq([{hit.iri, hit.created_at}])
       end
 
       context "when the batch is truncated" do
@@ -313,8 +314,8 @@ Spectator.describe Feed::Judging do
         end
       end
 
-      context "when the floor is above the oldest arrival" do
-        let(floor) { miss_row.created_at }
+      context "when the floor is above the oldest post" do
+        let(floor) { miss.created_at }
 
         it "does not scan the post below the floor" do
           expect(subject.scanned).to eq(1)
@@ -342,9 +343,9 @@ Spectator.describe Feed::Judging do
         let_create(:announce, named: hit_announce, object: hit)
         let!(hit_announce_row) { put_in_inbox(actor, hit_announce) }
 
-        it "materializes it at its earliest arrival" do
+        it "materializes it at its position" do
           subject
-          expect(materialized).to eq([{hit.iri, hit_row.created_at}])
+          expect(materialized).to eq([{hit.iri, hit.created_at}])
         end
 
         it "judges it once" do
@@ -384,7 +385,8 @@ Spectator.describe Feed::Judging do
 
     let_build(:object, named: hit, content: "<p>something alpha something</p>")
     let_create(:create, named: hit_create, object: hit)
-    let!(arrival) { put_in_inbox(actor, hit_create).created_at }
+
+    before_each { put_in_inbox(actor, hit_create) }
 
     context "when the feed is not registered" do
       pre_condition { expect(Feed::Candidates.arrival_for(feed, hit)).not_to be_nil }
@@ -408,21 +410,19 @@ Spectator.describe Feed::Judging do
           .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
       end
 
-      it "includes the matching object at its arrival time" do
+      it "includes the matching object at its position" do
         Feed::Judging.judge_arrival(hit)
         verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri)
         expect(verdict.included).to be_true
-        expect(verdict.position).to eq(arrival)
+        expect(verdict.position).to eq(hit.created_at)
       end
 
       context "given a matching object whose author is deleted" do
         before_each { hit.attributed_to.delete! }
 
-        pre_condition { expect(hit.deleted?).to be_false }
-
-        it "writes no verdict" do
+        it "writes a verdict" do
           expect { Feed::Judging.judge_arrival(hit) }
-            .not_to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0)
+            .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
         end
       end
 

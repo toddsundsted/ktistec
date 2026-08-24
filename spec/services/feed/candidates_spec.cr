@@ -21,26 +21,28 @@ Spectator.describe Feed::Candidates do
     context "given a create in the owner's inbox" do
       let_build(:object)
       let_create(:create, object: object)
-      let!(arrival) { put_in_inbox(actor, create).created_at }
+
+      before_each { put_in_inbox(actor, create) }
 
       it "returns the object as a candidate" do
         expect(candidates.map(&.first)).to eq([object])
       end
 
-      it "carries the arrival time" do
-        expect(candidates.map(&.last)).to eq([arrival])
+      it "carries the object's creation time" do
+        expect(candidates.map(&.last)).to eq([object.created_at])
       end
 
       context "and a later announce of the same object" do
         let_create(:announce, object: object)
+
         before_each { put_in_inbox(actor, announce) }
 
         it "returns the object once" do
           expect(candidates.map(&.first)).to eq([object])
         end
 
-        it "carries the first arrival time" do
-          expect(candidates.map(&.last)).to eq([arrival])
+        it "carries the object's creation time" do
+          expect(candidates.map(&.last)).to eq([object.created_at])
         end
       end
 
@@ -124,10 +126,12 @@ Spectator.describe Feed::Candidates do
       context "with more creates" do
         let_build(:object, named: :object2)
         let_create(:create, named: :create2, object: object2)
+
         before_each { put_in_inbox(actor, create2) }
 
         let_build(:object, named: :object3)
         let_create(:create, named: :create3, object: object3)
+
         before_each { put_in_inbox(actor, create3) }
 
         it "returns candidates in arrival order" do
@@ -147,6 +151,7 @@ Spectator.describe Feed::Candidates do
     context "given a create in the owner's outbox" do
       let_build(:object)
       let_create(:create, object: object)
+
       before_each { put_in_outbox(actor, create) }
 
       pre_condition { expect(Relationship::Content::Outbox.count(from_iri: actor.iri)).to eq(1) }
@@ -160,6 +165,7 @@ Spectator.describe Feed::Candidates do
       let(other) { register.actor }
       let_build(:object)
       let_create(:create, object: object)
+
       before_each { put_in_inbox(other, create) }
 
       pre_condition { expect(Relationship::Content::Inbox.count(from_iri: other.iri)).to eq(1) }
@@ -257,88 +263,173 @@ Spectator.describe Feed::Candidates do
   end
 
   describe ".arrival_for" do
-    let_build(:object)
+    let_create(:object, visible: true)
 
-    it "returns nil" do
-      expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+    subject { Feed::Candidates.arrival_for(feed, object) }
+
+    it "returns the object's creation time" do
+      expect(subject).to eq(object.created_at)
     end
 
-    context "given a create in the owner's inbox" do
-      let_create(:create, object: object)
-      let!(arrival) { put_in_inbox(actor, create).created_at }
-
-      it "returns the arrival time" do
-        expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
-      end
-
-      context "and a later announce of the same object" do
-        let_create(:announce, object: object)
-        before_each { put_in_inbox(actor, announce) }
-
-        it "returns the earliest arrival time" do
-          expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
-        end
-      end
-
-      context "and the activity is undone" do
-        before_each { create.undo! }
-
-        it "returns nil" do
-          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
-        end
-      end
-
-      context "and the object is deleted" do
-        before_each { object.delete! }
-
-        it "returns nil" do
-          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
-        end
-      end
-
-      context "and the object's author is deleted" do
-        before_each { object.attributed_to.delete! }
-
-        it "returns nil" do
-          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
-        end
-      end
-
-      # blocking is reversible
-
-      context "and the object is blocked" do
-        before_each { object.block! }
-
-        it "returns the arrival time" do
-          expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
-        end
-      end
-
-      context "and the object's author is blocked" do
-        before_each { object.attributed_to.block! }
-
-        it "returns the arrival time" do
-          expect(Feed::Candidates.arrival_for(feed, object)).to eq(arrival)
-        end
-      end
-
-      context "and the object is special" do
-        before_each { object.assign(special: "vote").save }
-
-        it "returns nil" do
-          expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
-        end
-      end
-    end
-
-    context "given a create in the owner's outbox" do
-      let_create(:create, object: object)
-      before_each { put_in_outbox(actor, create) }
-
-      pre_condition { expect(Relationship::Content::Outbox.count(from_iri: actor.iri)).to eq(1) }
+    context "when the object is not visible" do
+      before_each { object.assign(visible: false).save }
 
       it "returns nil" do
-        expect(Feed::Candidates.arrival_for(feed, object)).to be_nil
+        expect(subject).to be_nil
+      end
+
+      context "and a create is in the owner's inbox" do
+        let_create(:create, object: object)
+
+        before_each { put_in_inbox(actor, create) }
+
+        it "returns the object's creation time" do
+          expect(subject).to eq(object.created_at)
+        end
+
+        context "but the activity is undone" do
+          before_each { create.undo! }
+
+          it "returns nil" do
+            expect(subject).to be_nil
+          end
+        end
+
+        context "but the feed's floor is above the object" do
+          before_each { feed.assign(floor: object.created_at + 1.second).save }
+
+          it "returns nil" do
+            expect(subject).to be_nil
+          end
+        end
+      end
+
+      context "and a create is in the owner's outbox" do
+        let_create(:create, object: object)
+
+        before_each { put_in_outbox(actor, create) }
+
+        it "returns the object's creation time" do
+          expect(subject).to eq(object.created_at)
+        end
+      end
+
+      context "and a create is in another actor's inbox" do
+        let(other) { register.actor }
+        let_create(:create, object: object)
+
+        before_each { put_in_inbox(other, create) }
+
+        pre_condition { expect(Relationship::Content::Inbox.count(from_iri: actor.iri)).to eq(0) }
+
+        it "returns nil" do
+          expect(subject).to be_nil
+        end
+      end
+
+      context "and a create is for another object" do
+        let_create(:create)
+
+        before_each { put_in_inbox(actor, create) }
+
+        pre_condition { expect(Relationship::Content::Inbox.count(from_iri: actor.iri)).to eq(1) }
+
+        it "returns nil" do
+          expect(subject).to be_nil
+        end
+      end
+    end
+
+    context "when the object is not published" do
+      before_each { object.assign(published: nil).save }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+
+      context "and a create is in the owner's outbox" do
+        let_create(:create, object: object)
+
+        before_each { put_in_outbox(actor, create) }
+
+        it "returns nil" do
+          expect(subject).to be_nil
+        end
+      end
+    end
+
+    context "when the object is special" do
+      before_each { object.assign(special: "vote").save }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    # deletion and blocking are reversible, and neither goes through
+    # `save`, so nothing would re-judge on reversal
+
+    context "when the object is deleted" do
+      before_each { object.delete! }
+
+      pre_condition { expect(object.deleted?).to be_true }
+
+      it "is still a candidate" do
+        expect(subject).to eq(object.created_at)
+      end
+    end
+
+    context "when the object is blocked" do
+      before_each { object.block! }
+
+      pre_condition { expect(object.blocked?).to be_true }
+
+      it "is still a candidate" do
+        expect(subject).to eq(object.created_at)
+      end
+    end
+
+    context "when the object's author is deleted" do
+      before_each { object.attributed_to.delete! }
+
+      pre_condition { expect(object.attributed_to.deleted?).to be_true }
+
+      it "is still a candidate" do
+        expect(subject).to eq(object.created_at)
+      end
+    end
+
+    context "when the object's author is blocked" do
+      before_each { object.attributed_to.block! }
+
+      pre_condition { expect(object.attributed_to.blocked?).to be_true }
+
+      it "is still a candidate" do
+        expect(subject).to eq(object.created_at)
+      end
+    end
+
+    context "when the feed has a floor below the object" do
+      before_each { feed.assign(floor: object.created_at - 1.second).save }
+
+      it "returns the object's creation time" do
+        expect(subject).to eq(object.created_at)
+      end
+
+      context "and the floor is at the object" do
+        before_each { feed.assign(floor: object.created_at).save }
+
+        it "returns nil" do
+          expect(subject).to be_nil
+        end
+      end
+
+      context "and the floor is above the object" do
+        before_each { feed.assign(floor: object.created_at + 1.second).save }
+
+        it "returns nil" do
+          expect(subject).to be_nil
+        end
       end
     end
   end

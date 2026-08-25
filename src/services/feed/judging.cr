@@ -43,10 +43,10 @@ class Feed
       candidates = Candidates.candidates_for(feed, limit: limit)
       matches = 0
       scanned = 0
-      candidates.each do |(object, arrival)|
+      candidates.each do |object|
         break if match_limit && matches >= match_limit
         judgment = backend.judge(feed, [object]).first
-        write_verdict(feed, object, arrival, judgment)
+        write_verdict(feed, object, object.created_at, judgment)
         Rules::Maintainer.reconcile_object_for(view, object.iri)
         matches += 1 if judgment.included
         scanned += 1
@@ -81,49 +81,40 @@ class Feed
 
     # The result of one backfill batch.
     #
-    # `cursor` is the mailbox row id to resume below. `done` reports
-    # that the scan has reached the floor, or run out of mailbox.
+    # `cursor` is the object id to resume below. `done` reports that
+    # the scan has reached the feed's floor.
     #
     record Batch, scanned : Int32, included : Int32, cursor : Int64?, done : Bool
 
-    # Judges one batch of a feed's unjudged candidates, newest first,
-    # stopping at `floor`.
+    # Judges one batch of a feed's unjudged candidates, newest first.
     #
     # Writes a verdict only for posts the feed includes. An excluded
     # post therefore stays a candidate. Skipping excluded verdicts
-    # keeps the backfill from writing a row for every post the owner
-    # has ever received, for every feed they own.
+    # keeps the backfill from writing a row for every post the server
+    # has ever held, for every feed.
     #
-    def backfill(feed : ::Feed, floor : Time, cursor : Int64?, limit : Int32) : Batch
+    def backfill(feed : ::Feed, cursor : Int64?, limit : Int32, floor_id : Int64? = nil) : Batch
       unless (backend = Backend.find?(feed.backend))
         raise "is not a registered backend: #{feed.backend}"
       end
       view = Rules::Feeds.view_for(feed)
-      rows = Candidates.candidate_rows_for(feed, cursor, limit)
-      seen = Set(String).new
-      scanned = 0
+      candidates = Candidates.candidates_for(feed, cursor, limit, floor_id)
       included = 0
-      above_floor = false
-      rows.each do |row|
-        next if row.delivered_at < floor
-        above_floor = true
-        object = row.object
-        next unless seen.add?(object.iri)
-        next if row.position <= floor
+      candidates.each do |object|
         judgment = backend.judge(feed, [object]).first
-        scanned += 1
         if judgment.included
-          write_verdict(feed, object, row.position, judgment)
+          write_verdict(feed, object, object.created_at, judgment)
           Rules::Maintainer.reconcile_object_for(view, object.iri)
           included += 1
         end
       end
-      # a batch entirely below the floor ends the scan.
+      # the scan never leaves the feed's window, so a short batch
+      # means no unjudged candidates remain.
       Batch.new(
-        scanned: scanned,
+        scanned: candidates.size,
         included: included,
-        cursor: rows.last?.try(&.cursor),
-        done: rows.size < limit || !above_floor,
+        cursor: candidates.last?.try(&.id),
+        done: candidates.size < limit,
       )
     end
 

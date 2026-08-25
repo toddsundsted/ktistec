@@ -100,25 +100,21 @@ Spectator.describe Task::BackfillFeed do
       expect { subject.perform }.not_to change { subject.next_attempt_at }
     end
 
-    context "given posts in the owner's inbox" do
-      let_build(:object, named: hit, content: "<p>something alpha something</p>")
-      let_build(:object, named: miss, content: "<p>something gamma something</p>")
-      let_create(:create, named: hit_create, object: hit)
-      let_create(:create, named: miss_create, object: miss)
-      let!(hit_row) { put_in_inbox(actor, hit_create) }
-      let!(miss_row) { put_in_inbox(actor, miss_create) }
+    context "given objects" do
+      let_create!(:object, named: hit, content: "<p>something alpha something</p>")
+      let_create!(:object, named: miss, content: "<p>something gamma something</p>")
 
       it "reschedules" do
         expect { subject.perform(1) }.to change { subject.next_attempt_at }
       end
 
-      it "does not reschedule once the mailbox is exhausted" do
+      it "does not reschedule once the window is exhausted" do
         expect { subject.perform }.not_to change { subject.next_attempt_at }
       end
 
       it "records the cursor" do
         subject.perform
-        expect(subject.state.cursor).to eq(hit_row.id)
+        expect(subject.state.cursor).to eq(hit.id)
       end
 
       it "counts what it scanned" do
@@ -145,12 +141,26 @@ Spectator.describe Task::BackfillFeed do
         end
       end
 
-      context "when the feed's floor is above the posts" do
-        before_each { feed.assign(floor: miss_row.created_at + 1.second).save }
+      context "when the feed's floor is above every object" do
+        before_each { feed.assign(floor: miss.created_at + 1.second).save }
 
         it "writes no verdict" do
           subject.perform
           expect(Feed::Verdict.count(feed_id: feed.id)).to eq(0)
+        end
+
+        it "records the floor id" do
+          subject.perform
+          expect(subject.state.floor_id).to eq(miss.id)
+        end
+      end
+
+      context "when the feed's floor is below every object" do
+        before_each { feed.assign(floor: Time.utc(1970, 1, 1)).save }
+
+        it "records a zero floor id" do
+          subject.perform
+          expect(subject.state.floor_id).to eq(0)
         end
       end
 

@@ -1,8 +1,6 @@
 require "../../models/feed"
 require "../../models/activity_pub"
 require "../../models/activity_pub/object"
-require "../../models/activity_pub/activity/create"
-require "../../models/activity_pub/activity/announce"
 require "../../models/relationship/content/inbox"
 require "../../models/relationship/content/outbox"
 
@@ -14,129 +12,72 @@ class Feed
   module Candidates
     extend self
 
-    # One scanned candidate.
-    #
-    record Candidate, cursor : Int64, delivered_at : Time, position : Time, object : ActivityPub::Object
-
-    # The candidate predicate, less the floor.
+    # The candidate predicate.
     #
     private PREDICATE_SQL = <<-SQL
-           o.published IS NOT NULL
-           AND o.special IS NULL
+           published IS NOT NULL
+           AND special IS NULL
            AND (
-             o.visible = 1
+             visible = 1
              OR EXISTS (
                SELECT 1
-                 FROM relationships mbx
-                 JOIN activities act ON act.iri = mbx.to_iri
-                WHERE mbx.type IN (?, ?)
-                  AND mbx.from_iri = ?
-                  AND act.object_iri = o.iri
-                  AND act.undone_at IS NULL
+                 FROM relationships m
+                 JOIN activities a ON a.iri = m.to_iri
+                WHERE m.type IN (?, ?)
+                  AND m.from_iri = ?
+                  AND a.object_iri = objects.iri
+                  AND a.undone_at IS NULL
              )
            )
       SQL
 
-    # The floor. A feed with no floor is unbounded.
+    # The scan.
     #
-    private FLOOR_SQL = "(? IS NULL OR o.created_at > ?)"
-
-    # The rows holding the feed's unjudged candidates.
-    #
-    private CANDIDATE_ROWS_SQL = <<-SQL
-        SELECT m.id, m.created_at, o.created_at, o.iri
-          FROM relationships m
-          JOIN activities a ON a.iri = m.to_iri
-          JOIN objects o ON o.iri = a.object_iri
-         WHERE m.type = ?
-           AND m.from_iri = ?
-           AND a.type IN (?, ?)
-           AND #{PREDICATE_SQL}
+    private CANDIDATES_SQL = <<-SQL
+      #{PREDICATE_SQL}
+           AND id > ?
+           AND id < ?
            AND NOT EXISTS (
              SELECT 1
                FROM feed_verdicts v
               WHERE v.feed_id = ?
-                AND v.object_iri = o.iri
+                AND v.object_iri = objects.iri
            )
-      SQL
-
-    private CANDIDATE_ROWS_FROM_NEWEST_SQL = <<-SQL
-      #{CANDIDATE_ROWS_SQL}
-         ORDER BY m.id DESC
+         ORDER BY id DESC
          LIMIT ?
       SQL
 
-    private CANDIDATE_ROWS_BELOW_CURSOR_SQL = <<-SQL
-      #{CANDIDATE_ROWS_SQL}
-           AND m.id < ?
-         ORDER BY m.id DESC
-         LIMIT ?
-      SQL
-
-    # Returns the rows holding the feed's unjudged candidates, newest
-    # first.
+    # Returns the feed's unjudged candidates, newest first.
     #
-    # `cursor` is the mailbox row id to scan down from; `nil` starts at
-    # the newest row.
+    # `cursor` is the object id to scan down from; `nil` starts at the
+    # newest object. A caller that already knows the floor's id passes
+    # it as `floor_id` and the probe is skipped.
     #
-    def candidate_rows_for(feed : ::Feed, cursor : Int64?, limit : Int32) : Array(Candidate)
-      if limit < 1
-        raise ArgumentError.new("limit must be positive")
-      end
-      scan(feed, cursor, limit)
-    end
-
-    # Returns the feed's candidates, each with its position.
-    #
-    # `limit` bounds how many rows are scanned; `nil` (the default)
-    # scans the whole mailbox.
-    #
-    def candidates_for(feed : ::Feed, limit : Int32? = nil) : Array({ActivityPub::Object, Time})
+    def candidates_for(feed : ::Feed, cursor : Int64? = nil, limit : Int32? = nil, floor_id : Int64? = nil) : Array(ActivityPub::Object)
       if limit && limit < 1
         raise ArgumentError.new("limit must be positive")
       end
-      floor = feed.floor
-      seen = Set(String).new
-      candidates = [] of {ActivityPub::Object, Time}
-      # in SQLite, a negative limit means no limit
-      scan(feed, nil, limit || -1).each do |row|
-        next unless seen.add?(row.object.iri)
-        next if floor && row.position <= floor
-        candidates << {row.object, row.position}
-      end
-      candidates
-    end
-
-    private def scan(feed : ::Feed, cursor : Int64?, limit : Int32) : Array(Candidate)
-      rows =
-        if cursor
-          Ktistec.database.query_all(
-            CANDIDATE_ROWS_BELOW_CURSOR_SQL,
-            *source_parameters(feed),
-            cursor,
-            limit,
-            as: {Int64, Time, Time, String})
-        else
-          Ktistec.database.query_all(
-            CANDIDATE_ROWS_FROM_NEWEST_SQL,
-            *source_parameters(feed),
-            limit,
-            as: {Int64, Time, Time, String})
-        end
-      rows.map do |(id, delivered_at, position, iri)|
-        Candidate.new(id, delivered_at, position, ActivityPub::Object.find(iri: iri, include_deleted: true))
-      end
-    end
-
-    private def source_parameters(feed : ::Feed)
-      {
-        Relationship::Content::Inbox.to_s,
-        feed.owner_iri,
-        ActivityPub::Activity::Create.to_s,
-        ActivityPub::Activity::Announce.to_s,
+      ActivityPub::Object.where(
+        CANDIDATES_SQL,
         *predicate_parameters(feed),
+        floor_id || floor_id(feed) || 0_i64,
+        cursor || Int64::MAX,
         feed.id,
-      }
+        # in SQLite, a negative limit means no limit
+        limit || -1,
+        include_deleted: true,
+      )
+    end
+
+    # Returns the id of the newest object at or below the feed's
+    # floor -- the bottom of the scan's window.
+    #
+    def floor_id(feed : ::Feed) : Int64?
+      return unless (floor = feed.floor)
+      Ktistec.database.query_one?(
+        "SELECT id FROM objects WHERE created_at <= ? ORDER BY id DESC LIMIT 1",
+        floor,
+        as: Int64)
     end
 
     # Returns `object`'s position in the feed, or `nil` if the object
@@ -144,11 +85,11 @@ class Feed
     #
     def arrival_for(feed : ::Feed, object : ActivityPub::Object) : Time?
       query = <<-SQL
-        SELECT o.created_at
-          FROM objects o
-         WHERE o.iri = ?
+        SELECT created_at
+          FROM objects
+         WHERE iri = ?
            AND #{PREDICATE_SQL}
-           AND #{FLOOR_SQL}
+           AND (? IS NULL OR created_at > ?)
       SQL
       Ktistec.database.query_one?(
         query,

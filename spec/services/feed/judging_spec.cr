@@ -22,14 +22,9 @@ Spectator.describe Feed::Judging do
       expect(Feed::Judging.judge(feed)).to eq(0)
     end
 
-    context "given posts in the owner's inbox" do
-      let_build(:object, named: hit, content: "<p>something alpha something</p>")
-      let_build(:object, named: miss, content: "<p>something gamma something</p>")
-      let_create(:create, named: hit_create, object: hit)
-      let_create(:create, named: miss_create, object: miss)
-
-      before_each { put_in_inbox(actor, hit_create) }
-      before_each { put_in_inbox(actor, miss_create) }
+    context "given objects" do
+      let_create!(:object, named: hit, content: "<p>something alpha something</p>")
+      let_create!(:object, named: miss, content: "<p>something gamma something</p>")
 
       it "judges the candidates" do
         expect(Feed::Judging.judge(feed)).to eq(2)
@@ -40,7 +35,7 @@ Spectator.describe Feed::Judging do
           .to change { Feed::Verdict.count(feed_id: feed.id) }.from(0).to(2)
       end
 
-      it "includes the matching post" do
+      it "includes the matching object" do
         Feed::Judging.judge(feed)
         verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri)
         expect(verdict.included).to be_true
@@ -48,13 +43,13 @@ Spectator.describe Feed::Judging do
         expect(verdict.position).to eq(hit.created_at)
       end
 
-      it "excludes the non-matching post" do
+      it "excludes the non-matching object" do
         Feed::Judging.judge(feed)
         verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: miss.iri)
         expect(verdict.included).to be_false
       end
 
-      it "materializes the matching post at its position" do
+      it "materializes the matching object at its position" do
         Feed::Judging.judge(feed)
         expect(materialized).to eq([{hit.iri, hit.created_at}])
       end
@@ -73,7 +68,7 @@ Spectator.describe Feed::Judging do
       end
 
       context "when the match limit is reached" do
-        # "something" matches both posts
+        # "something" matches both objects
         let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["something"]}})).as_h)
 
         pre_condition { expect(Feed::Candidates.candidates_for(feed).size).to eq(2) }
@@ -246,11 +241,10 @@ Spectator.describe Feed::Judging do
   end
 
   describe ".backfill" do
-    let(floor) { Time.utc(1970, 1, 1) }
     let(cursor) { nil }
     let(limit) { 10 }
 
-    subject { Feed::Judging.backfill(feed, floor, cursor, limit) }
+    subject { Feed::Judging.backfill(feed, cursor, limit) }
 
     it "scans nothing" do
       expect(subject.scanned).to eq(0)
@@ -264,40 +258,36 @@ Spectator.describe Feed::Judging do
       expect(subject.done).to be_true
     end
 
-    context "given posts in the owner's inbox" do
-      let_build(:object, named: hit, content: "<p>something alpha something</p>")
-      let_build(:object, named: miss, content: "<p>something gamma something</p>")
-      let_create(:create, named: hit_create, object: hit)
-      let_create(:create, named: miss_create, object: miss)
-      let!(hit_row) { put_in_inbox(actor, hit_create) }
-      let!(miss_row) { put_in_inbox(actor, miss_create) }
+    context "given objects" do
+      let_create!(:object, named: hit, content: "<p>something alpha something</p>")
+      let_create!(:object, named: miss, content: "<p>something gamma something</p>")
 
-      it "scans both posts" do
+      it "scans both objects" do
         expect(subject.scanned).to eq(2)
       end
 
-      it "reports the last row scanned as the cursor" do
-        expect(subject.cursor).to eq(hit_row.id)
+      it "reports the last object scanned as the cursor" do
+        expect(subject.cursor).to eq(hit.id)
       end
 
-      it "counts the matching post" do
+      it "counts the matching object" do
         expect(subject.included).to eq(1)
       end
 
-      it "writes a verdict for the matching post" do
+      it "writes a verdict for the matching object" do
         subject
         expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri).included).to be_true
       end
 
       # only `included` verdicts are written -- a verdict for every
-      # post the owner ever received, for every feed they own, is what
-      # the backfill must not write.
-      it "writes no verdict for the non-matching post" do
+      # object the server has ever held, for every feed, is what the
+      # backfill must not write.
+      it "writes no verdict for the non-matching object" do
         subject
         expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: miss.iri)).to be_nil
       end
 
-      it "materializes the matching post at its position" do
+      it "materializes the matching object at its position" do
         subject
         expect(materialized).to eq([{hit.iri, hit.created_at}])
       end
@@ -305,8 +295,8 @@ Spectator.describe Feed::Judging do
       context "when the batch is truncated" do
         let(limit) { 1 }
 
-        it "reports the last row scanned as the cursor" do
-          expect(subject.cursor).to eq(miss_row.id)
+        it "reports the last object scanned as the cursor" do
+          expect(subject.cursor).to eq(miss.id)
         end
 
         it "is not done" do
@@ -314,10 +304,10 @@ Spectator.describe Feed::Judging do
         end
       end
 
-      context "when the floor is at the oldest post" do
-        let(floor) { hit.created_at }
+      context "when the feed's floor is at the oldest object" do
+        before_each { feed.assign(floor: hit.created_at).save }
 
-        it "does not scan the post at the floor" do
+        it "does not scan the object at the floor" do
           expect(subject.scanned).to eq(1)
         end
 
@@ -327,19 +317,8 @@ Spectator.describe Feed::Judging do
         end
       end
 
-      context "when every post was delivered above the floor but created at or below it" do
-        let(limit) { 2 }
-        let(floor) { miss.created_at }
-
-        pre_condition { expect(miss_row.created_at).to be > floor }
-
-        it "is not done" do
-          expect(subject.done).to be_false
-        end
-      end
-
-      context "when the whole batch is below the floor" do
-        let(floor) { miss_row.created_at + 1.second }
+      context "when the feed's floor is at the newest object" do
+        before_each { feed.assign(floor: miss.created_at).save }
 
         it "scans nothing" do
           expect(subject.scanned).to eq(0)
@@ -347,29 +326,6 @@ Spectator.describe Feed::Judging do
 
         it "is done" do
           expect(subject.done).to be_true
-        end
-      end
-
-      context "and the matching post arrives again" do
-        let_create(:announce, named: hit_announce, object: hit)
-        let!(hit_announce_row) { put_in_inbox(actor, hit_announce) }
-
-        it "materializes it at its position" do
-          subject
-          expect(materialized).to eq([{hit.iri, hit.created_at}])
-        end
-
-        it "judges it once" do
-          expect(subject.scanned).to eq(2)
-        end
-
-        context "but its earliest arrival is below the floor" do
-          let(floor) { hit_announce_row.created_at }
-
-          it "writes no verdict for it" do
-            subject
-            expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri)).to be_nil
-          end
         end
       end
     end

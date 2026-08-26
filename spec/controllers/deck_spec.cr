@@ -65,10 +65,10 @@ Spectator.describe DeckController do
           expect(names.map(&.text)).to have("Robotics")
         end
 
-        it "links the pane to the feed" do
+        it "links the pane header to the feed's edit form" do
           get "/actors/#{actor.username}/deck", ACCEPT_HTML
-          href = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//a/@href")
-          expect(href.map(&.text)).to have("/actors/#{actor.username}/feeds/#{robotics.id}")
+          href = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//header//a/@href")
+          expect(href.map(&.text)).to have("/actors/#{actor.username}/feeds/#{robotics.id}/edit")
         end
 
         it "renders the pane as empty" do

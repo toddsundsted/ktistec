@@ -15,7 +15,7 @@
     section.deck-pane
       header
         h2 = feed.name
-        a href=actor_feed_path(actor, feed) See all
+        a href=edit_actor_feed_path(actor, feed) Edit
       - if contents.empty?
         p Nothing here yet.
       - else

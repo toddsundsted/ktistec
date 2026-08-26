@@ -61,6 +61,8 @@ body.deck-page {
     border-right: 5px solid var(--border-color);
     &:last-child { border-right: none; }
 
+    > :not(header) { position: relative; z-index: 0; }
+
     > header {
         position: sticky;
         z-index: 1;

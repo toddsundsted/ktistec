@@ -1385,7 +1385,7 @@ Spectator.describe ActivityPub::Actor do
     let(other) { described_class.new(iri: "https://test.test/#{random_string}").save }
 
     macro create_draft(index)
-      let_create!(:note, named: note{{index}}, attributed_to: subject)
+      let_create!(:note, named: note{{index}}, attributed_to: subject, published: nil)
     end
 
     create_draft(1)

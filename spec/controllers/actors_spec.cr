@@ -1016,6 +1016,7 @@ Spectator.describe ActorsController do
       let_create!(
         :object, named: :draft,
         attributed_to: actor,
+        published: nil,
         local: true,
       )
 

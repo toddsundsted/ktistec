@@ -2101,7 +2101,7 @@ Spectator.describe MCP::Tools do
         expect(actor_data["handle"].as_s).to eq(op_actor.handle)
         expect(first_object["parent_id"].as_nil).to be_nil
         expect(first_object["thread"].as_s).to eq(root_note.thread)
-        expect(first_object["published"].as_nil).to be_nil
+        expect(first_object["published"].as_s).to eq(root_note.published.not_nil!.to_rfc3339)
         expect(first_object["depth"].as_i).to eq(0)
       end
 

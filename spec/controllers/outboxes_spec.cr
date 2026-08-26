@@ -717,7 +717,7 @@ Spectator.describe OutboxesController do
           end
         end
 
-        let_build(:object, attributed_to: actor)
+        let_build(:object, attributed_to: actor, published: nil)
 
         context "when a draft object is specified" do
           before_each { object.save }

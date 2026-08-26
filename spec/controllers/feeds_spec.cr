@@ -765,7 +765,7 @@ Spectator.describe FeedsController do
       end
 
       context "given a preview request" do
-        let_create(:object, named: hit, content: "<p>cnc milling</p>")
+        let_create(:object, named: hit, content: "<p>cnc milling</p>", created_at: Feed::HORIZON.ago + 1.day)
         let_create(:create, named: hit_create, object: hit)
 
         before_each { put_in_inbox(actor, hit_create) }
@@ -796,6 +796,16 @@ Spectator.describe FeedsController do
         it "marks the feed as a draft" do
           post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json
           expect(robotics_feed.draft).to be_true
+        end
+
+        it "gives the draft a floor" do
+          post "/actors/#{actor.username}/feeds", FORM_HEADERS, preview_form
+          expect(robotics_feed.floor).to be_close(Feed::HORIZON.ago, 1.minute)
+        end
+
+        it "gives the draft a floor" do
+          post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json
+          expect(robotics_feed.floor).to be_close(Feed::HORIZON.ago, 1.minute)
         end
 
         it "does not register the feed's view" do
@@ -1079,17 +1089,7 @@ Spectator.describe FeedsController do
           expect(Rules::View.registry.map(&.type)).to contain(robotics_feed.feed_type)
         end
 
-        it "does not give the feed a floor" do
-          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-          expect(robotics_feed.floor).to be_nil
-        end
-
-        it "does not give the feed a floor" do
-          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-          expect(robotics_feed.floor).to be_nil
-        end
-
-        context "and the original has a floor" do
+        context "given the original's floor" do
           let(original_floor) { Time.utc(2026, 1, 1) }
 
           before_each { feed.assign(floor: original_floor).save }
@@ -1368,6 +1368,22 @@ Spectator.describe FeedsController do
           expect(copy.copy_of).to eq(feed.id)
         end
 
+        context "given the original's floor" do
+          let(original_floor) { Time.utc(2026, 1, 1) }
+
+          before_each { feed.assign(floor: original_floor).save }
+
+          it "carries the original's floor into the copy" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+            expect(copy.floor).to eq(original_floor)
+          end
+
+          it "carries the original's floor into the copy" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+            expect(copy.floor).to eq(original_floor)
+          end
+        end
+
         it "redirects to the copy's editor" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
           expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{copy.id}/edit")
@@ -1456,10 +1472,12 @@ Spectator.describe FeedsController do
       end
 
       context "given a draft feed" do
-        before_each { feed.assign(draft: true).save }
+        let(draft_floor) { Time.utc(2026, 1, 1) }
+
+        before_each { feed.assign(draft: true, floor: draft_floor).save }
 
         context "when previewing a draft feed" do
-          let_create(:object, named: hit)
+          let_create(:object, named: hit, created_at: draft_floor + 1.day)
           let_create!(:hashtag, subject: hit, name: "cnc")
           let_create(:create, named: hit_create, object: hit)
 
@@ -1583,14 +1601,14 @@ Spectator.describe FeedsController do
             expect(Rules::View.registry.map(&.type)).to contain(feed.feed_type)
           end
 
-          it "sets the feed's floor" do
+          it "carries the draft's floor forward" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-            expect(Feed.find(feed.id).floor).to be_close(Feed::HORIZON.ago, 1.minute)
+            expect(Feed.find(feed.id).floor).to eq(draft_floor)
           end
 
-          it "sets the feed's floor" do
+          it "carries the draft's floor forward" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-            expect(Feed.find(feed.id).floor).to be_close(Feed::HORIZON.ago, 1.minute)
+            expect(Feed.find(feed.id).floor).to eq(draft_floor)
           end
 
           it "schedules a backfill" do
@@ -1733,40 +1751,24 @@ Spectator.describe FeedsController do
               expect(Feed.find(feed.id).draft).to be_false
             end
 
-            it "does not give the copy a floor" do
+            it "carries the copy's floor forward" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-              expect(Feed.find(feed.id).floor).to be_nil
+              expect(Feed.find(feed.id).floor).to eq(draft_floor)
             end
 
-            it "does not give the copy a floor" do
+            it "carries the copy's floor forward" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-              expect(Feed.find(feed.id).floor).to be_nil
+              expect(Feed.find(feed.id).floor).to eq(draft_floor)
             end
 
-            context "and the original has a floor" do
-              let(original_floor) { Time.utc(2026, 1, 1) }
+            it "schedules a backfill for the copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+              expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(1)
+            end
 
-              before_each { original.assign(floor: original_floor).save }
-
-              it "carries the original's floor into the copy" do
-                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                expect(Feed.find(feed.id).floor).to eq(original_floor)
-              end
-
-              it "carries the original's floor into the copy" do
-                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                expect(Feed.find(feed.id).floor).to eq(original_floor)
-              end
-
-              it "schedules a backfill for the copy" do
-                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(1)
-              end
-
-              it "schedules a backfill for the copy" do
-                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(1)
-              end
+            it "schedules a backfill for the copy" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+              expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(1)
             end
 
             context "when the original is registered" do

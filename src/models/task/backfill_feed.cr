@@ -22,6 +22,8 @@ class Task
 
       property cursor : Int64?
 
+      property floor_id : Int64?
+
       property scanned : Int32
 
       property included : Int32
@@ -92,8 +94,12 @@ class Task
         return
       end
 
+      # the floor never moves, so the probe runs once per backfill.
+      # zero records "nothing below the floor".
+      state.floor_id ||= ::Feed::Candidates.floor_id(feed) || 0_i64
+
       started = Time.instant
-      batch = ::Feed::Judging.backfill(feed, floor, state.cursor, batch_size)
+      batch = ::Feed::Judging.backfill(feed, state.cursor, batch_size, floor_id: state.floor_id)
       elapsed = Time.instant - started
 
       state.scanned += batch.scanned

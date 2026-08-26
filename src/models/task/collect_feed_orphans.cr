@@ -7,8 +7,8 @@ class Task
   #
   # A feed memoizes its judgments as `Feed::Verdict`s and materializes
   # its membership as `relationships` rows carrying the synthetic
-  # `Feed::<id>` type. This task collects both when the object or
-  # actor is deleted.
+  # `Feed::<id>` type. This task collects both when the object they
+  # refer to no longer exists.
   #
   class CollectFeedOrphans < Task
     include Singleton
@@ -17,9 +17,22 @@ class Task
 
     SWEEP_INTERVAL = 5.minutes
 
-    SWEEP_OVERLAP = 1.minute
+    SWEEP_SIZE = 250
 
-    SWEEP_LOOKBACK = 2.weeks
+    # The sweep's position.
+    #
+    class State
+      include JSON::Serializable
+
+      property cursor : Int64
+
+      def initialize(@cursor = 0_i64)
+      end
+    end
+
+    @[Persistent]
+    @[Insignificant]
+    property state : State { State.new }
 
     def perform
       Log.debug { "Starting sweep of orphaned feed state" }
@@ -33,12 +46,18 @@ class Task
       self.next_attempt_at = randomized_next_attempt_at(SWEEP_INTERVAL)
     end
 
-    # Deletes the feed state left behind by a deleted object or actor.
-    #
-    # Only rows deleted since the previous run are considered.
+    # Deletes the feed state left behind by an object that no longer
+    # exists.
     #
     private def collect_orphans
-      iris = deleted_object_iris
+      slice = next_slice
+      if slice.empty? && state.cursor > 0
+        state.cursor = 0_i64
+        slice = next_slice
+      end
+      return 0 if slice.empty?
+      state.cursor = slice.last[0]
+      iris = slice.select(&.[2]).map(&.[1]).uniq!
       return 0 if iris.empty?
       feed_ids = Ktistec.database.query_all("SELECT id FROM feeds", as: Int64)
       iris.sum(0) do |iri|
@@ -46,20 +65,21 @@ class Task
       end
     end
 
-    # Returns the IRIs of objects deleted since the previous run.
+    # Returns the next slice of verdicts.
     #
-    private def deleted_object_iris
-      since = (last_attempt_at || created_at - SWEEP_LOOKBACK) - SWEEP_OVERLAP
+    private def next_slice
       query = <<-QUERY
-        SELECT iri FROM objects WHERE deleted_at > ?
-        UNION
-        SELECT o.iri
-          FROM objects o
-          JOIN actors c
-            ON c.iri = o.attributed_to_iri
-         WHERE c.deleted_at > ?
+        SELECT s.id, s.object_iri,
+               NOT EXISTS (SELECT 1 FROM objects o WHERE o.iri = s.object_iri)
+          FROM (
+            SELECT id, object_iri
+              FROM feed_verdicts
+             WHERE id > ?
+             ORDER BY id
+             LIMIT ?
+          ) AS s
       QUERY
-      Ktistec.database.query_all(query, since, since, as: String)
+      Ktistec.database.query_all(query, state.cursor, SWEEP_SIZE, as: {Int64, String, Bool})
     end
 
     # deleting in SQL bypasses model hooks -- if the associated models

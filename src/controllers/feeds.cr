@@ -114,7 +114,7 @@ class FeedsController
     params = feed_params(env)
 
     if previewing?(env)
-      feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: true}))
+      feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: true, floor: Time.utc - Feed::HORIZON}))
       if feed.valid?
         feed.save
         Feed::Window.new(feed).recompute
@@ -189,11 +189,6 @@ class FeedsController
         Feed::Window.new(feed).recompute
         redirect edit_actor_feed_path(feed.owner, feed)
       else
-        if original && original.owner == feed.owner
-          feed.assign(floor: original.floor)
-        else
-          feed.assign(floor: Time.utc - Feed::HORIZON)
-        end
         feed.save
         if original && original.owner == feed.owner
           Feed::Judging.rejudge_contents(original, feed)
@@ -210,7 +205,7 @@ class FeedsController
       if previewing?(env)
         if feed.assign(**params).valid?
           discard_superseded_copies(feed)
-          copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id})).save
+          copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor})).save
           Feed::Window.new(copy).recompute
           redirect edit_actor_feed_path(feed.owner, copy)
         else

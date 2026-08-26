@@ -332,6 +332,7 @@ Spectator.describe TableOfContentsController do
           :object, named: :draft,
           attributed_to: actor,
           canonical_path: "/zeta",
+          published: nil,
           local: true,
         )
 

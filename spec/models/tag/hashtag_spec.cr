@@ -38,22 +38,24 @@ Spectator.describe Tag::Hashtag do
       expect { new_tag.save }.to change { new_tag.name }.from("#foo").to("foo")
     end
 
-    pre_condition { expect(object.draft?).to be_true }
+    context "when the subject is a draft" do
+      let_build(:object, local: true, published: nil)
 
-    it "does not change the count" do
-      new_tag = described_class.new(subject: object, name: "#foo")
-      expect { new_tag.save }.not_to change { Tag.hashtag_recount_count }
+      it "does not change the count" do
+        new_tag = described_class.new(subject: object, name: "#foo")
+        expect { new_tag.save }.not_to change { Tag.hashtag_recount_count }
+      end
     end
   end
 
   describe "#destroy" do
-    let_create(:object, local: true)
+    context "when the subject is a draft" do
+      let_create(:object, local: true, published: nil)
 
-    pre_condition { expect(object.draft?).to be_true }
-
-    it "does not change the count" do
-      new_tag = described_class.new(subject: object, name: "#foo")
-      expect { new_tag.destroy }.not_to change { Tag.hashtag_recount_count }
+      it "does not change the count" do
+        new_tag = described_class.new(subject: object, name: "#foo")
+        expect { new_tag.destroy }.not_to change { Tag.hashtag_recount_count }
+      end
     end
   end
 

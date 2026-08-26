@@ -1182,6 +1182,7 @@ module ActivityPub
       # see the source for Relationship::Content::Follow::Thread and
       # Task::Fetch::Thread for additional after_save thread updating
       # functionality
+      ActivityPub::Object::OBSERVERS.notify(:save, self)
     end
 
     def before_destroy

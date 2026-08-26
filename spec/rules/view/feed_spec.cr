@@ -68,16 +68,6 @@ Spectator.describe Rules::View::Feed do
       end
     end
 
-    context "when the object is deleted" do
-      before_each { object.delete! }
-
-      pre_condition { expect(object.deleted?).to be_true }
-
-      it "does not select the object" do
-        expect(selected_iris).not_to contain(object.iri)
-      end
-    end
-
     context "given another feed's verdict" do
       let_build(:object, named: other_object)
       let_create!(:feed, named: other_feed, owner: actor)

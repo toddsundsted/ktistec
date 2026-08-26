@@ -125,6 +125,14 @@ private class SyntheticInjectionKeyedView < SyntheticIdentityKeyedView
   end
 end
 
+# An identity-keyed view whose stored scope is invalid.
+#
+private class SyntheticInvalidScopeView < SyntheticIdentityKeyedView
+  def stored_scope(_key : Rules::View::Key) : {String, Array(DB::Any)}
+    {"missing_column = 1", Array(DB::Any).new}
+  end
+end
+
 private def materialized(view)
   Ktistec.database.query_all("SELECT to_iri FROM relationships WHERE type = ?", view.type, as: String).to_set
 end
@@ -248,6 +256,22 @@ Spectator.describe Rules::Maintainer do
             expect(materialized(view)).not_to contain(object.iri)
           end
         end
+      end
+    end
+
+    context "an identity-keyed view with an invalid stored scope" do
+      let(view) { SyntheticInvalidScopeView.new }
+
+      let_create!(:object)
+
+      it "propagates the database error" do
+        expect { Rules::Maintainer.reconcile_for(view, key_for(object)) }
+          .to raise_error(SQLite3::Exception, /no such column: missing_column/)
+      end
+
+      it "rolls back the insert" do
+        Rules::Maintainer.reconcile_for(view, key_for(object)) rescue SQLite3::Exception
+        expect(materialized(view)).to be_empty
       end
     end
 

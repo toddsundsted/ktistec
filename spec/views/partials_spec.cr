@@ -869,7 +869,7 @@ Spectator.describe "partials" do
       XML.parse_html(render "./src/views/partials/editor.html.slang")
     end
 
-    let_build(:object, local: true)
+    let_build(:object, local: true, published: nil)
 
     context "if authenticated" do
       let(account) { register }
@@ -1417,7 +1417,7 @@ Spectator.describe "partials" do
       end
 
       context "given a question" do
-        let_build(:question, named: object, local: true)
+        let_build(:question, named: object, local: true, published: nil)
 
         it "renders poll button" do
           expect(subject.xpath_nodes("//a[contains(text(),'Include Poll')]")).not_to be_empty

@@ -143,6 +143,11 @@ module Ktistec
       @indexes << @subjects.map(subject)
     end
 
+    # :ditto:
+    def <<(subjects : Enumerable(String))
+      subjects.each { |subject| self << subject }
+    end
+
     # A subscription.
     #
     private class Subscription

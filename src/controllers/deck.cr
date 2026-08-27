@@ -51,22 +51,35 @@ class DeckController
     ok "deck/show", env: env, actor: account.actor, entries: entries
   end
 
-  # Returns a pane's next page of posts.
+  # Returns true if the client is navigating the pane's own frame.
+  #
+  private def self.pane_frame?(env, feed)
+    env.request.headers["Turbo-Frame"]? == "feed-#{feed.id}-pane"
+  end
+
+  # Renders a pane's next page of posts, wrapped in a turbo-stream
+  # that replaces the sentinel which asked for it.
+  #
+  private def self.render_sentinel_replacement(env, actor, feed, contents)
+    body = render "src/views/deck/contents.html.slang"
+    %(<turbo-stream action="replace" target="feed-#{feed.id}-sentinel"><template>#{body}</template></turbo-stream>)
+  end
+
+  # Returns a pane's posts.
   #
   get "/actors/:username/deck/panes/:id" do |env|
     unless (feed = get_pane_feed_with_ownership(env))
       not_found
     end
 
-    max_id = cursor_param(env.params.query, "max").try(&.to_i64?)
+    if pane_frame?(env, feed)
+      ok "deck/pane", env: env, actor: feed.owner, feed: feed, contents: feed.contents(limit: POSTS_PER_PANE)
+    else
+      env.response.content_type = "text/vnd.turbo-stream.html"
 
-    actor = feed.owner                                              # ameba:disable Lint/UselessAssign
-    contents = feed.contents(max_id: max_id, limit: POSTS_PER_PANE) # ameba:disable Lint/UselessAssign
+      max_id = cursor_param(env.params.query, "max").try(&.to_i64?)
 
-    env.response.content_type = "text/vnd.turbo-stream.html"
-
-    body = render "src/views/deck/contents.html.slang"
-
-    %(<turbo-stream action="replace" target="feed-#{feed.id}-sentinel"><template>#{body}</template></turbo-stream>)
+      render_sentinel_replacement(env, feed.owner, feed, feed.contents(max_id: max_id, limit: POSTS_PER_PANE))
+    end
   end
 end

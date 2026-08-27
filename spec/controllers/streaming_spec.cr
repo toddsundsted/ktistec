@@ -243,10 +243,38 @@ Spectator.describe StreamingController do
           expect(described_class.open_deck(io, actor, feeds, resume)).to eq({robotics.id.not_nil! => position.to_unix_ms})
         end
 
-        it "notifies" do
+        it "notifies the pane" do
           described_class.open_deck(io, actor, feeds, resume)
-          expect(io.to_s).to contain("Reload")
+          targets = io.to_s.scan(/target="([^"]+)"/).map(&.[1])
+          expect(targets).to eq(["feed-#{robotics.id}-refresh"])
         end
+      end
+    end
+
+    context "given two feeds holding the same post" do
+      let(position) { Time.utc(2026, 1, 2) }
+
+      let_create!(:feed, named: woodworking, owner: actor)
+
+      let(feeds) { [robotics, woodworking] }
+
+      let(resume) { "#{robotics.id}:#{position.to_unix_ms - 1},#{woodworking.id}:#{position.to_unix_ms - 1}" }
+
+      let_create(:object)
+
+      before_each do
+        put_in_feed(robotics, object, at: position)
+        put_in_feed(woodworking, object, at: position)
+      end
+
+      it "advances both baselines" do
+        expect(described_class.open_deck(io, actor, feeds, resume)).to eq({robotics.id.not_nil! => position.to_unix_ms, woodworking.id.not_nil! => position.to_unix_ms})
+      end
+
+      it "notifies both panes" do
+        described_class.open_deck(io, actor, feeds, resume)
+        targets = io.to_s.scan(/target="([^"]+)"/).map(&.[1])
+        expect(targets).to eq(["feed-#{robotics.id}-refresh", "feed-#{woodworking.id}-refresh"])
       end
     end
   end
@@ -384,7 +412,13 @@ Spectator.describe StreamingController do
       data: \
       <turbo-stream action="replace" target="feed-#{robotics.id}-refresh"><template>\
       <div id="feed-#{robotics.id}-refresh" class="pane-refresh">\
-      <a class="ui mini compact primary button" href="/actors/#{account.username}/deck/panes/#{robotics.id}" data-turbo-frame="feed-#{robotics.id}-pane">Reload</a>\
+      <a class="ui small info icon message" href="/actors/#{account.username}/deck/panes/#{robotics.id}" data-turbo-prefetch="false" data-turbo-frame="feed-#{robotics.id}-pane">\
+      <i class="sync icon"></i>\
+      <div class="content">\
+      <div class="header">There are new posts!</div>\
+      <p>Reload this feed</p>\
+      </div>\
+      </a>\
       </div>\
       </template></turbo-stream>
       \n

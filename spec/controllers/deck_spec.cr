@@ -69,6 +69,24 @@ Spectator.describe DeckController do
           expect(names.map(&.text)).to have("Robotics")
         end
 
+        it "wraps the pane's contents in a frame" do
+          get "/actors/#{actor.username}/deck", ACCEPT_HTML
+          ids = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]/turbo-frame/@id")
+          expect(ids.map(&.text)).to eq(["feed-#{robotics.id}-pane"])
+        end
+
+        it "subscribes to the deck stream" do
+          get "/actors/#{actor.username}/deck", ACCEPT_HTML
+          src = XML.parse_html(response.body).xpath_nodes("//turbo-stream-source/@src").first?
+          expect(src.try(&.text)).to eq("/stream/actor/deck")
+        end
+
+        it "renders an empty refresh slot inside the frame" do
+          get "/actors/#{actor.username}/deck", ACCEPT_HTML
+          slot = XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='feed-#{robotics.id}-pane']/*[@id='feed-#{robotics.id}-refresh']").first
+          expect(slot.text).to be_empty
+        end
+
         it "links the pane header to the feed's edit form" do
           get "/actors/#{actor.username}/deck", ACCEPT_HTML
           href = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//header//a/@href")
@@ -136,7 +154,7 @@ Spectator.describe DeckController do
 
             it "scopes the posts to their panes" do
               get "/actors/#{actor.username}/deck", ACCEPT_HTML
-              ids = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//turbo-frame/@id")
+              ids = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//turbo-frame[contains(@id,'-object-')]/@id")
               expect(ids.map(&.text)).to eq(["feed-#{robotics.id}-object-#{shared.id}", "feed-#{woodworking.id}-object-#{shared.id}"])
             end
 
@@ -218,6 +236,58 @@ Spectator.describe DeckController do
         it "returns 404" do
           get "/actors/#{actor.username}/deck/panes/#{robotics.id}", ACCEPT_HTML
           expect(response.status_code).to eq(404)
+        end
+      end
+
+      context "given a Turbo-Frame header naming the pane" do
+        let(path) { "/actors/#{actor.username}/deck/panes/#{robotics.id}" }
+
+        let(headers) { HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "feed-#{robotics.id}-pane"} }
+
+        it "succeeds" do
+          get path, headers
+          expect(response.status_code).to eq(200)
+        end
+
+        it "renders the pane's frame" do
+          get path, headers
+          ids = XML.parse_html(response.body).xpath_nodes("//turbo-frame/@id").map(&.text)
+          expect(ids.first).to eq("feed-#{robotics.id}-pane")
+        end
+
+        it "renders an empty refresh slot" do
+          get path, headers
+          slot = XML.parse_html(response.body).xpath_nodes("//*[@id='feed-#{robotics.id}-refresh']").first
+          expect(slot.text).to be_empty
+        end
+
+        context "given posts in the feed" do
+          let_create(:object, named: post)
+
+          before_each { put_in_feed(robotics, post) }
+
+          it "renders the posts" do
+            get path, headers
+            ids = XML.parse_html(response.body).xpath_nodes("//turbo-frame/@id").map(&.text)
+            expect(ids).to have("feed-#{robotics.id}-object-#{post.id}")
+          end
+        end
+      end
+
+      context "given a Turbo-Frame header naming the sentinel" do
+        let(path) { "/actors/#{actor.username}/deck/panes/#{robotics.id}" }
+
+        let(headers) { HTTP::Headers{"Accept" => "text/html", "Turbo-Frame" => "feed-#{robotics.id}-sentinel"} }
+
+        it "succeeds" do
+          get path, headers
+          expect(response.status_code).to eq(200)
+        end
+
+        it "replaces the sentinel" do
+          get path, headers
+          targets = XML.parse_html(response.body).xpath_nodes("//turbo-stream/@target").map(&.text)
+          expect(targets).to eq(["feed-#{robotics.id}-sentinel"])
         end
       end
 

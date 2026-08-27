@@ -86,9 +86,22 @@ body.deck-page {
         a { flex: none; font-size: 0.9rem; }
     }
 
-    > p {
+    &:has(.pane-refresh a) > header {
+        border-bottom-color: var(--semantic-primary);
+    }
+
+    > turbo-frame { display: block; }
+
+    > turbo-frame > p {
         padding: 1rem 0;
         color: var(--text-secondary);
+    }
+
+    .pane-refresh > .message {
+        margin-top: 1em;
+        cursor: pointer;
+        transition: box-shadow 0.1s ease;
+        &:hover { box-shadow: 0 0 0 1px var(--semantic-info) inset; }
     }
 
     .sentinel {

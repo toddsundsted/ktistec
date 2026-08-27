@@ -1,6 +1,9 @@
 require "../framework/controller"
 require "../framework/topic"
 
+require "./deck"
+require "../rules/feeds"
+require "../models/feed"
 require "../models/relationship/content/follow/hashtag"
 require "../models/relationship/content/follow/thread"
 require "../models/relationship/content/notification/follow/hashtag"
@@ -11,6 +14,8 @@ require "../models/task/fetch/hashtag"
 require "../models/task/fetch/thread"
 
 Ktistec::Topic.configure_debounce(/\/actors\/[^\/]+\/notifications$/, 1.second)
+
+Ktistec::Topic.configure_debounce(/\/actors\/[^\/]+\/feeds\/\d+$/, 1.second)
 
 class StreamingController
   include Ktistec::Controller
@@ -52,6 +57,13 @@ class StreamingController
   def self.replace_refresh_posts_message(io, id = false, path = Utils::Paths.current_page_path)
     body = render "src/views/partials/refresh-posts.html.slang"
     stream_replace(io, target: "refresh-posts-message", body: body, id: id)
+  end
+
+  # Renders action to replace a deck pane's refresh slot.
+  #
+  def self.replace_pane_refresh(io, actor, feed, id = false)
+    body = render "src/views/deck/refresh.html.slang"
+    stream_replace(io, target: "feed-#{feed.id}-refresh", body: body, id: id)
   end
 
   # Limits the number of long-lived connections.
@@ -293,6 +305,78 @@ class StreamingController
       actor.timeline(since: since, exclude_replies: true)
     else
       actor.timeline(since: since)
+    end
+  end
+
+  get "/stream/actor/deck" do |env|
+    setup_response(env.response)
+
+    actor = env.account.actor
+    feeds = DeckController.panes_for(actor)
+    panes = feeds.to_h { |feed| {Rules::Feeds.view_for(feed).subjects(env.account.username).first, feed} }
+
+    baselines = open_deck(env.response, actor, feeds, env.request.headers["Last-Event-ID"]?)
+
+    subscribe "/actor/refresh", panes.keys do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        else
+          if (name = subject) && (feed = panes[name]?)
+            advance_pane(env.response, actor, feed, baselines)
+          end
+        end
+      end
+    end
+  end
+
+  def self.encode_baselines(baselines : Hash(Int64, Int64)) : String
+    baselines.map { |feed_id, position| "#{feed_id}:#{position}" }.join(",")
+  end
+
+  def self.decode_baselines(value : String) : Hash(Int64, Int64)
+    value.split(',').each_with_object(Hash(Int64, Int64).new) do |pair, baselines|
+      key, _, val = pair.partition(':')
+      if (feed_id = key.to_i64?) && (position = val.to_i64?)
+        baselines[feed_id] = position
+      end
+    end
+  end
+
+  def self.pane_advanced?(feed : Feed, baseline : Int64?) : Int64?
+    if (newest = feed.stats.newest)
+      position = newest.to_unix_ms
+      position if baseline.nil? || position > baseline
+    end
+  end
+
+  private def self.advance_pane(io, actor, feed, baselines) : Nil
+    if (position = pane_advanced?(feed, baselines[feed.id.not_nil!]?))
+      baselines[feed.id.not_nil!] = position
+      Log.trace { "advance - feed: #{feed.id} position: #{position}" }
+      replace_pane_refresh(io, actor, feed, encode_baselines(baselines))
+    end
+  end
+
+  private def self.seed_baselines(feeds : Array(Feed)) : Hash(Int64, Int64)
+    feeds.each_with_object(Hash(Int64, Int64).new) do |feed, baselines|
+      baselines[feed.id.not_nil!] = pane_advanced?(feed, nil) || 0_i64
+    end
+  end
+
+  def self.open_deck(io, actor, feeds : Array(Feed), resume : String?) : Hash(Int64, Int64)
+    if resume
+      baselines = decode_baselines(resume)
+      feeds.each { |feed| advance_pane(io, actor, feed, baselines) }
+      baselines
+    else
+      seed_baselines(feeds).tap do |seeded|
+        Log.trace { "initial - baselines: #{seeded}" }
+        stream_no_op(io, encode_baselines(seeded))
+      end
     end
   end
 

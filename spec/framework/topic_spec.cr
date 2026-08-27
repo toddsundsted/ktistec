@@ -23,6 +23,14 @@ Spectator.describe Ktistec::Topic do
     it "creates a topic with two subjects" do
       expect(Ktistec::Topic{"subject", "foobar"}.subjects).to eq(["subject", "foobar"])
     end
+
+    it "creates a topic with many subjects" do
+      expect(Ktistec::Topic{["subject", "foobar"]}.subjects).to eq(["subject", "foobar"])
+    end
+
+    it "creates a topic with one subject and many subjects" do
+      expect(Ktistec::Topic{"subject", ["foobar", "quux"]}.subjects).to eq(["subject", "foobar", "quux"])
+    end
   end
 
   class ::Ktistec::Topic

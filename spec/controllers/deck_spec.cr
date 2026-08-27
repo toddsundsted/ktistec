@@ -16,6 +16,10 @@ Spectator.describe DeckController do
     before_each { put_in_feed(robotics, object{{index}}, at: object{{index}}.created_at) }
   end
 
+  macro pane(index)
+    let_create!(:feed, named: pane{{index}}, owner: actor)
+  end
+
   describe "GET /actors/:username/deck" do
     it "returns 401 if not authorized" do
       get "/actors/#{actor.username}/deck", ACCEPT_HTML
@@ -298,6 +302,50 @@ Spectator.describe DeckController do
             end
           end
         end
+      end
+    end
+  end
+
+  describe ".panes_for" do
+    let_create!(:feed, named: robotics, owner: actor, name: "Robotics")
+
+    it "returns the feed" do
+      expect(described_class.panes_for(actor).map(&.id)).to eq([robotics.id])
+    end
+
+    context "given a second feed" do
+      let_create!(:feed, named: woodworking, owner: actor, name: "Woodworking")
+
+      it "orders the feeds by id" do
+        expect(described_class.panes_for(actor).map(&.id)).to eq([robotics.id, woodworking.id])
+      end
+    end
+
+    context "given a draft feed" do
+      before_each { robotics.assign(draft: true).save }
+
+      it "does not return the feed" do
+        expect(described_class.panes_for(actor)).to be_empty
+      end
+    end
+
+    context "given a feed owned by another account" do
+      before_each { robotics.assign(owner: register.actor).save }
+
+      it "does not return the feed" do
+        expect(described_class.panes_for(actor)).to be_empty
+      end
+    end
+
+    context "given more feeds than MAX_PANES" do
+      {% for index in 1..12 %}
+        pane({{index}})
+      {% end %}
+
+      pre_condition { expect(Feed.count).to be_gt(DeckController::MAX_PANES) }
+
+      it "returns at most MAX_PANES" do
+        expect(described_class.panes_for(actor).size).to eq(DeckController::MAX_PANES)
       end
     end
   end

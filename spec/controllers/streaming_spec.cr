@@ -1,4 +1,5 @@
 require "../../src/controllers/streaming"
+require "../../src/services/feed/backend/criteria"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"
@@ -115,6 +116,141 @@ Spectator.describe StreamingController do
     end
   end
 
+  describe "GET /stream/actor/deck" do
+    it "returns 401 if not authorized" do
+      get "/stream/actor/deck"
+      expect(response.status_code).to eq(401)
+    end
+  end
+
+  describe ".encode_baselines" do
+    it "encodes no baselines" do
+      expect(described_class.encode_baselines(Hash(Int64, Int64).new)).to be_empty
+    end
+
+    it "encodes the baselines" do
+      expect(described_class.encode_baselines({1_i64 => 1000_i64, 2_i64 => 2000_i64})).to eq("1:1000,2:2000")
+    end
+  end
+
+  describe ".decode_baselines" do
+    it "decodes an empty value" do
+      expect(described_class.decode_baselines("")).to be_empty
+    end
+
+    it "decodes valid baselines" do
+      expect(described_class.decode_baselines("1:1000,2:2000")).to eq({1_i64 => 1000_i64, 2_i64 => 2000_i64})
+    end
+
+    it "ignores invalid baselines" do
+      expect(described_class.decode_baselines("1:1000,garbage")).to eq({1_i64 => 1000_i64})
+    end
+  end
+
+  describe ".pane_advanced?" do
+    let_create!(:feed, named: robotics)
+
+    it "returns nil" do
+      expect(described_class.pane_advanced?(robotics, nil)).to be_nil
+    end
+
+    context "given a post in the feed" do
+      let(position) { Time.utc(2026, 1, 2) }
+
+      let_create(:object, named: newer)
+
+      before_each { put_in_feed(robotics, newer, at: position) }
+
+      it "returns the position" do
+        expect(described_class.pane_advanced?(robotics, nil)).to eq(position.to_unix_ms)
+      end
+
+      context "and a baseline before the position" do
+        it "returns the position" do
+          expect(described_class.pane_advanced?(robotics, position.to_unix_ms - 1)).to eq(position.to_unix_ms)
+        end
+      end
+
+      context "and a baseline at the position" do
+        it "returns nil" do
+          expect(described_class.pane_advanced?(robotics, position.to_unix_ms)).to be_nil
+        end
+      end
+
+      context "and an earlier post in the feed" do
+        let(earlier) { Time.utc(2026, 1, 1) }
+
+        let_create(:object, named: older)
+
+        before_each { put_in_feed(robotics, older, at: earlier) }
+
+        it "returns nil" do
+          expect(described_class.pane_advanced?(robotics, position.to_unix_ms)).to be_nil
+        end
+      end
+    end
+  end
+
+  describe ".open_deck" do
+    let(actor) { register.actor }
+
+    let_create!(:feed, named: robotics, owner: actor)
+
+    let(feeds) { [robotics] }
+
+    let(io) { IO::Memory.new }
+
+    it "seeds the baseline at zero" do
+      expect(described_class.open_deck(io, actor, feeds, nil)).to eq({robotics.id.not_nil! => 0_i64})
+    end
+
+    context "given a post in the feed" do
+      let(position) { Time.utc(2026, 1, 2) }
+
+      let_create(:object)
+
+      before_each { put_in_feed(robotics, object, at: position) }
+
+      context "on a fresh connection" do
+        it "seeds the baseline at the position" do
+          expect(described_class.open_deck(io, actor, feeds, nil)).to eq({robotics.id.not_nil! => position.to_unix_ms})
+        end
+
+        it "emits the baselines as the event id" do
+          described_class.open_deck(io, actor, feeds, nil)
+          expect(io.to_s).to contain("id: #{robotics.id}:#{position.to_unix_ms}")
+        end
+
+        it "does not notify" do
+          described_class.open_deck(io, actor, feeds, nil)
+          expect(io.to_s).not_to contain("Reload")
+        end
+      end
+
+      context "on a reconnection at the position" do
+        let(resume) { "#{robotics.id}:#{position.to_unix_ms}" }
+
+        it "does not notify" do
+          described_class.open_deck(io, actor, feeds, resume)
+          expect(io.to_s).to be_empty
+        end
+      end
+
+      context "on a reconnection before the position" do
+        let(resume) { "#{robotics.id}:#{position.to_unix_ms - 1}" }
+
+        it "advances the baseline" do
+          expect(described_class.open_deck(io, actor, feeds, resume)).to eq({robotics.id.not_nil! => position.to_unix_ms})
+        end
+
+        it "notifies" do
+          described_class.open_deck(io, actor, feeds, resume)
+          expect(io.to_s).to contain("Reload")
+        end
+      end
+    end
+  end
+
   describe ".replace_actor_icon" do
     let_create(actor)
 
@@ -226,6 +362,30 @@ Spectator.describe StreamingController do
       <div class="content"><div class="header">There are new posts!</div>\
       <p><a href="" data-turbo-prefetch="false" data-turbo-action="replace">Refresh</a></p>\
       </div></div>\
+      </template></turbo-stream>
+      \n
+      HTML
+    end
+  end
+
+  describe ".replace_pane_refresh" do
+    let(account) { register }
+
+    let_create!(:feed, named: robotics, owner: account.actor)
+
+    subject do
+      String.build do |io|
+        described_class.replace_pane_refresh(io, account.actor, robotics)
+      end
+    end
+
+    it "renders a Turbo Stream action" do
+      expect(subject).to eq <<-HTML
+      data: \
+      <turbo-stream action="replace" target="feed-#{robotics.id}-refresh"><template>\
+      <div id="feed-#{robotics.id}-refresh" class="pane-refresh">\
+      <a class="ui mini compact primary button" href="/actors/#{account.username}/deck/panes/#{robotics.id}" data-turbo-frame="feed-#{robotics.id}-pane">Reload</a>\
+      </div>\
       </template></turbo-stream>
       \n
       HTML

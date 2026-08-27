@@ -35,14 +35,18 @@ class DeckController
     end
   end
 
+  # Returns the feeds rendered as panes, in pane order.
+  #
+  def self.panes_for(actor : ActivityPub::Actor) : Array(Feed)
+    Feed.where("owner_iri = ? AND draft = 0 ORDER BY id LIMIT ?", actor.iri, MAX_PANES)
+  end
+
   get "/actors/:username/deck" do |env|
     unless (account = get_account_with_ownership(env))
       not_found
     end
 
-    feeds = Feed.where("owner_iri = ? AND draft = 0 ORDER BY id LIMIT ?", account.actor.iri, MAX_PANES)
-
-    entries = feeds.map { |feed| {feed, feed.contents(limit: POSTS_PER_PANE)} }
+    entries = panes_for(account.actor).map { |feed| {feed, feed.contents(limit: POSTS_PER_PANE)} }
 
     ok "deck/show", env: env, actor: account.actor, entries: entries
   end

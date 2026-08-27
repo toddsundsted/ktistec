@@ -363,6 +363,9 @@ module Ktistec
 
       class_property memo_ttl : Time::Span = 1.hour
 
+      ACTIVITYSTREAMS_CONTEXT               = "www.w3.org/ns/activitystreams/context.jsonld"
+      ACTIVITYSTREAMS_COMPATIBILITY_CONTEXT = {"Hashtag" => wrap("https://www.w3.org/ns/activitystreams#Hashtag")}
+
       MAX_MEMO_ENTRIES = 100
 
       @@memo = {} of String => {String?, Time}
@@ -377,9 +380,18 @@ module Ktistec
           uri.host = "litepub.social"
           uri.path = ""
         end
-        CONTEXTS.dig("#{uri.host}#{uri.path}/context.jsonld", "@context")
+        bundled_context_with_compatibility("#{uri.host}#{uri.path}/context.jsonld")
       rescue KeyError
         resolve_uncached(url, uri)
+      end
+
+      private def bundled_context_with_compatibility(key)
+        context = CONTEXTS.dig(key, "@context")
+        if key == ACTIVITYSTREAMS_CONTEXT
+          wrap(context.as_h.merge(ACTIVITYSTREAMS_COMPATIBILITY_CONTEXT))
+        else
+          context
+        end
       end
 
       # Resolves an uncached context by fetching it.
@@ -401,7 +413,7 @@ module Ktistec
           end
         end
         if key
-          CONTEXTS.dig(key, "@context")
+          bundled_context_with_compatibility(key)
         else
           Log.notice { %(uncached external context not loaded: #{url}#{digest ? " [sha256=#{digest}]" : ""}) }
           empty

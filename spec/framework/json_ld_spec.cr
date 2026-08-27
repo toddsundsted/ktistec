@@ -597,6 +597,34 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
+  context "given an undeclared Hashtag type" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "type": "Page",
+            "tag": [
+              {"type": "Hashtag", "name": "#fediverse"},
+              {"type": "Unrecognized", "name": "other"}
+            ]
+          }
+        JSON
+      ))
+    end
+
+    it "expands the Hashtag type" do
+      types = json["https://www.w3.org/ns/activitystreams#tag"].as_a
+        .map { |tag| described_class.dig?(tag, "@type") }
+      expect(types).to contain("https://www.w3.org/ns/activitystreams#Hashtag")
+    end
+
+    it "leaves undeclared types unchanged" do
+      types = json["https://www.w3.org/ns/activitystreams#tag"].as_a
+        .map { |tag| described_class.dig?(tag, "@type") }
+      expect(types).to contain("Unrecognized")
+    end
+  end
+
   context "given a URL to a locally hosted litepub schema" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON

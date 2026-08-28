@@ -9,7 +9,8 @@ Spectator.describe DeckController do
 
   ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
 
-  let(actor) { register.actor }
+  let(account) { register }
+  let(actor) { account.actor }
 
   macro post(index)
     let_create(:object, named: object{{index}})
@@ -380,14 +381,30 @@ Spectator.describe DeckController do
     let_create!(:feed, named: robotics, owner: actor, name: "Robotics")
 
     it "returns the feed" do
-      expect(described_class.panes_for(actor).map(&.id)).to eq([robotics.id])
+      expect(described_class.panes_for(account).map(&.id)).to eq([robotics.id])
     end
 
     context "given a second feed" do
       let_create!(:feed, named: woodworking, owner: actor, name: "Woodworking")
 
       it "orders the feeds by id" do
-        expect(described_class.panes_for(actor).map(&.id)).to eq([robotics.id, woodworking.id])
+        expect(described_class.panes_for(account).map(&.id)).to eq([robotics.id, woodworking.id])
+      end
+
+      context "and a feed order naming the second feed" do
+        before_each { account.assign(feed_order: ["woodworking"]).save }
+
+        it "returns the named feed first" do
+          expect(described_class.panes_for(account).map(&.id)).to eq([woodworking.id, robotics.id])
+        end
+      end
+
+      context "and a feed order with a slug that matches no feed" do
+        before_each { account.assign(feed_order: ["gardening", "woodworking"]).save }
+
+        it "ignores the unmatched slug" do
+          expect(described_class.panes_for(account).map(&.id)).to eq([woodworking.id, robotics.id])
+        end
       end
     end
 
@@ -395,7 +412,7 @@ Spectator.describe DeckController do
       before_each { robotics.assign(draft: true).save }
 
       it "does not return the feed" do
-        expect(described_class.panes_for(actor)).to be_empty
+        expect(described_class.panes_for(account)).to be_empty
       end
     end
 
@@ -403,7 +420,7 @@ Spectator.describe DeckController do
       before_each { robotics.assign(owner: register.actor).save }
 
       it "does not return the feed" do
-        expect(described_class.panes_for(actor)).to be_empty
+        expect(described_class.panes_for(account)).to be_empty
       end
     end
 
@@ -415,7 +432,19 @@ Spectator.describe DeckController do
       pre_condition { expect(Feed.count).to be_gt(DeckController::MAX_PANES) }
 
       it "returns at most MAX_PANES" do
-        expect(described_class.panes_for(actor).size).to eq(DeckController::MAX_PANES)
+        expect(described_class.panes_for(account).size).to eq(DeckController::MAX_PANES)
+      end
+
+      it "drops the last feed" do
+        expect(described_class.panes_for(account).map(&.id)).not_to contain(pane12.id)
+      end
+
+      context "and a feed order naming the last feed" do
+        before_each { account.assign(feed_order: [pane12.slug.not_nil!]).save }
+
+        it "keeps the last feed" do
+          expect(described_class.panes_for(account).map(&.id)).to contain(pane12.id)
+        end
       end
     end
   end

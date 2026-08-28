@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../models/account"
 require "../models/feed"
 
 # The `DeckController` renders a user's published feeds side by side,
@@ -37,8 +38,11 @@ class DeckController
 
   # Returns the feeds rendered as panes, in pane order.
   #
-  def self.panes_for(actor : ActivityPub::Actor) : Array(Feed)
-    Feed.where("owner_iri = ? AND draft = 0 ORDER BY id LIMIT ?", actor.iri, MAX_PANES)
+  def self.panes_for(account : Account) : Array(Feed)
+    feeds = Feed.where("owner_iri = ? AND draft = 0 ORDER BY id", account.actor.iri)
+    by_slug = feeds.index_by(&.slug)
+    ordered = account.feed_order.compact_map { |slug| by_slug.delete(slug) }
+    (ordered + (feeds - ordered)).first(MAX_PANES)
   end
 
   get "/actors/:username/deck" do |env|
@@ -46,7 +50,7 @@ class DeckController
       not_found
     end
 
-    entries = panes_for(account.actor).map { |feed| {feed, feed.contents(limit: POSTS_PER_PANE)} }
+    entries = panes_for(account).map { |feed| {feed, feed.contents(limit: POSTS_PER_PANE)} }
 
     ok "deck/show", env: env, actor: account.actor, entries: entries
   end

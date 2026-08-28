@@ -30,6 +30,16 @@ Spectator.describe Utils::Paths do
     end
   end
 
+  double :feed_double do
+    stub def id
+      30
+    end
+
+    stub def slug_or_id
+      "the-feed"
+    end
+  end
+
   describe "back_path" do
     let(env) do
       make_env("GET", "/filters/17").tap do |env|
@@ -750,10 +760,10 @@ Spectator.describe Utils::Paths do
 
     context "given an actor and a feed" do
       let(actor) { double(:path_double) }
-      let(feed) { double(:path_double) }
+      let(feed) { double(:feed_double) }
 
       it "gets the edit actor feed path" do
-        expect((edit_actor_feed_path(actor, feed)).to_s).to eq("/actors/xyz/feeds/42/edit")
+        expect((edit_actor_feed_path(actor, feed)).to_s).to eq("/actors/xyz/feeds/the-feed/edit")
       end
     end
 
@@ -772,15 +782,24 @@ Spectator.describe Utils::Paths do
 
     context "given an actor and a feed" do
       let(actor) { double(:path_double) }
-      let(feed) { double(:path_double) }
+      let(feed) { double(:feed_double) }
 
       it "gets the actor feed path" do
-        expect((actor_feed_path(actor, feed)).to_s).to eq("/actors/xyz/feeds/42")
+        expect((actor_feed_path(actor, feed)).to_s).to eq("/actors/xyz/feeds/the-feed")
       end
     end
 
     it "gets the actor feed path" do
       expect((actor_feed_path).to_s).to eq("/actors/abc/feeds/17")
+    end
+  end
+
+  describe "actor_feed_id_path" do
+    let(actor) { double(:path_double) }
+    let(feed) { double(:feed_double) }
+
+    it "gets the actor feed path" do
+      expect((actor_feed_id_path(actor, feed)).to_s).to eq("/actors/xyz/feeds/30")
     end
   end
 

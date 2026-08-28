@@ -187,8 +187,82 @@ Spectator.describe Feed do
     end
   end
 
+  describe "#slug" do
+    context "given a draft feed" do
+      let_build(:feed, name: "The Fediverse", draft: true)
+
+      it "does not generate a slug" do
+        expect { feed.save }.not_to change { feed.slug }.from(nil)
+      end
+    end
+
+    context "given a published feed" do
+      let_build(:feed, name: "The Fediverse", draft: false)
+
+      it "generates a slug" do
+        expect { feed.save }.to change { feed.slug }.from(nil).to("the-fediverse")
+      end
+
+      context "and the name is changed" do
+        pre_condition { expect(feed.save.slug).to eq("the-fediverse") }
+
+        it "keeps the slug" do
+          expect { feed.assign(name: "Something Else").save }.not_to change { Feed.find(feed.id).slug }
+        end
+      end
+
+      context "and the owner has a published feed with the same name" do
+        let_create!(:feed, named: other, owner: feed.owner, name: "The Fediverse")
+
+        pre_condition { expect(other.slug).to eq("the-fediverse") }
+
+        it "resolves the collision" do
+          expect { feed.save }.to change { feed.slug }.from(nil).to("the-fediverse-2")
+        end
+      end
+
+      context "and another actor has a published feed with the same name" do
+        let_create!(:feed, named: other, name: "The Fediverse")
+
+        pre_condition { expect(other.owner).not_to eq(feed.owner) }
+
+        it "generates a slug" do
+          expect { feed.save }.to change { feed.slug }.from(nil).to("the-fediverse")
+        end
+      end
+
+      context "and the owner has a draft with the same name" do
+        let_create!(:feed, named: other, owner: feed.owner, name: "The Fediverse", draft: true)
+
+        pre_condition { expect(other.slug).to be_nil }
+
+        it "generates a slug" do
+          expect { feed.save }.to change { feed.slug }.from(nil).to("the-fediverse")
+        end
+      end
+    end
+  end
+
+  describe "#slug_or_id" do
+    context "given a draft feed" do
+      let_create(:feed, name: "The Fediverse", draft: true)
+
+      it "returns the id" do
+        expect(feed.slug_or_id).to eq(feed.id.to_s)
+      end
+    end
+
+    context "given a published feed" do
+      let_create(:feed, name: "The Fediverse", draft: false)
+
+      it "returns a slug" do
+        expect(feed.slug_or_id).to eq("the-fediverse")
+      end
+    end
+  end
+
   describe "#publish" do
-    let_create(:feed, draft: true)
+    let_create(:feed, name: "The Fediverse", draft: true)
 
     it "transitions draft to published" do
       feed.publish
@@ -200,14 +274,22 @@ Spectator.describe Feed do
       expect(Feed.find(feed.id).draft).to be_false
     end
 
+    it "generates a slug" do
+      expect { feed.publish }.to change { Feed.find(feed.id).slug }.from(nil).to("the-fediverse")
+    end
+
     context "given a copy" do
-      let_create(:feed, named: original)
+      let_create(:feed, named: original, name: "The Original")
 
       before_each { feed.assign(original: original).save }
 
       it "clears original" do
         feed.publish
         expect(Feed.find(feed.id).original?).to be_nil
+      end
+
+      it "inherits the slug" do
+        expect { feed.publish }.to change { Feed.find(feed.id).slug }.from(nil).to("the-original")
       end
     end
   end

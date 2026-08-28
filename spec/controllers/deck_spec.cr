@@ -90,7 +90,7 @@ Spectator.describe DeckController do
         it "links the pane header to the feed's edit form" do
           get "/actors/#{actor.username}/deck", ACCEPT_HTML
           href = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//header//a/@href")
-          expect(href.map(&.text)).to have("/actors/#{actor.username}/feeds/#{robotics.id}/edit")
+          expect(href.map(&.text)).to have("/actors/#{actor.username}/feeds/#{robotics.slug}/edit")
         end
 
         it "renders the pane as empty" do

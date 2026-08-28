@@ -41,7 +41,7 @@ class Task
     # Returns the IRI that identifies a feed's backfill.
     #
     def self.iri_for(feed : ::Feed) : String
-      "#{Ktistec.host}#{Utils::Paths.actor_feed_path(feed.owner, feed)}"
+      "#{Ktistec.host}#{Utils::Paths.actor_feed_id_path(feed.owner, feed)}"
     end
 
     # Returns whether a backfill exists and is not complete.

@@ -108,7 +108,7 @@ Spectator.describe FeedsController do
         it "links the feed name to the feed" do
           get "/actors/#{actor.username}/feeds", ACCEPT_HTML
           href = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'header')][text()='Robotics']/@href").first?
-          expect(href.try(&.text)).to eq("/actors/#{actor.username}/feeds/#{mixed.id}")
+          expect(href.try(&.text)).to eq("/actors/#{actor.username}/feeds/#{mixed.slug}")
         end
 
         it "renders the feed id" do
@@ -123,7 +123,7 @@ Spectator.describe FeedsController do
 
         it "renders the feed href" do
           get "/actors/#{actor.username}/feeds", ACCEPT_JSON
-          expect(entry["href"].as_s).to eq("/actors/#{actor.username}/feeds/#{mixed.id}")
+          expect(entry["href"].as_s).to eq("/actors/#{actor.username}/feeds/#{mixed.slug}")
         end
 
         macro terms(kind)
@@ -383,12 +383,12 @@ Spectator.describe FeedsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 404 if the feed id is not numeric" do
+      it "returns 404 if no feed has the slug" do
         get "/actors/#{actor.username}/feeds/abc", ACCEPT_HTML
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 404 if the feed id is not numeric" do
+      it "returns 404 if no feed has the slug" do
         get "/actors/#{actor.username}/feeds/abc", ACCEPT_JSON
         expect(response.status_code).to eq(404)
       end
@@ -407,6 +407,8 @@ Spectator.describe FeedsController do
         end
       end
 
+      # feeds are identified by either their id or their slug
+
       it "succeeds" do
         get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_HTML
         expect(response.status_code).to eq(200)
@@ -414,6 +416,16 @@ Spectator.describe FeedsController do
 
       it "succeeds" do
         get "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/feeds/#{feed.slug}", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/feeds/#{feed.slug}", ACCEPT_JSON
         expect(response.status_code).to eq(200)
       end
 
@@ -677,7 +689,7 @@ Spectator.describe FeedsController do
 
       it "returns the feed's location" do
         post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc"})
-        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/#{robotics_feed.id}")
+        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/robotics")
       end
 
       context "given a blank name" do
@@ -901,6 +913,56 @@ Spectator.describe FeedsController do
       it "succeeds" do
         get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_JSON
         expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/feeds/#{feed.slug}/edit", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/feeds/#{feed.slug}/edit", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      context "and addressed by slug" do
+        pre_condition { expect(feed.slug).to eq("robotics") }
+
+        context "and another actor has a feed with the same slug" do
+          let_create!(:feed, named: other, name: "Robotics!")
+
+          pre_condition { expect(other.slug).to eq(feed.slug) }
+
+          it "resolves the actor's feed" do
+            get "/actors/#{actor.username}/feeds/#{feed.slug}/edit", ACCEPT_HTML
+            body = XML.parse_html(response.body)
+            expect(form_fields("name")).to eq({"Robotics"})
+          end
+
+          it "resolves the actor's feed" do
+            get "/actors/#{actor.username}/feeds/#{feed.slug}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["id"].as_i64).to eq(feed.id)
+          end
+        end
+
+        context "and a revision has been published but not yet swapped" do
+          let_create!(:feed, named: revision, owner: actor, name: "Robotics Revised", draft: true, original: feed)
+
+          before_each { revision.publish }
+
+          pre_condition { expect(revision.slug).to eq(feed.slug) }
+
+          it "resolves the revision" do
+            get "/actors/#{actor.username}/feeds/#{feed.slug}/edit", ACCEPT_HTML
+            body = XML.parse_html(response.body)
+            expect(form_fields("name")).to eq({"Robotics Revised"})
+          end
+
+          it "resolves the revision" do
+            get "/actors/#{actor.username}/feeds/#{feed.slug}/edit", ACCEPT_JSON
+            expect(JSON.parse(response.body)["id"].as_i64).to eq(revision.id)
+          end
+        end
       end
 
       it "renders the form" do

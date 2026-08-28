@@ -359,10 +359,14 @@ module Utils::Paths
 
   macro actor_feed_path(actor = nil, feed = nil)
     {% if feed %}
-      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds/#{::URI.encode_path_segment({{feed}}.id.to_s)}")
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds/#{::URI.encode_path_segment({{feed}}.slug_or_id)}")
     {% else %}
       ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds/#{::URI.encode_path_segment(env.params.url["id"])}")
     {% end %}
+  end
+
+  macro actor_feed_id_path(actor = nil, feed = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds/#{::URI.encode_path_segment({{feed}}.id.to_s)}")
   end
 
   macro actor_deck_path(actor = nil)

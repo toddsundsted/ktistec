@@ -17,6 +17,26 @@ module Ktistec
       Random::Secure.urlsafe_base64(8)
     end
 
+    # The maximum length of a slug, in codepoints.
+    #
+    SLUG_LIMIT = 64
+
+    # Generates a slug from a name.
+    #
+    # An all-digit slug is prefixed, so that it can never be mistaken
+    # for a database id.
+    #
+    def slugify(name : String) : String
+      slug = name.unicode_normalize(:nfc).downcase.gsub(/[^\p{L}\p{N}]+/, "-").strip('-')
+      if slug.size > SLUG_LIMIT
+        head = slug[0, SLUG_LIMIT + 1]
+        slug = (index = head.rindex('-')) ? head[0, index] : slug[0, SLUG_LIMIT]
+        slug = slug.rstrip('-')
+      end
+      slug = "feed-#{slug}" if slug.matches?(/\A[0-9]+\z/)
+      slug.presence || "feed"
+    end
+
     # Renders content as simple text.
     #
     def render_as_text(content)

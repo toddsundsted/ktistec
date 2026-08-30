@@ -64,8 +64,11 @@ class FeedsController
   #
   private def self.get_feed_with_ownership(env)
     if (account = get_account_with_ownership(env))
-      if (id = env.params.url["id"].to_i64?) && (feed = Feed.find?(id))
-        feed if feed.owner == account.actor
+      identifier = env.params.url["id"]
+      if (id = identifier.to_i64?)
+        Feed.where("owner_iri = ? AND id = ?", account.actor.iri, id).first?
+      else
+        Feed.where("owner_iri = ? AND draft = 0 AND slug = ? ORDER BY id DESC LIMIT 1", account.actor.iri, identifier).first?
       end
     end
   end

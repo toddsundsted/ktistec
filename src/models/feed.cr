@@ -1,5 +1,6 @@
 require "../framework/model"
 require "../framework/model/common"
+require "../framework/util"
 require "./feed/verdict"
 require "../services/feed/backend"
 
@@ -26,6 +27,11 @@ class Feed
   @[Persistent]
   property name : String
   validates(name) { "can't be blank" unless name.presence }
+
+  # a draft has no slug -- it is addressed by id.
+
+  @[Persistent]
+  property slug : String?
 
   @[Persistent]
   property backend : String
@@ -98,6 +104,24 @@ class Feed
     end
   end
 
+  # Generates the feed's slug.
+  #
+  def before_save
+    return if draft || slug
+    base = Ktistec::Util.slugify(name)
+    candidate = base
+    count = 1
+    while slug_taken?(candidate)
+      candidate = "#{base}-#{count += 1}"
+    end
+    self.slug = candidate
+  end
+
+  private def slug_taken?(slug : String) : Bool
+    query = "SELECT COUNT(*) FROM feeds WHERE owner_iri = ? AND draft = 0 AND slug = ?"
+    Ktistec.database.scalar(query, owner_iri, slug).as(Int64) > 0
+  end
+
   # Invalidates the feed's verdicts when the criteria change.
   #
   def before_update
@@ -113,13 +137,20 @@ class Feed
   # Publishes a draft feed.
   #
   def publish
-    assign(draft: false, copy_of: nil).save
+    assign(slug: slug || original?.try(&.slug), draft: false, copy_of: nil).save
   end
 
   # Returns `true` if the feed is published, `false` if it's a draft.
   #
   def published?
     !draft
+  end
+
+  # The feed's identifier in a path.
+  #
+  def slug_or_id : String
+    slug = self.slug
+    slug && published? ? slug : id.to_s
   end
 
   # The relationship type of the feed's materialized rows.

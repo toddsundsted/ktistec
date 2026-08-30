@@ -7,7 +7,9 @@ require "../spec_helper/factory"
 Spectator.describe DeckController do
   setup_spec
 
-  ACCEPT_HTML = HTTP::Headers{"Accept" => "text/html"}
+  ACCEPT_HTML  = HTTP::Headers{"Accept" => "text/html"}
+  FORM_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
+  JSON_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "application/json"}
 
   let(account) { register }
   let(actor) { account.actor }
@@ -19,6 +21,23 @@ Spectator.describe DeckController do
 
   macro pane(index)
     let_create!(:feed, named: pane{{index}}, owner: actor)
+  end
+
+  # Returns, for each rendered pane, whether each of its move controls
+  # is disabled.
+  #
+  def disabled_moves(body)
+    XML.parse_html(body).xpath_nodes("//section[contains(@class,'deck-pane')]").map do |pane|
+      {left: move_disabled?(pane, "Move Left"), right: move_disabled?(pane, "Move Right")}
+    end
+  end
+
+  # Returns whether the control labeled `label` is disabled. Raises if
+  # there is no such control.
+  #
+  private def move_disabled?(pane, label)
+    button = pane.xpath_nodes(".//button[normalize-space(.)=#{label.inspect}]").first
+    !button["disabled"]?.nil?
   end
 
   describe "GET /actors/:username/deck" do
@@ -88,10 +107,27 @@ Spectator.describe DeckController do
           expect(slot.text).to be_empty
         end
 
+        it "links the pane header to the feeds page" do
+          get "/actors/#{actor.username}/deck", ACCEPT_HTML
+          href = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//header//a/@href")
+          expect(href.map(&.text)).to have("/actors/#{actor.username}/feeds")
+        end
+
         it "links the pane header to the feed's edit form" do
           get "/actors/#{actor.username}/deck", ACCEPT_HTML
           href = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//header//a/@href")
           expect(href.map(&.text)).to have("/actors/#{actor.username}/feeds/#{robotics.slug}/edit")
+        end
+
+        it "points the move controls at the pane's position" do
+          get "/actors/#{actor.username}/deck", ACCEPT_HTML
+          actions = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//form[@class='pane-move']/@action")
+          expect(actions.map(&.text)).to eq(["/actors/#{actor.username}/deck/panes/#{robotics.id}/position"] * 2)
+        end
+
+        it "disables both move controls" do
+          get "/actors/#{actor.username}/deck", ACCEPT_HTML
+          expect(disabled_moves(response.body)).to eq([{left: true, right: true}])
         end
 
         it "renders the pane as empty" do
@@ -145,6 +181,11 @@ Spectator.describe DeckController do
             expect(names.map(&.text)).to eq(["Robotics", "Woodworking"])
           end
 
+          it "disables the move controls that would do nothing" do
+            get "/actors/#{actor.username}/deck", ACCEPT_HTML
+            expect(disabled_moves(response.body)).to eq([{left: true, right: false}, {left: false, right: true}])
+          end
+
           context "that shares a post" do
             let_create(:object, named: shared)
 
@@ -182,6 +223,19 @@ Spectator.describe DeckController do
                 expect(ids.sort).to eq(ids.uniq.sort!)
               end
             end
+          end
+        end
+
+        context "and more feeds than the deck shows" do
+          {% for index in 1..12 %}
+            pane({{index}})
+          {% end %}
+
+          pre_condition { expect(Feed.count).to be_gt(DeckController::MAX_PANES) }
+
+          it "enables the last pane's move controls" do
+            get "/actors/#{actor.username}/deck", ACCEPT_HTML
+            expect(disabled_moves(response.body).last).to eq({left: false, right: false})
           end
         end
 
@@ -373,6 +427,172 @@ Spectator.describe DeckController do
             end
           end
         end
+      end
+    end
+  end
+
+  describe "POST /actors/:username/deck/panes/:id/position" do
+    let_create!(:feed, named: robotics, owner: actor, name: "Robotics")
+    let_create!(:feed, named: woodworking, owner: actor, name: "Woodworking")
+
+    # moves the pane with `id` to `position`
+    def move(id, position, headers = FORM_HEADERS)
+      post "/actors/#{actor.username}/deck/panes/#{id}/position", headers, "position=#{position}"
+    end
+
+    it "returns 401 if not authorized" do
+      move(woodworking.id, 0)
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "returns 404 if the account does not exist" do
+        post "/actors/missing/deck/panes/#{woodworking.id}/position", FORM_HEADERS, "position=0"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 for a different account" do
+        post "/actors/#{register.actor.username}/deck/panes/#{woodworking.id}/position", FORM_HEADERS, "position=0"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if the feed does not exist" do
+        post "/actors/#{actor.username}/deck/panes/999999/position", FORM_HEADERS, "position=0"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 400 if the position is missing" do
+        post "/actors/#{actor.username}/deck/panes/#{woodworking.id}/position", FORM_HEADERS, ""
+        expect(response.status_code).to eq(400)
+      end
+
+      context "given a feed owned by another account" do
+        before_each { woodworking.assign(owner: register.actor).save }
+
+        it "returns 404" do
+          move(woodworking.id, 0)
+          expect(response.status_code).to eq(404)
+        end
+      end
+
+      it "returns 400 if the position is not a number" do
+        move(woodworking.id, "first")
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the position is before the first feed" do
+        move(woodworking.id, -1)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the position is past the last feed" do
+        move(woodworking.id, 2)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 413 if the body is too large" do
+        move(woodworking.id, "9" * DeckController::MAX_REQUEST_BYTES)
+        expect(response.status_code).to eq(413)
+      end
+
+      it "returns 302" do
+        move(woodworking.id, 0, FORM_HEADERS)
+        expect(response.status_code).to eq(302)
+      end
+
+      it "redirects to the deck" do
+        move(woodworking.id, 0, FORM_HEADERS)
+        expect(response.headers["Location"]?).to eq("/actors/#{actor.username}/deck")
+      end
+
+      it "returns 204" do
+        move(woodworking.id, 0, JSON_HEADERS)
+        expect(response.status_code).to eq(204)
+      end
+
+      it "moves the pane left" do
+        expect { move(woodworking.id, 0) }.to change { account.reload!.feed_order }.from([] of String).to(["woodworking", "robotics"])
+      end
+
+      it "moves the pane right" do
+        expect { move(robotics.id, 1) }.to change { account.reload!.feed_order }.from([] of String).to(["woodworking", "robotics"])
+      end
+
+      it "records the order when a pane is moved to where it already is" do
+        expect { move(woodworking.id, 1) }.to change { account.reload!.feed_order }.from([] of String).to(["robotics", "woodworking"])
+      end
+
+      context "and the order has already been recorded" do
+        before_each { move(woodworking.id, 0) }
+
+        it "leaves it unchanged when the pane is moved to where it already is" do
+          expect { move(woodworking.id, 0) }.not_to change { account.reload!.feed_order }.from(["woodworking", "robotics"])
+        end
+      end
+
+      context "given a draft feed" do
+        before_each { woodworking.assign(draft: true).save }
+
+        it "returns 404" do
+          move(woodworking.id, 0)
+          expect(response.status_code).to eq(404)
+        end
+      end
+
+      context "and more feeds than the deck shows" do
+        # enough feeds to fill the deck, plus one it has no room for
+        {% for index in 1..9 %}
+          pane({{index}})
+        {% end %}
+
+        let_create!(:feed, named: last_shown, owner: actor)
+        let_create!(:feed, named: first_hidden, owner: actor)
+
+        def panes
+          described_class.panes_for(account.reload!).map(&.id)
+        end
+
+        pre_condition { expect(panes.size).to eq(DeckController::MAX_PANES) }
+        pre_condition { expect(panes).to contain(last_shown.id) }
+        pre_condition { expect(panes).not_to contain(first_hidden.id) }
+
+        it "moves the hidden feed onto the deck" do
+          move(last_shown.id, DeckController::MAX_PANES)
+          expect(panes).to contain(first_hidden.id)
+        end
+
+        it "drops the moved pane off the deck" do
+          move(last_shown.id, DeckController::MAX_PANES)
+          expect(panes).not_to contain(last_shown.id)
+        end
+
+        it "still shows MAX_PANES panes" do
+          move(last_shown.id, DeckController::MAX_PANES)
+          expect(panes.size).to eq(DeckController::MAX_PANES)
+        end
+
+        it "restores the deck" do
+          original = panes
+          move(last_shown.id, DeckController::MAX_PANES)
+          move(first_hidden.id, DeckController::MAX_PANES)
+          expect(panes).to eq(original)
+        end
+      end
+    end
+  end
+
+  describe ".ordered_feeds_for" do
+    context "given more feeds than MAX_PANES" do
+      {% for index in 1..13 %}
+        pane({{index}})
+      {% end %}
+
+      pre_condition { expect(Feed.count).to be_gt(DeckController::MAX_PANES) }
+
+      it "returns every feed" do
+        expect(described_class.ordered_feeds_for(account).size).to eq(Feed.count)
       end
     end
   end

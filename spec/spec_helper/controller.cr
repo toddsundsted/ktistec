@@ -21,8 +21,8 @@ end
 class DummyAuth < Kemal::Handler
   def call(env)
     if (session = Global.session) && (account = Global.account)
-      env.session = session
-      env.account = account
+      env.session = (session.id.try { |id| Session.find?(id) }) || session
+      env.account = (account.id.try { |id| Account.find?(id) }) || account
     end
     call_next(env)
   end

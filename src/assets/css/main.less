@@ -83,7 +83,29 @@ body.deck-page {
             white-space: nowrap;
         }
 
-        a { flex: none; font-size: 0.9rem; }
+        /* covers the name while shown */
+        .pane-controls {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 1px;
+            background-color: var(--bg-primary);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.1s ease;
+            /* cancel the menu's margin, keep its item bleed */
+            margin: 0 -0.35714286em;
+
+            form { display: contents; }
+            button.item { appearance: none; }
+        }
+    }
+
+    > header:hover .pane-controls,
+    > header:has(:focus-visible) .pane-controls {
+        opacity: 1;
+        pointer-events: auto;
     }
 
     &:has(.pane-refresh a) > header {
@@ -110,6 +132,11 @@ body.deck-page {
         text-align: center;
         &[busy] { opacity: 0.5; }
     }
+}
+
+/* there is no hover to reveal the controls with */
+@media (hover: none) {
+    .deck-pane > header .pane-controls { display: none; }
 }
 
 /* remove visible outlines on focused menu items */

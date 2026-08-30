@@ -381,6 +381,10 @@ module Utils::Paths
     {% end %}
   end
 
+  macro actor_deck_pane_position_path(actor = nil, feed = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_deck_pane_path({{actor}}, {{feed}})}/position")
+  end
+
   macro actor_relationships_path(actor = nil, relationship = nil)
     {% if relationship %}
       ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/#{::URI.encode_path_segment({{relationship}})}")

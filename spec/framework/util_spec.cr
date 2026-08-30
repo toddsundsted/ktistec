@@ -9,6 +9,48 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ".slugify" do
+    it "lowercases the name and joins words" do
+      expect(described_class.slugify("News, Relentlessly Upbeat")).to eq("news-relentlessly-upbeat")
+    end
+
+    it "collapses a run of non-alphanumeric characters" do
+      expect(described_class.slugify("C++ & Rust!")).to eq("c-rust")
+    end
+
+    it "strips leading and trailing separators" do
+      expect(described_class.slugify("--Dashes--Everywhere--")).to eq("dashes-everywhere")
+    end
+
+    it "keeps letters outside ASCII" do
+      expect(described_class.slugify("Café Society")).to eq("café-society")
+    end
+
+    it "composes a decomposed name" do
+      expect(described_class.slugify("Cafe\u0301 Society")).to eq("caf\u00E9-society")
+    end
+
+    it "cuts a long name at the last separator within the limit" do
+      expect(described_class.slugify("word " * 20)).to eq((["word"] * 13).join("-"))
+    end
+
+    it "truncates a long name with no separator within the limit" do
+      expect(described_class.slugify("x" * 100)).to eq("x" * 64)
+    end
+
+    it "prefixes an all-digit slug" do
+      expect(described_class.slugify("2026")).to eq("feed-2026")
+    end
+
+    it "does not prefix a slug that merely begins with digits" do
+      expect(described_class.slugify("2026 in review")).to eq("2026-in-review")
+    end
+
+    it "substitutes a slug when nothing survives" do
+      expect(described_class.slugify("🔥🔥🔥")).to eq("feed")
+    end
+  end
+
   describe ".render_as_text" do
     it "ignores empty content" do
       expect(described_class.render_as_text("")).to eq("")

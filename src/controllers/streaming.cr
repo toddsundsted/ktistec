@@ -312,7 +312,7 @@ class StreamingController
     setup_response(env.response)
 
     actor = env.account.actor
-    feeds = DeckController.panes_for(actor)
+    feeds = DeckController.panes_for(env.account)
     panes = feeds.to_h { |feed| {Rules::Feeds.view_for(feed).subjects(env.account.username).first, feed} }
 
     baselines = open_deck(env.response, actor, feeds, env.request.headers["Last-Event-ID"]?)

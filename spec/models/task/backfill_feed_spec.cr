@@ -13,6 +13,14 @@ Spectator.describe Task::BackfillFeed do
 
   subject { described_class.new(source_iri: actor.iri, subject_iri: described_class.iri_for(feed)).save }
 
+  describe ".iri_for" do
+    pre_condition { expect(feed.slug).not_to be_nil }
+
+    it "addresses the feed by id" do
+      expect(described_class.iri_for(feed)).to eq("#{Ktistec.host}/actors/#{actor.username}/feeds/#{feed.id}")
+    end
+  end
+
   describe ".schedule_for" do
     around_each do |proc|
       previous = described_class.schedule_but_dont_perform

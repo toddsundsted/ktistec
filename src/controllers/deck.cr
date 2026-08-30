@@ -1,4 +1,5 @@
 require "../framework/controller"
+require "../models/account"
 require "../models/feed"
 
 # The `DeckController` renders a user's published feeds side by side,
@@ -10,6 +11,8 @@ class DeckController
   MAX_PANES = 12
 
   POSTS_PER_PANE = 20
+
+  MAX_REQUEST_BYTES = 4_096
 
   # Authorizes access to a user's deck.
   #
@@ -35,10 +38,19 @@ class DeckController
     end
   end
 
-  # Returns the feeds rendered as panes, in pane order.
+  # Returns all of the account's published feeds, in pane order.
   #
-  def self.panes_for(actor : ActivityPub::Actor) : Array(Feed)
-    Feed.where("owner_iri = ? AND draft = 0 ORDER BY id LIMIT ?", actor.iri, MAX_PANES)
+  def self.ordered_feeds_for(account : Account) : Array(Feed)
+    feeds = Feed.where("owner_iri = ? AND draft = 0 ORDER BY id", account.actor.iri)
+    by_slug = feeds.index_by(&.slug)
+    ordered = account.feed_order.compact_map { |slug| by_slug.delete(slug) }
+    ordered + (feeds - ordered)
+  end
+
+  # Returns the account's published feeds that are rendered as panes, in pane order.
+  #
+  def self.panes_for(account : Account) : Array(Feed)
+    ordered_feeds_for(account).first(MAX_PANES)
   end
 
   get "/actors/:username/deck" do |env|
@@ -46,9 +58,48 @@ class DeckController
       not_found
     end
 
-    entries = panes_for(account.actor).map { |feed| {feed, feed.contents(limit: POSTS_PER_PANE)} }
+    feeds = ordered_feeds_for(account)
+    panes = feeds.first(MAX_PANES)
 
-    ok "deck/show", env: env, actor: account.actor, entries: entries
+    entries = panes.map { |feed| {feed, feed.contents(limit: POSTS_PER_PANE)} }
+
+    ok "deck/show", env: env, actor: account.actor, entries: entries, overflow: feeds.size > panes.size
+  end
+
+  # Moves a pane to a position in the deck's order.
+  #
+  post "/actors/:username/deck/panes/:id/position" do |env|
+    unless (account = get_account_with_ownership(env))
+      not_found
+    end
+
+    cap_request_body env, MAX_REQUEST_BYTES
+
+    params = normalize_params(env.params.body.presence || env.params.json)
+
+    unless (position = params["position"]?.as?(String).try(&.to_i?))
+      bad_request
+    end
+
+    feeds = ordered_feeds_for(account)
+
+    unless (index = feeds.index { |feed| feed.id.to_s == env.params.url["id"] })
+      not_found
+    end
+
+    unless 0 <= position < feeds.size
+      bad_request
+    end
+
+    feeds.insert(position, feeds.delete_at(index))
+
+    account.assign(feed_order: feeds.compact_map(&.slug)).save
+
+    if accepts?("text/html")
+      redirect actor_deck_path(account.actor)
+    else
+      no_content
+    end
   end
 
   # Returns true if the client is navigating the pane's own frame.

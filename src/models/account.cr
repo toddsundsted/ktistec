@@ -178,6 +178,9 @@ class Account
   end
 
   @[Persistent]
+  property feed_order : Array(String) { [] of String }
+
+  @[Persistent]
   property iri : String { "" }
 
   belongs_to actor, class_name: ActivityPub::Actor, foreign_key: iri, primary_key: iri

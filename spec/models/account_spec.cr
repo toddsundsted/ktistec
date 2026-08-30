@@ -65,6 +65,17 @@ Spectator.describe Account do
     end
   end
 
+  describe "#feed_order" do
+    it "defaults to empty" do
+      expect(subject.feed_order).to be_empty
+    end
+
+    it "persists the slugs" do
+      subject.assign(feed_order: ["robotics", "woodworking"]).save
+      expect(subject.reload!.feed_order).to eq(["robotics", "woodworking"])
+    end
+  end
+
   describe "#validate" do
     it "rejects the username as too short" do
       new_account = described_class.new(username: "", password: "")

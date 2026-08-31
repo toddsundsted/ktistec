@@ -597,12 +597,13 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
-  context "given an undeclared Hashtag type" do
+  context "given ActivityStreams compatibility term definitions" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON
           {
             "@context": "https://www.w3.org/ns/activitystreams",
             "type": "Page",
+            "sensitive": true,
             "tag": [
               {"type": "Hashtag", "name": "#fediverse"},
               {"type": "Unrecognized", "name": "other"}
@@ -612,7 +613,11 @@ Spectator.describe Ktistec::JSON_LD do
       ))
     end
 
-    it "expands the Hashtag type" do
+    it "expands the sensitive term" do
+      expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_true
+    end
+
+    it "expands the Hashtag term" do
       types = json["https://www.w3.org/ns/activitystreams#tag"].as_a
         .map { |tag| described_class.dig?(tag, "@type") }
       expect(types).to contain("https://www.w3.org/ns/activitystreams#Hashtag")
@@ -622,6 +627,37 @@ Spectator.describe Ktistec::JSON_LD do
       types = json["https://www.w3.org/ns/activitystreams#tag"].as_a
         .map { |tag| described_class.dig?(tag, "@type") }
       expect(types).to contain("Unrecognized")
+    end
+  end
+
+  context "given Mastodon compatibility term definitions" do
+    let(json) do
+      described_class.expand(JSON.parse(<<-JSON
+          {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "type": "Person",
+            "featured": "https://example.com/actors/alice/featured",
+            "attachment": [
+              {"name": "Pronouns", "type": "PropertyValue", "value": "e/em/eir"}
+            ]
+          }
+        JSON
+      ))
+    end
+
+    it "expands the featured term" do
+      expect(described_class.dig_id?(json, "http://joinmastodon.org/ns#featured"))
+        .to eq("https://example.com/actors/alice/featured")
+    end
+
+    it "expands the PropertyValue term" do
+      attachment = json["https://www.w3.org/ns/activitystreams#attachment"].as_a.first
+      expect(attachment["@type"]).to eq("http://schema.org#PropertyValue")
+    end
+
+    it "expands the value term" do
+      attachment = json["https://www.w3.org/ns/activitystreams#attachment"].as_a.first
+      expect(described_class.dig?(attachment, "http://schema.org#value")).to eq("e/em/eir")
     end
   end
 
@@ -659,9 +695,7 @@ Spectator.describe Ktistec::JSON_LD do
           "id": "https://threadbin.example/m/random/t/1",
           "type": "Page",
           "summary": "a summary",
-          "sensitive": true,
-          "tag": [{"type": "Hashtag", "name": "#random"}],
-          "attachment": [{"type": "PropertyValue", "name": "name", "value": "value"}]
+          "commentsEnabled": true
         }
         JSON
       )
@@ -685,15 +719,7 @@ Spectator.describe Ktistec::JSON_LD do
       end
 
       it "expands terms defined by the self-hosted context" do
-        expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_true
-      end
-
-      it "expands tag types defined by the self-hosted context" do
-        expect(described_class.dig_first?(json, "https://www.w3.org/ns/activitystreams#tag", "@type")).to eq("https://www.w3.org/ns/activitystreams#Hashtag")
-      end
-
-      it "expands attachment values defined by the self-hosted context" do
-        expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#attachment", "http://schema.org#value")).to eq("value")
+        expect(described_class.dig?(json, "https://joinpeertube.org/ns#commentsEnabled", as: Bool)).to be_true
       end
 
       it "fetches the context" do
@@ -731,7 +757,7 @@ Spectator.describe Ktistec::JSON_LD do
         pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
 
         it "does not expand terms defined by the self-hosted context" do
-          expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_nil
+          expect(described_class.dig?(json, "https://joinpeertube.org/ns#commentsEnabled", as: Bool)).to be_nil
         end
 
         it "fetches the context once" do
@@ -747,7 +773,7 @@ Spectator.describe Ktistec::JSON_LD do
         pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
 
         it "does not expand terms defined by the self-hosted context" do
-          expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_nil
+          expect(described_class.dig?(json, "https://joinpeertube.org/ns#commentsEnabled", as: Bool)).to be_nil
         end
       end
 
@@ -796,7 +822,7 @@ Spectator.describe Ktistec::JSON_LD do
       end
 
       it "does not expand terms defined by the self-hosted context" do
-        expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_nil
+        expect(described_class.dig?(json, "https://joinpeertube.org/ns#commentsEnabled", as: Bool)).to be_nil
       end
     end
   end
@@ -820,7 +846,7 @@ Spectator.describe Ktistec::JSON_LD do
             "id": "https://threadbin.example/m/random/t/1",
             "type": "Page",
             "summary": "a summary",
-            "sensitive": true
+            "commentsEnabled": true
           }
         }
         JSON
@@ -846,7 +872,7 @@ Spectator.describe Ktistec::JSON_LD do
     pre_condition { expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#object", "https://www.w3.org/ns/activitystreams#summary", "und")).to eq("a summary") }
 
     it "expands terms defined by the self-hosted context" do
-      expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#object", "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_true
+      expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#object", "https://joinpeertube.org/ns#commentsEnabled", as: Bool)).to be_true
     end
 
     it "fetches the context" do
@@ -858,7 +884,7 @@ Spectator.describe Ktistec::JSON_LD do
       before_each { document.as_h["object"].as_h["id"] = JSON::Any.new("https://elsewhere.example/m/random/t/1") }
 
       it "does not expand terms defined by the context" do
-        expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#object", "https://www.w3.org/ns/activitystreams#sensitive", as: Bool)).to be_nil
+        expect(described_class.dig?(json, "https://www.w3.org/ns/activitystreams#object", "https://joinpeertube.org/ns#commentsEnabled", as: Bool)).to be_nil
       end
 
       it "does not fetch the context" do

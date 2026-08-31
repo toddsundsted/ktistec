@@ -363,8 +363,20 @@ module Ktistec
 
       class_property memo_ttl : Time::Span = 1.hour
 
-      ACTIVITYSTREAMS_CONTEXT               = "www.w3.org/ns/activitystreams/context.jsonld"
-      ACTIVITYSTREAMS_COMPATIBILITY_CONTEXT = {"Hashtag" => wrap("https://www.w3.org/ns/activitystreams#Hashtag")}
+      # compatibility definitions for commonly omitted terms
+      ACTIVITYSTREAMS_CONTEXT                        = "www.w3.org/ns/activitystreams/context.jsonld"
+      ACTIVITYSTREAMS_COMPATIBILITY_TERM_DEFINITIONS = {
+        "Hashtag"       => wrap("https://www.w3.org/ns/activitystreams#Hashtag"),
+        "sensitive"     => wrap("https://www.w3.org/ns/activitystreams#sensitive"),
+        "schema"        => wrap("http://schema.org#"),
+        "PropertyValue" => wrap("schema:PropertyValue"),
+        "value"         => wrap("schema:value"),
+        "toot"          => wrap("http://joinmastodon.org/ns#"),
+        "featured"      => wrap({
+          "@id"   => wrap("toot:featured"),
+          "@type" => wrap("@id"),
+        }),
+      }
 
       MAX_MEMO_ENTRIES = 100
 
@@ -388,7 +400,7 @@ module Ktistec
       private def bundled_context_with_compatibility(key)
         context = CONTEXTS.dig(key, "@context")
         if key == ACTIVITYSTREAMS_CONTEXT
-          wrap(context.as_h.merge(ACTIVITYSTREAMS_COMPATIBILITY_CONTEXT))
+          wrap(context.as_h.merge(ACTIVITYSTREAMS_COMPATIBILITY_TERM_DEFINITIONS))
         else
           context
         end

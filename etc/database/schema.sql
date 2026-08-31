@@ -94,6 +94,9 @@ INSERT INTO migrations VALUES(20260712135009,'add-draft-and-copy-of-to-feeds');
 INSERT INTO migrations VALUES(20260718052326,'remove-version-from-feeds-and-feed-verdicts');
 INSERT INTO migrations VALUES(20260721095825,'add-deleted-at-indexes');
 INSERT INTO migrations VALUES(20260721183245,'add-floor-to-feeds');
+INSERT INTO migrations VALUES(20260825140851,'rebuild-feeds-on-the-object-clock');
+INSERT INTO migrations VALUES(20260827183955,'add-slug-to-feeds');
+INSERT INTO migrations VALUES(20260828064319,'add-feed-order-to-accounts');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -108,7 +111,8 @@ CREATE TABLE accounts (
     auto_follow_back BOOLEAN NOT NULL DEFAULT 0,
     manually_approve_quotes BOOLEAN NOT NULL DEFAULT 1,
     default_editor TEXT,
-    pinned_collections TEXT
+    pinned_collections TEXT,
+    feed_order TEXT
   );
 CREATE TABLE sessions (
     id integer PRIMARY KEY AUTOINCREMENT,
@@ -331,7 +335,8 @@ CREATE TABLE feeds (
     "params" text,
     "draft" boolean NOT NULL DEFAULT 0,
     "copy_of" integer,
-    "floor" datetime
+    "floor" datetime,
+    "slug" varchar(255)
   );
 CREATE TABLE feed_verdicts (
     "id" integer PRIMARY KEY AUTOINCREMENT,
@@ -370,6 +375,8 @@ CREATE UNIQUE INDEX idx_feed_verdicts_feed_id_object_iri
     ON feed_verdicts (feed_id ASC, object_iri ASC);
 CREATE INDEX idx_feeds_owner_iri
     ON feeds (owner_iri ASC);
+CREATE INDEX idx_feeds_owner_iri_slug
+    ON feeds (owner_iri ASC, slug ASC);
 CREATE INDEX idx_filter_terms_actor_id
     ON filter_terms (actor_id ASC);
 CREATE INDEX idx_last_times_name

@@ -233,9 +233,9 @@ been deleted or blocked.
 
 ### Custom Hashtag, Mention, and Keyword Feeds
 
-Build your own feeds from the posts that arrive in your inbox. A feed
-matches on keywords, hashtags, and mentions, each grouped as terms you
-want *any* of, *all* of, or *none* of, so a feed can be as broad or as
+Build your own feeds from the posts your server holds. A feed matches
+on keywords, hashtags, and mentions, each grouped as terms you want
+*any* of, *all* of, or *none* of, so a feed can be as broad or as
 narrow as you like. Preview the matches while you tune the criteria,
 then publish.
 
@@ -245,8 +245,9 @@ A feed you haven't published yet is kept as a draft, so you can come
 back to it later, and editing a published feed leaves the new version
 a draft until you publish your changes.
 
-When you publish a feed, it's backfilled with matching posts from the
-previous 30 days, so it isn't empty when you start reading.
+A feed reaches back 30 days from the moment you create it, and
+publishing it backfills it with matching posts from that window, so it
+isn't empty when you start reading.
 
 ### Bookmarks
 

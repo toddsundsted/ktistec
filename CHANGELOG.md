@@ -1,6 +1,27 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.12.0]
+### Added
+- Notify a deck pane when it has new posts.
+
+### Fixed
+- Retry an unresolved quote authorization.
+- Label a draft with the status of its quote request.
+- Compare origins when deciding whether to trust an IRI, key document, or owner.
+- Ignore a trailing slash when matching a dereferenced document's IRI.
+- Allow only `Create` and `Update` to update objects.
+- Ignore an inbound vote that fails the FEP-9967 checks.
+- Expand commonly omitted ActivityStreams context terms.
+- Break a long link rather than let it overflow.
+
+### Changed
+- Widen the feed scan to every object the server holds.
+- Address a published feed by slug rather than by id.
+
+### Removed
+- The `proxyUrl` property from the actor document.
+
 ## [v3.11.0]
 ### Added
 - Accept inbound activities at a shared inbox.
@@ -923,6 +944,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.12.0]: https://github.com/toddsundsted/ktistec/compare/e2554566...603276f0
 [v3.11.0]: https://github.com/toddsundsted/ktistec/compare/ffd86278...9577f80b
 [v3.10.0]: https://github.com/toddsundsted/ktistec/compare/5b66aaad...b8245e87
 [v3.9.0]: https://github.com/toddsundsted/ktistec/compare/1a47aa6e...56ecc835

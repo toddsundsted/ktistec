@@ -14,6 +14,7 @@
 - [FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/2c59/fep-2c59.md)
 - [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
 - [FEP-0151: NodeInfo in Fediverse Software (2025 edition)](https://codeberg.org/fediverse/fep/src/branch/main/fep/0151/fep-0151.md)
+- [FEP-9967: Polls](https://codeberg.org/fediverse/fep/src/branch/main/fep/9967/fep-9967.md)
 
 ## ActivityPub
 
@@ -101,12 +102,19 @@ Ktistec uses [HTTP Signatures](https://datatracker.ietf.org/doc/html/draft-cavag
 
 Ktistec performs **full JSON-LD expansion** using cached contexts. The server caches standard and commonly-encountered third-party contexts (e.g. ActivityStreams, PURL) locally for performance and reliability.
 
+Senders often use terms they never declare. To expand those documents rather than drop the terms, Ktistec merges compatibility definitions into the ActivityStreams context wherever a document references it:
+
+- `Hashtag`
+- `sensitive`
+- `schema` (`http://schema.org#`), and `PropertyValue` and `value` under it
+- `toot` (`http://joinmastodon.org/ns#`), and `featured` under it
+
 ### Supported objects
 
 **Primary object types:**
 - `Note` - Short-form posts
 - `Article` - Long-form content
-- `Question` - Polls (with `oneOf`/`anyOf` options and `endTime`)
+- `Question` - Polls, per FEP-9967 (with `oneOf`/`anyOf` options and `endTime`)
 - `Tombstone` - Deleted content placeholder
 - `QuoteAuthorization` - FEP-044f quote consent
 
@@ -138,6 +146,12 @@ Ktistec performs **full JSON-LD expansion** using cached contexts. The server ca
 
 **Extension activities:**
 - `QuoteRequest` - FEP-044f request to quote a post
+
+### Polls
+
+[FEP-9967](https://codeberg.org/fediverse/fep/src/branch/main/fep/9967/fep-9967.md) is implemented.
+
+The FEP requires that a voter have permission to vote when the poll is not public, but does not define what confers it. In Ktistec, a voter has permission when the poll is public, when the voter is named in the poll's `to`, `cc` or `audience`, or when the poll addresses its author's followers collection and the voter is a confirmed follower.
 
 ### Addressing and delivery
 
@@ -196,6 +210,7 @@ Locally uploaded media files are stored on the instance and served from the `/up
 **Updates:**
 - Objects
   - `Update(Object)` activities modify existing objects
+  - Only `Create` and `Update` may carry an embedded object. On any other activity -- `Announce`, `Like`, `Delete`, `Undo` -- an inline object node is ignored and only its `id` is retained; the object is then taken from cache or dereferenced from that `id`. An activity that merely references an object cannot rewrite it.
   - The updated object replaces the original
   - `updated` timestamp is set
 - Actors

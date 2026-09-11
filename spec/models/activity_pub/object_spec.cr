@@ -2899,8 +2899,8 @@ Spectator.describe ActivityPub::Object::Attachment do
     end
   end
 
-  def attachment(media_type)
-    ActivityPub::Object::Attachment.new("https://example.com/file", media_type)
+  def attachment(media_type, url = "https://example.com/file")
+    ActivityPub::Object::Attachment.new(url, media_type)
   end
 
   describe "#image?" do
@@ -2954,6 +2954,52 @@ Spectator.describe ActivityPub::Object::Attachment do
 
     it "is false for an unsupported type" do
       expect(attachment("application/pdf").audio?).to be_false
+    end
+  end
+
+  def media_category(media_type, url)
+    case attachment(media_type, url)
+    when .image? then :image
+    when .video? then :video
+    when .audio? then :audio
+    end
+  end
+
+  describe "media type classification" do
+    context "when the declared media type is supported" do
+      it "takes precedence over the URL extension" do
+        expect(media_category("image/png", "https://example.com/file.mp3")).to eq(:image)
+      end
+    end
+
+    context "when the declared media type is a known alias" do
+      it "classifies audio/mp3 as audio" do
+        expect(media_category("audio/mp3", "https://example.com/file.mp3")).to eq(:audio)
+      end
+
+      it "classifies audio/x-wav as audio" do
+        expect(media_category("audio/x-wav", "https://example.com/file.wav")).to eq(:audio)
+      end
+
+      it "classifies audio/wave as audio" do
+        expect(media_category("audio/wave", "https://example.com/file.wav")).to eq(:audio)
+      end
+    end
+
+    context "when the declared media type is generic" do
+      it "classifies a supported URL extension" do
+        expect(media_category("application/octet-stream", "https://example.com/file.webm")).to eq(:video)
+      end
+
+      it "does not classify an unsupported URL extension" do
+        expect(media_category("application/octet-stream", "https://example.com/file.pdf")).to be_nil
+      end
+    end
+
+    context "when the declared media type is unsupported" do
+      it "does not infer a type from the URL extension" do
+        expect(media_category("invalid", "https://example.com/file.jpg")).to be_nil
+      end
     end
   end
 end

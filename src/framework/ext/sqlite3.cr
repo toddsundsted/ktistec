@@ -1,26 +1,11 @@
 require "json"
 require "xml"
 require "sqlite3"
-require "benchmark"
 
 module DB
   abstract class Statement
     protected def emit_log(args : Enumerable)
       # override the library definition of `emit_log` to silence it.
-    end
-  end
-end
-
-# Run "PRAGMA optimize" when a connection is closed.
-# See: https://www.sqlite.org/lang_analyze.html#automatically_running_analyze
-
-module SQLite3
-  class Connection
-    def do_close
-      time = Benchmark.realtime { check LibSQLite3.exec(self, "PRAGMA analysis_limit=400; PRAGMA optimize;", nil, nil, nil) }
-      Log.info { "Updating database statistics: #{sprintf("%.3fms", time.total_milliseconds)}" }
-    ensure
-      previous_def
     end
   end
 end

@@ -3,6 +3,14 @@ require "../../src/framework"
 require "../spec_helper/base"
 require "../spec_helper/network"
 
+Spectator.describe Ktistec do
+  setup_spec
+
+  it "gathers query planner statistics on startup" do
+    expect(Ktistec.database.scalar("SELECT COUNT(*) FROM sqlite_master WHERE name = 'sqlite_stat1'")).to eq(1)
+  end
+end
+
 Spectator.describe Ktistec::LogLevel do
   setup_spec
 

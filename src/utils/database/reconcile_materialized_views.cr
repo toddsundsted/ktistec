@@ -18,14 +18,15 @@ module Ktistec
         Relationship::Content::Notification
       ]
 
-      # Reconciles every registered view, then purges the orphaned base
-      # types.
+      # Refreshes planner statistics, reconciles every registered
+      # view, then purges the orphaned base types.
       #
       # Not atomic: each view reconciles under its own savepoint and
       # the orphan deletes run in autocommit. This is operation is
       # idempotent.
       #
       def run(db)
+        db.exec("ANALYZE")
         Rules::View.registry.each do |view|
           before = count(db, view.type)
           Rules::Maintainer.reconcile(view)

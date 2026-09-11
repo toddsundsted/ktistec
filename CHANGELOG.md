@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.12.1]
+### Changed
+- Gather query planner statistics on startup and before reconciling materialized views.
+
 ## [v3.12.0]
 ### Added
 - Notify a deck pane when it has new posts.
@@ -944,6 +948,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.12.1]: https://github.com/toddsundsted/ktistec/compare/874107ab...d26efc2c
 [v3.12.0]: https://github.com/toddsundsted/ktistec/compare/e2554566...603276f0
 [v3.11.0]: https://github.com/toddsundsted/ktistec/compare/ffd86278...9577f80b
 [v3.10.0]: https://github.com/toddsundsted/ktistec/compare/5b66aaad...b8245e87

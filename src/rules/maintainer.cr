@@ -78,11 +78,13 @@ module Rules
       SQL
       changed = false
       log_operation(type) do
-        transaction do
-          inserted = Ktistec.database.exec(insert, args: Array(DB::Any){now, type} + query_args + Array(DB::Any){type}).rows_affected
-          deleted = Ktistec.database.exec(delete, args: Array(DB::Any){type} + scope_args + query_args).rows_affected
-          repositioned = repositions ? Ktistec.database.exec(reposition, args: Array(DB::Any){now} + query_args + Array(DB::Any){type}).rows_affected : 0_i64
-          changed = (inserted + deleted + repositioned) > 0
+        Ktistec.database.using_connection do |connection|
+          transaction(connection) do
+            inserted = connection.exec(insert, args: Array(DB::Any){now, type} + query_args + Array(DB::Any){type}).rows_affected
+            deleted = connection.exec(delete, args: Array(DB::Any){type} + scope_args + query_args).rows_affected
+            repositioned = repositions ? connection.exec(reposition, args: Array(DB::Any){now} + query_args + Array(DB::Any){type}).rows_affected : 0_i64
+            changed = (inserted + deleted + repositioned) > 0
+          end
         end
       end
       changed
@@ -143,15 +145,15 @@ module Rules
     # Wraps a unit of maintenance in a SQLite SAVEPOINT. A savepoint
     # nests cleanly inside an enclosing transaction.
     #
-    private def transaction(&) : Nil
-      Ktistec.database.exec("SAVEPOINT rules_maintainer")
+    private def transaction(connection, &) : Nil
+      connection.exec("SAVEPOINT rules_maintainer")
       begin
         yield
       rescue ex
-        Ktistec.database.exec("ROLLBACK TO rules_maintainer")
+        connection.exec("ROLLBACK TO rules_maintainer")
         raise ex
       ensure
-        Ktistec.database.exec("RELEASE rules_maintainer")
+        connection.exec("RELEASE rules_maintainer")
       end
     end
 

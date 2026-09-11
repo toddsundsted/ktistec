@@ -24,6 +24,9 @@ module Ktistec
     puts Ktistec::Database.do_operation(:apply, version)
   end
 
+  # gather query planner statistics
+  Ktistec.database.exec("ANALYZE")
+
   # Model-like class for managing log levels.
   #
   class LogLevel

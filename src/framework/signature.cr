@@ -95,7 +95,7 @@ module Ktistec
         raise Error.new("body digest must be signed")
       end
       signature_string =
-        split_headers_string.compact_map do |header|
+        split_headers_string.map do |header|
           case header
           when "(request-target)"
             "#{header}: #{method} #{url.path}"
@@ -103,18 +103,14 @@ module Ktistec
             "#{header}: #{parameters["created"]}"
           when "(expires)"
             "#{header}: #{parameters["expires"]}"
-          when "date"
-            "#{header}: #{headers["Date"]}"
           when "host"
+            # the host comes from the URL, not the request
             "#{header}: #{url.authority}"
-          when "accept"
-            "#{header}: #{headers["Accept"]}"
-          when "content-type"
-            "#{header}: #{headers["Content-Type"]}"
-          when "content-length"
-            "#{header}: #{headers["Content-Length"]}"
-          when "digest"
-            "#{header}: #{headers["Digest"]}"
+          else
+            unless (values = headers.get?(header))
+              raise Error.new("signed header is missing: #{header}")
+            end
+            "#{header}: #{values.map(&.strip).join(", ")}"
           end
         end.join("\n")
       key = key_pair.public_key

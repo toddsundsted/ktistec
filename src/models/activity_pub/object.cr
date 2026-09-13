@@ -204,15 +204,34 @@ module ActivityPub
       end
 
       def image?
-        media_type.in?(Ktistec::Constants::SUPPORTED_IMAGE_TYPES)
+        normalized_media_type.in?(Ktistec::Constants::SUPPORTED_IMAGE_TYPES)
       end
 
       def video?
-        media_type.in?(Ktistec::Constants::SUPPORTED_VIDEO_TYPES)
+        normalized_media_type.in?(Ktistec::Constants::SUPPORTED_VIDEO_TYPES)
       end
 
       def audio?
-        media_type.in?(Ktistec::Constants::SUPPORTED_AUDIO_TYPES)
+        normalized_media_type.in?(Ktistec::Constants::SUPPORTED_AUDIO_TYPES)
+      end
+
+      def self.infer_media_type(url : String) : String?
+        ext = File.extname(URI.parse(url).path).downcase
+        Ktistec::Constants::SUPPORTED_MEDIA_TYPES_MAP[ext]? unless ext.empty?
+      rescue URI::Error
+      end
+
+      private def normalized_media_type
+        case media_type
+        when "audio/mp3"
+          "audio/mpeg"
+        when "audio/x-wav", "audio/wave"
+          "audio/wav"
+        when "application/octet-stream"
+          self.class.infer_media_type(url) || media_type
+        else
+          media_type
+        end
       end
 
       def has_focal_point?
@@ -1329,7 +1348,7 @@ module ActivityPub
             url = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#url").presence
             media_type = Ktistec::JSON_LD.dig?(attachment, "https://www.w3.org/ns/activitystreams#mediaType").presence
             # some servers (e.g. Threads) omit `mediaType`
-            media_type ||= infer_media_type(url) if url
+            media_type ||= Attachment.infer_media_type(url) if url
             name = ActivityPub.dig_text?(attachment, "https://www.w3.org/ns/activitystreams#name").presence
             focal_point =
               if (fp = attachment.as_h["http://joinmastodon.org/ns#focalPoint"]?)
@@ -1362,12 +1381,6 @@ module ActivityPub
             end
           end
         end.compact
-      end
-
-      private def self.infer_media_type(url : String) : String?
-        ext = File.extname(URI.parse(url).path).downcase
-        Ktistec::Constants::SUPPORTED_MEDIA_TYPES_MAP[ext]? unless ext.empty?
-      rescue URI::Error
       end
     end
   end

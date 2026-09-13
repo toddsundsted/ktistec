@@ -112,12 +112,17 @@ Spectator.describe Ktistec::Signature do
         .to raise_error(Ktistec::Signature::Error, "host header must be signed")
     end
 
-    it "raises an error if the host doesn't match" do
+    it "ignores the host header in the request" do
+      headers["Host"] = "foo_bar"
+      expect(described_class.verify(key_pair, "https://remote/inbox", headers, "body")).to be_true
+    end
+
+    it "raises an error if the signature was made for a different host" do
       expect { described_class.verify(key_pair, "https://foo_bar/inbox", headers) }
         .to raise_error(Ktistec::Signature::Error, /invalid signature/)
     end
 
-    it "raises an error if the port doesn't match" do
+    it "raises an error if the signature was made for a different port" do
       expect { described_class.verify(key_pair, "https://remote:8443/inbox", headers, "body") }
         .to raise_error(Ktistec::Signature::Error, /invalid signature/)
     end
@@ -125,7 +130,7 @@ Spectator.describe Ktistec::Signature do
     context "given a non-standard port" do
       let(headers) { described_class.sign(key_pair, "https://remote:8443/inbox", body: "body") }
 
-      it "raises an error if the port doesn't match" do
+      it "raises an error if the signature was made for a different port" do
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, "body") }
           .to raise_error(Ktistec::Signature::Error, /invalid signature/)
       end
@@ -260,6 +265,75 @@ Spectator.describe Ktistec::Signature do
       headers["Accept"] = "FOO/BAR"
       expect { described_class.verify(key_pair, "https://remote/inbox", headers) }
         .to raise_error(Ktistec::Signature::Error, /invalid signature/)
+    end
+
+    # signs a request over an explicit list of headers, trimming and
+    # joining repeated values per draft-cavage-http-signatures 2.3
+    private def sign(headers, url, signed)
+      uri = URI.parse(url).normalize
+      signature_string =
+        signed.map do |header|
+          case header
+          when "(request-target)"
+            "#{header}: post #{uri.path}"
+          when "host"
+            "#{header}: #{uri.authority}"
+          else
+            "#{header}: #{headers.get(header).map(&.strip).join(", ")}"
+          end
+        end.join("\n")
+      signature = Base64.strict_encode(key_pair.private_key.sign(OpenSSL::Digest.new("SHA256"), signature_string))
+      headers["Signature"] =
+        %Q<keyId="#{key_pair.iri}#main-key",algorithm="rsa-sha256",headers="#{signed.join(" ")}",signature="#{signature}">
+      headers
+    end
+
+    context "given a signature covering an arbitrary header" do
+      let(body) { "body" }
+
+      let(user_agent) { ["agent/1.0"] }
+
+      let(headers) do
+        HTTP::Headers{
+          "Date"   => Time::Format::HTTP_DATE.format(Time.utc),
+          "Digest" => "SHA-256=" + Base64.strict_encode(OpenSSL::Digest.new("SHA256").update(body).final),
+        }.tap do |headers|
+          user_agent.each { |value| headers.add("User-Agent", value) }
+        end
+      end
+
+      before_each do
+        sign(headers, "https://remote/inbox", ["(request-target)", "host", "date", "user-agent", "digest"])
+      end
+
+      it "verifies signature" do
+        expect(described_class.verify(key_pair, "https://remote/inbox", headers, body)).to be_true
+      end
+
+      context "but the header is not in the request" do
+        before_each { headers.delete("User-Agent") }
+
+        it "raises an error" do
+          expect { described_class.verify(key_pair, "https://remote/inbox", headers, body) }
+            .to raise_error(Ktistec::Signature::Error, "signed header is missing: user-agent")
+        end
+      end
+
+      context "and the header value has trailing whitespace" do
+        let(user_agent) { ["agent/1.0  "] }
+
+        it "verifies signature" do
+          expect(described_class.verify(key_pair, "https://remote/inbox", headers, body)).to be_true
+        end
+      end
+
+      context "and the header appears more than once" do
+        let(user_agent) { ["one", "two"] }
+
+        it "verifies signature" do
+          expect(described_class.verify(key_pair, "https://remote/inbox", headers, body)).to be_true
+        end
+      end
     end
   end
 end

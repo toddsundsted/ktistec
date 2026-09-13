@@ -269,14 +269,6 @@ class InboxesController
       gone
     end
 
-    # the identity that signs the requests made while verifying and
-    # dereferencing this activity. the account named in the path when
-    # there is one, otherwise an arbitrary local account.
-
-    unless (fetch_identity = account.try(&.actor) || Account.all.first?.try(&.actor))
-      service_unavailable
-    end
-
     cap_request_body env, MAX_INBOX_REQUEST_BYTES
 
     unless (body = env.request.body.try(&.gets_to_end).presence)
@@ -330,6 +322,19 @@ class InboxesController
        ActivityPub::Actor.find?(object_iri).nil?
       Log.trace { "[#{request_id}] delete of unknown target iri=#{object_iri}; accepting without verification" }
       ok
+    end
+
+    # the identity that signs the requests made while verifying and
+    # dereferencing this activity. the account named in the path when
+    # there is one. otherwise the account the activity implicates by
+    # its type, and failing that, an arbitrary local account.
+
+    accounts = Account.all
+
+    implicated = accounts.find { |candidate| Ktistec::Recipients.semantic_recipient?(activity, candidate.actor) }
+
+    unless (fetch_identity = account.try(&.actor) || implicated.try(&.actor) || accounts.first?.try(&.actor))
+      service_unavailable
     end
 
     # 1) resolve the keyId from the Signature header to the signer and

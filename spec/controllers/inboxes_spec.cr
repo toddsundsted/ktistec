@@ -103,6 +103,8 @@ Spectator.describe InboxesController do
 
         before_each { HTTP::Client.activities << activity }
 
+        let(retrieval) { HTTP::Client.requests.find! { |request| request.resource == activity.iri } }
+
         it "retrieves the activity from the origin" do
           post "/inbox", headers, json_ld
           expect(HTTP::Client.requests).to have("GET #{activity.iri}")
@@ -110,7 +112,24 @@ Spectator.describe InboxesController do
 
         it "signs the retrieval with the local account" do
           post "/inbox", headers, json_ld
-          expect(HTTP::Client.last?.not_nil!.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
+          expect(retrieval.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
+        end
+
+        # `Ktistec::Recipients.semantic_recipient?` decides which account
+        # an activity implicates, and that varies by type. an accept is
+        # the example used here.
+
+        context "and the activity implicates a local account" do
+          let!(follower) { register.actor }
+
+          let_create!(:follow, actor: follower, object: other)
+
+          let_build(:accept, named: :activity, actor: other, object: follow)
+
+          it "signs the retrieval with the implicated account" do
+            post "/inbox", headers, json_ld
+            expect(retrieval.headers["Signature"]).to contain(%Q|keyId="#{follower.iri}#main-key"|)
+          end
         end
       end
 

@@ -362,8 +362,13 @@ class InboxesController
       signer_iri, resolved_key = resolved
       candidate = find_or_dereference_actor(fetch_identity, signer_iri, request_id, transient, deadline, require_key: resolved_key.nil?)
       key_pair = resolved_key || candidate
-      if candidate && key_pair && Ktistec::Signature.verify?(key_pair, "#{host}#{env.request.path}", env.request.headers, body)
-        signer = candidate
+      if candidate && key_pair
+        begin
+          Ktistec::Signature.verify(key_pair, "#{host}#{env.request.path}", env.request.headers, body)
+          signer = candidate
+        rescue ex : Ktistec::Signature::Error | OpenSSL::Error
+          Log.trace { "[#{request_id}] signature verification failed: #{ex.message}" }
+        end
       else
         Log.trace { "[#{request_id}] signature verification failed" }
       end

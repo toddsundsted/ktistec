@@ -53,7 +53,7 @@ Spectator.describe Ktistec::Signature do
     context "with hs2019" do
       let(algorithm) { "hs2019" }
 
-      it "sets the algorithm signature parameter to 'rsa-sha256'" do
+      it "sets the algorithm signature parameter to 'hs2019'" do
         expect(signature).to have(%q<algorithm="hs2019">)
       end
 
@@ -194,13 +194,13 @@ Spectator.describe Ktistec::Signature do
           .to raise_error(Ktistec::Signature::Error, /invalid signature/)
       end
 
-      it "raises an error if date is out of range" do
+      it "raises an error if the creation date is in the future" do
         headers = described_class.sign(key_pair, "https://remote/inbox", algorithm: "hs2019", time: 10.minutes.from_now, method: :get)
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, method: :get) }
           .to raise_error(Ktistec::Signature::Error, "received before creation date")
       end
 
-      it "raises an error if date is out of range" do
+      it "raises an error if the expiration date is in the past" do
         headers = described_class.sign(key_pair, "https://remote/inbox", algorithm: "hs2019", time: 1.hour.ago, method: :get)
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, method: :get) }
           .to raise_error(Ktistec::Signature::Error, "received after expiration date")
@@ -232,13 +232,13 @@ Spectator.describe Ktistec::Signature do
           .to raise_error(Ktistec::Signature::Error, /invalid signature/)
       end
 
-      it "raises an error if date is out of range" do
+      it "raises an error if the date is in the future" do
         headers = described_class.sign(key_pair, "https://remote/inbox", algorithm: "rsa-sha256", time: 10.minutes.from_now, method: :get)
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, method: :get) }
           .to raise_error(Ktistec::Signature::Error, "date out of range")
       end
 
-      it "raises an error if date is out of range" do
+      it "raises an error if the date is in the past" do
         headers = described_class.sign(key_pair, "https://remote/inbox", algorithm: "rsa-sha256", time: 1.hour.ago, method: :get)
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, method: :get) }
           .to raise_error(Ktistec::Signature::Error, "date out of range")

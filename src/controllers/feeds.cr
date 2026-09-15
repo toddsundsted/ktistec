@@ -132,7 +132,7 @@ class FeedsController
         feed.save
         Rules::Feeds.register(feed)
         Task::BackfillFeed.schedule_for(feed)
-        if accepts?("application/ld+json", "application/activity+json", "application/json")
+        if accepts_json?
           created actor_feed_path(account.actor, feed), "feeds/edit", env: env, feed: feed, criteria: form_criteria(env, feed), contents: nil
         else
           redirect actor_feeds_path(account.actor)
@@ -202,7 +202,7 @@ class FeedsController
           unregister_and_destroy(original)
         end
         Task::BackfillFeed.schedule_for(feed)
-        if accepts?("application/ld+json", "application/activity+json", "application/json")
+        if accepts_json?
           created actor_feed_path(feed.owner, feed), "feeds/edit", env: env, feed: feed, criteria: form_criteria(env, feed), contents: nil
         else
           redirect actor_feeds_path(feed.owner)
@@ -229,7 +229,7 @@ class FeedsController
           Rules::Feeds.register(published)
           unregister_and_destroy(feed)
           Task::BackfillFeed.schedule_for(published)
-          if accepts?("application/ld+json", "application/activity+json", "application/json")
+          if accepts_json?
             created actor_feed_path(published.owner, published), "feeds/edit", env: env, feed: published, criteria: form_criteria(env, published), contents: nil
           else
             redirect actor_feeds_path(feed.owner)
@@ -250,7 +250,7 @@ class FeedsController
 
     unregister_and_destroy(feed)
 
-    if accepts?("application/ld+json", "application/activity+json", "application/json")
+    if accepts_json?
       no_content
     else
       redirect actor_feeds_path(feed.owner)

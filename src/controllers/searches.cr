@@ -88,7 +88,7 @@ class SearchesController
   end
 
   private def self.discover_activity_pub_link(body, base) : String?
-    doc = XML.parse_html(body)
+    doc = XML.parse_html(body, Ktistec::Constants::HTML_PARSER_OPTIONS)
     if (node = doc.xpath_nodes(%q(//link[@rel='alternate' and @type='application/activity+json']/@href)).first?)
       href = URI.parse(base).resolve(node.text).to_s
       href if Ktistec::Util.safe_iri?(href) && href != base

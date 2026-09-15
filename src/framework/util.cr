@@ -2,6 +2,7 @@ require "html"
 require "uri"
 require "xml"
 
+require "../ktistec/constants"
 require "../safe/safe_html"
 
 module Ktistec
@@ -42,14 +43,7 @@ module Ktistec
     def render_as_text(content)
       return "" if content.nil? || content.empty?
       String.build do |build|
-        render_as_text(XML.parse_html("<div>#{content}</div>",
-          XML::HTMLParserOptions::RECOVER |
-          XML::HTMLParserOptions::NODEFDTD |
-          XML::HTMLParserOptions::NOIMPLIED |
-          XML::HTMLParserOptions::NOERROR |
-          XML::HTMLParserOptions::NOWARNING |
-          XML::HTMLParserOptions::NONET,
-        ), build)
+        render_as_text(XML.parse_html("<div>#{content}</div>", Constants::HTML_PARSER_OPTIONS), build)
       end.chomp
     end
 
@@ -84,14 +78,7 @@ module Ktistec
     def sanitize(content : String?) : Ktistec::SafeHTML
       return Ktistec::SafeHTML.assert_safe("") if content.nil? || content.empty?
       result = String.build do |build|
-        sanitize(XML.parse_html("<div>#{content}</div>",
-          XML::HTMLParserOptions::RECOVER |
-          XML::HTMLParserOptions::NODEFDTD |
-          XML::HTMLParserOptions::NOIMPLIED |
-          XML::HTMLParserOptions::NOERROR |
-          XML::HTMLParserOptions::NOWARNING |
-          XML::HTMLParserOptions::NONET,
-        ), build)
+        sanitize(XML.parse_html("<div>#{content}</div>", Constants::HTML_PARSER_OPTIONS), build)
       end.gsub(/^<div>|<\/div>$/, "")
       Ktistec::SafeHTML.assert_safe(result)
     end

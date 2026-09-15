@@ -1,6 +1,18 @@
+require "xml"
+
 module Ktistec
   module Constants
     PUBLIC = "https://www.w3.org/ns/activitystreams#Public"
+
+    # The options used when parsing content. `NONET` in particular
+    # keeps the parser from fetching anything the content references.
+    HTML_PARSER_OPTIONS =
+      XML::HTMLParserOptions::RECOVER |
+        XML::HTMLParserOptions::NODEFDTD |
+        XML::HTMLParserOptions::NOIMPLIED |
+        XML::HTMLParserOptions::NOERROR |
+        XML::HTMLParserOptions::NOWARNING |
+        XML::HTMLParserOptions::NONET
 
     ACCEPT_HEADER = %q|application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"|
 

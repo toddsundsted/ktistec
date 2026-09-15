@@ -5,14 +5,14 @@
     - else
       em Quoted a post
 - elsif failed
-  .ui.segment.quoted-object
+  turbo-frame.ui.segment.quoted-object id=scoped_id(scope, "quote-#{object.id}")
     em Failed to load!
 - elsif quote
   - if quote.deleted? || quote.attributed_to.deleted?
-    .ui.segment.quoted-object
+    turbo-frame.ui.segment.quoted-object id=scoped_id(scope, "quote-#{object.id}")
       em This post is deleted!
   - elsif quote.blocked? || quote.attributed_to.blocked?
-    .ui.segment.quoted-object
+    turbo-frame.ui.segment.quoted-object id=scoped_id(scope, "quote-#{object.id}")
       em This post is blocked!
   - else
     - if !error_message && (object.draft? || object.quote_approved?(quote))

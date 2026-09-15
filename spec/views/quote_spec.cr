@@ -121,6 +121,10 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
     context "but object is deleted" do
       before_each { quote.delete! }
 
+      it "renders the turbo-frame" do
+        expect(subject.xpath_nodes("//turbo-frame/@id").map(&.text)).to contain_exactly("quote-#{object.id}")
+      end
+
       it "renders 'This post is deleted!' message" do
         expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("This post is deleted!")
       end
@@ -136,6 +140,10 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
     context "but object is blocked" do
       before_each { quote.block! }
+
+      it "renders the turbo-frame" do
+        expect(subject.xpath_nodes("//turbo-frame/@id").map(&.text)).to contain_exactly("quote-#{object.id}")
+      end
 
       it "renders 'This post is blocked!' message" do
         expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("This post is blocked!")
@@ -277,6 +285,10 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
   context "dereference failed" do
     let(failed) { true }
+
+    it "renders the turbo-frame" do
+      expect(subject.xpath_nodes("//turbo-frame/@id").map(&.text)).to contain_exactly("quote-#{object.id}")
+    end
 
     it "renders 'Failed to load!' message" do
       expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("Failed to load!")

@@ -2559,6 +2559,22 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#quote_display_link" do
+    let_build(:object)
+
+    let(quote_url) { "https://example.com/@alice/116018331320350492" }
+
+    it "wraps the marked link" do
+      object.content = %Q|<p class="quote-inline">RE: <a href="#{quote_url}">link</a></p>|
+      expect(object.quote_display_link).to eq(quote_url)
+    end
+
+    it "returns nil" do
+      object.content = %q|<p class="quote-inline">RE: <a href="javascript:alert(1)">link</a></p>|
+      expect(object.quote_display_link).to be_nil
+    end
+  end
+
   context "canonical path" do
     PATH = "/abc/xyz"
 

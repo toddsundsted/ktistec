@@ -40,6 +40,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
   MESSAGE_TEXT_PATH = "//*[contains(@class,'quoted-object')][not(section)]//em/text()"
   BUTTON_TEXT_XPATH = "//*[contains(@class,'quoted-object')][not(section)]//button/text()"
+  LINK_HREF_XPATH   = "//*[contains(@class,'quoted-object')][not(section)]//a/@href"
   CONTENT_XPATH     = "//section[@class='ui feed']//div[@class='content']"
 
   context "when not cached" do
@@ -298,8 +299,26 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
       expect(subject.xpath_nodes(CONTENT_XPATH)).to be_empty
     end
 
-    it "does not render buttons" do
-      expect(subject.xpath_nodes(BUTTON_TEXT_XPATH)).to be_empty
+    it "renders retry button" do
+      expect(subject.xpath_nodes(BUTTON_TEXT_XPATH)).to contain_exactly("Try again")
+    end
+
+    it "renders turbo-frame target" do
+      expect(subject.xpath_nodes("//form[@data-turbo-frame='quote-#{object.id}']")).not_to be_empty
+    end
+
+    it "does not render link to the quoted post" do
+      expect(subject.xpath_nodes(LINK_HREF_XPATH)).to be_empty
+    end
+
+    context "and the content contains a link to the quoted post" do
+      before_each do
+        object.assign(content: %q|<p class="quote-inline">RE: <a href="https://remote/@user/123">link</a></p>|).save
+      end
+
+      it "renders link to the quoted post" do
+        expect(subject.xpath_nodes(LINK_HREF_XPATH).map(&.text)).to contain_exactly("https://remote/@user/123")
+      end
     end
   end
 end

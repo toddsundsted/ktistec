@@ -136,6 +136,24 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ".quote_inline_href?" do
+    let(link) { "https://remote.test/@alice/116018331320350492" }
+
+    it "ignores content without a marked link" do
+      expect(described_class.quote_inline_href?(%Q|<p>context: <a href="#{link}">link</a></p>|)).to be_nil
+    end
+
+    it "returns the marked link" do
+      content = %Q|<p>see <a href="https://remote.test/@bob/999">this</a></p><p class="quote-inline">RE: <a href="#{link}">link</a></p>|
+      expect(described_class.quote_inline_href?(content)).to eq(link)
+    end
+
+    it "returns the marked link in a span" do
+      content = %Q|<span class="quote-inline">RE: <a href="#{link}">link</a></span>|
+      expect(described_class.quote_inline_href?(content)).to eq(link)
+    end
+  end
+
   describe ".sanitize" do
     it "ignores empty content" do
       expect(described_class.sanitize("")).to eq("")

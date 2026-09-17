@@ -47,6 +47,26 @@ module Ktistec
       end.chomp
     end
 
+    # Generates a summary from long content.
+    #
+    # Whitespace is collapsed and the result is a single line.
+    #
+    def generate_summary(content : String?, *, threshold = LONG_CONTENT_THRESHOLD, length = GENERATED_SUMMARY_LENGTH, ellipsis = "…") : String?
+      text = render_as_text(content).gsub(/\s+/, " ").strip
+      return unless text.size > threshold
+      truncate(text, length, ellipsis: ellipsis)
+    end
+
+    # Returns the link to the quoted post that servers include for
+    # clients that don't render quotes.
+    #
+    def quote_inline_href?(content : String?) : String?
+      return if content.nil? || content.empty?
+      XML.parse_html("<div>#{content}</div>", Constants::HTML_PARSER_OPTIONS)
+        .xpath_nodes("//*[contains(@class, 'quote-inline')]//a/@href")
+        .first?.try(&.text.presence)
+    end
+
     # not strictly block elements (`br` is inline), these are elements
     # that should be replaced with a newline.
 
@@ -321,16 +341,6 @@ module Ktistec
     private LONG_CONTENT_THRESHOLD = 3000
 
     private GENERATED_SUMMARY_LENGTH = 200
-
-    # Generates a summary from long content.
-    #
-    # Whitespace is collapsed and the result is a single line.
-    #
-    def generate_summary(content : String?, *, threshold = LONG_CONTENT_THRESHOLD, length = GENERATED_SUMMARY_LENGTH, ellipsis = "…") : String?
-      text = render_as_text(content).gsub(/\s+/, " ").strip
-      return unless text.size > threshold
-      truncate(text, length, ellipsis: ellipsis)
-    end
 
     # Wraps a URL in a link, in the format used by Mastodon:
     # https://github.com/mastodon/mastodon/blob/main/app/lib/text_formatter.rb

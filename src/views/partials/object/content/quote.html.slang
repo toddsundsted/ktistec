@@ -7,6 +7,14 @@
 - elsif failed
   turbo-frame.ui.segment.quoted-object id=scoped_id(scope, "quote-#{object.id}")
     em Failed to load!
+    form.ui.form method="GET" action=fetch_quote_path(object) data-turbo-frame=scoped_id(scope, "quote-#{object.id}")
+      button.ui.tiny.button type="submit"
+        i.redo.icon
+        | Try again
+    - if (quote_link = object.quote_display_link)
+      a.ui.tiny.iconic.button target="_blank" href=quote_link
+        i.external.arrow.icon
+        | Quoted post
 - elsif quote
   - if quote.deleted? || quote.attributed_to.deleted?
     turbo-frame.ui.segment.quoted-object id=scoped_id(scope, "quote-#{object.id}")

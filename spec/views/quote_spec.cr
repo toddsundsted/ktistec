@@ -40,6 +40,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
   MESSAGE_TEXT_PATH = "//*[contains(@class,'quoted-object')][not(section)]//em/text()"
   BUTTON_TEXT_XPATH = "//*[contains(@class,'quoted-object')][not(section)]//button/text()"
+  LINK_HREF_XPATH   = "//*[contains(@class,'quoted-object')][not(section)]//a/@href"
   CONTENT_XPATH     = "//section[@class='ui feed']//div[@class='content']"
 
   context "when not cached" do
@@ -121,6 +122,10 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
     context "but object is deleted" do
       before_each { quote.delete! }
 
+      it "renders the turbo-frame" do
+        expect(subject.xpath_nodes("//turbo-frame/@id").map(&.text)).to contain_exactly("quote-#{object.id}")
+      end
+
       it "renders 'This post is deleted!' message" do
         expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("This post is deleted!")
       end
@@ -136,6 +141,10 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
 
     context "but object is blocked" do
       before_each { quote.block! }
+
+      it "renders the turbo-frame" do
+        expect(subject.xpath_nodes("//turbo-frame/@id").map(&.text)).to contain_exactly("quote-#{object.id}")
+      end
 
       it "renders 'This post is blocked!' message" do
         expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("This post is blocked!")
@@ -188,6 +197,18 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
           it "scopes the turbo-frame attribute values" do
             expect(subject.xpath_nodes("//turbo-frame/@id | //form/@data-turbo-frame").map(&.text))
               .to eq(["feed-1-quote-#{object.id}", "feed-1-quote-#{object.id}"])
+          end
+        end
+
+        context "and verification failed" do
+          let(error_message) { "Failed to fetch authorization." }
+
+          it "renders the error message" do
+            expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("Failed to fetch authorization.")
+          end
+
+          it "renders a verify button" do
+            expect(subject.xpath_nodes(BUTTON_TEXT_XPATH)).to contain_exactly("Verify quote")
           end
         end
       end
@@ -278,6 +299,10 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
   context "dereference failed" do
     let(failed) { true }
 
+    it "renders the turbo-frame" do
+      expect(subject.xpath_nodes("//turbo-frame/@id").map(&.text)).to contain_exactly("quote-#{object.id}")
+    end
+
     it "renders 'Failed to load!' message" do
       expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("Failed to load!")
     end
@@ -286,8 +311,26 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
       expect(subject.xpath_nodes(CONTENT_XPATH)).to be_empty
     end
 
-    it "does not render buttons" do
-      expect(subject.xpath_nodes(BUTTON_TEXT_XPATH)).to be_empty
+    it "renders retry button" do
+      expect(subject.xpath_nodes(BUTTON_TEXT_XPATH)).to contain_exactly("Try again")
+    end
+
+    it "renders turbo-frame target" do
+      expect(subject.xpath_nodes("//form[@data-turbo-frame='quote-#{object.id}']")).not_to be_empty
+    end
+
+    it "does not render link to the quoted post" do
+      expect(subject.xpath_nodes(LINK_HREF_XPATH)).to be_empty
+    end
+
+    context "and the content contains a link to the quoted post" do
+      before_each do
+        object.assign(content: %q|<p class="quote-inline">RE: <a href="https://remote/@user/123">link</a></p>|).save
+      end
+
+      it "renders link to the quoted post" do
+        expect(subject.xpath_nodes(LINK_HREF_XPATH).map(&.text)).to contain_exactly("https://remote/@user/123")
+      end
     end
   end
 end

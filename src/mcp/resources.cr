@@ -1,4 +1,5 @@
 require "./errors"
+require "../ktistec/constants"
 require "../utils/json_rpc"
 require "../utils/paths"
 require "../models/account"
@@ -267,7 +268,7 @@ module MCP
       embedded_urls = [] of String
       if content && object.attachments
         begin
-          html_doc = XML.parse_html(content)
+          html_doc = XML.parse_html(content, Ktistec::Constants::HTML_PARSER_OPTIONS)
           embedded_urls = html_doc.xpath_nodes("//img/@src").map(&.text)
         rescue
           # continue without filtering attachments

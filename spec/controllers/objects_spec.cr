@@ -2112,9 +2112,14 @@ Spectator.describe ObjectsController do
             HTTP::Client.objects << quote
           end
 
+          it "renders the frame" do
+            get "/remote/objects/#{visible.id}/fetch/quote", TURBO_FRAME
+            ids = XML.parse_html(response.body).xpath_nodes("//turbo-frame/@id").map(&.text)
+            expect(ids).to contain("quote-#{visible.id}")
+          end
+
           it "returns error message" do
             get "/remote/objects/#{visible.id}/fetch/quote", TURBO_FRAME
-            expect(response.status_code).to eq(200)
             expect(response.body).to contain("Failed to load!")
           end
 

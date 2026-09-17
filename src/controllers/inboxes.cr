@@ -269,14 +269,6 @@ class InboxesController
       gone
     end
 
-    # the identity that signs the requests made while verifying and
-    # dereferencing this activity. the account named in the path when
-    # there is one, otherwise an arbitrary local account.
-
-    unless (fetch_identity = account.try(&.actor) || Account.all.first?.try(&.actor))
-      service_unavailable
-    end
-
     cap_request_body env, MAX_INBOX_REQUEST_BYTES
 
     unless (body = env.request.body.try(&.gets_to_end).presence)
@@ -332,6 +324,19 @@ class InboxesController
       ok
     end
 
+    # the identity that signs the requests made while verifying and
+    # dereferencing this activity. the account named in the path when
+    # there is one. otherwise the account the activity implicates by
+    # its type, and failing that, an arbitrary local account.
+
+    accounts = Account.all
+
+    implicated = accounts.find { |candidate| Ktistec::Recipients.semantic_recipient?(activity, candidate.actor) }
+
+    unless (fetch_identity = account.try(&.actor) || implicated.try(&.actor) || accounts.first?.try(&.actor))
+      service_unavailable
+    end
+
     # 1) resolve the keyId from the Signature header to the signer and
     # its verification key. 2) verify the signature against the raw
     # body. 3a) a relayed Delete is authenticated by the relaying
@@ -357,8 +362,13 @@ class InboxesController
       signer_iri, resolved_key = resolved
       candidate = find_or_dereference_actor(fetch_identity, signer_iri, request_id, transient, deadline, require_key: resolved_key.nil?)
       key_pair = resolved_key || candidate
-      if candidate && key_pair && Ktistec::Signature.verify?(key_pair, "#{host}#{env.request.path}", env.request.headers, body)
-        signer = candidate
+      if candidate && key_pair
+        begin
+          Ktistec::Signature.verify(key_pair, "#{host}#{env.request.path}", env.request.headers, body)
+          signer = candidate
+        rescue ex : Ktistec::Signature::Error | OpenSSL::Error
+          Log.trace { "[#{request_id}] signature verification failed: #{ex.message}" }
+        end
       else
         Log.trace { "[#{request_id}] signature verification failed" }
       end

@@ -3,6 +3,7 @@ require "uri"
 require "xml"
 
 require "../framework/util"
+require "../ktistec/constants"
 
 module Ktistec::RSS
   # Generates an RSS feed from an array of objects.
@@ -23,15 +24,7 @@ module Ktistec::RSS
         author = object.attributed_to
         title =
           if (raw_title = object.name.presence || object.content.presence)
-            stripped = XML.parse_html(
-              raw_title,
-              XML::HTMLParserOptions::RECOVER |
-              XML::HTMLParserOptions::NODEFDTD |
-              XML::HTMLParserOptions::NOIMPLIED |
-              XML::HTMLParserOptions::NOERROR |
-              XML::HTMLParserOptions::NOWARNING |
-              XML::HTMLParserOptions::NONET,
-            ).xpath_string("string()")
+            stripped = XML.parse_html(raw_title, Ktistec::Constants::HTML_PARSER_OPTIONS).xpath_string("string()")
             stripped.size > 50 ? "#{stripped[0...50]}…" : stripped
           else
             Ktistec::Util.render_as_text("Post by #{author.name}").strip

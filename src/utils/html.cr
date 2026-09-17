@@ -4,6 +4,7 @@ require "libxml_ext"
 
 require "./web_finger"
 require "../framework/util"
+require "../ktistec/constants"
 
 require "../models/activity_pub/actor"
 require "../models/activity_pub/object"
@@ -29,14 +30,7 @@ module Ktistec
     #
     def enhance(content)
       return Enhancements.new if content.nil? || content.empty?
-      xml = XML.parse_html("<div>#{content}</div>",
-        XML::HTMLParserOptions::RECOVER |
-        XML::HTMLParserOptions::NODEFDTD |
-        XML::HTMLParserOptions::NOIMPLIED |
-        XML::HTMLParserOptions::NOERROR |
-        XML::HTMLParserOptions::NOWARNING |
-        XML::HTMLParserOptions::NONET,
-      )
+      xml = XML.parse_html("<div>#{content}</div>", Ktistec::Constants::HTML_PARSER_OPTIONS)
       Enhancements.new.tap do |enhancements|
         xml.xpath_nodes("//figure").each do |figure|
           figure.xpath_nodes(".//img").each do |image|

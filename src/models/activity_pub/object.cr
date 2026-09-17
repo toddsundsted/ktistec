@@ -437,6 +437,15 @@ module ActivityPub
       Ktistec::SafeURI.from?(urls.try(&.first?) || iri)
     end
 
+    # Returns the address of the quoted post in the content, for
+    # display.
+    #
+    def quote_display_link : Ktistec::SafeURI?
+      if (href = Ktistec::Util.quote_inline_href?(content))
+        Ktistec::SafeURI.from?(href)
+      end
+    end
+
     def display_date(timezone = nil)
       date(timezone).to_s("%l:%M%p · %b %-d, %Y").lstrip(' ')
     end

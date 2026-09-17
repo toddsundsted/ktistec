@@ -7,8 +7,6 @@ module Ktistec
   module Signature
     extend self
 
-    Log = ::Log.for(self)
-
     class Error < Exception
     end
 
@@ -61,8 +59,8 @@ module Ktistec
         raise Error.new("missing signature")
       end
       parameters = signature.split(",", remove_empty: true).reduce({} of String => String) do |a, h|
-        k, v = h.split("=", 2)
-        a[k] = v.delete('"')
+        k, separator, v = h.partition("=")
+        a[k] = v.delete('"') unless separator.empty?
         a
       end
       unless (parameters.keys.sort! & ["signature", "headers"]).size == 2
@@ -100,9 +98,15 @@ module Ktistec
           when "(request-target)"
             "#{header}: #{method} #{url.path}"
           when "(created)"
-            "#{header}: #{parameters["created"]}"
+            unless (created = parameters["created"]?)
+              raise Error.new("created parameter must be specified")
+            end
+            "#{header}: #{created}"
           when "(expires)"
-            "#{header}: #{parameters["expires"]}"
+            unless (expires = parameters["expires"]?)
+              raise Error.new("expires parameter must be specified")
+            end
+            "#{header}: #{expires}"
           when "host"
             # the host comes from the URL, not the request
             "#{header}: #{url.authority}"
@@ -113,25 +117,40 @@ module Ktistec
             "#{header}: #{values.map(&.strip).join(", ")}"
           end
         end.join("\n")
+      decoded =
+        begin
+          Base64.decode(parameters["signature"])
+        rescue Base64::Error
+          raise Error.new("malformed signature")
+        end
       key = key_pair.public_key
-      unless key.try(&.verify(OpenSSL::Digest.new("SHA256"), Base64.decode(parameters["signature"]), signature_string))
+      unless key.try(&.verify(OpenSSL::Digest.new("SHA256"), decoded, signature_string))
         raise Error.new("invalid signature: signed by keyId=#{parameters["keyId"]}")
       end
       # five minutes of leeway for clock skew
       if "(created)".in?(split_headers_string)
-        created = Time.unix(Int64.new(parameters["created"]))
-        unless created < 5.minutes.from_now
+        unless (seconds = parameters["created"].to_i64?)
+          raise Error.new("created parameter must be an integer")
+        end
+        unless seconds < 5.minutes.from_now.to_unix
           raise Error.new("received before creation date")
         end
       end
       if "(expires)".in?(split_headers_string)
-        expires = Time.unix(Int64.new(parameters["expires"]))
-        unless expires > 5.minutes.ago
+        unless (seconds = parameters["expires"].to_i64?)
+          raise Error.new("expires parameter must be an integer")
+        end
+        unless seconds > 5.minutes.ago.to_unix
           raise Error.new("received after expiration date")
         end
       end
       if "date".in?(split_headers_string)
-        date = Time::Format::HTTP_DATE.parse(headers["Date"])
+        date =
+          begin
+            Time::Format::HTTP_DATE.parse(headers["Date"])
+          rescue Time::Format::Error
+            raise Error.new("date header is malformed")
+          end
         unless date > 5.minutes.ago && date < 5.minutes.from_now
           raise Error.new("date out of range")
         end
@@ -143,13 +162,6 @@ module Ktistec
         end
       end
       true
-    end
-
-    def verify?(key_pair, url, headers, *args, **opts)
-      verify(key_pair, url, headers, *args, **opts)
-    rescue ex : Error | OpenSSL::Error
-      Log.debug { "verification failed: #{ex.message}" }
-      false
     end
   end
 end

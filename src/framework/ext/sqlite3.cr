@@ -2,6 +2,8 @@ require "json"
 require "xml"
 require "sqlite3"
 
+require "../../ktistec/constants"
+
 module DB
   abstract class Statement
     protected def emit_log(args : Enumerable)
@@ -55,14 +57,7 @@ module Ktistec
       txt = LibSQLite3.value_text(argv[0])
       str = String.new(txt)
       unless str.blank?
-        str = XML.parse_html(str,
-          XML::HTMLParserOptions::RECOVER |
-          XML::HTMLParserOptions::NODEFDTD |
-          XML::HTMLParserOptions::NOIMPLIED |
-          XML::HTMLParserOptions::NOERROR |
-          XML::HTMLParserOptions::NOWARNING |
-          XML::HTMLParserOptions::NONET,
-        ).xpath_string("string()")
+        str = XML.parse_html(str, Ktistec::Constants::HTML_PARSER_OPTIONS).xpath_string("string()")
       end
       LibSQLite3.result_text(context, str, str.bytesize, TRANSIENT)
       nil

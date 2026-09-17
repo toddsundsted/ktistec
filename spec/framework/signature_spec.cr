@@ -53,7 +53,7 @@ Spectator.describe Ktistec::Signature do
     context "with hs2019" do
       let(algorithm) { "hs2019" }
 
-      it "sets the algorithm signature parameter to 'rsa-sha256'" do
+      it "sets the algorithm signature parameter to 'hs2019'" do
         expect(signature).to have(%q<algorithm="hs2019">)
       end
 
@@ -100,10 +100,21 @@ Spectator.describe Ktistec::Signature do
         .to raise_error(Ktistec::Signature::Error, "malformed signature")
     end
 
+    it "ignores a signature header parameter without a '='" do
+      headers["Signature"] = headers["Signature"] + ",garbage"
+      expect(described_class.verify(key_pair, "https://remote/inbox", headers, "body")).to be_true
+    end
+
     it "raises an error if the signing keys don't match" do
       key_pair.public_key = OpenSSL::RSA.new("-----BEGIN PUBLIC KEY-----\nMFowDQYJKoZIhvcNAQEBBQADSQAwRgJBAJw6kBEQGSgQVt+T5/8Tq+8235TDi4wx\nziJ107KaI578uAIDoYg6U2ULSpfY4/lUnNH2W9hp6tPMTljY967+PacCARE=\n-----END PUBLIC KEY-----\n", false)
       expect { described_class.verify(key_pair, "https://remote/inbox", headers) }
         .to raise_error(Ktistec::Signature::Error, /invalid signature/)
+    end
+
+    it "raises an error if the signature is not base64" do
+      headers["Signature"] = headers["Signature"].gsub(/signature="[^"]*"/, %q<signature="!!!">)
+      expect { described_class.verify(key_pair, "https://remote/inbox", headers, "body") }
+        .to raise_error(Ktistec::Signature::Error, "malformed signature")
     end
 
     it "raises an error if the host header isn't signed" do
@@ -159,25 +170,37 @@ Spectator.describe Ktistec::Signature do
     context "with hs2019" do
       let(headers) { described_class.sign(key_pair, "https://remote/inbox", algorithm: "hs2019", body: "") }
 
-      it "raises an error if the (created) header doesn't match" do
+      it "raises an error if the created parameter is missing" do
+        headers["Signature"] = headers["Signature"].gsub(/created=[0-9]+,/, "")
+        expect { described_class.verify(key_pair, "https://remote/inbox", headers, "") }
+          .to raise_error(Ktistec::Signature::Error, "created parameter must be specified")
+      end
+
+      it "raises an error if the expires parameter is missing" do
+        headers["Signature"] = headers["Signature"].gsub(/expires=[0-9]+,/, "")
+        expect { described_class.verify(key_pair, "https://remote/inbox", headers, "") }
+          .to raise_error(Ktistec::Signature::Error, "expires parameter must be specified")
+      end
+
+      it "raises an error if the created parameter doesn't match" do
         headers["Signature"] = headers["Signature"].gsub(/created=[0-9]+/, "created=BAD DATE")
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, "") }
           .to raise_error(Ktistec::Signature::Error, /invalid signature/)
       end
 
-      it "raises an error if the (expires) header doesn't match" do
+      it "raises an error if the expires parameter doesn't match" do
         headers["Signature"] = headers["Signature"].gsub(/expires=[0-9]+/, "expires=BAD DATE")
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, "") }
           .to raise_error(Ktistec::Signature::Error, /invalid signature/)
       end
 
-      it "raises an error if date is out of range" do
+      it "raises an error if the creation date is in the future" do
         headers = described_class.sign(key_pair, "https://remote/inbox", algorithm: "hs2019", time: 10.minutes.from_now, method: :get)
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, method: :get) }
           .to raise_error(Ktistec::Signature::Error, "received before creation date")
       end
 
-      it "raises an error if date is out of range" do
+      it "raises an error if the expiration date is in the past" do
         headers = described_class.sign(key_pair, "https://remote/inbox", algorithm: "hs2019", time: 1.hour.ago, method: :get)
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, method: :get) }
           .to raise_error(Ktistec::Signature::Error, "received after expiration date")
@@ -209,13 +232,13 @@ Spectator.describe Ktistec::Signature do
           .to raise_error(Ktistec::Signature::Error, /invalid signature/)
       end
 
-      it "raises an error if date is out of range" do
+      it "raises an error if the date is in the future" do
         headers = described_class.sign(key_pair, "https://remote/inbox", algorithm: "rsa-sha256", time: 10.minutes.from_now, method: :get)
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, method: :get) }
           .to raise_error(Ktistec::Signature::Error, "date out of range")
       end
 
-      it "raises an error if date is out of range" do
+      it "raises an error if the date is in the past" do
         headers = described_class.sign(key_pair, "https://remote/inbox", algorithm: "rsa-sha256", time: 1.hour.ago, method: :get)
         expect { described_class.verify(key_pair, "https://remote/inbox", headers, method: :get) }
           .to raise_error(Ktistec::Signature::Error, "date out of range")
@@ -269,13 +292,17 @@ Spectator.describe Ktistec::Signature do
 
     # signs a request over an explicit list of headers, trimming and
     # joining repeated values per draft-cavage-http-signatures 2.3
-    private def sign(headers, url, signed)
+    private def sign(headers, url, signed, created = nil, expires = nil)
       uri = URI.parse(url).normalize
       signature_string =
         signed.map do |header|
           case header
           when "(request-target)"
             "#{header}: post #{uri.path}"
+          when "(created)"
+            "#{header}: #{created}"
+          when "(expires)"
+            "#{header}: #{expires}"
           when "host"
             "#{header}: #{uri.authority}"
           else
@@ -283,9 +310,53 @@ Spectator.describe Ktistec::Signature do
           end
         end.join("\n")
       signature = Base64.strict_encode(key_pair.private_key.sign(OpenSSL::Digest.new("SHA256"), signature_string))
+      parameters = %Q<keyId="#{key_pair.iri}#main-key">
+      parameters += created ? %Q<,algorithm="hs2019",created=#{created}> : %Q<,algorithm="rsa-sha256">
+      parameters += expires ? %Q<,expires=#{expires}> : ""
       headers["Signature"] =
-        %Q<keyId="#{key_pair.iri}#main-key",algorithm="rsa-sha256",headers="#{signed.join(" ")}",signature="#{signature}">
+        %Q<#{parameters},headers="#{signed.join(" ")}",signature="#{signature}">
       headers
+    end
+
+    context "given a signature covering a timestamp that isn't valid" do
+      let(body) { "body" }
+
+      let(headers) do
+        HTTP::Headers{
+          "Date"   => "BAD DATE",
+          "Digest" => "SHA-256=" + Base64.strict_encode(OpenSSL::Digest.new("SHA256").update(body).final),
+        }
+      end
+
+      it "raises an error if the date header can't be parsed" do
+        sign(headers, "https://remote/inbox", ["(request-target)", "host", "date", "digest"])
+        expect { described_class.verify(key_pair, "https://remote/inbox", headers, body) }
+          .to raise_error(Ktistec::Signature::Error, "date header is malformed")
+      end
+
+      it "raises an error if the created parameter isn't an integer" do
+        sign(headers, "https://remote/inbox", ["(request-target)", "(created)", "host", "digest"], created: "BAD DATE")
+        expect { described_class.verify(key_pair, "https://remote/inbox", headers, body) }
+          .to raise_error(Ktistec::Signature::Error, "created parameter must be an integer")
+      end
+
+      it "raises an error if the expires parameter isn't an integer" do
+        sign(headers, "https://remote/inbox", ["(request-target)", "(created)", "(expires)", "host", "digest"], created: "1", expires: "BAD DATE")
+        expect { described_class.verify(key_pair, "https://remote/inbox", headers, body) }
+          .to raise_error(Ktistec::Signature::Error, "expires parameter must be an integer")
+      end
+
+      it "raises an error if the created parameter is too large to be a time" do
+        sign(headers, "https://remote/inbox", ["(request-target)", "(created)", "host", "digest"], created: Int64::MAX.to_s)
+        expect { described_class.verify(key_pair, "https://remote/inbox", headers, body) }
+          .to raise_error(Ktistec::Signature::Error, "received before creation date")
+      end
+
+      it "raises an error if the expires parameter is too small to be a time" do
+        sign(headers, "https://remote/inbox", ["(request-target)", "(created)", "(expires)", "host", "digest"], created: "1", expires: Int64::MIN.to_s)
+        expect { described_class.verify(key_pair, "https://remote/inbox", headers, body) }
+          .to raise_error(Ktistec::Signature::Error, "received after expiration date")
+      end
     end
 
     context "given a signature covering an arbitrary header" do

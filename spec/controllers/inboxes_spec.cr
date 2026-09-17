@@ -67,9 +67,9 @@ Spectator.describe InboxesController do
     # actor with keys is cached
     let_create(:actor, named: :other, with_keys: true)
 
-    let_build(:create, actor: other)
+    let_build(:create, named: :activity, actor: other)
 
-    let(json_ld) { create.to_json_ld(true) }
+    let(json_ld) { activity.to_json_ld(true) }
 
     let(headers) { Ktistec::Signature.sign(other, "https://test.test/inbox", json_ld, "application/json") }
 
@@ -81,6 +81,8 @@ Spectator.describe InboxesController do
     context "given an account" do
       let!(actor) { register.actor }
 
+      let!(second_account) { register.actor }
+
       it "is successful" do
         post "/inbox", headers, json_ld
         expect(response.status_code).to eq(200)
@@ -88,7 +90,7 @@ Spectator.describe InboxesController do
 
       it "saves the activity" do
         expect { post "/inbox", headers, json_ld }
-          .to change { ActivityPub::Activity.count(iri: create.iri) }.by(1)
+          .to change { ActivityPub::Activity.count(iri: activity.iri) }.by(1)
       end
 
       it "does not put the activity in an inbox" do
@@ -99,23 +101,40 @@ Spectator.describe InboxesController do
       context "and the activity is unsigned" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
-        before_each { HTTP::Client.activities << create }
+        before_each { HTTP::Client.activities << activity }
+
+        let(retrieval) { HTTP::Client.requests.find! { |request| request.resource == activity.iri } }
 
         it "retrieves the activity from the origin" do
           post "/inbox", headers, json_ld
-          expect(HTTP::Client.requests).to have("GET #{create.iri}")
+          expect(HTTP::Client.requests).to have("GET #{activity.iri}")
         end
 
         it "signs the retrieval with the local account" do
           post "/inbox", headers, json_ld
-          expect(HTTP::Client.last?.not_nil!.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
+          expect(retrieval.headers["Signature"]).to contain(%Q|keyId="#{actor.iri}#main-key"|)
+        end
+
+        # `Ktistec::Recipients.semantic_recipient?` decides which account
+        # an activity implicates, and that varies by type. an accept is
+        # the example used here.
+
+        context "and the activity implicates a local account" do
+          let!(follower) { register.actor }
+
+          let_create!(:follow, actor: follower, object: other)
+
+          let_build(:accept, named: :activity, actor: other, object: follow)
+
+          it "signs the retrieval with the implicated account" do
+            post "/inbox", headers, json_ld
+            expect(retrieval.headers["Signature"]).to contain(%Q|keyId="#{follower.iri}#main-key"|)
+          end
         end
       end
 
-      let!(second_account) { register.actor }
-
       context "and the activity addresses the account" do
-        before_each { create.to = [actor.iri] }
+        before_each { activity.to = [actor.iri] }
 
         it "puts the activity in the first account's inbox" do
           expect { post "/inbox", headers, json_ld }
@@ -129,7 +148,7 @@ Spectator.describe InboxesController do
       end
 
       context "and the activity addresses both accounts" do
-        before_each { create.to = [actor.iri, second_account.iri] }
+        before_each { activity.to = [actor.iri, second_account.iri] }
 
         it "puts the activity in the first account's inbox" do
           expect { post "/inbox", headers, json_ld }
@@ -148,9 +167,7 @@ Spectator.describe InboxesController do
         let_create!(:follow, actor: other, object: terminated.actor)
         let_create!(:follow_relationship, actor: other, object: terminated.actor)
 
-        let_build(:undo, actor: other, object: follow)
-
-        let(json_ld) { undo.to_json_ld(true) }
+        let_build(:undo, named: :activity, actor: other, object: follow)
 
         before_each do
           terminated.actor.delete!

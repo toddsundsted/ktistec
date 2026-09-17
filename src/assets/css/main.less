@@ -1013,6 +1013,12 @@ a > img.emoji {
 /** quoted object **/
 .ui.segment.quoted-object {
     display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    > form {
+        display: contents;
+    }
 }
 
 .ui.feed .event.has-quote .content .quote-inline {

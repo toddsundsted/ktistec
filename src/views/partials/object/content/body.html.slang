@@ -8,7 +8,7 @@ crystal:
   end
   if (attachments = object.attachments.dup)  # don't modify the object
     if html
-      urls = XML.parse_html(html).xpath_nodes("//img/@src").map(&.text)
+      urls = XML.parse_html(html, Ktistec::Constants::HTML_PARSER_OPTIONS).xpath_nodes("//img/@src").map(&.text)
       attachments.reject!(&.url.in?(urls))
     end
   end

@@ -199,6 +199,18 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
               .to eq(["feed-1-quote-#{object.id}", "feed-1-quote-#{object.id}"])
           end
         end
+
+        context "and verification failed" do
+          let(error_message) { "Failed to fetch authorization." }
+
+          it "renders the error message" do
+            expect(subject.xpath_nodes(MESSAGE_TEXT_PATH)).to contain_exactly("Failed to fetch authorization.")
+          end
+
+          it "renders a verify button" do
+            expect(subject.xpath_nodes(BUTTON_TEXT_XPATH)).to contain_exactly("Verify quote")
+          end
+        end
       end
 
       context "and the quote authorization is cached" do

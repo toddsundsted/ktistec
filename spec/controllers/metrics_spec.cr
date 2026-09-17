@@ -178,6 +178,12 @@ Spectator.describe MetricsController do
         expect(XML.parse_html(response.body).xpath_nodes("//canvas[@id='charts-1']")).not_to be_empty
       end
 
+      it "renders chart options" do
+        get "/metrics?begin=", ACCEPT_HTML
+        options = XML.parse_html(response.body).xpath_nodes("//canvas/script[@data-chart-target='options']").map { |node| JSON.parse(node.text) }
+        expect(options.map(&.dig("maintainAspectRatio").as_bool)).to eq([false, false])
+      end
+
       it "renders metrics labels" do
         get "/metrics?begin=", ACCEPT_HTML
         labels = JSON.parse(XML.parse_html(response.body).xpath_nodes("//script[@id='chart-labels-1']").first.text).as_a

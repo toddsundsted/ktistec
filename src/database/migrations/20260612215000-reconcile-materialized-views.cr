@@ -4,6 +4,7 @@ require "../../utils/database/reconcile_materialized_views"
 extend Ktistec::Database::Migration
 
 up do |db|
+  db.exec("ANALYZE")
   Ktistec::Database::ReconcileMaterializedViews.run(db)
 end
 

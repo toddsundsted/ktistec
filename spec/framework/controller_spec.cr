@@ -21,7 +21,7 @@ class FooBarController
       ok "html"
     elsif accepts?("text/plain")
       ok "text"
-    elsif accepts?("application/ld+json", "application/activity+json", "application/json")
+    elsif accepts_json?
       ok "json"
     end
   end

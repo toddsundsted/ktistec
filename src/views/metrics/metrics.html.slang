@@ -11,6 +11,10 @@ crystal:
     "#B77EA3",
     "#E64345"
   ].each.cycle
+  options = {
+    maintainAspectRatio: false,
+    responsive: true,
+  }
 crystal:
   datasets = charts.select(&.name.starts_with?(/inbox-|outbox-/)).map do |chart|
     {
@@ -23,11 +27,14 @@ crystal:
       spanGaps: false
     }
   end
-canvas#charts-1 data-controller="chart"
-  script#chart-labels-1 type="application/json" data-chart-target="labels"
-    = Ktistec::SafeJSON.from(labels)
-  script#chart-datasets-1 type="application/json" data-chart-target="datasets"
-    = Ktistec::SafeJSON.from(datasets)
+.metrics-chart
+  canvas#charts-1 data-controller="chart"
+    script#chart-labels-1 type="application/json" data-chart-target="labels"
+      = Ktistec::SafeJSON.from(labels)
+    script#chart-datasets-1 type="application/json" data-chart-target="datasets"
+      = Ktistec::SafeJSON.from(datasets)
+    script type="application/json" data-chart-target="options"
+      = Ktistec::SafeJSON.from(options)
 crystal:
   datasets = charts.select(&.name.starts_with?(/heap-|free-|sqlite-/)).map do |chart|
     {
@@ -52,11 +59,14 @@ crystal:
       hidden: false
     }
   end
-canvas#charts-2 data-controller="chart"
-  script#chart-labels-2 type="application/json" data-chart-target="labels"
-    = Ktistec::SafeJSON.from(labels)
-  script#chart-datasets-2 type="application/json" data-chart-target="datasets"
-    = Ktistec::SafeJSON.from(datasets)
+.metrics-chart
+  canvas#charts-2 data-controller="chart"
+    script#chart-labels-2 type="application/json" data-chart-target="labels"
+      = Ktistec::SafeJSON.from(labels)
+    script#chart-datasets-2 type="application/json" data-chart-target="datasets"
+      = Ktistec::SafeJSON.from(datasets)
+    script type="application/json" data-chart-target="options"
+      = Ktistec::SafeJSON.from(options)
 crystal:
   ranges = {
     1.day.ago.to_s("%Y-%m-%d") => "Last 24 Hours",
@@ -72,8 +82,9 @@ crystal:
     "weekly" => "By Week",
     "monthly" => "By Month",
   }
-= form_tag(nil, "/metrics", method: "GET", class: "ui mini form") do
-  .two.fields
-    = select_tag("Range", nil, :begin, ranges, range.first.try(&.to_s("%Y-%m-%d")))
-    = select_tag("Granularity", nil, :granularity, granularities, granularity.to_s.split("::").last.downcase)
-  = submit_button("Update", class: "ui mini primary button")
+.ui.text.container
+  = form_tag(nil, "/metrics", method: "GET", class: "ui mini form") do
+    .two.fields
+      = select_tag("Range", nil, :begin, ranges, range.first.try(&.to_s("%Y-%m-%d")))
+      = select_tag("Granularity", nil, :granularity, granularities, granularity.to_s.split("::").last.downcase)
+    = submit_button("Update", class: "ui mini primary button")

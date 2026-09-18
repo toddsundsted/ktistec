@@ -25,17 +25,32 @@
     - [Tasks](#tasks)
     - [Scripts](#scripts)
   - [Theming](#theming)
+    - [Level 1 - Base Colors](#level-1---base-colors)
+    - [Level 2 - Full Control](#level-2---full-control)
+    - [CSS Classes and Data Attributes](#css-classes-and-data-attributes)
+    - [Custom Themes](#custom-themes)
+    - [Light/Dark Mode Support](#lightdark-mode-support)
   - [API](#api)
+    - [Initial Server Configuration](#initial-server-configuration)
+    - [Admin Account Management](#admin-account-management)
+    - [Account Settings](#account-settings)
     - [A Note on ActivityPub](#a-note-on-activitypub)
     - [Publishing an Object](#publishing-an-object)
     - [Sharing an Object (ActivityPub `Announce`)](#sharing-an-object-activitypub-announce)
     - [Liking an Object](#liking-an-object)
-    - [Quoting an Object (FEP-044f)](#quoting-an-object-fep-044f)
+    - [Disliking an Object](#disliking-an-object)
+    - [Quoting an Object](#quoting-an-object)
     - [Following an Actor](#following-an-actor)
     - [Undoing an Activity](#undoing-an-activity)
+    - [Feed Management](#feed-management)
     - [Deleting](#deleting)
   - [MCP Support](#mcp-support)
     - [OAuth](#oauth)
+    - [Prompts](#prompts)
+    - [Resources](#resources)
+    - [Tools](#tools)
+    - [Supported Collections](#supported-collections)
+    - [Compatibility](#compatibility)
   - [Prerequisites](#prerequisites)
   - [Building](#building)
     - [Crystal Compatibility](#crystal-compatibility)
@@ -508,24 +523,32 @@ The table below contains a list of supported endpoints:
 
 | Method | Path | Notes |
 |-|-|-|
-| GET    | /actors/:username/inbox     | Retrieves a page of `activities` in your inbox as an ActivityPub collection. |
-| GET    | /actors/:username/outbox    | Retrieves a page of `activities` in your outbox as an ActivityPub collection. |
-| POST   | /actors/:username/outbox    | Puts an `activity` in your outbox for delivery. |
-| POST   | /remote/objects/:id/quote   | Creates a quote post referencing the object (by database ID). Implements FEP-044f consent. |
-| GET    | /actors/:username/posts     | Retrieves a page of `objects` you've published. |
-| GET    | /actors/:username/drafts    | Retrieves a page of `objects` you've saved as drafts. |
-| GET    | /actors/:username/followers | Retrieves a page of `actors` following you. |
-| GET    | /actors/:username/following | Retrieves a page of `actors` you're following. |
-| GET    | /admin/accounts             | Retrieves all user accounts. |
-| GET    | /admin/accounts/new         | Gets a representation of an account. |
-| POST   | /admin/accounts             | Creates a new user account. |
-| POST   | /settings/actor             | Updates account settings for the authenticated user. |
-| GET    | /lookup/activity?iri=:iri   | Looks up the `activity` in the server cache identified by `iri`. |
-| GET    | /lookup/actor?iri=:iri      | Looks up the `actor` in the server cache identified by `iri`. |
-| GET    | /lookup/object?iri=:iri     | Looks up the `object` in the server cache identified by `iri`. |
-| GET    | /sessions                   | Gets a representation of an authentication attempt with unset `username` and `password`. |
-| POST   | /sessions                   | Authenticates using the supplied `username` and `password`. |
-| DELETE | /sessions                   | Destroys the current session. |
+| GET    | /actors/:username/inbox          | Retrieves a page of `activities` in your inbox as an ActivityPub collection. |
+| GET    | /actors/:username/outbox         | Retrieves a page of `activities` in your outbox as an ActivityPub collection. |
+| POST   | /actors/:username/outbox         | Puts an `activity` in your outbox for delivery. |
+| POST   | /remote/objects/:id/quote        | Creates a quote post referencing the object (by database ID). |
+| GET    | /actors/:username/posts          | Retrieves a page of `objects` you've published. |
+| GET    | /actors/:username/drafts         | Retrieves a page of `objects` you've saved as drafts. |
+| GET    | /actors/:username/followers      | Retrieves a page of `actors` following you. |
+| GET    | /actors/:username/following      | Retrieves a page of `actors` you're following. |
+| GET    | /actors/:username/feeds          | Retrieves your feeds. Pass `include=drafts` to include drafts. |
+| POST   | /actors/:username/feeds          | Creates and publishes a feed. |
+| GET    | /actors/:username/feeds/:id      | Retrieves a page of `objects` in the feed as an ActivityPub collection. |
+| GET    | /actors/:username/feeds/:id/edit | Retrieves the feed's criteria. |
+| POST   | /actors/:username/feeds/:id      | Republishes the feed with new criteria. |
+| DELETE | /actors/:username/feeds/:id      | Destroys the feed. |
+| GET    | /admin/accounts                  | Retrieves all user accounts. |
+| GET    | /admin/accounts/new              | Gets a representation of an account. |
+| POST   | /admin/accounts                  | Creates a new user account. |
+| POST   | /settings/actor                  | Updates account settings for the authenticated user. |
+| GET    | /lookup/activity?iri=:iri        | Looks up the `activity` in the server cache identified by `iri`. |
+| GET    | /lookup/actor?iri=:iri           | Looks up the `actor` in the server cache identified by `iri`. |
+| GET    | /lookup/object?iri=:iri          | Looks up the `object` in the server cache identified by `iri`. |
+| GET    | /sessions                        | Gets a representation of an authentication attempt with unset `username` and `password`. |
+| POST   | /sessions                        | Authenticates using the supplied `username` and `password`. |
+| DELETE | /sessions                        | Destroys the current session. |
+
+`Content-Type: application/json` is required on every request.
 
 The `/sessions` endpoint is useful when doing script development
 outside of the server environment.  The scripts the Ktistec server
@@ -787,7 +810,7 @@ curl -s \
   "$KTISTEC_HOST/actors/$USERNAME/outbox"
 ```
 
-### Quoting an Object (FEP-044f)
+### Quoting an Object
 
 To create a quote post that references another post, `POST` a JSON
 request to the quote endpoint. Unlike the outbox endpoint, quotes use
@@ -875,6 +898,58 @@ curl -s \
   -H "Content-Type: application/json" \
   -d '{"type":"Undo","object":"https://example.com/activities/123"}' \
   "$KTISTEC_HOST/actors/$USERNAME/outbox"
+```
+
+### Feed Management
+
+A feed collects posts that match its criteria. Criteria are grouped
+into three buckets -- `any`, `all`, and `none` -- each a
+newline-separated list of terms. A term beginning with `#` is a
+hashtag, a term beginning with `@` is a mention, and any other term is
+a keyword.
+
+| Name        | Notes |
+|-|-|
+| name        | The feed's name.  The feed's slug is derived from it. |
+| description | Optional. A plain text description of the feed. |
+| any         | Optional. Terms, at least one of which must match. |
+| all         | Optional. Terms, all of which must match. |
+| none        | Optional. Terms, none of which may match. |
+
+Example:
+
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Comics","any":"#comics\n#webcomics\ngraphic novel"}' \
+  "$KTISTEC_HOST/actors/$USERNAME/feeds"
+```
+
+The `Location` header of the response holds the feed's path.
+
+A published feed is never modified. Updating a feed's criteria
+replaces it: a new feed is created and the original is destroyed.
+
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Comics","any":"#comics\n#webcomics","none":"#politics"}' \
+  "$KTISTEC_HOST/actors/$USERNAME/feeds/comics"
+```
+
+Deleting a feed destroys it. The feed and its record of which posts
+it collected are gone for good; the posts themselves are untouched.
+
+```bash
+curl -s \
+  -X DELETE \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  "$KTISTEC_HOST/actors/$USERNAME/feeds/comics"
 ```
 
 ### Deleting

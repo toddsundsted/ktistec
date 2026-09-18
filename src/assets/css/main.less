@@ -139,6 +139,25 @@ body.deck-page {
     .deck-pane > header .pane-controls { display: none; }
 }
 
+/** metrics **/
+
+.metrics {
+    width: 100%;
+    padding: 0 1rem;
+
+    > :last-child { margin-bottom: 1rem; }
+}
+
+/* chart.js sizes the canvas to this box */
+.metrics-chart {
+    position: relative;
+    height: 350px;
+}
+
+@media only screen and (max-width: 767.98px) {
+    .metrics { padding: 0 0.5rem; }
+}
+
 /* remove visible outlines on focused menu items */
 .ui.pagination.menu a:focus, .ui.navigation.menu a:focus { outline: 0; }
 

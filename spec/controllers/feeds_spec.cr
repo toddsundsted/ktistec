@@ -1214,7 +1214,7 @@ Spectator.describe FeedsController do
 
         it "succeeds" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-          expect(response.status_code).to eq(302)
+          expect(response.status_code).to eq(201)
         end
 
         it "redirects to the index" do
@@ -1222,9 +1222,9 @@ Spectator.describe FeedsController do
           expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
         end
 
-        it "returns the index" do
+        it "returns the feed's location" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
+          expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/robotics")
         end
 
         context "and the original has contents" do
@@ -1690,7 +1690,7 @@ Spectator.describe FeedsController do
 
           it "succeeds" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-            expect(response.status_code).to eq(302)
+            expect(response.status_code).to eq(201)
           end
 
           it "redirects to the index" do
@@ -1698,9 +1698,9 @@ Spectator.describe FeedsController do
             expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
           end
 
-          it "returns the index" do
+          it "returns the feed's location" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-            expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
+            expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/robotics")
           end
 
           context "given a blank name" do
@@ -1994,7 +1994,7 @@ Spectator.describe FeedsController do
 
       it "succeeds" do
         delete "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
-        expect(response.status_code).to eq(302)
+        expect(response.status_code).to eq(204)
       end
 
       it "redirects to the index" do
@@ -2002,9 +2002,9 @@ Spectator.describe FeedsController do
         expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
       end
 
-      it "returns the index" do
+      it "does not redirect" do
         delete "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
-        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
+        expect(response.headers["Location"]?).to be_nil
       end
 
       context "given a materialized post and its verdict" do

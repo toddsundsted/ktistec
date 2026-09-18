@@ -256,7 +256,7 @@ class OutboxesController
 
     OutboxActivityProcessor.process(account, activity)
 
-    if accepts?("application/ld+json", "application/activity+json", "application/json")
+    if accepts_json?
       unless activity.is_a?(ActivityPub::Activity::Delete)
         created activity_path(activity), "activities/activity", env: env, activity: activity, recursive: true
       end

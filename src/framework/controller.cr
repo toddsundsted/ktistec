@@ -30,6 +30,10 @@ class HTTP::Server::Context
     end
   end
 
+  def accepts_json?
+    accepts?("application/ld+json", "application/activity+json", "application/json") ? true : false
+  end
+
   def accepts_turbo_stream?
     accepts?("text/vnd.turbo-stream.html") ? true : false
   end
@@ -49,6 +53,10 @@ module Ktistec
 
     macro accepts?(*mime_type)
       env.accepts?({{mime_type.splat}})
+    end
+
+    macro accepts_json?
+      env.accepts_json?
     end
 
     macro accepts_turbo_stream?

@@ -33,6 +33,9 @@
       if path.matches?(%r|^/actors/[^/]+/deck$|)
         _body_class = "dimmable deck-page"
         _content_class = "deck"
+      elsif path == "/metrics"
+        _body_class = "dimmable"
+        _content_class = "metrics"
       elsif path.starts_with?("/.design-system") || path.starts_with?("/admin/")
         _body_class = "dimmable"
         _content_class = "ui container"

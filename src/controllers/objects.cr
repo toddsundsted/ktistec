@@ -74,7 +74,7 @@ class ObjectsController
 
     object.save
 
-    if accepts?("application/ld+json", "application/activity+json", "application/json")
+    if accepts_json?
       created object_path(object), "objects/object", env: env, object: object, recursive: false
     elsif accepts_turbo_stream?
       ok "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "editor"
@@ -165,7 +165,7 @@ class ObjectsController
 
     object.save
 
-    if accepts?("application/ld+json", "application/activity+json", "application/json")
+    if accepts_json?
       ok "objects/object", env: env, object: object, recursive: false
     elsif accepts_turbo_stream?
       ok "partials/editor", env: env, object: object, _operation: "replace", _method: "morph", _target: "editor"
@@ -304,7 +304,7 @@ class ObjectsController
       Task::DeliverDelayedObject.new(actor: actor, object: object, state: state).save
     end
 
-    if accepts?("application/ld+json", "application/activity+json", "application/json")
+    if accepts_json?
       created object_path(object), "objects/object", env: env, object: object, recursive: false
     else
       redirect object_path(object)

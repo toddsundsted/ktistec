@@ -23,8 +23,7 @@ Spectator.describe "object partials" do
 
     subject do
       begin
-        body = String.build { |io| Slang.embed("src/views/partials/object/label.html.slang", io) }
-        XML.parse_html(body)
+        XML.parse_html(render "./src/views/partials/object/label.html.slang")
       rescue XML::Error
         XML.parse_html("<div/>").document
       end

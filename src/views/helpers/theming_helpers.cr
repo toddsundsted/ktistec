@@ -28,7 +28,7 @@ module Ktistec::ViewHelper
       states << "has-blocked-actor" if actor && actor != author && actor.blocked?
       states << "has-replies" if object.replies_count > 0
       states << "has-quote" if object.quote_iri
-      states << "has-media" if object.attachments.try { |a| a.size > 0 }
+      states << "has-media" unless object.display_attachments.empty?
       if (attributed_to = object.attributed_to?)
         states << "visibility-#{visibility(attributed_to, object)}"
       end

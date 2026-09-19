@@ -392,8 +392,7 @@ module API
       end
 
       private def self.build_media_attachments(object : ActivityPub::Object) : Array(MediaAttachment)
-        attachments = object.attachments || [] of ActivityPub::Object::Attachment
-        attachments.map_with_index do |attachment, index|
+        object.display_attachments.map_with_index do |attachment, index|
           media_type =
             if attachment.image?
               "image"

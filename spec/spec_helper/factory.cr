@@ -163,6 +163,10 @@ def tombstone_factory(**options)
   object_factory(ActivityPub::Object::Tombstone, **options)
 end
 
+def image_factory(**options)
+  object_factory(**options).assign(type: "ActivityPub::Object::Image")
+end
+
 # activity factories
 
 def activity_factory(clazz = ActivityPub::Activity, iri = nil, actor_iri = nil, actor = false, object_iri = nil, object = false, target_iri = nil, target = false, local = nil, **options)

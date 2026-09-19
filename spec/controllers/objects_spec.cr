@@ -425,6 +425,69 @@ Spectator.describe ObjectsController do
       expect(og_image_alt.try(&.["content"])).to eq(Ktistec.settings.site)
     end
 
+    context "when the object is image" do
+      before_each do
+        visible.assign(
+          type: "ActivityPub::Object::Image",
+          media_type: "image/jpeg",
+          urls: ["https://example.com/image"],
+          name: "An image",
+        ).save
+      end
+
+      it "uses the image object for og:image" do
+        get "/objects/#{visible.uid}", ACCEPT_HTML
+        html = XML.parse_html(response.body)
+        expect(html.xpath_node("//meta[@property='og:image']").try(&.["content"])).to eq("https://example.com/image")
+      end
+
+      it "includes og:image:type" do
+        get "/objects/#{visible.uid}", ACCEPT_HTML
+        html = XML.parse_html(response.body)
+        expect(html.xpath_node("//meta[@property='og:image:type']").try(&.["content"])).to eq("image/jpeg")
+      end
+
+      it "includes og:image:alt" do
+        get "/objects/#{visible.uid}", ACCEPT_HTML
+        html = XML.parse_html(response.body)
+        expect(html.xpath_node("//meta[@property='og:image:alt']").try(&.["content"])).to eq("An image")
+      end
+    end
+
+    context "when the object is video" do
+      before_each do
+        visible.assign(
+          type: "ActivityPub::Object::Video",
+          media_type: "video/mp4",
+          urls: ["https://example.com/video"],
+          name: "A video",
+        ).save
+      end
+
+      it "uses the fallback for og:image" do
+        get "/objects/#{visible.uid}", ACCEPT_HTML
+        html = XML.parse_html(response.body)
+        expect(html.xpath_node("//meta[@property='og:image']").try(&.["content"])).to eq("https://test.test/images/logo.png")
+      end
+    end
+
+    context "when the object is audio" do
+      before_each do
+        visible.assign(
+          type: "ActivityPub::Object::Audio",
+          media_type: "audio/mpeg",
+          urls: ["https://example.com/audio"],
+          name: "An audio",
+        ).save
+      end
+
+      it "uses the fallback for og:image" do
+        get "/objects/#{visible.uid}", ACCEPT_HTML
+        html = XML.parse_html(response.body)
+        expect(html.xpath_node("//meta[@property='og:image']").try(&.["content"])).to eq("https://test.test/images/logo.png")
+      end
+    end
+
     context "with multiple image attachments" do
       before_each do
         visible.assign(attachments: [

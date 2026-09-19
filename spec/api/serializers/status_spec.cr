@@ -389,6 +389,21 @@ Spectator.describe API::V1::Serializers::Status do
       end
     end
 
+    context "when the object is media" do
+      before_each do
+        object.assign(
+          type: "ActivityPub::Object::Image",
+          media_type: "image/jpeg",
+          urls: ["https://example.com/image"],
+          name: "An image",
+        ).save
+      end
+
+      it "presents the media object as an attachment" do
+        expect(subject.media_attachments.first.url).to eq("https://example.com/image")
+      end
+    end
+
     context "with urls" do
       before_each { object.assign(urls: ["https://example.com/status/1"]).save }
 

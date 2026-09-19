@@ -225,6 +225,21 @@ Spectator.describe "object partials" do
       end
     end
 
+    context "given an image object" do
+      before_each do
+        object.assign(
+          type: "ActivityPub::Object::Image",
+          media_type: "image/jpeg",
+          urls: ["https://remote/image"],
+          name: "An image",
+        )
+      end
+
+      it "renders the image object" do
+        expect(subject.xpath_nodes("//img/@src").map(&.text)).to contain_exactly("https://remote/image")
+      end
+    end
+
     # translation
 
     def_mock Ktistec::Translator

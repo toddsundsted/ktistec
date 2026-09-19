@@ -6,11 +6,10 @@ crystal:
   if (content = translation.try(&.content).presence || object.content.presence)
     html = (object.media_type == "text/markdown") ? markdown_to_html(content) : content
   end
-  if (attachments = object.attachments.dup)  # don't modify the object
-    if html
-      urls = XML.parse_html(html, Ktistec::Constants::HTML_PARSER_OPTIONS).xpath_nodes("//img/@src").map(&.text)
-      attachments.reject!(&.url.in?(urls))
-    end
+  attachments = object.display_attachments
+  if html
+    urls = XML.parse_html(html, Ktistec::Constants::HTML_PARSER_OPTIONS).xpath_nodes("//img/@src").map(&.text)
+    attachments.reject!(&.url.in?(urls))
   end
 - partial "partials/object/content/attachments"
 - if with_detail

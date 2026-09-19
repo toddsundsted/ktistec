@@ -5,10 +5,7 @@
       og_description_raw = object.summary.presence || object.content.presence || ""
       og_description = Ktistec::Util.render_as_text_and_truncate(og_description_raw, 155)
       fallback_image = Ktistec.settings.image.presence || "#{Ktistec.host}/images/logo.png"
-      image_attachments = [] of ActivityPub::Object::Attachment
-      if (attachments = object.attachments)
-        image_attachments = attachments.select(&.image?)
-      end
+      image_attachments = object.display_attachments.select(&.image?)
     meta property="og:type" content="article"
     meta property="og:title" content=og_title
     meta property="og:description" content=og_description

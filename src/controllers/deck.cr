@@ -59,6 +59,11 @@ class DeckController
     end
 
     feeds = ordered_feeds_for(account)
+
+    if feeds.empty?
+      redirect actor_feeds_path(account.actor)
+    end
+
     panes = feeds.first(MAX_PANES)
 
     entries = panes.map { |feed| {feed, feed.contents(limit: POSTS_PER_PANE)} }

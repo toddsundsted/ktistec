@@ -256,30 +256,6 @@ Spectator.describe ActorsController do
       expect(og_url.try(&.["content"])).to eq("#{Ktistec.host}/@#{actor.username}")
     end
 
-    it "includes profile:username" do
-      get "/actors/#{actor.username}", ACCEPT_HTML
-      expect(response.status_code).to eq(200)
-      html = XML.parse_html(response.body)
-      profile_username = html.xpath_node("//meta[@property='profile:username']")
-      expect(profile_username.try(&.["content"])).to eq(actor.username)
-    end
-
-    it "includes og:image" do
-      get "/actors/#{actor.username}", ACCEPT_HTML
-      expect(response.status_code).to eq(200)
-      html = XML.parse_html(response.body)
-      og_image = html.xpath_node("//meta[@property='og:image']")
-      expect(og_image.try(&.["content"])).to eq("https://test.test/images/logo.png")
-    end
-
-    it "includes og:image:alt" do
-      get "/actors/#{actor.username}", ACCEPT_HTML
-      expect(response.status_code).to eq(200)
-      html = XML.parse_html(response.body)
-      og_image_alt = html.xpath_node("//meta[@property='og:image:alt']")
-      expect(og_image_alt.try(&.["content"])).to eq(actor.username)
-    end
-
     context "with pinned posts" do
       macro make_post(name)
         let_build(:object, named: {{name}}, attributed_to: actor, visible: true, published: Time.utc)

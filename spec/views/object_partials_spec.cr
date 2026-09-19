@@ -81,6 +81,159 @@ Spectator.describe "object partials" do
     end
   end
 
+  describe "og_metadata.html.slang" do
+    let(env) { make_env("GET", "/object") }
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/partials/object/og_metadata.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    let_create(:object)
+
+    it "includes og:image" do
+      og_image = subject.xpath_node("//meta[@property='og:image']")
+      expect(og_image.try(&.["content"])).to eq("https://test.test/images/logo.png")
+    end
+
+    it "includes og:image:alt" do
+      og_image_alt = subject.xpath_node("//meta[@property='og:image:alt']")
+      expect(og_image_alt.try(&.["content"])).to eq(Ktistec.settings.site)
+    end
+
+    context "when the object is image" do
+      before_each do
+        object.assign(
+          type: "ActivityPub::Object::Image",
+          media_type: "image/jpeg",
+          urls: ["https://example.com/image"],
+          name: "An image",
+        ).save
+      end
+
+      it "uses the image object for og:image" do
+        expect(subject.xpath_node("//meta[@property='og:image']").try(&.["content"])).to eq("https://example.com/image")
+      end
+
+      it "includes og:image:type" do
+        expect(subject.xpath_node("//meta[@property='og:image:type']").try(&.["content"])).to eq("image/jpeg")
+      end
+
+      it "includes og:image:alt" do
+        expect(subject.xpath_node("//meta[@property='og:image:alt']").try(&.["content"])).to eq("An image")
+      end
+    end
+
+    context "when the object is video" do
+      before_each do
+        object.assign(
+          type: "ActivityPub::Object::Video",
+          media_type: "video/mp4",
+          urls: ["https://example.com/video"],
+          name: "A video",
+        ).save
+      end
+
+      it "uses the fallback for og:image" do
+        expect(subject.xpath_node("//meta[@property='og:image']").try(&.["content"])).to eq("https://test.test/images/logo.png")
+      end
+    end
+
+    context "when the object is audio" do
+      before_each do
+        object.assign(
+          type: "ActivityPub::Object::Audio",
+          media_type: "audio/mpeg",
+          urls: ["https://example.com/audio"],
+          name: "An audio",
+        ).save
+      end
+
+      it "uses the fallback for og:image" do
+        expect(subject.xpath_node("//meta[@property='og:image']").try(&.["content"])).to eq("https://test.test/images/logo.png")
+      end
+    end
+
+    context "with multiple image attachments" do
+      before_each do
+        object.assign(attachments: [
+          ActivityPub::Object::Attachment.new(
+            url: "#{Ktistec.host}/attachments/#{object.uid}/image1.png",
+            media_type: "image/png",
+            caption: "Image 1",
+          ),
+          ActivityPub::Object::Attachment.new(
+            url: "#{Ktistec.host}/attachments/#{object.uid}/image2.jpg",
+            media_type: "image/jpeg",
+            caption: "Image 2",
+          ),
+        ]).save
+      end
+
+      it "includes multiple og:image" do
+        og_images = subject.xpath_nodes("//meta[@property='og:image']/@content").map(&.text)
+        expect(og_images.size).to eq(2)
+        expect(og_images[0]).to eq("#{Ktistec.host}/attachments/#{object.uid}/image1.png")
+        expect(og_images[1]).to eq("#{Ktistec.host}/attachments/#{object.uid}/image2.jpg")
+      end
+
+      it "includes og:image:type" do
+        og_image_types = subject.xpath_nodes("//meta[@property='og:image:type']/@content").map(&.text)
+        expect(og_image_types.size).to eq(2)
+        expect(og_image_types[0]).to eq("image/png")
+        expect(og_image_types[1]).to eq("image/jpeg")
+      end
+
+      it "includes og:image:alt" do
+        og_image_alts = subject.xpath_nodes("//meta[@property='og:image:alt']/@content").map(&.text)
+        expect(og_image_alts.size).to eq(2)
+        expect(og_image_alts[0]).to eq("Image 1")
+        expect(og_image_alts[1]).to eq("Image 2")
+      end
+    end
+
+    context "with a canonical path" do
+      before_each { object.assign(canonical_path: "/custom/path") }
+
+      it "includes og:url metadata" do
+        og_url = subject.xpath_node("//meta[@property='og:url']")
+        expect(og_url.try(&.["content"])).to eq("#{Ktistec.host}/custom/path")
+      end
+    end
+
+    context "with language" do
+      before_each { object.assign(language: "en-US").save }
+
+      it "includes og:locale metadata" do
+        locale = subject.xpath_node("//meta[@property='og:locale']")
+        expect(locale.try(&.["content"])).to eq("en-US")
+      end
+    end
+
+    context "with updated timestamp" do
+      let(updated_time) { Time.utc(2025, 1, 15, 14, 30, 0) }
+      before_each { object.assign(updated: updated_time).save }
+
+      it "includes article:modified_time metadata" do
+        modified_time = subject.xpath_node("//meta[@property='article:modified_time']")
+        expect(modified_time.try(&.["content"])).to eq(updated_time.to_rfc3339)
+      end
+    end
+
+    context "with hashtags" do
+      let_create!(:hashtag, named: nil, subject: object, name: "opensource")
+      let_create!(:hashtag, named: nil, subject: object, name: "activitypub")
+
+      it "includes article:tag metadata for each hashtag" do
+        article_tags = subject.xpath_nodes("//meta[@property='article:tag']/@content").map(&.text)
+        expect(article_tags).to contain_exactly("opensource", "activitypub")
+      end
+    end
+  end
+
   describe "content.html.slang" do
     let(env) { make_env("GET", "/object") }
 

@@ -78,12 +78,11 @@ class FeedsController
       not_found
     end
 
-    feeds =
-      if env.params.query["include"]? == "drafts"
-        Feed.where("owner_iri = ? ORDER BY created_at DESC", account.actor.iri)
-      else
-        Feed.where("owner_iri = ? AND draft = 0 ORDER BY created_at DESC", account.actor.iri)
-      end
+    feeds = Feed.where("owner_iri = ? ORDER BY created_at DESC", account.actor.iri)
+    drafts_count = feeds.count(&.draft)
+    published_count = feeds.size - drafts_count
+    show_drafts = published_count == 0 || env.params.query["include"]? == "drafts"
+    feeds.reject!(&.draft) unless show_drafts
 
     # feeds with no posts sort first: an empty feed is most likely one
     # just published with criteria still being tuned, and it is the
@@ -92,7 +91,7 @@ class FeedsController
       {feed, Feed::Backend::Criteria::Form.summarize(feed.params), feed.stats}
     end.sort_by! { |feed, _, stats| {stats.newest ? 0 : 1, stats.newest || Time::UNIX_EPOCH, feed.created_at} }.reverse!
 
-    ok "feeds/index", env: env, actor: account.actor, entries: entries
+    ok "feeds/index", env: env, actor: account.actor, entries: entries, published_count: published_count, drafts_count: drafts_count, show_drafts: show_drafts
   end
 
   get "/actors/:username/feeds/new" do |env|

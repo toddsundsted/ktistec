@@ -723,10 +723,18 @@ Spectator.describe Utils::Paths do
       it "gets the actor feeds path" do
         expect((actor_feeds_path(actor)).to_s).to eq("/actors/xyz/feeds")
       end
+
+      it "includes drafts" do
+        expect((actor_feeds_path(actor, drafts: true)).to_s).to eq("/actors/xyz/feeds?include=drafts")
+      end
     end
 
     it "gets the actor feeds path" do
       expect((actor_feeds_path).to_s).to eq("/actors/abc/feeds")
+    end
+
+    it "includes drafts" do
+      expect((actor_feeds_path(drafts: true)).to_s).to eq("/actors/abc/feeds?include=drafts")
     end
   end
 

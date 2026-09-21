@@ -65,11 +65,13 @@ class FeedsController
   private def self.get_feed_with_ownership(env)
     if (account = get_account_with_ownership(env))
       identifier = env.params.url["id"]
-      if (id = identifier.to_i64?)
-        Feed.where("owner_iri = ? AND id = ?", account.actor.iri, id).first?
-      else
-        Feed.where("owner_iri = ? AND draft = 0 AND slug = ? ORDER BY id DESC LIMIT 1", account.actor.iri, identifier).first?
-      end
+      feed =
+        if (id = identifier.to_i64?)
+          Feed.find?(id)
+        else
+          Feed.find?(account.actor, identifier)
+        end
+      feed if feed && feed.owner == account.actor
     end
   end
 
@@ -78,12 +80,11 @@ class FeedsController
       not_found
     end
 
-    feeds =
-      if env.params.query["include"]? == "drafts"
-        Feed.where("owner_iri = ? ORDER BY created_at DESC", account.actor.iri)
-      else
-        Feed.where("owner_iri = ? AND draft = 0 ORDER BY created_at DESC", account.actor.iri)
-      end
+    feeds = Feed.for(account.actor)
+    drafts_count = feeds.count(&.draft)
+    published_count = feeds.size - drafts_count
+    show_drafts = published_count == 0 || env.params.query["include"]? == "drafts"
+    feeds.reject!(&.draft) unless show_drafts
 
     # feeds with no posts sort first: an empty feed is most likely one
     # just published with criteria still being tuned, and it is the
@@ -92,7 +93,7 @@ class FeedsController
       {feed, Feed::Backend::Criteria::Form.summarize(feed.params), feed.stats}
     end.sort_by! { |feed, _, stats| {stats.newest ? 0 : 1, stats.newest || Time::UNIX_EPOCH, feed.created_at} }.reverse!
 
-    ok "feeds/index", env: env, actor: account.actor, entries: entries
+    ok "feeds/index", env: env, actor: account.actor, entries: entries, published_count: published_count, drafts_count: drafts_count, show_drafts: show_drafts
   end
 
   get "/actors/:username/feeds/new" do |env|
@@ -211,7 +212,7 @@ class FeedsController
     else
       if previewing?(env)
         if feed.assign(**params).valid?
-          discard_superseded_copies(feed)
+          feed.drafts.each(&.destroy)
           copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor})).save
           Feed::Window.new(copy).recompute
           redirect edit_actor_feed_path(feed.owner, copy)
@@ -222,7 +223,7 @@ class FeedsController
       else
         published = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor}))
         if published.valid?
-          discard_superseded_copies(feed)
+          feed.drafts.each(&.destroy)
           published.save
           Feed::Judging.rejudge_contents(feed, published)
           published.publish
@@ -255,12 +256,6 @@ class FeedsController
     else
       redirect actor_feeds_path(feed.owner)
     end
-  end
-
-  # Discards any existing draft copies of a published feed.
-  #
-  private def self.discard_superseded_copies(feed)
-    Feed.where("copy_of = ? AND draft = 1", feed.id).each(&.destroy)
   end
 
   # Removes a feed's runtime view and backfill before destroying the

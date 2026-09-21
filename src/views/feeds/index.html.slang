@@ -13,6 +13,13 @@
 - else
   h1 Feeds
   a.ui.primary.button href=new_actor_feed_path(actor) New Feed
+  - if drafts_count > 0 && published_count > 0
+    - if show_drafts
+      a.ui.button href=actor_feeds_path(actor) Hide Drafts
+    - else
+      a.ui.button href=actor_feeds_path(actor, drafts: true) Show #{pluralize(drafts_count, "Draft")}
+  - if published_count > 0
+    a.ui.teal.right.floated.button href=actor_deck_path(actor) To Deck
   - entries.each do |feed, summary, stats|
     .ui.fluid.card
       .content

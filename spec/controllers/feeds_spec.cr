@@ -92,6 +92,12 @@ Spectator.describe FeedsController do
         expect(JSON.parse(response.body)["feeds"].as_a).to be_empty
       end
 
+      it "only renders the new feed button" do
+        get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+        buttons = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'button')]/text()").map(&.text)
+        expect(buttons).to contain_exactly("New Feed")
+      end
+
       context "given a feed" do
         let_create!(
           :feed,
@@ -181,6 +187,18 @@ Spectator.describe FeedsController do
           end
         end
 
+        it "renders the new feed and deck buttons" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+          buttons = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'button')]/text()").map(&.text)
+          expect(buttons).to contain("New Feed", "To Deck")
+        end
+
+        it "does not render the drafts button" do
+          get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+          buttons = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'button')]/text()").map(&.text)
+          expect(buttons).not_to contain("Show 1 Draft")
+        end
+
         it "renders the feed as published" do
           get "/actors/#{actor.username}/feeds", ACCEPT_HTML
           expect(response.body).to contain(mixed.name)
@@ -195,62 +213,83 @@ Spectator.describe FeedsController do
         context "that is draft" do
           before_each { mixed.assign(draft: true).save }
 
-          it "renders the empty page" do
+          it "renders the feed as a draft" do
             get "/actors/#{actor.username}/feeds", ACCEPT_HTML
-            expect(response.body).to contain("don't have any feeds")
+            expect(response.body).to contain("Draft")
           end
 
-          it "renders the empty collection" do
+          it "renders the feed as a draft" do
             get "/actors/#{actor.username}/feeds", ACCEPT_JSON
-            expect(JSON.parse(response.body)["feeds"].as_a).to be_empty
+            expect(entry["draft"].as_bool).to be_true
           end
 
-          context "and drafts are included" do
-            it "renders the feed as a draft" do
-              get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
-              expect(response.body).to contain("Draft")
+          it "does not render the draft or deck buttons" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+            buttons = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'button')]/text()").map(&.text)
+            expect(buttons).not_to contain("Show 1 Draft", "Hide Draft", "To Deck")
+          end
+
+          it "renders nothing in preview" do
+            get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+            expect(response.body).to contain("nothing in preview")
+          end
+
+          context "and the draft has matches" do
+            let_create(:object)
+
+            before_each { put_in_feed(mixed, object) }
+
+            it "renders the preview size" do
+              get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+              expect(response.body).to contain("1 post in preview")
+            end
+          end
+
+          context "and the draft replaces a published feed" do
+            let_create!(:feed, named: replaced, owner: actor, name: "Replaced")
+
+            before_each { mixed.assign(copy_of: replaced.id).save }
+
+            it "lists only the published feed" do
+              get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+              feeds = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'header')]/text()").map(&.text)
+              expect(feeds).to contain_exactly("Replaced")
             end
 
-            it "renders the feed as a draft" do
-              get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_JSON
-              expect(entry["draft"].as_bool).to be_true
+            it "lists only the published feed" do
+              get "/actors/#{actor.username}/feeds", ACCEPT_JSON
+              feeds = JSON.parse(response.body)["feeds"].as_a.map(&.["name"].as_s)
+              expect(feeds).to contain_exactly("Replaced")
             end
 
-            it "renders nothing in preview" do
-              get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
-              expect(response.body).to contain("nothing in preview")
+            it "links to show drafts" do
+              get "/actors/#{actor.username}/feeds", ACCEPT_HTML
+              href = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'button')][text()='Show 1 Draft']/@href").first?
+              expect(href.try(&.text)).to eq("/actors/#{actor.username}/feeds?include=drafts")
             end
 
-            context "and the draft has matches" do
-              let_create(:object)
-
-              before_each { put_in_feed(mixed, object) }
-
-              it "renders the preview size" do
+            context "and drafts are included" do
+              it "renders the feed as a draft" do
                 get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
-                expect(response.body).to contain("1 post in preview")
+                expect(response.body).to contain("Draft of Replaced")
               end
-            end
 
-            context "and the draft replaces a published feed" do
-              let_create!(:feed, named: replaced, owner: actor, name: "Replaced")
-
-              before_each { mixed.assign(copy_of: replaced.id).save }
-
-              it "lists the published feed alongside the draft" do
+              it "lists both the published feed and the draft" do
                 get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
-                expect(response.body).to contain("Replaced", "Robotics")
+                feeds = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'header')]/text()").map(&.text)
+                expect(feeds).to contain_exactly("Replaced", "Robotics")
               end
 
-              it "lists the published feed alongside the draft" do
+              it "lists both the published feed and the draft" do
                 get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_JSON
                 feeds = JSON.parse(response.body)["feeds"].as_a.map(&.["name"].as_s)
                 expect(feeds).to contain_exactly("Replaced", "Robotics")
               end
 
-              it "names the feed it replaces" do
+              it "links to hide drafts" do
                 get "/actors/#{actor.username}/feeds?include=drafts", ACCEPT_HTML
-                expect(response.body).to contain("Draft of Replaced")
+                href = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'button')][text()='Hide Drafts']/@href").first?
+                expect(href.try(&.text)).to eq("/actors/#{actor.username}/feeds")
               end
             end
           end

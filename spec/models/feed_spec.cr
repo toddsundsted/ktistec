@@ -26,6 +26,71 @@ Spectator.describe Feed do
     expect(described_class.new(name: "name", backend: "criteria")).to be_a(Feed)
   end
 
+  describe ".for" do
+    let_create(:actor)
+
+    let_create!(:feed, named: older, owner: actor, name: "Older")
+    let_create!(:feed, named: newer, owner: actor, name: "Newer")
+
+    it "returns the owner's feeds, newest first" do
+      expect(described_class.for(actor)).to eq([newer, older])
+    end
+
+    context "given a draft" do
+      before_each { older.assign(draft: true).save }
+
+      it "includes the draft" do
+        expect(described_class.for(actor)).to contain(older)
+      end
+    end
+
+    context "given another owner's feed" do
+      let_create!(:feed, named: other, name: "Other")
+
+      it "does not include the feed" do
+        expect(described_class.for(actor)).not_to contain(other)
+      end
+    end
+  end
+
+  describe ".find?" do
+    let_create(:actor)
+
+    let_create!(:feed, owner: actor, name: "The Fediverse")
+
+    it "returns the feed" do
+      expect(described_class.find?(actor, "the-fediverse")).to eq(feed)
+    end
+
+    it "does not return the feed" do
+      expect(described_class.find?(actor, "something-else")).to be_nil
+    end
+
+    context "given a draft" do
+      before_each { feed.assign(draft: true).save }
+
+      it "does not return the feed" do
+        expect(described_class.find?(actor, "the-fediverse")).to be_nil
+      end
+    end
+
+    context "given another owner" do
+      let_create(:actor, named: other)
+
+      it "does not return the feed" do
+        expect(described_class.find?(other, "the-fediverse")).to be_nil
+      end
+    end
+
+    context "given a replacement holding the same slug" do
+      let_create!(:feed, named: replacement, owner: actor, name: "The Fediverse", slug: "the-fediverse")
+
+      it "returns the replacement" do
+        expect(described_class.find?(actor, "the-fediverse")).to eq(replacement)
+      end
+    end
+  end
+
   describe "validation" do
     let_build(:feed)
 

@@ -41,7 +41,7 @@ class DeckController
   # Returns all of the account's published feeds, in pane order.
   #
   def self.ordered_feeds_for(account : Account) : Array(Feed)
-    feeds = Feed.where("owner_iri = ? AND draft = 0 ORDER BY id", account.actor.iri)
+    feeds = Feed.for(account.actor).select(&.published?).reverse!
     by_slug = feeds.index_by(&.slug)
     ordered = account.feed_order.compact_map { |slug| by_slug.delete(slug) }
     ordered + (feeds - ordered)

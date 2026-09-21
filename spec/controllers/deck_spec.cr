@@ -169,7 +169,7 @@ Spectator.describe DeckController do
         context "and another feed" do
           let_create!(:feed, named: woodworking, owner: actor, name: "Woodworking")
 
-          it "orders the panes by feed id" do
+          it "orders the panes oldest first" do
             get "/actors/#{actor.username}/deck", ACCEPT_HTML
             names = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//h2/text()")
             expect(names.map(&.text)).to eq(["Robotics", "Woodworking"])
@@ -601,7 +601,7 @@ Spectator.describe DeckController do
     context "given a second feed" do
       let_create!(:feed, named: woodworking, owner: actor, name: "Woodworking")
 
-      it "orders the feeds by id" do
+      it "orders the feeds oldest first" do
         expect(described_class.panes_for(account).map(&.id)).to eq([robotics.id, woodworking.id])
       end
 

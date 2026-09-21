@@ -59,20 +59,14 @@ Spectator.describe DeckController do
         expect(response.status_code).to eq(404)
       end
 
-      it "succeeds" do
+      it "returns 302" do
         get "/actors/#{actor.username}/deck", ACCEPT_HTML
-        expect(response.status_code).to eq(200)
+        expect(response.status_code).to eq(302)
       end
 
-      it "renders the empty page" do
+      it "redirects to the feeds page" do
         get "/actors/#{actor.username}/deck", ACCEPT_HTML
-        expect(response.body).to contain("don't have any feeds yet")
-      end
-
-      it "links to the new feed form" do
-        get "/actors/#{actor.username}/deck", ACCEPT_HTML
-        href = XML.parse_html(response.body).xpath_nodes("//a[contains(@class,'button')]/@href").first?
-        expect(href.try(&.text)).to eq("/actors/#{actor.username}/feeds/new")
+        expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
       end
 
       context "given a feed" do
@@ -175,7 +169,7 @@ Spectator.describe DeckController do
         context "and another feed" do
           let_create!(:feed, named: woodworking, owner: actor, name: "Woodworking")
 
-          it "orders the panes by feed id" do
+          it "orders the panes oldest first" do
             get "/actors/#{actor.username}/deck", ACCEPT_HTML
             names = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//h2/text()")
             expect(names.map(&.text)).to eq(["Robotics", "Woodworking"])
@@ -242,18 +236,18 @@ Spectator.describe DeckController do
         context "that is a draft" do
           before_each { robotics.assign(draft: true).save }
 
-          it "renders the empty page" do
+          it "redirects to the feeds page" do
             get "/actors/#{actor.username}/deck", ACCEPT_HTML
-            expect(response.body).to contain("don't have any feeds yet")
+            expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
           end
         end
 
         context "that belongs to another account" do
           before_each { robotics.assign(owner: register.actor).save }
 
-          it "renders the empty page" do
+          it "redirects to the feeds page" do
             get "/actors/#{actor.username}/deck", ACCEPT_HTML
-            expect(response.body).to contain("don't have any feeds yet")
+            expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds")
           end
         end
       end
@@ -607,7 +601,7 @@ Spectator.describe DeckController do
     context "given a second feed" do
       let_create!(:feed, named: woodworking, owner: actor, name: "Woodworking")
 
-      it "orders the feeds by id" do
+      it "orders the feeds oldest first" do
         expect(described_class.panes_for(account).map(&.id)).to eq([robotics.id, woodworking.id])
       end
 

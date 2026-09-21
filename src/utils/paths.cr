@@ -345,8 +345,12 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_actor_path({{actor}})}/refresh")
   end
 
-  macro actor_feeds_path(actor = nil)
-    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds")
+  macro actor_feeds_path(actor = nil, drafts = false)
+    {% if drafts %}
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds?include=drafts")
+    {% else %}
+      ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/feeds")
+    {% end %}
   end
 
   macro new_actor_feed_path(actor = nil)

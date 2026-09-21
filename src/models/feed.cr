@@ -42,7 +42,8 @@ class Feed
 
   @[Persistent]
   property copy_of : Int64?
-  belongs_to original, class_name: Feed, foreign_key: copy_of, primary_key: id
+  belongs_to original, class_name: Feed, foreign_key: copy_of, primary_key: id, inverse_of: drafts
+  has_many drafts, class_name: Feed, foreign_key: copy_of, primary_key: id, inverse_of: original
 
   @[Persistent]
   property description : String?
@@ -79,6 +80,18 @@ class Feed
   #
   @[Persistent]
   property params : Hash(String, JSON::Any) { {} of String => JSON::Any }
+
+  # Returns the owner's feeds, drafts included, newest first.
+  #
+  def self.for(owner : ActivityPub::Actor) : Array(Feed)
+    Feed.where("owner_iri = ? ORDER BY created_at DESC, id DESC", owner.iri)
+  end
+
+  # Returns the owner's published feed with the given slug, if any.
+  #
+  def self.find?(owner : ActivityPub::Actor, slug : String) : Feed?
+    Feed.where("owner_iri = ? AND draft = 0 AND slug = ? ORDER BY id DESC LIMIT 1", owner.iri, slug).first?
+  end
 
   # Validates the backend's params.
   #

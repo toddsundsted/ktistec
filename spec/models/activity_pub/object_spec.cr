@@ -2575,6 +2575,70 @@ Spectator.describe ActivityPub::Object do
     end
   end
 
+  describe "#display_attachments" do
+    let_build(:image, named: :object,
+      media_type: "image/jpeg",
+      urls: ["https://example.com/image"],
+      name: "An image",
+    )
+
+    it "presents an image object as an attachment" do
+      expect(object.display_attachments).to contain_exactly(
+        ActivityPub::Object::Attachment.new("https://example.com/image", "image/jpeg", "An image"),
+      )
+    end
+
+    context "when the object is a video" do
+      before_each { object.assign(type: "ActivityPub::Object::Video", media_type: "video/mp4") }
+
+      it "presents the video object as an attachment" do
+        expect(object.display_attachments.first.video?).to be_true
+      end
+    end
+
+    context "when the object is audio" do
+      before_each { object.assign(type: "ActivityPub::Object::Audio", media_type: "audio/mpeg") }
+
+      it "presents the audio object as an attachment" do
+        expect(object.display_attachments.first.audio?).to be_true
+      end
+    end
+
+    context "when the media type does not match the object type" do
+      before_each { object.assign(media_type: "video/mp4") }
+
+      it "does not derive an attachment" do
+        expect(object.display_attachments).to be_empty
+      end
+    end
+
+    context "when the object has multiple URLs" do
+      before_each { object.assign(urls: ["https://example.com/image", "https://example.com/other"]) }
+
+      it "does not choose a representation" do
+        expect(object.display_attachments).to be_empty
+      end
+    end
+
+    context "when the URL is unsafe" do
+      before_each { object.assign(urls: ["javascript:alert(1)"]) }
+
+      it "does not derive an attachment" do
+        expect(object.display_attachments).to be_empty
+      end
+    end
+
+    context "when the object has attachments" do
+      let(attachment) { ActivityPub::Object::Attachment.new("https://example.com/attached.jpg", "image/jpeg") }
+
+      before_each { object.assign(attachments: [attachment]) }
+
+      it "returns the attachments" do
+        expect(object.display_attachments).to contain_exactly(attachment)
+      end
+    end
+  end
+
   context "canonical path" do
     PATH = "/abc/xyz"
 

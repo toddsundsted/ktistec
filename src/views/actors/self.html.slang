@@ -19,7 +19,7 @@ crystal:
         span.ui.mini.transitional.horizontal.circular.label class=color title=tooltip = count
       - else
         span.invisible.label
-    a.item href=actor_feeds_path(actor) Feeds
+    a.item href=actor_deck_path(actor) Deck
     - env.account.pinned_collections.each do |label, path|
       a.item href=Utils::Paths.pinned_collection_path(path) = label
     a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"

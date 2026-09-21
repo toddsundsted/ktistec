@@ -12,8 +12,7 @@ Spectator.describe "views/partials/object/content/poll.html.slang" do
   subject do
     begin
       scope = self.scope # ameba:disable Lint/UselessAssign
-      body = String.build { |io| Slang.embed("src/views/partials/object/content/poll.html.slang", io) }
-      XML.parse_html(body)
+      XML.parse_html(render "./src/views/partials/object/content/poll.html.slang")
     rescue XML::Error
       XML.parse_html("<div/>").document
     end

@@ -317,6 +317,35 @@ Spectator.describe "partials" do
     end
   end
 
+  describe "actor/og_metadata.html.slang" do
+    let(actor) { register.actor }
+
+    let(env) { make_env("GET", "/actor") }
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/partials/actor/og_metadata.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    it "includes profile:username" do
+      profile_username = subject.xpath_node("//meta[@property='profile:username']")
+      expect(profile_username.try(&.["content"])).to eq(actor.username)
+    end
+
+    it "includes og:image" do
+      og_image = subject.xpath_node("//meta[@property='og:image']")
+      expect(og_image.try(&.["content"])).to eq("https://test.test/images/logo.png")
+    end
+
+    it "includes og:image:alt" do
+      og_image_alt = subject.xpath_node("//meta[@property='og:image:alt']")
+      expect(og_image_alt.try(&.["content"])).to eq(actor.username)
+    end
+  end
+
   describe "actor-panel.html.slang" do
     let_create(:actor)
 

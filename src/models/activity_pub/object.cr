@@ -446,6 +446,28 @@ module ActivityPub
       end
     end
 
+    # Returns the media to present for this object.
+    #
+    def display_attachments : Array(Attachment)
+      if (attachments = self.attachments) && !attachments.empty?
+        attachments.dup
+      elsif (media_type = self.media_type.presence) && (urls = self.urls) && urls.size == 1 && Ktistec::SafeURI.from?(urls.first)
+        attachment = Attachment.new(urls.first, media_type, name.presence)
+        compatible =
+          case type
+          when "ActivityPub::Object::Image"
+            attachment.image?
+          when "ActivityPub::Object::Video"
+            attachment.video?
+          when "ActivityPub::Object::Audio"
+            attachment.audio?
+          end
+        compatible ? [attachment] : [] of Attachment
+      else
+        [] of Attachment
+      end
+    end
+
     def display_date(timezone = nil)
       date(timezone).to_s("%l:%M%p · %b %-d, %Y").lstrip(' ')
     end

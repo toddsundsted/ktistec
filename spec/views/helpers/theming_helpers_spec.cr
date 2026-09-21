@@ -200,6 +200,20 @@ Spectator.describe "helpers" do
       end
     end
 
+    context "when the object is media" do
+      before_each do
+        note.assign(
+          type: "ActivityPub::Object::Image",
+          media_type: "image/jpeg",
+          urls: ["https://example.com/image"],
+        )
+      end
+
+      it "includes has-media" do
+        expect(subject).to contain("has-media")
+      end
+    end
+
     context "when object is addressed to followers only" do
       before_each do
         note.assign(to: [note.attributed_to.followers.not_nil!])

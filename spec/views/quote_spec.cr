@@ -16,8 +16,7 @@ Spectator.describe "views/partials/object/content/quote.html.slang" do
       error_message = self.error_message # ameba:disable Lint/UselessAssign
       show_quote = self.show_quote       # ameba:disable Lint/UselessAssign
       scope = self.scope                 # ameba:disable Lint/UselessAssign
-      body = String.build { |content_io| Slang.embed("src/views/partials/object/content/quote.html.slang", content_io) }
-      XML.parse_html(body)
+      XML.parse_html(render "./src/views/partials/object/content/quote.html.slang")
     rescue XML::Error
       XML.parse_html("<div/>").document
     end

@@ -114,6 +114,25 @@ end
 
 # Redefinitions
 
+# NOTE: the clock has nanosecond resolution but the database stores
+# times with millisecond precision, so a time read from the clock does
+# not compare equal to itself after a roundtrip.  This covers `ago`
+# and `from_now`, which are defined in terms of `Time.local`.
+
+struct Time
+  def self.utc : Time
+    previous_def.truncate_to_millisecond
+  end
+
+  def self.local(location : Location = Location.local) : Time
+    previous_def.truncate_to_millisecond
+  end
+
+  protected def truncate_to_millisecond : Time
+    self - (self.nanosecond % 1_000_000).nanoseconds
+  end
+end
+
 # NOTE: The `uid` methods were removed from `Account` and `Linked`
 # because the meaning of `uid` wasn't clear for remote linked models.
 # The methods were added here to avoid breaking existing tests.

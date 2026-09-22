@@ -38,12 +38,15 @@ Spectator.describe Ktistec::Model::Common do
       expect(common.updated_at).not_to be_nil
     end
 
+    # the clock is truncated to milliseconds when testing, so wait
+    # long enough for the next save to land on a different time
+
     it "does not change created_at" do
-      expect { common.save }.not_to change { common.created_at }
+      expect { sleep 10.milliseconds; common.save }.not_to change { common.created_at }
     end
 
     it "changes updated_at" do
-      expect { common.save }.to change { common.updated_at }
+      expect { sleep 10.milliseconds; common.save }.to change { common.updated_at }
     end
   end
 end

@@ -83,7 +83,7 @@ Spectator.describe OAuth2::Provider::AccessToken do
       it "leaves expires_at unchanged" do
         expires_at = access_token.expires_at
         access_token.touch
-        expect(access_token.reload!.expires_at).to be_close(expires_at, delta: 1.second)
+        expect(access_token.reload!.expires_at).to eq(expires_at)
       end
     end
 

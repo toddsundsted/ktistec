@@ -1,6 +1,22 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.13.0]
+### Added
+- Link the feed deck from the secondary nav bar.
+- Offer a retry and a link when a quoted post can't be loaded.
+
+### Fixed
+- Keep the verify button when a quote authorization can't be fetched.
+- Verify HTTP signatures over the full set of headers the `headers` signature parameter names.
+- Sign an inbox delivery's fetches with the implicated account.
+- Render directly published media objects as attachments.
+- Handle more attachment media types when rendering.
+
+### Changed
+- Finish the feeds API.
+- Widen the metrics charts display.
+
 ## [v3.12.1]
 ### Changed
 - Gather query planner statistics on startup and before reconciling materialized views.
@@ -948,6 +964,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.13.0]: https://github.com/toddsundsted/ktistec/compare/02c9f7d8...4f3c2f40
 [v3.12.1]: https://github.com/toddsundsted/ktistec/compare/874107ab...d26efc2c
 [v3.12.0]: https://github.com/toddsundsted/ktistec/compare/e2554566...603276f0
 [v3.11.0]: https://github.com/toddsundsted/ktistec/compare/ffd86278...9577f80b

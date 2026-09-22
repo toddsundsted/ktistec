@@ -3246,7 +3246,7 @@ Spectator.describe InboxesController do
       end
 
       context "wrapped Delete activity (community relay)" do
-        let_create(:actor, named: :moderator, iri: "https://lemmy.ml/u/mod")
+        let_create(:actor, named: :moderator, iri: "https://other.example/u/mod")
         let_create(:object, attributed_to: lemmy_user, audience: [community.iri])
         let_build(:delete, actor: moderator, object: object)
         let_build(:announce, actor: community, object_iri: delete.iri)
@@ -3392,8 +3392,7 @@ Spectator.describe InboxesController do
             # the moderator's instance is dead -- not cached, not
             # fetchable. the community's signature is the authentication.
             # resolving the inner actor must not gate the removal.
-            let_build(:actor, named: :ghost, iri: "https://dead.example/u/ghost")
-            let_build(:delete, actor: ghost, object: object)
+            before_each { moderator.destroy }
 
             it "saves the Delete activity" do
               expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
@@ -3408,6 +3407,31 @@ Spectator.describe InboxesController do
             it "is successful" do
               post "/actors/#{actor.username}/inbox", headers, wrapped_json
               expect(response.status_code).to eq(200)
+            end
+
+            context "and the inner Delete embeds its actor" do
+              let(wrapped_json) do
+                {
+                  "@context" => "https://www.w3.org/ns/activitystreams",
+                  "type"     => "Announce",
+                  "id"       => announce.iri,
+                  "actor"    => announce.actor.iri,
+                  "object"   => JSON.parse(delete.to_json_ld(recursive: true)),
+                }.to_json
+              end
+
+              pre_condition { expect(JSON.parse(wrapped_json).dig("object", "actor", "id")).to eq(moderator.iri) }
+
+              it "deletes the object" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .to change { object.reload!.deleted_at }
+              end
+
+              it "does not save the actor" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
+                expect(ActivityPub::Actor.find?(moderator.iri)).to be_nil
+              end
             end
           end
         end

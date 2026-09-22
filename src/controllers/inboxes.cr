@@ -696,8 +696,19 @@ class InboxesController
     "https://www.w3.org/ns/activitystreams#Delete",
   ]
 
+  # Properties of a relayed activity that are reduced to references.
+  #
+  REFERENCE_PROPERTIES = [
+    "https://www.w3.org/ns/activitystreams#actor",
+    "https://www.w3.org/ns/activitystreams#object",
+    "https://www.w3.org/ns/activitystreams#target",
+    "https://www.w3.org/ns/activitystreams#instrument",
+    "https://www.w3.org/ns/activitystreams#result",
+  ]
+
   # Detects a community-relayed activity and returns the wrapped inner
-  # activity's JSON-LD.
+  # activity's JSON-LD, with embedded nodes reduced to references --
+  # the relay, not their origin, sent them.
   #
   private def self.relayed_inner_activity(json_ld, request_id)
     type = json_ld.dig?("@type").try(&.as_s)
@@ -711,7 +722,13 @@ class InboxesController
 
     Log.debug { "[#{request_id}] relayed #{type.split("#").last} in Announce" }
 
-    object
+    inner = object.as_h.dup
+    REFERENCE_PROPERTIES.each do |property|
+      if (nodes = inner[property]?.try(&.as_a?))
+        inner[property] = JSON::Any.new(nodes.map { |node| node.dig?("@id") || node })
+      end
+    end
+    JSON::Any.new(inner)
   rescue ex
     Log.warn { "[#{request_id}] failed to inspect Announce: #{ex.message}" }
     nil

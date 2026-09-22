@@ -16,6 +16,7 @@
     - [Content Filtering](#content-filtering)
     - [Blocking](#blocking)
     - [Custom Hashtag, Mention, and Keyword Feeds](#custom-hashtag-mention-and-keyword-feeds)
+    - [Feed Deck](#feed-deck)
     - [Bookmarks](#bookmarks)
     - [Pinned Posts](#pinned-posts)
     - [Quote Posts](#quote-posts)
@@ -263,6 +264,17 @@ a draft until you publish your changes.
 A feed reaches back 30 days from the moment you create it, and
 publishing it backfills it with matching posts from that window, so it
 isn't empty when you start reading.
+
+### Feed Deck
+
+Read your published feeds side by side. The deck shows each published
+feed as its own independently scrolling pane, so you can follow
+several at once without switching pages.
+
+Reorder panes by dragging them -- or with the move left/right controls
+when JavaScript is unavailable; the order is saved and used the next
+time you open the deck. Each pane refreshes in place and lets you know
+when new posts have arrived.
 
 ### Bookmarks
 

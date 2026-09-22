@@ -405,7 +405,7 @@ Spectator.describe ActivityPub::Actor do
       actor = described_class.from_json_ld(json).save
       expect(actor.iri).to eq("https://remote/foo_bar")
       expect(actor.username).to eq("foo_bar")
-      expect(actor.pem_public_key).to be_nil
+      expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
       expect(actor.inbox).to eq("inbox link")
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
@@ -427,11 +427,6 @@ Spectator.describe ActivityPub::Actor do
       expect(attachments.first.value).to eq("https://somewhere.example.com/this-is-a-long-url-that-should-be-truncated")
       expect(attachments.last.name).to eq("Website")
       expect(attachments.last.value).to eq("http://site.example.com")
-    end
-
-    it "includes the public key" do
-      actor = described_class.from_json_ld(json, include_key: true).save
-      expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
     end
 
     context "given a webfinger property" do
@@ -533,7 +528,7 @@ Spectator.describe ActivityPub::Actor do
       actor = described_class.new.from_json_ld(json).save
       expect(actor.iri).to eq("https://remote/foo_bar")
       expect(actor.username).to eq("foo_bar")
-      expect(actor.pem_public_key).to be_nil
+      expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
       expect(actor.inbox).to eq("inbox link")
       expect(actor.outbox).to eq("outbox link")
       expect(actor.following).to eq("following link")
@@ -557,9 +552,13 @@ Spectator.describe ActivityPub::Actor do
       expect(attachments.last.value).to eq("http://site.example.com")
     end
 
-    it "includes the public key" do
-      actor = described_class.new.from_json_ld(json, include_key: true).save
-      expect(actor.pem_public_key).to eq("---PEM PUBLIC KEY---")
+    context "given a document without a public key" do
+      let(json) { super.gsub(/"publicKey":{[^}]+},/, "") }
+
+      it "does not replace the existing public key" do
+        actor = described_class.new(pem_public_key: "---EXISTING PEM PUBLIC KEY---")
+        expect(actor.from_json_ld(json).pem_public_key).to eq("---EXISTING PEM PUBLIC KEY---")
+      end
     end
 
     context "when natural-language properties are sent only as language maps" do

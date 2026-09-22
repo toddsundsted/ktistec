@@ -210,7 +210,7 @@ class InboxesController
     actor = ActivityPub::Actor.find?(iri)
     return actor if actor && (!require_key || actor.pem_public_key)
     try_dereference(transient, request_id) do
-      ActivityPub::Actor.dereference(key_pair, iri, ignore_cached: true, include_key: true, deadline: deadline)
+      ActivityPub::Actor.dereference(key_pair, iri, ignore_cached: true, deadline: deadline)
     end.try do |dereferenced|
       dereferenced.verify_handle!(deadline)
       dereferenced.save

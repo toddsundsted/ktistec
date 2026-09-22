@@ -86,7 +86,7 @@ class InteractionsController
         headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
         begin
           Ktistec::Network.get?(env.account.actor, uri, headers) do |response|
-            instance = ActivityPub.from_json_ld(response.body, include_key: true)
+            instance = ActivityPub.from_json_ld(response.body)
             Ktistec::Model::Linked.check_origin!(instance.iri, response.final_url)
             instance
           end

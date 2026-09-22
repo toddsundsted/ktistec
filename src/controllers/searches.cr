@@ -72,7 +72,7 @@ class SearchesController
   private def self.fetch_activity_pub(key_pair, url, headers, *, follow_alternate = true)
     response = Ktistec::Network.get(key_pair, url, headers)
     unless html_response?(response)
-      instance = ActivityPub.from_json_ld(response.body, include_key: true)
+      instance = ActivityPub.from_json_ld(response.body)
       Ktistec::Model::Linked.check_origin!(instance.iri, response.final_url)
       return instance
     end

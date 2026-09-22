@@ -501,7 +501,7 @@ Spectator.describe APIController do
       it "leaves expires_at unchanged" do
         expires_at = access_token.expires_at
         get "/api/v1/accounts/verify_credentials", headers: json_bearer_headers(access_token.token)
-        expect(access_token.reload!.expires_at).to be_close(expires_at, delta: 1.second)
+        expect(access_token.reload!.expires_at).to eq(expires_at)
       end
     end
   end

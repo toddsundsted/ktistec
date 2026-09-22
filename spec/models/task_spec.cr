@@ -40,7 +40,7 @@ Spectator.describe Task do
 
     it "does not reset next_attempt_at" do
       SingletonTask.ensure_scheduled
-      expect(task.reload!.next_attempt_at).to be_close(future_time.to_utc, delta: 1.millisecond)
+      expect(task.reload!.next_attempt_at).to eq(future_time.to_utc)
     end
   end
 

@@ -163,8 +163,8 @@ Spectator.describe Ktistec::Model::Polymorphic do
     end
 
     it "populates the uninherited properties of subclass" do
-      expect(PolymorphicModel.find(subclass5.id).as(Subclass5).stamp).to be_within(1.second).of(stamp)
-      expect(PolymorphicModel.find(id: subclass5.id).as(Subclass5).stamp).to be_within(1.second).of(stamp)
+      expect(PolymorphicModel.find(subclass5.id).as(Subclass5).stamp).to eq(stamp)
+      expect(PolymorphicModel.find(id: subclass5.id).as(Subclass5).stamp).to eq(stamp)
     end
 
     it "raises an error" do

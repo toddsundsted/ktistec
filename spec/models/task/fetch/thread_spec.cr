@@ -295,12 +295,19 @@ Spectator.describe Task::Fetch::Thread do
           expect(horizon(subject)).to have(reply4.id)
         end
 
-        it "changes time of last attempt" do
-          expect { subject.perform }.to change { node.last_attempt_at }
-        end
+        context "and the clock has advanced" do
+          # the node was already stamped by the attempt above, so wait
+          # for the millisecond-truncated clock to advance
 
-        it "changes time of last success" do
-          expect { subject.perform }.to change { node.last_success_at }
+          before_each { sleep 10.milliseconds }
+
+          it "changes time of last attempt" do
+            expect { subject.perform }.to change { node.last_attempt_at }
+          end
+
+          it "changes time of last success" do
+            expect { subject.perform }.to change { node.last_success_at }
+          end
         end
       end
     end

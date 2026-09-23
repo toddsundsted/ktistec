@@ -68,6 +68,60 @@ Spectator.describe Rules::View::Feed do
       end
     end
 
+    context "when the object is not visible" do
+      before_each { object.update_property(:visible, false) }
+
+      pre_condition { expect(Feed::Verdict.find(feed_id: feed.id, object_iri: object.iri).included).to be_true }
+
+      it "does not select the object" do
+        expect(selected_iris).not_to contain(object.iri)
+      end
+
+      context "but is in the owner's inbox" do
+        let_create(:create, object: object)
+
+        before_each { put_in_inbox(actor, create) }
+
+        it "selects the object" do
+          expect(selected_iris).to contain(object.iri)
+        end
+
+        context "and its delivery is undone" do
+          before_each { create.undo! }
+
+          pre_condition { expect(create.undone?).to be_true }
+
+          it "does not select the object" do
+            expect(selected_iris).not_to contain(object.iri)
+          end
+        end
+      end
+    end
+
+    context "when the object is unpublished" do
+      before_each { object.update_property(:published, nil) }
+
+      it "does not select the object" do
+        expect(selected_iris).not_to contain(object.iri)
+      end
+    end
+
+    context "when the object is special" do
+      before_each { object.update_property(:special, "vote") }
+
+      it "does not select the object" do
+        expect(selected_iris).not_to contain(object.iri)
+      end
+    end
+
+    context "when the object is at the feed's floor" do
+      before_each { feed.assign(floor: object.created_at).save }
+
+      it "does not select the object" do
+        expect(selected_iris).not_to contain(object.iri)
+      end
+    end
+
     context "given another feed's verdict" do
       let_build(:object, named: other_object)
       let_create!(:feed, named: other_feed, owner: actor)
@@ -93,7 +147,7 @@ Spectator.describe Rules::View::Feed do
       # intentional implementation test
       it "binds the key as parameters, never interpolating them" do
         _, args = subject.membership({from_iri: actor.iri, to_iri: object.iri})
-        expect(args).to eq([actor.iri, feed.id, object.iri])
+        expect(args).to eq([actor.iri, feed.id, "Relationship::Content::Inbox", "Relationship::Content::Outbox", actor.iri, object.iri])
       end
     end
   end

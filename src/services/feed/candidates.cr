@@ -3,6 +3,7 @@ require "../../models/activity_pub"
 require "../../models/activity_pub/object"
 require "../../models/relationship/content/inbox"
 require "../../models/relationship/content/outbox"
+require "../../rules/view/feed"
 
 class Feed
   # The candidate source.
@@ -12,29 +13,10 @@ class Feed
   module Candidates
     extend self
 
-    # The candidate predicate.
-    #
-    private PREDICATE_SQL = <<-SQL
-           published IS NOT NULL
-           AND special IS NULL
-           AND (
-             visible = 1
-             OR EXISTS (
-               SELECT 1
-                 FROM relationships m
-                 JOIN activities a ON a.iri = m.to_iri
-                WHERE m.type IN (?, ?)
-                  AND m.from_iri = ?
-                  AND a.object_iri = objects.iri
-                  AND a.undone_at IS NULL
-             )
-           )
-      SQL
-
     # The scan.
     #
     private CANDIDATES_SQL = <<-SQL
-      #{PREDICATE_SQL}
+      #{Rules::View::Feed::CANDIDATE_SQL}
            AND id > ?
            AND id < ?
            AND NOT EXISTS (
@@ -88,7 +70,7 @@ class Feed
         SELECT created_at
           FROM objects
          WHERE iri = ?
-           AND #{PREDICATE_SQL}
+           AND #{Rules::View::Feed::CANDIDATE_SQL}
            AND (? IS NULL OR created_at > ?)
       SQL
       Ktistec.database.query_one?(

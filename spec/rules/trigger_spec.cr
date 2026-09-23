@@ -128,6 +128,11 @@ Spectator.describe Rules::Trigger do
           expect { Rules::Trigger.reconcile_for_object(post) }
             .to change { feed_row_count(feed) }.from(1).to(0)
         end
+
+        it "leaves the verdict included" do
+          expect { Rules::Trigger.reconcile_for_object(post) }
+            .not_to change { Feed::Verdict.find(feed_id: feed.id, object_iri: post.iri).included }.from(true)
+        end
       end
 
       context "when an edit stops it matching" do

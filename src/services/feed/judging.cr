@@ -70,6 +70,7 @@ class Feed
       seeded = 0
       Verdict.where(feed_id: source.id, included: true).each do |verdict|
         next unless (object = verdict.object?)
+        next unless Candidates.arrival_for(target, object)
         judgment = backend.judge(target, [object]).first
         next unless judgment.included
         write_verdict(target, object, verdict.position, judgment)
@@ -126,12 +127,9 @@ class Feed
         next unless view.is_a?(Rules::View::Feed)
         next unless (feed = ::Feed.find?(view.feed_id))
         next unless (backend = Backend.find?(feed.backend))
-        if (arrival = Candidates.arrival_for(feed, object))
-          judgment = backend.judge(feed, [object]).first
-          write_verdict(feed, object, arrival, judgment)
-        elsif (verdict = Verdict.find?(feed_id: feed.id, object_iri: object.iri))
-          verdict.assign(included: false, reason: "not a candidate").save
-        end
+        next unless (arrival = Candidates.arrival_for(feed, object))
+        judgment = backend.judge(feed, [object]).first
+        write_verdict(feed, object, arrival, judgment)
       end
     end
 

@@ -1889,7 +1889,7 @@ Spectator.describe FeedsController do
             end
 
             context "and the original has contents" do
-              let_create!(:object, named: kept, content: "<p>keyword</p>")
+              let_create!(:object, named: kept, content: "<p>keyword</p>", created_at: draft_floor + 1.day)
               let_create!(:hashtag, named: nil, subject: kept, name: "cnc")
               let_create!(:feed_verdict, named: nil, feed: original, object: kept, included: true)
 

@@ -209,6 +209,19 @@ Spectator.describe Feed::Judging do
         end
       end
 
+      context "and a member whose object is not visible" do
+        let_build(:object, named: hidden, content: "<p>alpha beta</p>", visible: false)
+        let_create!(:feed_verdict, named: nil, feed: source, object: hidden, included: true)
+
+        pre_condition { expect(Feed::Verdict.find(feed_id: source.id, object_iri: hidden.iri).included).to be_true }
+
+        it "does not include the hidden member" do
+          Feed::Judging.rejudge_contents(source, target)
+          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri)).not_to be_nil
+          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: hidden.iri)).to be_nil
+        end
+      end
+
       # in draft->publish the target already holds its own
       # preview-window verdicts, so a survivor can arrive already
       # having a target verdict; rejudge must upsert it, not add a
@@ -360,7 +373,10 @@ Spectator.describe Feed::Judging do
       put_in_inbox(actor, miss_create)
     end
 
-    pre_condition { expect(Feed::Verdict.count).to eq(0) }
+    pre_condition do
+      expect(Feed::Verdict.count(object_iri: hit.iri)).to eq(0)
+      expect(Feed::Verdict.count(object_iri: miss.iri)).to eq(0)
+    end
 
     context "when the feed is not registered" do
       pre_condition { expect(Feed::Candidates.arrival_for(feed, hit)).not_to be_nil }
@@ -406,6 +422,18 @@ Spectator.describe Feed::Judging do
         it "writes a verdict" do
           expect { Feed::Judging.judge_arrival(hit) }
             .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
+        end
+      end
+
+      context "given a matching object that is not visible" do
+        let_build(:object, named: hidden, content: "<p>something alpha something</p>", visible: false)
+        let_create!(:feed_verdict, named: nil, feed: feed, object: hidden, included: true)
+
+        pre_condition { expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hidden.iri).included).to be_true }
+
+        it "leaves the verdict included" do
+          Feed::Judging.judge_arrival(hidden)
+          expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hidden.iri).included).to be_true
         end
       end
 

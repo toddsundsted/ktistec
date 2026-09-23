@@ -668,9 +668,18 @@ Spectator.describe InboxesController do
             post "/actors/#{actor.username}/inbox", headers, json_ld
             expect(response.status_code).to eq(200)
           end
+
+          context "and the origin serves a key that doesn't verify" do
+            before_each { HTTP::Client.actors << other.dup.assign(pem_public_key: "") }
+
+            it "retrieves the actor from the origin only once" do
+              post "/actors/#{actor.username}/inbox", headers, json_ld
+              expect(HTTP::Client.requests.count { |request| request === "GET #{other.iri}" }).to eq(1)
+            end
+          end
         end
 
-        context "but the public key is wrong" do
+        context "but the public key is stale" do
           before_each { other.dup.assign(pem_public_key: "").save }
 
           before_each do
@@ -679,19 +688,42 @@ Spectator.describe InboxesController do
             HTTP::Client.objects.delete(note.iri)
           end
 
-          it "retrieves the activity from the origin" do
+          it "retrieves the actor from the origin" do
             post "/actors/#{actor.username}/inbox", headers, json_ld
-            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+            expect(HTTP::Client.requests).to have("GET #{other.iri}")
           end
 
-          it "does not retrieve the actor from the origin" do
-            post "/actors/#{actor.username}/inbox", headers, json_ld
-            expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
+          it "updates the actor's public key" do
+            expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+              .to change { ActivityPub::Actor.find(other.id).pem_public_key }
           end
 
-          it "returns 400 if the activity can't be verified" do
+          it "does not retrieve the activity from the origin" do
             post "/actors/#{actor.username}/inbox", headers, json_ld
-            expect(response.status_code).to eq(400)
+            expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          context "and the origin serves a replacement key" do
+            before_each { HTTP::Client.actors << other.dup.assign(pem_public_key: OpenSSL::RSA.generate(512, 17).public_key.to_pem) }
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, json_ld
+              expect(response.status_code).to eq(400)
+            end
+          end
+
+          context "and the actor's origin is unreachable" do
+            let_create(:actor, named: :other, iri: "https://remote/timeout-error", with_keys: true)
+
+            it "returns 502" do
+              post "/actors/#{actor.username}/inbox", headers, json_ld
+              expect(response.status_code).to eq(502)
+            end
           end
         end
       end

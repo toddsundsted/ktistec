@@ -205,12 +205,20 @@ class InboxesController
 
   # Finds a cached actor by IRI, or dereferences and saves it.
   #
+  # Returns the actor and whether it was dereferenced.
+  #
   private def self.find_or_dereference_actor(key_pair, iri, request_id, transient, deadline, require_key)
-    return unless iri
+    return {nil, false} unless iri
     actor = ActivityPub::Actor.find?(iri)
-    return actor if actor && (!require_key || actor.pem_public_key)
+    return {actor, false} if actor && (!require_key || actor.pem_public_key)
+    {dereference_actor(key_pair, iri, request_id, transient, deadline), true}
+  end
+
+  # Dereferences an actor from its origin and saves it.
+  #
+  private def self.dereference_actor(key_pair, iri, request_id, transient, deadline)
     try_dereference(transient, request_id) do
-      ActivityPub::Actor.dereference(key_pair, iri, ignore_cached: true, include_key: true, deadline: deadline)
+      ActivityPub::Actor.dereference(key_pair, iri, ignore_cached: true, deadline: deadline)
     end.try do |dereferenced|
       dereferenced.verify_handle!(deadline)
       dereferenced.save
@@ -360,7 +368,7 @@ class InboxesController
 
     if (key_id = parse_key_id(env.request.headers)) && (resolved = resolve_signer(fetch_identity, key_id, request_id, transient, deadline))
       signer_iri, resolved_key = resolved
-      candidate = find_or_dereference_actor(fetch_identity, signer_iri, request_id, transient, deadline, require_key: resolved_key.nil?)
+      candidate, dereferenced = find_or_dereference_actor(fetch_identity, signer_iri, request_id, transient, deadline, require_key: resolved_key.nil?)
       key_pair = resolved_key || candidate
       if candidate && key_pair
         begin
@@ -368,6 +376,20 @@ class InboxesController
           signer = candidate
         rescue ex : Ktistec::Signature::Error | OpenSSL::Error
           Log.trace { "[#{request_id}] signature verification failed: #{ex.message}" }
+          # a cached key that fails may simply be stale. fetch the
+          # actor from its origin and try once more. only a key that
+          # came from the database can be stale.
+          if resolved_key.nil? && !dereferenced
+            refreshed = dereference_actor(fetch_identity, signer_iri, request_id, transient, deadline)
+            if refreshed && refreshed.pem_public_key != candidate.pem_public_key
+              begin
+                Ktistec::Signature.verify(refreshed, "#{host}#{env.request.path}", env.request.headers, body)
+                signer = refreshed
+              rescue ex : Ktistec::Signature::Error | OpenSSL::Error
+                Log.trace { "[#{request_id}] signature verification failed with refreshed key: #{ex.message}" }
+              end
+            end
+          end
         end
       else
         Log.trace { "[#{request_id}] signature verification failed" }
@@ -389,12 +411,12 @@ class InboxesController
         via_community = signer
         verified = true
       end
-      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
+      actor, _ = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
     elsif !inner_ld && signer && outer_actor_iri && signer.iri == outer_actor_iri
       actor = signer
       verified = true
     else
-      actor = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
+      actor, _ = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
 
       # 4
 
@@ -696,8 +718,19 @@ class InboxesController
     "https://www.w3.org/ns/activitystreams#Delete",
   ]
 
+  # Properties of a relayed activity that are reduced to references.
+  #
+  REFERENCE_PROPERTIES = [
+    "https://www.w3.org/ns/activitystreams#actor",
+    "https://www.w3.org/ns/activitystreams#object",
+    "https://www.w3.org/ns/activitystreams#target",
+    "https://www.w3.org/ns/activitystreams#instrument",
+    "https://www.w3.org/ns/activitystreams#result",
+  ]
+
   # Detects a community-relayed activity and returns the wrapped inner
-  # activity's JSON-LD.
+  # activity's JSON-LD, with embedded nodes reduced to references --
+  # the relay, not their origin, sent them.
   #
   private def self.relayed_inner_activity(json_ld, request_id)
     type = json_ld.dig?("@type").try(&.as_s)
@@ -711,7 +744,13 @@ class InboxesController
 
     Log.debug { "[#{request_id}] relayed #{type.split("#").last} in Announce" }
 
-    object
+    inner = object.as_h.dup
+    REFERENCE_PROPERTIES.each do |property|
+      if (nodes = inner[property]?.try(&.as_a?))
+        inner[property] = JSON::Any.new(nodes.map { |node| node.dig?("@id") || node })
+      end
+    end
+    JSON::Any.new(inner)
   rescue ex
     Log.warn { "[#{request_id}] failed to inspect Announce: #{ex.message}" }
     nil

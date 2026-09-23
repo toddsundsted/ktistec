@@ -668,9 +668,18 @@ Spectator.describe InboxesController do
             post "/actors/#{actor.username}/inbox", headers, json_ld
             expect(response.status_code).to eq(200)
           end
+
+          context "and the origin serves a key that doesn't verify" do
+            before_each { HTTP::Client.actors << other.dup.assign(pem_public_key: "") }
+
+            it "retrieves the actor from the origin only once" do
+              post "/actors/#{actor.username}/inbox", headers, json_ld
+              expect(HTTP::Client.requests.count { |request| request === "GET #{other.iri}" }).to eq(1)
+            end
+          end
         end
 
-        context "but the public key is wrong" do
+        context "but the public key is stale" do
           before_each { other.dup.assign(pem_public_key: "").save }
 
           before_each do
@@ -679,19 +688,42 @@ Spectator.describe InboxesController do
             HTTP::Client.objects.delete(note.iri)
           end
 
-          it "retrieves the activity from the origin" do
+          it "retrieves the actor from the origin" do
             post "/actors/#{actor.username}/inbox", headers, json_ld
-            expect(HTTP::Client.requests).to have("GET #{activity.iri}")
+            expect(HTTP::Client.requests).to have("GET #{other.iri}")
           end
 
-          it "does not retrieve the actor from the origin" do
-            post "/actors/#{actor.username}/inbox", headers, json_ld
-            expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
+          it "updates the actor's public key" do
+            expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
+              .to change { ActivityPub::Actor.find(other.id).pem_public_key }
           end
 
-          it "returns 400 if the activity can't be verified" do
+          it "does not retrieve the activity from the origin" do
             post "/actors/#{actor.username}/inbox", headers, json_ld
-            expect(response.status_code).to eq(400)
+            expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, json_ld
+            expect(response.status_code).to eq(200)
+          end
+
+          context "and the origin serves a replacement key" do
+            before_each { HTTP::Client.actors << other.dup.assign(pem_public_key: OpenSSL::RSA.generate(512, 17).public_key.to_pem) }
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, json_ld
+              expect(response.status_code).to eq(400)
+            end
+          end
+
+          context "and the actor's origin is unreachable" do
+            let_create(:actor, named: :other, iri: "https://remote/timeout-error", with_keys: true)
+
+            it "returns 502" do
+              post "/actors/#{actor.username}/inbox", headers, json_ld
+              expect(response.status_code).to eq(502)
+            end
           end
         end
       end
@@ -3246,7 +3278,7 @@ Spectator.describe InboxesController do
       end
 
       context "wrapped Delete activity (community relay)" do
-        let_create(:actor, named: :moderator, iri: "https://lemmy.ml/u/mod")
+        let_create(:actor, named: :moderator, iri: "https://other.example/u/mod")
         let_create(:object, attributed_to: lemmy_user, audience: [community.iri])
         let_build(:delete, actor: moderator, object: object)
         let_build(:announce, actor: community, object_iri: delete.iri)
@@ -3392,8 +3424,7 @@ Spectator.describe InboxesController do
             # the moderator's instance is dead -- not cached, not
             # fetchable. the community's signature is the authentication.
             # resolving the inner actor must not gate the removal.
-            let_build(:actor, named: :ghost, iri: "https://dead.example/u/ghost")
-            let_build(:delete, actor: ghost, object: object)
+            before_each { moderator.destroy }
 
             it "saves the Delete activity" do
               expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
@@ -3408,6 +3439,31 @@ Spectator.describe InboxesController do
             it "is successful" do
               post "/actors/#{actor.username}/inbox", headers, wrapped_json
               expect(response.status_code).to eq(200)
+            end
+
+            context "and the inner Delete embeds its actor" do
+              let(wrapped_json) do
+                {
+                  "@context" => "https://www.w3.org/ns/activitystreams",
+                  "type"     => "Announce",
+                  "id"       => announce.iri,
+                  "actor"    => announce.actor.iri,
+                  "object"   => JSON.parse(delete.to_json_ld(recursive: true)),
+                }.to_json
+              end
+
+              pre_condition { expect(JSON.parse(wrapped_json).dig("object", "actor", "id")).to eq(moderator.iri) }
+
+              it "deletes the object" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .to change { object.reload!.deleted_at }
+              end
+
+              it "does not save the actor" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
+                expect(ActivityPub::Actor.find?(moderator.iri)).to be_nil
+              end
             end
           end
         end

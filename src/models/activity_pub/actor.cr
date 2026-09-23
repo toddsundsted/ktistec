@@ -1423,12 +1423,12 @@ module ActivityPub
       ActorModelHelper.to_json_ld(self, recursive)
     end
 
-    def from_json_ld(json, *, include_key = false)
-      self.assign(self.class.map(json, include_key: include_key))
+    def from_json_ld(json)
+      self.assign(self.class.map(json))
     end
 
-    def self.map(json, *, include_key = false, **options)
-      ActorModelHelper.from_json_ld(json, include_key)
+    def self.map(json, **options)
+      ActorModelHelper.from_json_ld(json)
     end
   end
 end
@@ -1440,7 +1440,7 @@ private module ActorModelHelper
     render "src/views/actors/actor.json.ecr"
   end
 
-  def self.from_json_ld(json : JSON::Any | String | IO, include_key)
+  def self.from_json_ld(json : JSON::Any | String | IO)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
     actor_iri = json.dig?("@id").try(&.as_s?)
     {
@@ -1448,15 +1448,13 @@ private module ActorModelHelper
       "_type"          => json.dig?("@type").try(&.as_s.split("#").last),
       "username"       => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
       "webfinger"      => Ktistec::JSON_LD.dig?(json, "https://purl.archive.org/socialweb/webfinger#webfinger").try(&.lchop("acct:")),
-      "pem_public_key" => if include_key
-        Ktistec::JSON_LD.dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem")
-      end,
-      "shared_inbox" => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#endpoints", "https://www.w3.org/ns/activitystreams#sharedInbox"),
-      "inbox"        => Ktistec::JSON_LD.dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
-      "outbox"       => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
-      "following"    => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
-      "followers"    => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
-      "featured"     => Ktistec::JSON_LD.dig_id?(json, "http://joinmastodon.org/ns#featured").try do |featured|
+      "pem_public_key" => Ktistec::JSON_LD.dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem"),
+      "shared_inbox"   => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#endpoints", "https://www.w3.org/ns/activitystreams#sharedInbox"),
+      "inbox"          => Ktistec::JSON_LD.dig_id?(json, "http://www.w3.org/ns/ldp#inbox"),
+      "outbox"         => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#outbox"),
+      "following"      => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#following"),
+      "followers"      => Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#followers"),
+      "featured"       => Ktistec::JSON_LD.dig_id?(json, "http://joinmastodon.org/ns#featured").try do |featured|
         featured if Ktistec::Util.same_origin?(featured, actor_iri)
       end,
       "name"        => ActivityPub.dig_text?(json, "https://www.w3.org/ns/activitystreams#name"),

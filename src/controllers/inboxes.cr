@@ -335,6 +335,15 @@ class InboxesController
 
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
+    if inner_ld && (activity_actor_iri = activity.actor_iri) && Ktistec::Model::Linked.local?(activity_actor_iri)
+      if ActivityPub::Activity.find?(activity.iri, include_undone: true)
+        Log.trace { "[#{request_id}] ignoring relay echo of activity by local actor=#{activity_actor_iri} relayed by #{outer_actor_iri}" }
+      else
+        Log.warn { "[#{request_id}] #{outer_actor_iri} relayed an activity by local actor=#{activity_actor_iri} that we never sent iri=#{activity.iri}" }
+      end
+      ok
+    end
+
     # this is, strictly speaking, not required because this method
     # should be idempotent, but it avoids a lot of unnecessary work.
 

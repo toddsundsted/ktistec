@@ -286,6 +286,17 @@ def self.random_password
   random_string + "1="
 end
 
+# Helpers for inspecting log output
+
+def self.capture_log(source : String = "*", level : Log::Severity = :trace, &) : Array(Log::Entry)
+  backend = Log::MemoryBackend.new
+  Log.setup(source, level, backend)
+  yield
+  backend.entries
+ensure
+  Log.setup_from_env
+end
+
 # Test configuration
 
 Kemal.config.public_folder = Dir.tempdir

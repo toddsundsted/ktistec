@@ -3190,6 +3190,47 @@ Spectator.describe InboxesController do
                 expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                   .to change { ActivityPub::Activity::Like.count }.by(1)
               end
+
+              context "and the inner activity's actor is local" do
+                let_build(:like, actor: actor, object: object)
+
+                context "but we never sent it (a forgery)" do
+                  pre_condition { expect(ActivityPub::Activity.find?(like.iri)).to be_nil }
+
+                  it "does not save the inner Like activity" do
+                    expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      .not_to change { ActivityPub::Activity::Like.count }
+                  end
+
+                  it "warns of the forgery" do
+                    entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/that we never sent/)
+                  end
+
+                  it "is successful" do
+                    post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                    expect(response.status_code).to eq(200)
+                  end
+                end
+
+                context "and we sent it (an echo)" do
+                  before_each { like.save }
+
+                  it "logs the echo" do
+                    entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+                  end
+
+                  context "and we since undid it" do
+                    before_each { like.undo! }
+
+                    it "logs the echo" do
+                      entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+                    end
+                  end
+                end
+              end
             end
           end
 
@@ -3270,6 +3311,47 @@ Spectator.describe InboxesController do
               it "saves the inner Dislike activity" do
                 expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                   .to change { ActivityPub::Activity::Dislike.count }.by(1)
+              end
+
+              context "and the inner activity's actor is local" do
+                let_build(:dislike, actor: actor, object: object)
+
+                context "but we never sent it (a forgery)" do
+                  pre_condition { expect(ActivityPub::Activity.find?(dislike.iri)).to be_nil }
+
+                  it "does not save the inner Dislike activity" do
+                    expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      .not_to change { ActivityPub::Activity::Dislike.count }
+                  end
+
+                  it "warns of the forgery" do
+                    entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/that we never sent/)
+                  end
+
+                  it "is successful" do
+                    post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                    expect(response.status_code).to eq(200)
+                  end
+                end
+
+                context "and we sent it (an echo)" do
+                  before_each { dislike.save }
+
+                  it "logs the echo" do
+                    entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+                  end
+
+                  context "and we since undid it" do
+                    before_each { dislike.undo! }
+
+                    it "logs the echo" do
+                      entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+                    end
+                  end
+                end
               end
             end
           end
@@ -3511,6 +3593,43 @@ Spectator.describe InboxesController do
           it "is successful" do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
             expect(response.status_code).to eq(200)
+          end
+
+          context "when the inner activity's actor is local" do
+            let_build(:delete, actor: actor, object: object)
+
+            context "but we never sent it (a forgery)" do
+              pre_condition { expect(ActivityPub::Activity.find?(delete.iri)).to be_nil }
+
+              it "does not save the Delete activity" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { ActivityPub::Activity::Delete.count }
+              end
+
+              it "does not delete the object" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { object.reload!.deleted_at }
+              end
+
+              it "warns of the forgery" do
+                entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                expect(entries.select(&.severity.warn?).map(&.message)).to have(/that we never sent/)
+              end
+
+              it "is successful" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
+              end
+            end
+
+            context "and we sent it (an echo)" do
+              before_each { delete.save }
+
+              it "logs the echo" do
+                entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+              end
+            end
           end
 
           context "when the inner activity's id is not on its actor's host" do

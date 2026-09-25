@@ -3,12 +3,13 @@ require "../../src/services/feed/backend/criteria"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"
+require "../spec_helper/feed/backend"
 
 # fails the way an unanticipated bug in judging might -- partway
 # through the publish transition, after the successor has been
 # created.
 #
-private class RaisingBackend < Feed::Backend
+private class RaisingBackend < TestBackend
   def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
     raise "judging failed"
   end

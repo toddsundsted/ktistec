@@ -605,4 +605,10 @@ Spectator.describe Feed::Backend::Criteria do
       expect(subject.judging_params(params)).to eq(params)
     end
   end
+
+  describe "#revision" do
+    it "does not depend on the criteria" do
+      expect(subject.revision(one("keywords", "any", "alpha"))).to eq(subject.revision(one("hashtags", "none", "beta")))
+    end
+  end
 end

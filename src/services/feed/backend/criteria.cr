@@ -20,6 +20,18 @@ class Feed
     # wins, across groups.
     #
     class Criteria < Backend
+      REVISION = "1"
+
+      def revision(params : Hash(String, JSON::Any)) : String
+        REVISION
+      end
+
+      COST = Cost.new(batch_size: 250)
+
+      def cost(params : Hash(String, JSON::Any)) : Cost
+        COST
+      end
+
       SELECTORS = %w(any all none)
       POSITIVE  = %w(any all)
 

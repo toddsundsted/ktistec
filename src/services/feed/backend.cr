@@ -37,6 +37,32 @@ class Feed
       params
     end
 
+    # Reports the judge's revision given a feed's params.
+    #
+    # Changes when a change to the judge would change its answers.
+    #
+    abstract def revision(params : Hash(String, JSON::Any)) : String
+
+    # A judge's declared appetite.
+    #
+    record Cost,
+      batch_size : Int32
+
+    # Declares the judge's cost given a feed's params.
+    #
+    abstract def cost(params : Hash(String, JSON::Any)) : Cost
+
+    # A judging failure.
+    #
+    abstract class Error < Exception
+    end
+
+    class TransientError < Error
+    end
+
+    class PermanentError < Error
+    end
+
     @@registry = {} of String => Backend
 
     # Registers a backend.

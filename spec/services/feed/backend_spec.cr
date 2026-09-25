@@ -6,7 +6,7 @@ require "../../spec_helper/base"
 require "../../spec_helper/factory"
 require "../../spec_helper/feed/backend"
 
-private class CannedBackend < Feed::Backend
+private class CannedBackend < TestBackend
   getter calls = [] of {Feed, Array(ActivityPub::Object)}
 
   def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
@@ -58,5 +58,21 @@ Spectator.describe Feed::Backend do
     it "returns nil" do
       expect(described_class.find?("missing")).to be_nil
     end
+  end
+end
+
+Spectator.describe Feed::Backend::TransientError do
+  subject { described_class.new("judge unavailable") }
+
+  it "is a judging error" do
+    expect(subject).to be_a(Feed::Backend::Error)
+  end
+end
+
+Spectator.describe Feed::Backend::PermanentError do
+  subject { described_class.new("judge misconfigured") }
+
+  it "is a judging error" do
+    expect(subject).to be_a(Feed::Backend::Error)
   end
 end

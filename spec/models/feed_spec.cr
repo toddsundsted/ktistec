@@ -5,7 +5,7 @@ require "../spec_helper/base"
 require "../spec_helper/factory"
 require "../spec_helper/feed/backend"
 
-private class RejectingBackend < Feed::Backend
+private class RejectingBackend < TestBackend
   def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
     objects.map { Judgment.new(included: false) }
   end

@@ -125,6 +125,15 @@ Spectator.describe Feed do
       end
     end
 
+    context "when the backend of a saved feed is changed" do
+      before_each { feed.save.assign(backend: "missing") }
+
+      it "is invalid" do
+        expect(feed.valid?).to be_false
+        expect(feed.errors["backend"]?).to contain("can't be changed")
+      end
+    end
+
     context "when the backend rejects the params" do
       around_each do |proc|
         Feed::Backend.register("rejecting", RejectingBackend.new)

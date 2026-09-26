@@ -35,7 +35,13 @@ class Feed
 
   @[Persistent]
   property backend : String
-  validates(backend) { "is not a registered backend: #{backend}" unless Backend.find?(backend) }
+  validates(backend) do
+    if !new_record? && changed?(:backend)
+      "can't be changed"
+    elsif !Backend.find?(backend)
+      "is not a registered backend: #{backend}"
+    end
+  end
 
   @[Persistent]
   property draft : Bool = false

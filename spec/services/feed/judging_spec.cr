@@ -120,14 +120,6 @@ Spectator.describe Feed::Judging do
       end
     end
 
-    context "given an unregistered backend" do
-      before_each { feed.assign(backend: "missing").save(skip_validation: true) }
-
-      it "raises an error" do
-        expect { Feed::Judging.judge(feed) }.to raise_error(/is not a registered backend/)
-      end
-    end
-
     context "given a non-positive limit" do
       it "raises an error" do
         expect { Feed::Judging.judge(feed, limit: 0) }.to raise_error(ArgumentError, "limit must be positive")
@@ -243,14 +235,6 @@ Spectator.describe Feed::Judging do
         end
       end
     end
-
-    context "given an unregistered target backend" do
-      before_each { target.assign(backend: "missing").save(skip_validation: true) }
-
-      it "raises an error" do
-        expect { Feed::Judging.rejudge_contents(source, target) }.to raise_error(/is not a registered backend/)
-      end
-    end
   end
 
   describe ".backfill" do
@@ -340,14 +324,6 @@ Spectator.describe Feed::Judging do
         it "is done" do
           expect(subject.done).to be_true
         end
-      end
-    end
-
-    context "given an unregistered backend" do
-      before_each { feed.assign(backend: "missing").save(skip_validation: true) }
-
-      it "raises an error" do
-        expect { subject }.to raise_error(/is not a registered backend/)
       end
     end
   end

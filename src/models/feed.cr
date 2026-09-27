@@ -2,6 +2,7 @@ require "../framework/model"
 require "../framework/model/common"
 require "../framework/util"
 require "./feed/verdict"
+require "./feed/version"
 require "../services/feed/backend"
 
 # An algorithmic feed.
@@ -42,6 +43,14 @@ class Feed
       "is not a registered backend: #{backend}"
     end
   end
+
+  # The version answering for the feed.
+  #
+  # Assigned on save, from the backend and the params.
+  #
+  @[Persistent]
+  property version_id : Int64?
+  belongs_to version, class_name: Feed::Version, foreign_key: version_id, primary_key: id
 
   @[Persistent]
   property draft : Bool = false
@@ -123,9 +132,10 @@ class Feed
     end
   end
 
-  # Generates the feed's slug.
+  # Assigns the feed's version and generates the feed's slug.
   #
   def before_save
+    self.version_id = Version.for(backend, params).id
     return if draft || slug
     base = Ktistec::Util.slugify(name)
     candidate = base

@@ -547,6 +547,11 @@ def feed_verdict_factory(clazz = Feed::Verdict, feed_id = nil, feed = false, obj
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
+def feed_version_factory(clazz = Feed::Version, backend = "criteria", params = nil, **options)
+  params ||= JSON.parse(%({"keywords": {"any": ["keyword"]}})).as_h
+  clazz.new(**{backend: backend, params: params.to_json}.merge(options))
+end
+
 # translation factory
 
 def translation_factory(clazz = Translation, origin_id = nil, origin = false, **options)

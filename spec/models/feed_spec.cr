@@ -261,6 +261,36 @@ Spectator.describe Feed do
     end
   end
 
+  describe "#version_id" do
+    let_build(:feed, backend: "criteria")
+
+    it "assigns a version on save" do
+      expect { feed.save }.to change { feed.version_id }.from(nil)
+    end
+
+    context "given another feed with the same backend and params" do
+      let_create!(:feed, named: other, backend: "criteria", params: feed.params)
+
+      pre_condition { expect(other.version_id).not_to be_nil }
+
+      it "shares the other feed's version" do
+        expect(feed.save.version_id).to eq(other.version_id)
+      end
+    end
+
+    context "given a saved feed" do
+      before_each { feed.assign(params: JSON.parse(%({"keywords": {"any": ["alpha"]}, "order": {"any": ["alpha"]}})).as_h).save }
+
+      context "when the params are replaced" do
+        before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
+
+        it "changes the version on save" do
+          expect { feed.save }.to change { feed.version_id }
+        end
+      end
+    end
+  end
+
   describe "#slug" do
     context "given a draft feed" do
       let_build(:feed, name: "The Fediverse", draft: true)

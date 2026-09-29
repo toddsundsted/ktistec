@@ -5,10 +5,10 @@ require "../feed"
 class Task
   # Collection task for orphaned feed state.
   #
-  # A feed memoizes its judgments as `Feed::Verdict`s and materializes
-  # its membership as `relationships` rows carrying the synthetic
-  # `Feed::<id>` type. This task collects both when the object they
-  # refer to no longer exists.
+  # Collects `Feed::Version`s no feed uses, `Feed::Verdict`s whose
+  # version is collected or whose object no longer exists, and
+  # membership rows (the `Relationship`s carrying the synthetic
+  # `Feed::<id>` type) whose object no longer exists.
   #
   class CollectFeedOrphans < Task
     include Singleton
@@ -37,7 +37,7 @@ class Task
     def perform
       Log.debug { "Starting sweep of orphaned feed state" }
 
-      swept_count = collect_orphans
+      swept_count = collect_orphans + collect_unused_versions
 
       Log.debug { "Feed orphan sweep completed: deleted #{swept_count} rows" }
 
@@ -59,10 +59,22 @@ class Task
       state.cursor = slice.last[0]
       iris = slice.select(&.[2]).map(&.[1]).uniq!
       return 0 if iris.empty?
-      feed_ids = Ktistec.database.query_all("SELECT id FROM feeds", as: Int64)
       iris.sum(0) do |iri|
-        delete_verdicts(feed_ids, iri) + delete_materialized_rows(iri)
+        delete_verdicts(iri) + delete_materialized_rows(iri)
       end
+    end
+
+    private UNUSED_VERSIONS = <<-QUERY
+      SELECT v.id
+        FROM feed_versions v
+       WHERE NOT EXISTS (SELECT 1 FROM feeds f WHERE f.version_id = v.id)
+    QUERY
+
+    # Deletes the versions no feed uses, and their verdicts.
+    #
+    private def collect_unused_versions
+      deleted = Ktistec.database.exec("DELETE FROM feed_verdicts WHERE version_id IN (#{UNUSED_VERSIONS})").rows_affected.to_i
+      deleted + Ktistec.database.exec("DELETE FROM feed_versions WHERE id IN (#{UNUSED_VERSIONS})").rows_affected.to_i
     end
 
     # Returns the next slice of verdicts.
@@ -83,14 +95,12 @@ class Task
     end
 
     # deleting in SQL bypasses model hooks -- if the associated models
-    # ever gain any, this and `Feed#delete_verdicts_and_materialized_rows`
+    # ever gain any, this and `Feed#delete_materialized_rows`
     # are the sites to revisit.
 
-    private def delete_verdicts(feed_ids, iri)
-      query = "DELETE FROM feed_verdicts WHERE feed_id = ? AND object_iri = ?"
-      feed_ids.sum(0) do |feed_id|
-        Ktistec.database.exec(query, feed_id, iri).rows_affected.to_i
-      end
+    private def delete_verdicts(iri)
+      query = "DELETE FROM feed_verdicts WHERE object_iri = ?"
+      Ktistec.database.exec(query, iri).rows_affected.to_i
     end
 
     private def delete_materialized_rows(iri)

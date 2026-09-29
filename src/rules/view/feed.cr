@@ -9,7 +9,7 @@ module Rules
     # never here.
     #
     # An object is a member when it is a candidate for the feed and
-    # has a verdict for the feed that is `included` and current.
+    # has a verdict for the feed's version that is `included`.
     #
     class Feed < View
       INBOX  = "Relationship::Content::Inbox"
@@ -58,11 +58,11 @@ module Rules
         sql = <<-SQL
           SELECT ? AS from_iri,
                  v.object_iri AS to_iri,
-                 v.position AS position
-            FROM feed_verdicts v
-            JOIN feeds f ON f.id = v.feed_id
+                 objects.created_at AS position
+            FROM feeds f
+            JOIN feed_verdicts v ON v.version_id = f.version_id
             JOIN objects ON objects.iri = v.object_iri
-           WHERE v.feed_id = ?
+           WHERE f.id = ?
              AND v.included = 1
              AND (f.floor IS NULL OR objects.created_at > f.floor)
              AND #{CANDIDATE_SQL}

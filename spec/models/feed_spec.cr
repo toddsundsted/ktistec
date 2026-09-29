@@ -125,6 +125,15 @@ Spectator.describe Feed do
       end
     end
 
+    context "when the backend of a saved feed is changed" do
+      before_each { feed.save.assign(backend: "missing") }
+
+      it "is invalid" do
+        expect(feed.valid?).to be_false
+        expect(feed.errors["backend"]?).to contain("can't be changed")
+      end
+    end
+
     context "when the backend rejects the params" do
       around_each do |proc|
         Feed::Backend.register("rejecting", RejectingBackend.new)
@@ -144,110 +153,46 @@ Spectator.describe Feed do
     end
   end
 
-  describe "#criteria_changed?" do
-    let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
-
-    it "is false" do
-      expect(feed.criteria_changed?).to be_false
-    end
-
-    context "when saved" do
-      before_each { feed.save }
-
-      it "is false" do
-        expect(feed.criteria_changed?).to be_false
-      end
-
-      context "and the criteria are replaced" do
-        before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
-
-        it "is true" do
-          expect(feed.criteria_changed?).to be_true
-        end
-      end
-
-      context "and the criteria are mutated in place" do
-        before_each { feed.params["keywords"] = JSON.parse(%({"any": ["beta"]})) }
-
-        it "is true" do
-          expect(feed.criteria_changed?).to be_true
-        end
-      end
-
-      # this tests that adding the entry order key, and changing
-      # nothing else, does not count as a criteria change.
-      context "and only the entry order is added" do
-        before_each { feed.params[Feed::Backend::Criteria::ORDER] = JSON.parse(%({"any": ["alpha"]})) }
-
-        it "is false" do
-          expect(feed.criteria_changed?).to be_false
-        end
-      end
-    end
-  end
-
   describe "#save" do
     let_build(:object)
     let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
     let_create!(:feed_verdict, feed: feed, object: object)
 
-    before_each { put_in_feed(feed, object) }
-
-    it "does not delete the verdicts" do
-      expect { feed.save }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
-    end
-
-    it "does not delete the materialized rows" do
-      expect { feed.save }.not_to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1)
-    end
-
     context "when the criteria are replaced" do
       before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
 
-      it "deletes the verdicts" do
-        expect { feed.save }.to change { Feed::Verdict.count(feed_id: feed.id) }.from(1).to(0)
+      it "keeps the verdicts" do
+        expect { feed.save }.not_to change { Feed::Verdict.count(id: feed_verdict.id) }.from(1)
       end
+    end
+  end
 
-      it "deletes the materialized rows" do
-        expect { feed.save }.to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1).to(0)
+  describe "#version_id" do
+    let_build(:feed, backend: "criteria")
+
+    it "assigns a version on save" do
+      expect { feed.save }.to change { feed.version_id }.from(nil)
+    end
+
+    context "given another feed with the same backend and params" do
+      let_create!(:feed, named: other, backend: "criteria", params: feed.params)
+
+      pre_condition { expect(other.version_id).not_to be_nil }
+
+      it "shares the other feed's version" do
+        expect(feed.save.version_id).to eq(other.version_id)
       end
     end
 
-    context "when the criteria are mutated in place" do
-      before_each { feed.params["keywords"] = JSON.parse(%({"any": ["beta"]})) }
+    context "given a saved feed" do
+      before_each { feed.assign(params: JSON.parse(%({"keywords": {"any": ["alpha"]}, "order": {"any": ["alpha"]}})).as_h).save }
 
-      it "deletes the verdicts" do
-        expect { feed.save }.to change { Feed::Verdict.count(feed_id: feed.id) }.from(1).to(0)
-      end
+      context "when the params are replaced" do
+        before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
 
-      it "deletes the materialized rows" do
-        expect { feed.save }.to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1).to(0)
-      end
-    end
-
-    context "when the name changes" do
-      before_each { feed.assign(name: "Renamed") }
-
-      it "does not delete the verdicts" do
-        expect { feed.save }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
-      end
-
-      it "does not delete the materialized rows" do
-        expect { feed.save }.not_to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1)
-      end
-    end
-
-    # this tests that adding the entry order key, and changing
-    # nothing else, does not count as a criteria change.
-    context "when only the entry order is added" do
-      before_each { feed.params[Feed::Backend::Criteria::ORDER] = JSON.parse(%({"any": ["alpha"]})) }
-
-      it "does not delete the verdicts" do
-        expect { feed.save }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
-      end
-
-      it "does not delete the materialized rows" do
-        expect { feed.save }.not_to change { materialized_count(feed.owner_iri, feed.feed_type) }.from(1)
+        it "changes the version on save" do
+          expect { feed.save }.to change { feed.version_id }
+        end
       end
     end
   end
@@ -453,14 +398,13 @@ Spectator.describe Feed do
     let_create!(:feed_verdict, feed: feed, object: object)
     before_each { put_in_feed(feed, object) }
 
-    let_create(:feed, named: other)
+    let_create(:feed, named: other, params: JSON.parse(%({"keywords": {"any": ["other"]}})).as_h)
     let_build(:object, named: another)
     let_create!(:feed_verdict, named: nil, feed: other, object: another)
     before_each { put_in_feed(other, another) }
 
-    it "deletes the feed's verdicts" do
-      feed_id = feed.id
-      expect { feed.destroy }.to change { Feed::Verdict.count(feed_id: feed_id) }.from(1).to(0)
+    it "does not delete the feed's verdicts" do
+      expect { feed.destroy }.not_to change { Feed::Verdict.count(id: feed_verdict.id) }.from(1)
     end
 
     it "deletes the feed's materialized rows" do
@@ -468,14 +412,7 @@ Spectator.describe Feed do
       expect { feed.destroy }.to change { materialized_count(owner_iri, feed_type) }.from(1).to(0)
     end
 
-    pre_condition do
-      expect(Feed::Verdict.count(feed_id: other.id)).to eq(1)
-      expect(materialized_count(other.owner_iri, other.feed_type)).to eq(1)
-    end
-
-    it "does not delete the other feed's verdicts" do
-      expect { feed.destroy }.not_to change { Feed::Verdict.count(feed_id: other.id) }
-    end
+    pre_condition { expect(materialized_count(other.owner_iri, other.feed_type)).to eq(1) }
 
     it "does not delete the other feed's materialized rows" do
       expect { feed.destroy }.not_to change { materialized_count(other.owner_iri, other.feed_type) }

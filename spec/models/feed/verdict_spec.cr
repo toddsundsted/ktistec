@@ -8,7 +8,7 @@ Spectator.describe Feed::Verdict do
   setup_spec
 
   it "instantiates the class" do
-    expect(described_class.new(included: true, position: Time.utc)).to be_a(Feed::Verdict)
+    expect(described_class.new(included: true)).to be_a(Feed::Verdict)
   end
 
   describe "validation" do
@@ -18,12 +18,12 @@ Spectator.describe Feed::Verdict do
       expect(feed_verdict.valid?).to be_true
     end
 
-    context "when feed and object are missing" do
-      let_build(:feed_verdict, feed: nil, object: nil)
+    context "when version and object are missing" do
+      let_build(:feed_verdict, version: nil, object: nil)
 
-      it "is invalid without a feed" do
+      it "is invalid without a version" do
         expect(feed_verdict.valid?).to be_false
-        expect(feed_verdict.errors.keys).to contain("feed")
+        expect(feed_verdict.errors.keys).to contain("version")
       end
 
       it "is invalid without an object" do
@@ -34,14 +34,12 @@ Spectator.describe Feed::Verdict do
   end
 
   describe "persistence" do
-    let(position) { Time.utc(2016, 2, 15, 10, 20, 0) }
-    let_create(:feed_verdict, included: false, reason: "no keywords matched", position: position)
+    let_create(:feed_verdict, included: false, reason: "no keywords matched")
 
     it "round-trips through the database" do
       verdict = Feed::Verdict.find(feed_verdict.id)
       expect(verdict.included).to be_false
       expect(verdict.reason).to eq("no keywords matched")
-      expect(verdict.position).to eq(position)
     end
   end
 end

@@ -31,7 +31,7 @@ class Feed
 
     # Returns a feed's params reduced to what decides membership.
     #
-    # In canonical form. Compared, never stored.
+    # In canonical form.
     #
     def judging_params(params : Hash(String, JSON::Any)) : Hash(String, JSON::Any)
       params

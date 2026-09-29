@@ -1,7 +1,9 @@
 require "../framework/model"
 require "../framework/model/common"
+require "../framework/observable"
 require "../framework/util"
 require "./feed/verdict"
+require "./feed/version"
 require "../services/feed/backend"
 
 # An algorithmic feed.
@@ -22,8 +24,6 @@ class Feed
   belongs_to owner, class_name: ActivityPub::Actor, foreign_key: owner_iri, primary_key: iri
   validates(owner) { "missing: #{owner_iri}" unless owner? }
 
-  has_many verdicts, class_name: Feed::Verdict, foreign_key: feed_id, primary_key: id, inverse_of: feed
-
   @[Persistent]
   property name : String
   validates(name) { "can't be blank" unless name.presence }
@@ -35,7 +35,21 @@ class Feed
 
   @[Persistent]
   property backend : String
-  validates(backend) { "is not a registered backend: #{backend}" unless Backend.find?(backend) }
+  validates(backend) do
+    if !new_record? && changed?(:backend)
+      "can't be changed"
+    elsif !Backend.find?(backend)
+      "is not a registered backend: #{backend}"
+    end
+  end
+
+  # The version answering for the feed.
+  #
+  # Assigned on save, from the backend and the params.
+  #
+  @[Persistent]
+  property version_id : Int64?
+  belongs_to version, class_name: Feed::Version, foreign_key: version_id, primary_key: id
 
   @[Persistent]
   property draft : Bool = false
@@ -104,22 +118,14 @@ class Feed
     end
   end
 
-  # Indicates whether the new criteria differ from the persisted criteria.
-  #
-  def criteria_changed? : Bool
-    return false if new_record?
-    # compare against the database row rather than relying on change
-    # tracking, so every mutation path is seen
-    if (backend = Backend.find?(self.backend))
-      backend.judging_params(Feed.find(id).params) != backend.judging_params(params)
-    else
-      Feed.find(id).params != params
-    end
-  end
+  @version_changed = false
 
-  # Generates the feed's slug.
+  # Assigns the feed's version and generates the feed's slug.
   #
   def before_save
+    version_id = Version.for(backend, params).id
+    @version_changed = version_id != self.version_id
+    self.version_id = version_id
     return if draft || slug
     base = Ktistec::Util.slugify(name)
     candidate = base
@@ -135,16 +141,21 @@ class Feed
     Ktistec.database.scalar(query, owner_iri, slug).as(Int64) > 0
   end
 
-  # Invalidates the feed's verdicts when the criteria change.
+  OBSERVERS = Ktistec::Observable::Registry(Feed).new
+
+  # Notifies observers when the feed moved to another version.
   #
-  def before_update
-    delete_verdicts_and_materialized_rows if criteria_changed?
+  def after_save
+    if @version_changed
+      @version_changed = false
+      Feed::OBSERVERS.notify(:version, self)
+    end
   end
 
-  # Invalidates the feed's verdicts when the feed is destroyed.
+  # Deletes the feed's materialized rows when the feed is destroyed.
   #
   def before_destroy
-    delete_verdicts_and_materialized_rows
+    delete_materialized_rows
   end
 
   # Publishes a draft feed.
@@ -201,7 +212,7 @@ class Feed
     Stats.new(count, newest)
   end
 
-  # Deletes the feed's verdicts and materialized rows.
+  # Deletes the feed's materialized rows.
   #
   # The materialized rows carry the synthetic feed `type` and must
   # never pass through `Relationship`'s polymorphic loader.
@@ -210,8 +221,7 @@ class Feed
   # ever gain any, this and the methods in `Task::CollectFeedOrphans`
   # are the sites to revisit.
   #
-  private def delete_verdicts_and_materialized_rows
-    Ktistec.database.exec("DELETE FROM feed_verdicts WHERE feed_id = ?", id)
+  private def delete_materialized_rows
     Ktistec.database.exec("DELETE FROM relationships WHERE from_iri = ? AND type = ?", owner_iri, feed_type)
   end
 

@@ -54,14 +54,14 @@ Spectator.describe Rules::View::Feed do
     let_build(:object)
     let_create!(:feed_verdict, feed: feed, object: object, included: true)
 
-    it "selects the verdict's object at its position" do
-      expect(selected).to contain({actor.iri, object.iri, feed_verdict.position})
+    it "selects the verdict's object at its creation time" do
+      expect(selected).to contain({actor.iri, object.iri, object.created_at})
     end
 
     context "when the verdict is out" do
       before_each { feed_verdict.assign(included: false).save }
 
-      pre_condition { expect(Feed::Verdict.count(feed_id: feed.id, included: false)).to eq(1) }
+      pre_condition { expect(Feed::Verdict.count(version_id: feed.version_id, included: false)).to eq(1) }
 
       it "does not select the object" do
         expect(selected_iris).not_to contain(object.iri)
@@ -71,7 +71,7 @@ Spectator.describe Rules::View::Feed do
     context "when the object is not visible" do
       before_each { object.update_property(:visible, false) }
 
-      pre_condition { expect(Feed::Verdict.find(feed_id: feed.id, object_iri: object.iri).included).to be_true }
+      pre_condition { expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: object.iri).included).to be_true }
 
       it "does not select the object" do
         expect(selected_iris).not_to contain(object.iri)
@@ -122,22 +122,34 @@ Spectator.describe Rules::View::Feed do
       end
     end
 
-    context "given another feed's verdict" do
+    context "given a verdict of another feed on another version" do
       let_build(:object, named: other_object)
-      let_create!(:feed, named: other_feed, owner: actor)
+      let_create!(:feed, named: other_feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["other"]}})).as_h)
       let_create!(:feed_verdict, named: nil, feed: other_feed, object: other_object, included: true)
 
-      pre_condition { expect(Feed::Verdict.count(feed_id: other_feed.id, included: true)).to eq(1) }
+      pre_condition { expect(other_feed.version_id).not_to eq(feed.version_id) }
 
       it "does not select the object" do
         expect(selected_iris).not_to contain(other_object.iri)
       end
     end
 
+    context "given a verdict of another feed on the same version" do
+      let_build(:object, named: other_object)
+      let_create!(:feed, named: other_feed, owner: actor, params: feed.params)
+      let_create!(:feed_verdict, named: nil, feed: other_feed, object: other_object, included: true)
+
+      pre_condition { expect(other_feed.version_id).to eq(feed.version_id) }
+
+      it "selects the object" do
+        expect(selected_iris).to contain(other_object.iri)
+      end
+    end
+
     context "when scoped" do
       it "selects the full row for the key" do
         expect(selected({from_iri: actor.iri, to_iri: object.iri}))
-          .to eq([{actor.iri, object.iri, feed_verdict.position}])
+          .to eq([{actor.iri, object.iri, object.created_at}])
       end
 
       it "selects nothing when the key does not qualify" do
@@ -159,12 +171,12 @@ Spectator.describe Rules::View::Feed do
     let_build(:object)
     let_create!(:feed_verdict, feed: feed, object: object, included: true)
 
-    it "materializes the row at the verdict's position" do
+    it "materializes the row at the object's creation time" do
       Rules::Maintainer.reconcile_object_for(subject, object.iri)
       row = Ktistec.database.query_one(
         "SELECT from_iri, to_iri, created_at FROM relationships WHERE type = ?",
         subject.type, as: {String, String, Time})
-      expect(row).to eq({actor.iri, object.iri, feed_verdict.position})
+      expect(row).to eq({actor.iri, object.iri, object.created_at})
     end
   end
 end

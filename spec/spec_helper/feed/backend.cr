@@ -10,6 +10,20 @@ class Feed
   end
 end
 
+# Registers a backend for each example in the enclosing group, and
+# removes it after.
+#
+macro register_backend(name, backend)
+  around_each do |proc|
+    Feed::Backend.register({{name}}, {{backend}})
+    begin
+      proc.call
+    ensure
+      Feed::Backend.unregister({{name}})
+    end
+  end
+end
+
 # Base class for stub backends in specs.
 #
 # Answers every part of the contract except `validate_params`

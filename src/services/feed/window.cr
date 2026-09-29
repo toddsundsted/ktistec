@@ -5,7 +5,7 @@ class Feed
   # The preview window.
   #
   # A window is the bounded set of a feed's verdicts produced by
-  # previewing a draft. Once a draft's criteria have verdicts they are
+  # previewing a draft. Once a draft's version has verdicts they are
   # never recomputed.
   #
   struct Window
@@ -17,17 +17,17 @@ class Feed
 
     # Materializes the window.
     #
-    # It is a no-op if the feed already has verdicts.
+    # It is a no-op if the feed's version already has verdicts.
     #
     def recompute : Int32
       return 0 if computed?
       Feed::Judging.judge(@feed, limit: SCAN_CAP, match_limit: MATCH_CAP)
     end
 
-    # Whether the feed's criteria have been judged, or not.
+    # Whether the feed's version has verdicts, or not.
     #
     private def computed?
-      Verdict.count(feed_id: @feed.id) > 0
+      Verdict.count(version_id: @feed.version_id) > 0
     end
 
     # The window's contents.

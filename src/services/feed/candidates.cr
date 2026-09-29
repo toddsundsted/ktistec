@@ -22,7 +22,7 @@ class Feed
            AND NOT EXISTS (
              SELECT 1
                FROM feed_verdicts v
-              WHERE v.feed_id = ?
+              WHERE v.version_id = ?
                 AND v.object_iri = objects.iri
            )
          ORDER BY id DESC
@@ -44,7 +44,7 @@ class Feed
         *predicate_parameters(feed),
         floor_id || floor_id(feed) || 0_i64,
         cursor || Int64::MAX,
-        feed.id,
+        feed.version_id,
         # in SQLite, a negative limit means no limit
         limit || -1,
         include_deleted: true,

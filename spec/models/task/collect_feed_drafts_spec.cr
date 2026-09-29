@@ -37,15 +37,10 @@ Spectator.describe Task::CollectFeedDrafts do
 
       context "with contents" do
         let_build(:object)
-        let_create!(:feed_verdict, feed: draft, object: object)
 
         before_each { put_in_feed(draft, object) }
 
         pre_condition { expect(materialized_count(draft)).to eq(1) }
-
-        it "deletes the draft's verdicts" do
-          expect { subject.perform }.to change { Feed::Verdict.count(feed_id: draft.id) }.from(1).to(0)
-        end
 
         it "deletes the draft's materialized rows" do
           expect { subject.perform }.to change { materialized_count(draft) }.from(1).to(0)

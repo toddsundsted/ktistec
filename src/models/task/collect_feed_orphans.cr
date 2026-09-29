@@ -5,10 +5,10 @@ require "../feed"
 class Task
   # Collection task for orphaned feed state.
   #
-  # A feed memoizes its judgments as `Feed::Verdict`s and materializes
-  # its membership as `relationships` rows carrying the synthetic
-  # `Feed::<id>` type. This task collects both when the object they
-  # refer to no longer exists.
+  # A feed's version memoizes its judgments as `Feed::Verdict`s and a
+  # feed materializes its membership as `relationships` rows carrying
+  # the synthetic `Feed::<id>` type. This task collects both when the
+  # object they refer to no longer exists.
   #
   class CollectFeedOrphans < Task
     include Singleton
@@ -59,9 +59,8 @@ class Task
       state.cursor = slice.last[0]
       iris = slice.select(&.[2]).map(&.[1]).uniq!
       return 0 if iris.empty?
-      feed_ids = Ktistec.database.query_all("SELECT id FROM feeds", as: Int64)
       iris.sum(0) do |iri|
-        delete_verdicts(feed_ids, iri) + delete_materialized_rows(iri)
+        delete_verdicts(iri) + delete_materialized_rows(iri)
       end
     end
 
@@ -83,14 +82,12 @@ class Task
     end
 
     # deleting in SQL bypasses model hooks -- if the associated models
-    # ever gain any, this and `Feed#delete_verdicts_and_materialized_rows`
+    # ever gain any, this and `Feed#delete_materialized_rows`
     # are the sites to revisit.
 
-    private def delete_verdicts(feed_ids, iri)
-      query = "DELETE FROM feed_verdicts WHERE feed_id = ? AND object_iri = ?"
-      feed_ids.sum(0) do |feed_id|
-        Ktistec.database.exec(query, feed_id, iri).rows_affected.to_i
-      end
+    private def delete_verdicts(iri)
+      query = "DELETE FROM feed_verdicts WHERE object_iri = ?"
+      Ktistec.database.exec(query, iri).rows_affected.to_i
     end
 
     private def delete_materialized_rows(iri)

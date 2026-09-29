@@ -13,20 +13,12 @@ class Feed
   # backend, write verdicts, and after each write explicitly reconcile
   # the feed's view for that object.
   #
-  # Invariant: a judge pass must not yield to another fiber between
-  # candidate selection and its last verdict write. A criteria edit
-  # deletes the feed's verdicts (see `Feed#before_update`); a verdict
-  # written after that delete from a stale in-flight pass would
-  # survive as apparently current, and candidates with verdicts are
-  # never re-judged.
-  #
   module Judging
     extend self
 
     Log = ::Log.for(self)
 
-    # Judges a feed's unjudged candidates, most recently arrived
-    # first.
+    # Judges a feed's unjudged candidates, newest first.
     #
     # `limit` caps how many candidates are scanned; `match_limit`
     # stops the scan early once that many matches have been found. A
@@ -46,7 +38,7 @@ class Feed
       candidates.each do |object|
         break if match_limit && matches >= match_limit
         judgment = backend.judge(feed, [object]).first
-        write_verdict(feed, object, object.created_at, judgment)
+        write_verdict(feed, object, judgment)
         Rules::Maintainer.reconcile_object_for(view, object.iri)
         matches += 1 if judgment.included
         scanned += 1
@@ -68,12 +60,12 @@ class Feed
       end
       view = Rules::Feeds.view_for(target)
       seeded = 0
-      Verdict.where(feed_id: source.id, included: true).each do |verdict|
+      Verdict.where(version_id: source.version_id, included: true).each do |verdict|
         next unless (object = verdict.object?)
         next unless Candidates.arrival_for(target, object)
         judgment = backend.judge(target, [object]).first
         next unless judgment.included
-        write_verdict(target, object, verdict.position, judgment)
+        write_verdict(target, object, judgment)
         Rules::Maintainer.reconcile_object_for(view, object.iri)
         seeded += 1
       end
@@ -92,7 +84,7 @@ class Feed
     # Writes a verdict only for posts the feed includes. An excluded
     # post therefore stays a candidate. Skipping excluded verdicts
     # keeps the backfill from writing a row for every post the server
-    # has ever held, for every feed.
+    # has ever held, for every version.
     #
     def backfill(feed : ::Feed, cursor : Int64?, limit : Int32, floor_id : Int64? = nil) : Batch
       unless (backend = Backend.find?(feed.backend))
@@ -104,7 +96,7 @@ class Feed
       candidates.each do |object|
         judgment = backend.judge(feed, [object]).first
         if judgment.included
-          write_verdict(feed, object, object.created_at, judgment)
+          write_verdict(feed, object, judgment)
           Rules::Maintainer.reconcile_object_for(view, object.iri)
           included += 1
         end
@@ -127,22 +119,23 @@ class Feed
         next unless view.is_a?(Rules::View::Feed)
         next unless (feed = ::Feed.find?(view.feed_id))
         next unless (backend = Backend.find?(feed.backend))
-        next unless (arrival = Candidates.arrival_for(feed, object))
+        next unless Candidates.arrival_for(feed, object)
         judgment = backend.judge(feed, [object]).first
-        write_verdict(feed, object, arrival, judgment)
+        write_verdict(feed, object, judgment)
       end
     end
 
-    # Writes (or refreshes) a feed's verdict for one object.
+    # Writes (or refreshes) the verdict of a feed's version for one
+    # object.
     #
-    private def write_verdict(feed, object, arrival, judgment)
+    private def write_verdict(feed, object, judgment)
+      version_id = feed.version_id
       verdict =
-        Verdict.find?(feed_id: feed.id, object_iri: object.iri) ||
-          Verdict.new(feed: feed, object: object, included: judgment.included, position: arrival)
+        Verdict.find?(version_id: version_id, object_iri: object.iri) ||
+          Verdict.new(version_id: version_id, object: object, included: judgment.included)
       verdict.assign(
         included: judgment.included,
         reason: judgment.reason,
-        position: arrival,
       ).save
     end
   end

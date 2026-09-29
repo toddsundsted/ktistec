@@ -1,3 +1,4 @@
+require "./feeds"
 require "./maintainer"
 require "./view/follow_thread"
 require "./view/follow_hashtag"
@@ -170,6 +171,13 @@ module Rules
       reconcile_for_mention(follow.from_iri, follow.href)
     end
 
+    # Rebuilds a feed's contents from its version's verdicts.
+    #
+    def reconcile_for_feed(feed : ::Feed) : Nil
+      view : Rules::View = Rules::Feeds.view_for(feed)
+      notify([{view, feed.owner_iri.not_nil!}]) if Rules::Maintainer.reconcile(view)
+    end
+
     # Notifies the pub/sub subjects for the changed `(view, owner)` pairs,
     # waking subscribed clients to refresh.
     #
@@ -201,6 +209,9 @@ Relationship::Content::Follow::Hashtag::OBSERVERS.observe(:destroy) { |follow| R
 
 # evict the mention-follow notification when its follow is removed.
 Relationship::Content::Follow::Mention::OBSERVERS.observe(:destroy) { |follow| Rules::Trigger.reconcile_for_mention_follow(follow) }
+
+# rebuild a feed's contents when it moves to another version.
+Feed::OBSERVERS.observe(:version) { |feed| Rules::Trigger.reconcile_for_feed(feed) }
 
 # re-evaluate the public hashtag feed when a hashtag is added or removed.
 Tag::OBSERVERS.observe(:create) { |tag| Rules::Trigger.reconcile_for_tag(tag) if tag.is_a?(Tag::Hashtag) }

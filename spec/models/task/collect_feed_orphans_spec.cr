@@ -26,7 +26,7 @@ Spectator.describe Task::CollectFeedOrphans do
       pre_condition { expect(materialized_count(feed)).to eq(1) }
 
       it "does not delete the verdict" do
-        expect { subject.perform }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
+        expect { subject.perform }.not_to change { Feed::Verdict.count(version_id: feed.version_id) }.from(1)
       end
 
       it "does not delete the materialized row" do
@@ -41,7 +41,7 @@ Spectator.describe Task::CollectFeedOrphans do
         end
 
         it "does not delete the verdict" do
-          expect { subject.perform }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
+          expect { subject.perform }.not_to change { Feed::Verdict.count(version_id: feed.version_id) }.from(1)
         end
 
         it "does not delete the materialized row" do
@@ -57,7 +57,7 @@ Spectator.describe Task::CollectFeedOrphans do
         end
 
         it "does not delete the verdict" do
-          expect { subject.perform }.not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(1)
+          expect { subject.perform }.not_to change { Feed::Verdict.count(version_id: feed.version_id) }.from(1)
         end
 
         it "does not delete the materialized row" do
@@ -71,7 +71,7 @@ Spectator.describe Task::CollectFeedOrphans do
         pre_condition { expect(ActivityPub::Object.find?(iri: object.iri, include_deleted: true)).to be_nil }
 
         it "deletes the verdict" do
-          expect { subject.perform }.to change { Feed::Verdict.count(feed_id: feed.id) }.from(1).to(0)
+          expect { subject.perform }.to change { Feed::Verdict.count(version_id: feed.version_id) }.from(1).to(0)
         end
 
         it "deletes the materialized row" do
@@ -85,16 +85,18 @@ Spectator.describe Task::CollectFeedOrphans do
           before_each { another.destroy }
 
           it "deletes both verdicts" do
-            expect { subject.perform }.to change { Feed::Verdict.count(feed_id: feed.id) }.from(2).to(0)
+            expect { subject.perform }.to change { Feed::Verdict.count(version_id: feed.version_id) }.from(2).to(0)
           end
         end
 
-        context "and a second feed holds the same object" do
-          let_create!(:feed, named: other, draft: false)
+        context "and a feed on another version holds the same object" do
+          let_create!(:feed, named: other, draft: false, params: JSON.parse(%({"keywords": {"any": ["other"]}})).as_h)
           let_create!(:feed_verdict, named: nil, feed: other, object: object, included: true)
 
-          it "deletes the second feed's verdict" do
-            expect { subject.perform }.to change { Feed::Verdict.count(feed_id: other.id) }.from(1).to(0)
+          pre_condition { expect(other.version_id).not_to eq(feed.version_id) }
+
+          it "deletes the other version's verdict" do
+            expect { subject.perform }.to change { Feed::Verdict.count(version_id: other.version_id) }.from(1).to(0)
           end
         end
       end
@@ -117,7 +119,7 @@ Spectator.describe Task::CollectFeedOrphans do
         before_each { object.destroy }
 
         it "collects it on the next sweep" do
-          expect { subject.perform }.to change { Feed::Verdict.count(feed_id: feed.id) }.from(1).to(0)
+          expect { subject.perform }.to change { Feed::Verdict.count(version_id: feed.version_id) }.from(1).to(0)
         end
       end
     end

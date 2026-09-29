@@ -141,11 +141,11 @@ Spectator.describe Task::BackfillFeed do
           subject.save
         end
 
-        pre_condition { expect(Feed::Verdict.count(feed_id: feed.id)).to eq(0) }
+        pre_condition { expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(0) }
 
         it "judges the next candidate when the task is reloaded" do
           described_class.find(subject.id).perform(1)
-          expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri).included).to be_true
+          expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: hit.iri).included).to be_true
         end
       end
 
@@ -154,7 +154,7 @@ Spectator.describe Task::BackfillFeed do
 
         it "writes no verdict" do
           subject.perform
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(0)
+          expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(0)
         end
 
         it "records the floor id" do
@@ -177,7 +177,7 @@ Spectator.describe Task::BackfillFeed do
 
         it "writes no verdict" do
           subject.perform
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(0)
+          expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(0)
         end
 
         it "does not reschedule" do
@@ -190,7 +190,7 @@ Spectator.describe Task::BackfillFeed do
 
         it "writes no verdict" do
           subject.perform
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(0)
+          expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(0)
         end
 
         it "does not reschedule" do
@@ -203,7 +203,7 @@ Spectator.describe Task::BackfillFeed do
 
         it "writes no verdict" do
           subject.perform
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(0)
+          expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(0)
         end
 
         it "does not reschedule" do
@@ -226,7 +226,7 @@ Spectator.describe Task::BackfillFeed do
           subject.perform(1)
           subject.save
           described_class.find(subject.id).perform(1)
-          expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: early.iri).try(&.included)).to be_true
+          expect(Feed::Verdict.find?(version_id: feed.version_id, object_iri: early.iri).try(&.included)).to be_true
         end
       end
 

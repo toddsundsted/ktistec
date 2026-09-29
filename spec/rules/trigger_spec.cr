@@ -111,7 +111,7 @@ Spectator.describe Rules::Trigger do
 
     it "writes the verdict before materializing it" do
       expect { Rules::Trigger.reconcile_for_object(post) }
-        .to change { Feed::Verdict.count(feed_id: feed.id, included: true) }.from(0).to(1)
+        .to change { Feed::Verdict.count(version_id: feed.version_id, included: true) }.from(0).to(1)
     end
 
     context "given a member" do
@@ -131,7 +131,7 @@ Spectator.describe Rules::Trigger do
 
         it "leaves the verdict included" do
           expect { Rules::Trigger.reconcile_for_object(post) }
-            .not_to change { Feed::Verdict.find(feed_id: feed.id, object_iri: post.iri).included }.from(true)
+            .not_to change { Feed::Verdict.find(version_id: feed.version_id, object_iri: post.iri).included }.from(true)
         end
       end
 
@@ -329,6 +329,17 @@ Spectator.describe Rules::Trigger do
     end
   end
 
+  describe ".reconcile_for_feed" do
+    let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    let_build(:object, named: post, attributed_to: author)
+    let_create!(:feed_verdict, feed: feed, object: post, included: true)
+
+    it "materializes the version's verdicts" do
+      expect { Rules::Trigger.reconcile_for_feed(feed) }
+        .to change { feed_row_count(feed) }.from(0).to(1)
+    end
+  end
+
   # each entry point that drives the maintainer must notify the
   # owner's subject. the subject family (notifications vs. timeline)
   # is incidental here: `notify` forwards `view.subjects`
@@ -420,6 +431,54 @@ Spectator.describe Rules::Trigger do
           Rules::Trigger.reconcile_for_hashtag(actor.iri, "foo")
           expect(notified).to be_empty
         end
+      end
+    end
+
+    context "via reconcile_for_feed" do
+      let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+      let_build(:object, named: post, attributed_to: author)
+      let_create!(:feed_verdict, feed: feed, object: post, included: true)
+
+      it "notifies the owner's feed subject" do
+        Rules::Trigger.reconcile_for_feed(feed)
+        expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+      end
+
+      context "when nothing changes" do
+        before_each do
+          Rules::Trigger.reconcile_for_feed(feed)
+          notified.clear
+        end
+
+        it "does not notify" do
+          Rules::Trigger.reconcile_for_feed(feed)
+          expect(notified).to be_empty
+        end
+      end
+    end
+  end
+
+  describe "when a feed is saved" do
+    let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    let_build(:object, named: post, attributed_to: author)
+    let_create!(:feed_verdict, feed: feed, object: post, included: true)
+
+    before_each { put_in_feed(feed, post) }
+
+    context "with params of another version" do
+      before_each { feed.assign(params: JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h) }
+
+      it "drops the post from the feed" do
+        expect { feed.save }.to change { feed_row_count(feed) }.from(1).to(0)
+      end
+    end
+
+    context "given a new feed with the same params" do
+      let_build(:feed, named: joining, owner: actor, params: feed.params)
+
+      it "includes the posts judged for them" do
+        joining.save
+        expect(feed_row_count(joining)).to eq(1)
       end
     end
   end

@@ -32,7 +32,7 @@ Spectator.describe Feed::Candidates do
         let_create!(:feed_verdict, feed: feed, object: object, included: false)
 
         it "does not return the object" do
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(1)
+          expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(1)
           expect(candidates).to be_empty
         end
 

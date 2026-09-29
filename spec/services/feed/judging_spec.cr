@@ -32,24 +32,23 @@ Spectator.describe Feed::Judging do
 
       it "writes a verdict per candidate" do
         expect { Feed::Judging.judge(feed) }
-          .to change { Feed::Verdict.count(feed_id: feed.id) }.from(0).to(2)
+          .to change { Feed::Verdict.count(version_id: feed.version_id) }.from(0).to(2)
       end
 
       it "includes the matching object" do
         Feed::Judging.judge(feed)
-        verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri)
+        verdict = Feed::Verdict.find(version_id: feed.version_id, object_iri: hit.iri)
         expect(verdict.included).to be_true
         expect(verdict.reason).to match(/alpha/)
-        expect(verdict.position).to eq(hit.created_at)
       end
 
       it "excludes the non-matching object" do
         Feed::Judging.judge(feed)
-        verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: miss.iri)
+        verdict = Feed::Verdict.find(version_id: feed.version_id, object_iri: miss.iri)
         expect(verdict.included).to be_false
       end
 
-      it "materializes the matching object at its position" do
+      it "materializes the matching object at its creation time" do
         Feed::Judging.judge(feed)
         expect(materialized).to eq([{hit.iri, hit.created_at}])
       end
@@ -59,11 +58,11 @@ Spectator.describe Feed::Judging do
         expect(Feed::Judging.judge(feed)).to eq(0)
       end
 
-      it "judges candidates in batches ordered by arrival" do
+      it "judges candidates in batches, newest first" do
         expect(Feed::Judging.judge(feed, limit: 1)).to eq(1)
-        expect(Feed::Verdict.count(feed_id: feed.id, object_iri: miss.iri)).to eq(1)
+        expect(Feed::Verdict.count(version_id: feed.version_id, object_iri: miss.iri)).to eq(1)
         expect(Feed::Judging.judge(feed, limit: 1)).to eq(1)
-        expect(Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri)).to eq(1)
+        expect(Feed::Verdict.count(version_id: feed.version_id, object_iri: hit.iri)).to eq(1)
         expect(Feed::Judging.judge(feed, limit: 1)).to eq(0)
       end
 
@@ -79,7 +78,7 @@ Spectator.describe Feed::Judging do
 
         it "writes a verdict only for the judged candidate" do
           expect { Feed::Judging.judge(feed, match_limit: 1) }
-            .to change { Feed::Verdict.count(feed_id: feed.id) }.from(0).to(1)
+            .to change { Feed::Verdict.count(version_id: feed.version_id) }.from(0).to(1)
         end
 
         it "judges the unjudged candidate on a second run" do
@@ -94,10 +93,7 @@ Spectator.describe Feed::Judging do
           feed.assign(params: JSON.parse(%({"keywords": {"any": ["gamma"]}})).as_h).save
         end
 
-        pre_condition do
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(0)
-          expect(materialized).to be_empty
-        end
+        pre_condition { expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(0) }
 
         it "re-judges all candidates" do
           expect(Feed::Judging.judge(feed)).to eq(2)
@@ -105,17 +101,24 @@ Spectator.describe Feed::Judging do
 
         it "writes fresh verdicts" do
           Feed::Judging.judge(feed)
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(2)
+          expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(2)
         end
 
         it "repopulates the feed under the new policy" do
           Feed::Judging.judge(feed)
           expect(materialized).to eq([{miss.iri, miss.created_at}])
         end
+      end
 
-        it "leaves no stale rows after a bounded re-judge" do
-          Feed::Judging.judge(feed, match_limit: 1)
-          expect(materialized).to eq([{miss.iri, miss.created_at}])
+      context "given another feed on the same version" do
+        let_create!(:feed, named: other, owner: actor, params: feed.params)
+
+        before_each { Feed::Judging.judge(other) }
+
+        pre_condition { expect(other.version_id).to eq(feed.version_id) }
+
+        it "judges nothing" do
+          expect(Feed::Judging.judge(feed)).to eq(0)
         end
       end
     end
@@ -140,18 +143,17 @@ Spectator.describe Feed::Judging do
     context "given included members of the source feed" do
       let_build(:object, named: kept, content: "<p>alpha beta</p>")
       let_build(:object, named: dropped, content: "<p>alpha gamma</p>")
-      let(kept_position) { Time.utc(2026, 1, 2) }
-      let_create!(:feed_verdict, named: nil, feed: source, object: kept, included: true, position: kept_position)
+      let_create!(:feed_verdict, named: nil, feed: source, object: kept, included: true)
       let_create!(:feed_verdict, named: nil, feed: source, object: dropped, included: true)
 
       it "seeds the surviving member" do
         Feed::Judging.rejudge_contents(source, target)
-        expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri).try(&.included)).to be_true
+        expect(Feed::Verdict.find?(version_id: target.version_id, object_iri: kept.iri).try(&.included)).to be_true
       end
 
-      it "materializes the surviving member at its arrival position" do
+      it "materializes the surviving member at its creation time" do
         Feed::Judging.rejudge_contents(source, target)
-        expect(materialized_in(target)).to eq([{kept.iri, kept_position}])
+        expect(materialized_in(target)).to eq([{kept.iri, kept.created_at}])
       end
 
       it "returns the number seeded" do
@@ -160,29 +162,29 @@ Spectator.describe Feed::Judging do
 
       it "writes only included verdicts" do
         Feed::Judging.rejudge_contents(source, target)
-        expect(Feed::Verdict.count(feed_id: target.id)).to eq(1)
+        expect(Feed::Verdict.count(version_id: target.version_id)).to eq(1)
       end
 
       it "does not include the dropped member" do
         Feed::Judging.rejudge_contents(source, target)
-        expect(Feed::Verdict.find?(feed_id: target.id, object_iri: dropped.iri)).to be_nil
+        expect(Feed::Verdict.find?(version_id: target.version_id, object_iri: dropped.iri)).to be_nil
       end
 
       it "leaves the source untouched" do
         expect { Feed::Judging.rejudge_contents(source, target) }
-          .not_to change { Feed::Verdict.count(feed_id: source.id) }.from(2)
+          .not_to change { Feed::Verdict.count(version_id: source.version_id) }.from(2)
       end
 
       context "and an excluded member the target's criteria would match" do
         let_build(:object, named: excluded, content: "<p>beta</p>")
         let_create!(:feed_verdict, named: nil, feed: source, object: excluded, included: false)
 
-        pre_condition { expect(Feed::Verdict.find(feed_id: source.id, object_iri: excluded.iri).included).to be_false }
+        pre_condition { expect(Feed::Verdict.find(version_id: source.version_id, object_iri: excluded.iri).included).to be_false }
 
         it "does not include the excluded member" do
           Feed::Judging.rejudge_contents(source, target)
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri)).not_to be_nil
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: excluded.iri)).to be_nil
+          expect(Feed::Verdict.find?(version_id: target.version_id, object_iri: kept.iri)).not_to be_nil
+          expect(Feed::Verdict.find?(version_id: target.version_id, object_iri: excluded.iri)).to be_nil
         end
       end
 
@@ -192,12 +194,12 @@ Spectator.describe Feed::Judging do
 
         before_each { deleted.delete! }
 
-        pre_condition { expect(Feed::Verdict.find(feed_id: source.id, object_iri: deleted.iri).included).to be_true }
+        pre_condition { expect(Feed::Verdict.find(version_id: source.version_id, object_iri: deleted.iri).included).to be_true }
 
         it "does not include the deleted member" do
           Feed::Judging.rejudge_contents(source, target)
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri)).not_to be_nil
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: deleted.iri)).to be_nil
+          expect(Feed::Verdict.find?(version_id: target.version_id, object_iri: kept.iri)).not_to be_nil
+          expect(Feed::Verdict.find?(version_id: target.version_id, object_iri: deleted.iri)).to be_nil
         end
       end
 
@@ -205,12 +207,12 @@ Spectator.describe Feed::Judging do
         let_build(:object, named: hidden, content: "<p>alpha beta</p>", visible: false)
         let_create!(:feed_verdict, named: nil, feed: source, object: hidden, included: true)
 
-        pre_condition { expect(Feed::Verdict.find(feed_id: source.id, object_iri: hidden.iri).included).to be_true }
+        pre_condition { expect(Feed::Verdict.find(version_id: source.version_id, object_iri: hidden.iri).included).to be_true }
 
         it "does not include the hidden member" do
           Feed::Judging.rejudge_contents(source, target)
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri)).not_to be_nil
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: hidden.iri)).to be_nil
+          expect(Feed::Verdict.find?(version_id: target.version_id, object_iri: kept.iri)).not_to be_nil
+          expect(Feed::Verdict.find?(version_id: target.version_id, object_iri: hidden.iri)).to be_nil
         end
       end
 
@@ -219,19 +221,13 @@ Spectator.describe Feed::Judging do
       # having a target verdict; rejudge must upsert it, not add a
       # second row..
       context "and the target already has a verdict for the survivor" do
-        let(stale_position) { Time.utc(2020, 1, 1) }
-        let_create!(:feed_verdict, named: nil, feed: target, object: kept, included: true, position: stale_position)
+        let_create!(:feed_verdict, named: nil, feed: target, object: kept, included: true)
 
-        pre_condition { expect(Feed::Verdict.count(feed_id: target.id, object_iri: kept.iri)).to eq(1) }
+        pre_condition { expect(Feed::Verdict.count(version_id: target.version_id, object_iri: kept.iri)).to eq(1) }
 
         it "does not duplicate the survivor's verdict" do
           expect { Feed::Judging.rejudge_contents(source, target) }
-            .not_to change { Feed::Verdict.count(feed_id: target.id, object_iri: kept.iri) }.from(1)
-        end
-
-        it "overwrites the position with the source's arrival" do
-          Feed::Judging.rejudge_contents(source, target)
-          expect(Feed::Verdict.find(feed_id: target.id, object_iri: kept.iri).position).to eq(kept_position)
+            .not_to change { Feed::Verdict.count(version_id: target.version_id, object_iri: kept.iri) }.from(1)
         end
       end
     end
@@ -273,7 +269,7 @@ Spectator.describe Feed::Judging do
 
       it "writes a verdict for the matching object" do
         subject
-        expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri).included).to be_true
+        expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: hit.iri).included).to be_true
       end
 
       # only `included` verdicts are written -- a verdict for every
@@ -281,10 +277,10 @@ Spectator.describe Feed::Judging do
       # backfill must not write.
       it "writes no verdict for the non-matching object" do
         subject
-        expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: miss.iri)).to be_nil
+        expect(Feed::Verdict.find?(version_id: feed.version_id, object_iri: miss.iri)).to be_nil
       end
 
-      it "materializes the matching object at its position" do
+      it "materializes the matching object at its creation time" do
         subject
         expect(materialized).to eq([{hit.iri, hit.created_at}])
       end
@@ -310,7 +306,7 @@ Spectator.describe Feed::Judging do
 
         it "writes no verdict for it" do
           subject
-          expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri)).to be_nil
+          expect(Feed::Verdict.find?(version_id: feed.version_id, object_iri: hit.iri)).to be_nil
         end
       end
 
@@ -359,7 +355,7 @@ Spectator.describe Feed::Judging do
 
       it "writes no verdict" do
         expect { Feed::Judging.judge_arrival(hit) }
-          .not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(0)
+          .not_to change { Feed::Verdict.count(version_id: feed.version_id) }.from(0)
       end
     end
 
@@ -373,14 +369,13 @@ Spectator.describe Feed::Judging do
 
       it "writes a verdict" do
         expect { Feed::Judging.judge_arrival(hit) }
-          .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
+          .to change { Feed::Verdict.count(version_id: feed.version_id, object_iri: hit.iri) }.from(0).to(1)
       end
 
-      it "includes the matching object at its position" do
+      it "includes the matching object" do
         Feed::Judging.judge_arrival(hit)
-        verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri)
+        verdict = Feed::Verdict.find(version_id: feed.version_id, object_iri: hit.iri)
         expect(verdict.included).to be_true
-        expect(verdict.position).to eq(hit.created_at)
       end
 
       context "given a matching object whose author is deleted" do
@@ -388,7 +383,7 @@ Spectator.describe Feed::Judging do
 
         it "writes a verdict" do
           expect { Feed::Judging.judge_arrival(hit) }
-            .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
+            .to change { Feed::Verdict.count(version_id: feed.version_id, object_iri: hit.iri) }.from(0).to(1)
         end
       end
 
@@ -397,7 +392,7 @@ Spectator.describe Feed::Judging do
 
         it "writes a verdict" do
           expect { Feed::Judging.judge_arrival(hit) }
-            .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
+            .to change { Feed::Verdict.count(version_id: feed.version_id, object_iri: hit.iri) }.from(0).to(1)
         end
       end
 
@@ -405,23 +400,23 @@ Spectator.describe Feed::Judging do
         let_build(:object, named: hidden, content: "<p>something alpha something</p>", visible: false)
         let_create!(:feed_verdict, named: nil, feed: feed, object: hidden, included: true)
 
-        pre_condition { expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hidden.iri).included).to be_true }
+        pre_condition { expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: hidden.iri).included).to be_true }
 
         it "leaves the verdict included" do
           Feed::Judging.judge_arrival(hidden)
-          expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hidden.iri).included).to be_true
+          expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: hidden.iri).included).to be_true
         end
       end
 
       context "given a non-matching object" do
         it "writes a verdict" do
           expect { Feed::Judging.judge_arrival(miss) }
-            .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: miss.iri) }.from(0).to(1)
+            .to change { Feed::Verdict.count(version_id: feed.version_id, object_iri: miss.iri) }.from(0).to(1)
         end
 
         it "excludes the non-matching object" do
           Feed::Judging.judge_arrival(miss)
-          verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: miss.iri)
+          verdict = Feed::Verdict.find(version_id: feed.version_id, object_iri: miss.iri)
           expect(verdict.included).to be_false
         end
       end

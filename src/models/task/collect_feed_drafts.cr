@@ -6,8 +6,7 @@ class Task
   # Collection task for abandoned feed drafts.
   #
   # Drafts are destroyed one at a time, through the model, so
-  # `Feed#before_destroy` deletes each draft's verdicts and
-  # materialized rows.
+  # `Feed#before_destroy` deletes each draft's materialized rows.
   #
   class CollectFeedDrafts < Task
     include Singleton

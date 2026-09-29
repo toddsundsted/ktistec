@@ -102,6 +102,21 @@ Spectator.describe Task::CollectFeedOrphans do
       end
     end
 
+    context "given a destroyed feed with a verdict" do
+      let_create!(:feed)
+      let_create!(:feed_verdict, feed: feed, included: true)
+
+      before_each { feed.destroy }
+
+      it "deletes the verdict" do
+        expect { subject.perform }.to change { Feed::Verdict.count(version_id: feed.version_id) }.from(1).to(0)
+      end
+
+      it "deletes the version" do
+        expect { subject.perform }.to change { Feed::Version.count(id: feed.version_id) }.from(1).to(0)
+      end
+    end
+
     it "sets the next attempt at" do
       expect { subject.perform }.to change { subject.next_attempt_at }.from(nil)
     end

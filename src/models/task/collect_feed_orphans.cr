@@ -5,10 +5,10 @@ require "../feed"
 class Task
   # Collection task for orphaned feed state.
   #
-  # A feed's version memoizes its judgments as `Feed::Verdict`s and a
-  # feed materializes its membership as `relationships` rows carrying
-  # the synthetic `Feed::<id>` type. This task collects both when the
-  # object they refer to no longer exists.
+  # Collects `Feed::Version`s no feed uses, `Feed::Verdict`s whose
+  # version is collected or whose object no longer exists, and
+  # membership rows (the `Relationship`s carrying the synthetic
+  # `Feed::<id>` type) whose object no longer exists.
   #
   class CollectFeedOrphans < Task
     include Singleton
@@ -37,7 +37,7 @@ class Task
     def perform
       Log.debug { "Starting sweep of orphaned feed state" }
 
-      swept_count = collect_orphans
+      swept_count = collect_orphans + collect_unused_versions
 
       Log.debug { "Feed orphan sweep completed: deleted #{swept_count} rows" }
 
@@ -62,6 +62,19 @@ class Task
       iris.sum(0) do |iri|
         delete_verdicts(iri) + delete_materialized_rows(iri)
       end
+    end
+
+    private UNUSED_VERSIONS = <<-QUERY
+      SELECT v.id
+        FROM feed_versions v
+       WHERE NOT EXISTS (SELECT 1 FROM feeds f WHERE f.version_id = v.id)
+    QUERY
+
+    # Deletes the versions no feed uses, and their verdicts.
+    #
+    private def collect_unused_versions
+      deleted = Ktistec.database.exec("DELETE FROM feed_verdicts WHERE version_id IN (#{UNUSED_VERSIONS})").rows_affected.to_i
+      deleted + Ktistec.database.exec("DELETE FROM feed_versions WHERE id IN (#{UNUSED_VERSIONS})").rows_affected.to_i
     end
 
     # Returns the next slice of verdicts.

@@ -3,6 +3,20 @@ require "../../../src/services/feed/backend/criteria"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
+require "../../spec_helper/feed/backend"
+
+private class CountingBackend < TestBackend
+  class_property calls = 0
+
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
+    CountingBackend.calls += 1
+    objects.map { Judgment.new(included: true) }
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
 
 Spectator.describe Feed::Judging do
   setup_spec
@@ -231,6 +245,20 @@ Spectator.describe Feed::Judging do
         end
       end
     end
+
+    context "when the edit keeps the feed's version" do
+      register_backend("counting", CountingBackend.new)
+
+      let_create!(:feed, named: source, owner: actor, backend: "counting")
+      let_create!(:feed, named: target, owner: actor, backend: "counting")
+      let_create!(:feed_verdict, named: nil, feed: source, included: true)
+
+      pre_condition { expect(target.version_id).to eq(source.version_id) }
+
+      it "does not judge the contents again" do
+        expect { Feed::Judging.rejudge_contents(source, target) }.not_to change { CountingBackend.calls }
+      end
+    end
   end
 
   describe ".backfill" do
@@ -419,6 +447,24 @@ Spectator.describe Feed::Judging do
           verdict = Feed::Verdict.find(version_id: feed.version_id, object_iri: miss.iri)
           expect(verdict.included).to be_false
         end
+      end
+    end
+
+    context "when two registered feeds share a version" do
+      register_backend("counting", CountingBackend.new)
+
+      let_create(:feed, named: one, owner: actor, backend: "counting")
+      let_create(:feed, named: two, owner: actor, backend: "counting")
+
+      before_each do
+        Rules::Feeds.register(one)
+        Rules::Feeds.register(two)
+      end
+
+      pre_condition { expect(one.version_id).to eq(two.version_id) }
+
+      it "judges the post once, not once per feed" do
+        expect { Feed::Judging.judge_arrival(hit) }.to change { CountingBackend.calls }.by(1)
       end
     end
   end

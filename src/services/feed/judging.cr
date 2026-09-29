@@ -58,6 +58,7 @@ class Feed
       unless (backend = Backend.find?(target.backend))
         raise "is not a registered backend: #{target.backend}"
       end
+      return 0 if source.version_id == target.version_id
       view = Rules::Feeds.view_for(target)
       seeded = 0
       Verdict.where(version_id: source.version_id, included: true).each do |verdict|
@@ -115,11 +116,13 @@ class Feed
     # (or refreshing) each feed's verdict.
     #
     def judge_arrival(object : ActivityPub::Object) : Nil
+      judged = Set(Int64?).new
       Rules::View.registry.each do |view|
         next unless view.is_a?(Rules::View::Feed)
         next unless (feed = ::Feed.find?(view.feed_id))
         next unless (backend = Backend.find?(feed.backend))
         next unless Candidates.arrival_for(feed, object)
+        next unless judged.add?(feed.version_id)
         judgment = backend.judge(feed, [object]).first
         write_verdict(feed, object, judgment)
       end

@@ -18,6 +18,21 @@ private class CountingBackend < TestBackend
   end
 end
 
+private class FailingBackend < TestBackend
+  class_property error : Exception = Feed::Backend::TransientError.new("judge unavailable")
+
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
+    objects.map do |object|
+      raise FailingBackend.error if object.content.try(&.includes?("boom"))
+      Judgment.new(included: true)
+    end
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
+
 Spectator.describe Feed::Judging do
   setup_spec
 
@@ -142,6 +157,57 @@ Spectator.describe Feed::Judging do
         expect { Feed::Judging.judge(feed, limit: 0) }.to raise_error(ArgumentError, "limit must be positive")
       end
     end
+
+    context "when the judge fails on a candidate" do
+      register_backend("failing", FailingBackend.new)
+
+      let_create!(:feed, owner: actor, backend: "failing")
+      let_create!(:object, named: fine, content: "<p>fine</p>")
+      let_create!(:object, named: boom, content: "<p>boom</p>")
+
+      def verdict_for(object)
+        Feed::Verdict.find(version_id: feed.version_id, object_iri: object.iri)
+      end
+
+      pre_condition { expect(Feed::Candidates.candidates_for(feed).map(&.iri)).to eq([boom.iri, fine.iri]) }
+
+      it "goes on to judge the next candidate" do
+        Feed::Judging.judge(feed)
+        expect(verdict_for(fine).included).to be_true
+      end
+
+      context "and the failure is transient" do
+        before_each { FailingBackend.error = Feed::Backend::TransientError.new("judge unavailable") }
+
+        it "records a transient failure" do
+          Feed::Judging.judge(feed)
+          expect(verdict_for(boom).failure).to eq(Feed::Verdict::TRANSIENT)
+        end
+
+        it "records the failure's reason" do
+          Feed::Judging.judge(feed)
+          expect(verdict_for(boom).reason).to match(/judge unavailable/)
+        end
+      end
+
+      context "and the failure is permanent" do
+        before_each { FailingBackend.error = Feed::Backend::PermanentError.new("judge misconfigured") }
+
+        it "records a permanent failure" do
+          Feed::Judging.judge(feed)
+          expect(verdict_for(boom).failure).to eq(Feed::Verdict::PERMANENT)
+        end
+      end
+
+      context "and the failure is unclassified" do
+        before_each { FailingBackend.error = Exception.new("judge crashed") }
+
+        it "records a transient failure" do
+          Feed::Judging.judge(feed)
+          expect(verdict_for(boom).failure).to eq(Feed::Verdict::TRANSIENT)
+        end
+      end
+    end
   end
 
   describe ".rejudge_contents" do
@@ -174,14 +240,9 @@ Spectator.describe Feed::Judging do
         expect(Feed::Judging.rejudge_contents(source, target)).to eq(1)
       end
 
-      it "writes only included verdicts" do
+      it "excludes the dropped member" do
         Feed::Judging.rejudge_contents(source, target)
-        expect(Feed::Verdict.count(version_id: target.version_id)).to eq(1)
-      end
-
-      it "does not include the dropped member" do
-        Feed::Judging.rejudge_contents(source, target)
-        expect(Feed::Verdict.find?(version_id: target.version_id, object_iri: dropped.iri)).to be_nil
+        expect(Feed::Verdict.find(version_id: target.version_id, object_iri: dropped.iri).excluded?).to be_true
       end
 
       it "leaves the source untouched" do
@@ -259,6 +320,19 @@ Spectator.describe Feed::Judging do
         expect { Feed::Judging.rejudge_contents(source, target) }.not_to change { CountingBackend.calls }
       end
     end
+
+    context "when the judge fails on a member" do
+      register_backend("failing", FailingBackend.new)
+
+      let_create!(:feed, named: target, owner: actor, backend: "failing")
+      let_build(:object, named: boom, content: "<p>boom</p>")
+      let_create!(:feed_verdict, named: nil, feed: source, object: boom, included: true)
+
+      it "records the failure" do
+        Feed::Judging.rejudge_contents(source, target)
+        expect(Feed::Verdict.find(version_id: target.version_id, object_iri: boom.iri).failed?).to be_true
+      end
+    end
   end
 
   describe ".backfill" do
@@ -300,12 +374,9 @@ Spectator.describe Feed::Judging do
         expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: hit.iri).included).to be_true
       end
 
-      # only `included` verdicts are written -- a verdict for every
-      # object the server has ever held, for every feed, is what the
-      # backfill must not write.
-      it "writes no verdict for the non-matching object" do
+      it "excludes the non-matching object" do
         subject
-        expect(Feed::Verdict.find?(version_id: feed.version_id, object_iri: miss.iri)).to be_nil
+        expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: miss.iri).excluded?).to be_true
       end
 
       it "materializes the matching object at its creation time" do
@@ -350,6 +421,18 @@ Spectator.describe Feed::Judging do
         end
       end
     end
+
+    context "when the judge fails on a candidate" do
+      register_backend("failing", FailingBackend.new)
+
+      let_create!(:feed, owner: actor, backend: "failing")
+      let_create!(:object, named: boom, content: "<p>boom</p>")
+
+      it "records the failure" do
+        subject
+        expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: boom.iri).failed?).to be_true
+      end
+    end
   end
 
   describe ".judge_arrival" do
@@ -374,8 +457,8 @@ Spectator.describe Feed::Judging do
     end
 
     pre_condition do
-      expect(Feed::Verdict.count(object_iri: hit.iri)).to eq(0)
-      expect(Feed::Verdict.count(object_iri: miss.iri)).to eq(0)
+      expect(Feed::Verdict.count(version_id: feed.version_id, object_iri: hit.iri)).to eq(0)
+      expect(Feed::Verdict.count(version_id: feed.version_id, object_iri: miss.iri)).to eq(0)
     end
 
     context "when the feed is not registered" do
@@ -465,6 +548,39 @@ Spectator.describe Feed::Judging do
 
       it "judges the post once, not once per feed" do
         expect { Feed::Judging.judge_arrival(hit) }.to change { CountingBackend.calls }.by(1)
+      end
+    end
+
+    context "when a registered feed's judge fails" do
+      register_backend("failing", FailingBackend.new)
+
+      let_create(:feed, named: failing, owner: actor, backend: "failing")
+      let_build(:object, named: boom, content: "<p>boom</p>")
+      let_create(:create, named: boom_create, object: boom)
+
+      # saving a post judges its arrival, so save every post before
+      # registering the feed.
+      before_each do
+        put_in_inbox(actor, boom_create)
+        Rules::Feeds.register(failing)
+      end
+
+      def verdict_for(object)
+        Feed::Verdict.find(version_id: failing.version_id, object_iri: object.iri)
+      end
+
+      it "records the failure" do
+        Feed::Judging.judge_arrival(boom)
+        expect(verdict_for(boom).failed?).to be_true
+      end
+
+      context "given a failure for a post the judge can answer" do
+        let_create!(:feed_verdict, named: nil, feed: failing, object_iri: hit.iri, included: false, failure: Feed::Verdict::TRANSIENT)
+
+        it "replaces the failure" do
+          Feed::Judging.judge_arrival(hit)
+          expect(verdict_for(hit).included).to be_true
+        end
       end
     end
   end

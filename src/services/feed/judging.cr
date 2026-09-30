@@ -37,10 +37,10 @@ class Feed
       scanned = 0
       candidates.each do |object|
         break if match_limit && matches >= match_limit
-        judgment = backend.judge(feed, [object]).first
-        write_verdict(feed, object, judgment)
+        answer = ask(backend, feed, object)
+        write_verdict(feed, object, answer)
         Rules::Maintainer.reconcile_object_for(view, object.iri)
-        matches += 1 if judgment.included
+        matches += 1 if included?(answer)
         scanned += 1
       end
       scanned
@@ -64,11 +64,10 @@ class Feed
       Verdict.where(version_id: source.version_id, included: true).each do |verdict|
         next unless (object = verdict.object?)
         next unless Candidates.arrival_for(target, object)
-        judgment = backend.judge(target, [object]).first
-        next unless judgment.included
-        write_verdict(target, object, judgment)
+        answer = ask(backend, target, object)
+        write_verdict(target, object, answer)
         Rules::Maintainer.reconcile_object_for(view, object.iri)
-        seeded += 1
+        seeded += 1 if included?(answer)
       end
       seeded
     end
@@ -82,11 +81,6 @@ class Feed
 
     # Judges one batch of a feed's unjudged candidates, newest first.
     #
-    # Writes a verdict only for posts the feed includes. An excluded
-    # post therefore stays a candidate. Skipping excluded verdicts
-    # keeps the backfill from writing a row for every post the server
-    # has ever held, for every version.
-    #
     def backfill(feed : ::Feed, cursor : Int64?, limit : Int32, floor_id : Int64? = nil) : Batch
       unless (backend = Backend.find?(feed.backend))
         raise "is not a registered backend: #{feed.backend}"
@@ -95,9 +89,9 @@ class Feed
       candidates = Candidates.candidates_for(feed, cursor, limit, floor_id)
       included = 0
       candidates.each do |object|
-        judgment = backend.judge(feed, [object]).first
-        if judgment.included
-          write_verdict(feed, object, judgment)
+        answer = ask(backend, feed, object)
+        write_verdict(feed, object, answer)
+        if included?(answer)
           Rules::Maintainer.reconcile_object_for(view, object.iri)
           included += 1
         end
@@ -123,22 +117,44 @@ class Feed
         next unless (backend = Backend.find?(feed.backend))
         next unless Candidates.arrival_for(feed, object)
         next unless judged.add?(feed.version_id)
-        judgment = backend.judge(feed, [object]).first
-        write_verdict(feed, object, judgment)
+        write_verdict(feed, object, ask(backend, feed, object))
       end
     end
 
-    # Writes (or refreshes) the verdict of a feed's version for one
-    # object.
+    # A judge's failure to answer.
     #
-    private def write_verdict(feed, object, judgment)
+    private record Failure, failure : String, reason : String?
+
+    # Asks the judge about an object.
+    #
+    private def ask(backend, feed, object) : Backend::Judgment | Failure
+      backend.judge(feed, [object]).first
+    rescue err : Backend::PermanentError
+      Log.warn { "judging #{object.iri} for feed #{feed.id} failed (permanent): #{err.message}" }
+      Failure.new(Verdict::PERMANENT, err.message)
+    rescue err
+      Log.warn { "judging #{object.iri} for feed #{feed.id} failed (transient): #{err.message}" }
+      Failure.new(Verdict::TRANSIENT, err.message)
+    end
+
+    private def included?(answer : Backend::Judgment | Failure) : Bool
+      answer.is_a?(Backend::Judgment) && answer.included
+    end
+
+    private def write_verdict(feed, object, answer : Backend::Judgment | Failure)
       version_id = feed.version_id
-      verdict =
-        Verdict.find?(version_id: version_id, object_iri: object.iri) ||
-          Verdict.new(version_id: version_id, object: object, included: judgment.included)
+      verdict = Verdict.find?(version_id: version_id, object_iri: object.iri)
+      case answer
+      in Failure
+        included, failure = false, answer.failure
+      in Backend::Judgment
+        included, failure = answer.included, nil
+      end
+      verdict ||= Verdict.new(version_id: version_id, object: object, included: included)
       verdict.assign(
-        included: judgment.included,
-        reason: judgment.reason,
+        included: included,
+        failure: failure,
+        reason: answer.reason,
       ).save
     end
   end

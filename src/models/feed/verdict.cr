@@ -26,5 +26,28 @@ class Feed
 
     @[Persistent]
     property reason : String?
+
+    TRANSIENT = "transient"
+    PERMANENT = "permanent"
+
+    @[Persistent]
+    property failure : String?
+    validates(failure) do
+      if (failure = self.failure)
+        if !failure.in?(TRANSIENT, PERMANENT)
+          "is not a failure: #{failure}"
+        elsif included
+          "can't be included"
+        end
+      end
+    end
+
+    def excluded? : Bool
+      !included && !failed?
+    end
+
+    def failed? : Bool
+      !failure.nil?
+    end
   end
 end

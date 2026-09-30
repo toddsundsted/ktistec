@@ -1293,7 +1293,7 @@ Spectator.describe FeedsController do
             expect(drafts_feeds).to be_empty
           end
 
-          context "and judging raises" do
+          context "and the judge fails" do
             around_each do |proc|
               Feed::Backend.register("criteria", RaisingBackend.new)
               begin
@@ -1303,44 +1303,14 @@ Spectator.describe FeedsController do
               end
             end
 
-            it "fails" do
+            it "succeeds" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-              expect(response.status_code).to eq(500)
+              expect(response.status_code).to eq(302)
             end
 
-            it "fails" do
+            it "succeeds" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-              expect(response.status_code).to eq(500)
-            end
-
-            it "leaves the original as the only published feed" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-              expect(published_feeds.map(&.id)).to eq([feed.id])
-            end
-
-            it "leaves the original as the only published feed" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-              expect(published_feeds.map(&.id)).to eq([feed.id])
-            end
-
-            it "leaves the successor as a discardable draft" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-              expect(drafts_feeds.map(&.copy_of)).to eq([feed.id])
-            end
-
-            it "leaves the successor as a discardable draft" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-              expect(drafts_feeds.map(&.copy_of)).to eq([feed.id])
-            end
-
-            it "does not register the successor's view" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-              expect(registered_feed_types).to be_empty
-            end
-
-            it "does not register the successor's view" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-              expect(registered_feed_types).to be_empty
+              expect(response.status_code).to eq(201)
             end
           end
         end
@@ -1914,7 +1884,7 @@ Spectator.describe FeedsController do
                 expect(Feed.find(feed.id).contents.map(&.iri)).to contain(kept.iri)
               end
 
-              context "and judging raises" do
+              context "and the judge fails" do
                 around_each do |proc|
                   Feed::Backend.register("criteria", RaisingBackend.new)
                   begin
@@ -1924,44 +1894,14 @@ Spectator.describe FeedsController do
                   end
                 end
 
-                it "fails" do
+                it "publishes the copy" do
                   post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                  expect(response.status_code).to eq(500)
+                  expect(Feed.find(feed.id).draft).to be_false
                 end
 
-                it "fails" do
+                it "publishes the copy" do
                   post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                  expect(response.status_code).to eq(500)
-                end
-
-                it "does not publish the copy" do
-                  post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                  expect(Feed.find(feed.id).draft).to be_true
-                end
-
-                it "does not publish the copy" do
-                  post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                  expect(Feed.find(feed.id).draft).to be_true
-                end
-
-                it "does not register the copy's view" do
-                  post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                  expect(registered_feed_types).to be_empty
-                end
-
-                it "does not register the copy's view" do
-                  post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                  expect(registered_feed_types).to be_empty
-                end
-
-                it "does not delete the original" do
-                  post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                  expect(Feed.find?(original.id)).not_to be_nil
-                end
-
-                it "does not delete the original" do
-                  post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                  expect(Feed.find?(original.id)).not_to be_nil
+                  expect(Feed.find(feed.id).draft).to be_false
                 end
               end
             end

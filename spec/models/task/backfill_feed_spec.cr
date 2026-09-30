@@ -135,20 +135,6 @@ Spectator.describe Task::BackfillFeed do
         expect(subject.state.included).to eq(1)
       end
 
-      context "when a batch judges only the newest candidate" do
-        before_each do
-          subject.perform(1)
-          subject.save
-        end
-
-        pre_condition { expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(0) }
-
-        it "judges the next candidate when the task is reloaded" do
-          described_class.find(subject.id).perform(1)
-          expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: hit.iri).included).to be_true
-        end
-      end
-
       context "when the feed's floor is above every object" do
         before_each { feed.assign(floor: miss.created_at + 1.second).save }
 
@@ -208,25 +194,6 @@ Spectator.describe Task::BackfillFeed do
 
         it "does not reschedule" do
           expect { subject.perform }.not_to change { subject.next_attempt_at }
-        end
-      end
-
-      context "and two more that arrived in the same millisecond" do
-        let_build(:object, named: early, content: "<p>something alpha something</p>")
-        let_build(:object, named: late, content: "<p>something gamma something</p>")
-        let_create(:create, named: early_create, object: early)
-        let_create(:create, named: late_create, object: late)
-
-        let(instant) { Time.utc(2026, 1, 1, 1, 1, 1, nanosecond: 700_000_000) }
-
-        let_create!(:inbox_relationship, named: nil, owner: actor, activity: early_create, created_at: instant)
-        let_create!(:inbox_relationship, named: nil, owner: actor, activity: late_create, created_at: instant)
-
-        it "judges the second of them when the task is reloaded" do
-          subject.perform(1)
-          subject.save
-          described_class.find(subject.id).perform(1)
-          expect(Feed::Verdict.find?(version_id: feed.version_id, object_iri: early.iri).try(&.included)).to be_true
         end
       end
 

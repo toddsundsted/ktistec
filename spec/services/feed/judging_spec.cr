@@ -40,7 +40,7 @@ Spectator.describe Feed::Judging do
 
   let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
 
-  def materialized
+  def materialized(feed = self.feed)
     Ktistec.database.query_all(
       "SELECT to_iri, created_at FROM relationships WHERE type = ?",
       feed.feed_type, as: {String, Time})
@@ -149,6 +149,10 @@ Spectator.describe Feed::Judging do
         it "judges nothing" do
           expect(Feed::Judging.judge(feed)).to eq(0)
         end
+
+        it "materializes the matching object" do
+          expect(materialized).to eq([{hit.iri, hit.created_at}])
+        end
       end
     end
 
@@ -214,12 +218,6 @@ Spectator.describe Feed::Judging do
     let_create!(:feed, named: source, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
     let_create!(:feed, named: target, owner: actor, params: JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h)
 
-    def materialized_in(feed)
-      Ktistec.database.query_all(
-        "SELECT to_iri, created_at FROM relationships WHERE type = ?",
-        feed.feed_type, as: {String, Time})
-    end
-
     context "given included members of the source feed" do
       let_build(:object, named: kept, content: "<p>alpha beta</p>")
       let_build(:object, named: dropped, content: "<p>alpha gamma</p>")
@@ -233,7 +231,18 @@ Spectator.describe Feed::Judging do
 
       it "materializes the surviving member at its creation time" do
         Feed::Judging.rejudge_contents(source, target)
-        expect(materialized_in(target)).to eq([{kept.iri, kept.created_at}])
+        expect(materialized(target)).to eq([{kept.iri, kept.created_at}])
+      end
+
+      context "and another feed on the target's version" do
+        let_create!(:feed, named: other, owner: actor, params: target.params)
+
+        pre_condition { expect(other.version_id).to eq(target.version_id) }
+
+        it "materializes the surviving member in the other feed" do
+          Feed::Judging.rejudge_contents(source, target)
+          expect(materialized(other)).to eq([{kept.iri, kept.created_at}])
+        end
       end
 
       it "returns the number seeded" do
@@ -382,6 +391,17 @@ Spectator.describe Feed::Judging do
       it "materializes the matching object at its creation time" do
         subject
         expect(materialized).to eq([{hit.iri, hit.created_at}])
+      end
+
+      context "given another feed on the same version" do
+        let_create!(:feed, named: other, owner: actor, params: feed.params)
+
+        pre_condition { expect(other.version_id).to eq(feed.version_id) }
+
+        it "materializes the matching object in the other feed" do
+          subject
+          expect(materialized(other)).to eq([{hit.iri, hit.created_at}])
+        end
       end
 
       context "when the batch is truncated" do

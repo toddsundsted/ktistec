@@ -11,7 +11,7 @@ class Feed
   #
   # Given a feed: fetch its candidates, judge them via the feed's
   # backend, write verdicts, and after each write explicitly reconcile
-  # the feed's view for that object.
+  # the views of every feed on the feed's version for that object.
   #
   module Judging
     extend self
@@ -31,7 +31,7 @@ class Feed
       unless (backend = Backend.find?(feed.backend))
         raise "is not a registered backend: #{feed.backend}"
       end
-      view = Rules::Feeds.view_for(feed)
+      views = views_for(feed)
       candidates = Candidates.candidates_for(feed, limit: limit)
       matches = 0
       scanned = 0
@@ -39,7 +39,7 @@ class Feed
         break if match_limit && matches >= match_limit
         answer = ask(backend, feed, object)
         write_verdict(feed, object, answer)
-        Rules::Maintainer.reconcile_object_for(view, object.iri)
+        reconcile(views, object)
         matches += 1 if included?(answer)
         scanned += 1
       end
@@ -59,14 +59,14 @@ class Feed
         raise "is not a registered backend: #{target.backend}"
       end
       return 0 if source.version_id == target.version_id
-      view = Rules::Feeds.view_for(target)
+      views = views_for(target)
       seeded = 0
       Verdict.where(version_id: source.version_id, included: true).each do |verdict|
         next unless (object = verdict.object?)
         next unless Candidates.arrival_for(target, object)
         answer = ask(backend, target, object)
         write_verdict(target, object, answer)
-        Rules::Maintainer.reconcile_object_for(view, object.iri)
+        reconcile(views, object)
         seeded += 1 if included?(answer)
       end
       seeded
@@ -85,14 +85,14 @@ class Feed
       unless (backend = Backend.find?(feed.backend))
         raise "is not a registered backend: #{feed.backend}"
       end
-      view = Rules::Feeds.view_for(feed)
+      views = views_for(feed)
       candidates = Candidates.candidates_for(feed, cursor, limit, floor_id)
       included = 0
       candidates.each do |object|
         answer = ask(backend, feed, object)
         write_verdict(feed, object, answer)
         if included?(answer)
-          Rules::Maintainer.reconcile_object_for(view, object.iri)
+          reconcile(views, object)
           included += 1
         end
       end
@@ -135,6 +135,16 @@ class Feed
     rescue err
       Log.warn { "judging #{object.iri} for feed #{feed.id} failed (transient): #{err.message}" }
       Failure.new(Verdict::TRANSIENT, err.message)
+    end
+
+    # Returns the views of every feed on the feed's version.
+    #
+    private def views_for(feed : ::Feed) : Array(Rules::View::Feed)
+      ::Feed.where(version_id: feed.version_id).map { |each| Rules::Feeds.view_for(each) }
+    end
+
+    private def reconcile(views : Array(Rules::View::Feed), object : ActivityPub::Object) : Nil
+      views.each { |view| Rules::Maintainer.reconcile_object_for(view, object.iri) }
     end
 
     private def included?(answer : Backend::Judgment | Failure) : Bool

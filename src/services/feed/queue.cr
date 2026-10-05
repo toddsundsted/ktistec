@@ -1,0 +1,79 @@
+require "../../models/feed/question"
+
+class Feed
+  # The judge queue.
+  #
+  module Queue
+    extend self
+
+    # The number of questions beyond which backfill is refused.
+    #
+    class_property backfill_cap : Int32 = 100_000
+
+    # The number of questions beyond which *anything* is refused.
+    #
+    class_property live_cap : Int32 = 110_000
+
+    # Raised when the queue is full.
+    #
+    class FullError < Exception
+    end
+
+    # Enqueues a question.
+    #
+    # A question for a pair that is already waiting coalesces into the
+    # waiting question.
+    #
+    # Raises `FullError` if the queue is full.
+    #
+    def enqueue(version_id : Int64, object_iri : String, live : Bool, due_at : Time = Time.utc) : Nil
+      enqueue(version_id, object_iri, live, due_at, cap: live ? live_cap : backfill_cap)
+    end
+
+    private def enqueue(version_id : Int64, object_iri : String, live : Bool, due_at : Time, cap : Int32?) : Nil
+      if (question = Question.find?(version_id: version_id, object_iri: object_iri, batched: false))
+        question.due_at = due_at unless pulled_first?(question, live, due_at, Time.utc)
+        question.live ||= live
+        question.save
+      else
+        if cap && Question.count(batched: false) >= cap
+          raise FullError.new("queue is full: #{object_iri} for version #{version_id}")
+        end
+        Question.new(version_id: version_id, object_iri: object_iri, live: live, due_at: due_at).save
+      end
+    end
+
+    private def pulled_first?(question, live, due_at, now) : Bool
+      if question.due_at <= now && due_at <= now
+        (question.live && !live) || (question.live == live && question.due_at <= due_at)
+      else
+        question.due_at <= due_at
+      end
+    end
+
+    # Pulls the next question that is due into a batch.
+    #
+    def pull(now : Time = Time.utc) : Question?
+      Question.pull(now)
+    end
+
+    # Removes an answered question.
+    #
+    def finish(question : Question) : Nil
+      question.destroy
+    end
+
+    # Returns every question in a batch to waiting.
+    #
+    # Each is enqueued again, so duplicates coalesce.
+    #
+    # The cap does not apply.
+    #
+    def release_batches : Nil
+      Question.where(batched: true).each do |question|
+        question.destroy
+        enqueue(question.version_id.not_nil!, question.object_iri.not_nil!, question.live, question.due_at, cap: nil)
+      end
+    end
+  end
+end

@@ -549,6 +549,21 @@ def feed_verdict_factory(clazz = Feed::Verdict, feed : Feed? = nil, version_id =
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
+def feed_question_factory(clazz = Feed::Question, feed : Feed? = nil, version_id = nil, version = false, object_iri = nil, object = false, **options)
+  if feed
+    feed.save if feed.new_record?
+    version_id = feed.version_id
+  end
+  version = feed_version_factory.save unless version_id || version.nil? || version
+  object = object_factory unless object_iri || object.nil? || object
+  clazz.new({
+    "version_id" => version_id,
+    "version"    => version || nil,
+    "object_iri" => object_iri,
+    "object"     => object || nil,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
+end
+
 def feed_version_factory(clazz = Feed::Version, backend = "criteria", params = nil, **options)
   params ||= JSON.parse(%({"keywords": {"any": ["keyword"]}})).as_h
   clazz.new(**{backend: backend, params: params.to_json}.merge(options))

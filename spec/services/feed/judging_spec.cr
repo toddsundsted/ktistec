@@ -4,7 +4,6 @@ require "../../../src/services/feed/backend/criteria"
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 require "../../spec_helper/feed/backend"
-require "../../spec_helper/feed/queue"
 
 private class CountingBackend < TestBackend
   class_property calls = 0

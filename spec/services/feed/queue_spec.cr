@@ -2,7 +2,6 @@ require "../../../src/services/feed/queue"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
-require "../../spec_helper/feed/queue"
 
 Spectator.describe Feed::Queue do
   setup_spec

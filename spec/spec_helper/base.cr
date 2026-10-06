@@ -188,6 +188,13 @@ end
   {% end %}
 {% end %}
 
+macro finished
+  {% if @top_level.has_constant?("Feed") && Feed.has_constant?("Queue") %}
+    Feed::Queue.backfill_cap = 2
+    Feed::Queue.live_cap = 3
+  {% end %}
+end
+
 # Test setup/teardown
 
 module Ktistec

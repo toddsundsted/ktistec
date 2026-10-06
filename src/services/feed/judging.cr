@@ -1,10 +1,12 @@
 require "../../models/feed"
+require "../../models/feed/question"
 require "../../models/feed/verdict"
 require "../../rules/feeds"
 require "../../rules/maintainer"
 require "../../rules/view/feed"
 require "./backend"
 require "./candidates"
+require "./queue"
 
 class Feed
   # The synchronous judging entrypoint.
@@ -38,7 +40,7 @@ class Feed
       candidates.each do |object|
         break if match_limit && matches >= match_limit
         answer = ask(backend, feed, object)
-        write_verdict(feed, object, answer)
+        write_verdict(feed, object, answer, live: false)
         reconcile(views, object)
         matches += 1 if included?(answer)
         scanned += 1
@@ -65,45 +67,26 @@ class Feed
         next unless (object = verdict.object?)
         next unless Candidates.arrival_for(target, object)
         answer = ask(backend, target, object)
-        write_verdict(target, object, answer)
+        write_verdict(target, object, answer, live: false)
         reconcile(views, object)
         seeded += 1 if included?(answer)
       end
       seeded
     end
 
-    # The result of one backfill batch.
+    # Answers a question from the queue.
     #
-    # `cursor` is the object id to resume below. `done` reports that
-    # the scan has reached the feed's floor.
-    #
-    record Batch, scanned : Int32, included : Int32, cursor : Int64?, done : Bool
-
-    # Judges one batch of a feed's unjudged candidates, newest first.
-    #
-    def backfill(feed : ::Feed, cursor : Int64?, limit : Int32, floor_id : Int64? = nil) : Batch
-      unless (backend = Backend.find?(feed.backend))
-        raise "is not a registered backend: #{feed.backend}"
-      end
-      views = views_for(feed)
-      candidates = Candidates.candidates_for(feed, cursor, limit, floor_id)
-      included = 0
-      candidates.each do |object|
-        answer = ask(backend, feed, object)
-        write_verdict(feed, object, answer)
-        if included?(answer)
-          reconcile(views, object)
-          included += 1
-        end
-      end
-      # the scan never leaves the feed's window, so a short batch
-      # means no unjudged candidates remain.
-      Batch.new(
-        scanned: candidates.size,
-        included: included,
-        cursor: candidates.last?.try(&.id),
-        done: candidates.size < limit,
-      )
+    def answer(question : Question) : Nil
+      return unless (version_id = question.version_id)
+      return unless (object = ActivityPub::Object.find?(iri: question.object_iri))
+      feeds = ::Feed.where(version_id: version_id)
+      return unless (feed = feeds.find { |each| Candidates.arrival_for(each, object) })
+      return unless (backend = Backend.find?(feed.backend))
+      answer = ask(backend, feed, object)
+      # the version may have been abandoned while the judge answered
+      return if ::Feed.count(version_id: version_id) == 0
+      write_verdict(feed, object, answer, live: question.live)
+      reconcile(views_for(feed), object)
     end
 
     # Judges a single object against every registered feed, writing
@@ -117,7 +100,7 @@ class Feed
         next unless (backend = Backend.find?(feed.backend))
         next unless Candidates.arrival_for(feed, object)
         next unless judged.add?(feed.version_id)
-        write_verdict(feed, object, ask(backend, feed, object))
+        write_verdict(feed, object, ask(backend, feed, object), live: true)
       end
     end
 
@@ -151,7 +134,9 @@ class Feed
       answer.is_a?(Backend::Judgment) && answer.included
     end
 
-    private def write_verdict(feed, object, answer : Backend::Judgment | Failure)
+    RETRY_DELAY = 5.minutes
+
+    private def write_verdict(feed, object, answer : Backend::Judgment | Failure, live : Bool)
       version_id = feed.version_id
       verdict = Verdict.find?(version_id: version_id, object_iri: object.iri)
       case answer
@@ -166,6 +151,13 @@ class Feed
         failure: failure,
         reason: answer.reason,
       ).save
+      if failure == Verdict::TRANSIENT && version_id
+        begin
+          Queue.enqueue(version_id, object.iri, live: live, due_at: RETRY_DELAY.from_now)
+        rescue err : Queue::FullError
+          Log.warn { "not retrying #{object.iri} for version #{version_id}: #{err.message}" }
+        end
+      end
     end
   end
 end

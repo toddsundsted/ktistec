@@ -30,7 +30,7 @@ class Task
     end
 
     private def collect_abandoned_drafts(max_age_hours : Int32)
-      drafts = Feed.where("draft = 1 AND updated_at < ?", max_age_hours.hours.ago)
+      drafts = ::Feed.where("draft = 1 AND updated_at < ?", max_age_hours.hours.ago)
       drafts.each(&.destroy)
       drafts.size
     end

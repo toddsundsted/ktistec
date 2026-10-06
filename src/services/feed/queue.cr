@@ -1,10 +1,17 @@
 require "../../models/feed/question"
+require "./candidates"
 
 class Feed
   # The judge queue.
   #
   module Queue
     extend self
+
+    Log = ::Log.for(self)
+
+    # The number of candidates read at a time.
+    #
+    class_property page_size : Int32 = 250
 
     # The number of questions beyond which backfill is refused.
     #
@@ -49,6 +56,26 @@ class Feed
       else
         question.due_at <= due_at
       end
+    end
+
+    # Enqueues a published feed's candidates as backfill questions.
+    #
+    # Silently sheds candidates if the queue is full.
+    #
+    def enqueue_backfill(feed : ::Feed) : Nil
+      return if feed.draft
+      return unless feed.floor
+      version_id = feed.version_id.not_nil!
+      floor_id = Candidates.floor_id(feed) || 0_i64
+      cursor = nil
+      loop do
+        page = Candidates.candidates_for(feed, cursor, page_size, floor_id)
+        page.each { |object| enqueue(version_id, object.iri, live: false) }
+        break if page.size < page_size
+        cursor = page.last.id
+      end
+    rescue err : FullError
+      Log.warn { "backfill of feed #{feed.id} is incomplete: #{err.message}" }
     end
 
     # Pulls the next question that is due into a batch.

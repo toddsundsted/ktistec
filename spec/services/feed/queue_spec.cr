@@ -1,4 +1,5 @@
 require "../../../src/services/feed/queue"
+require "../../../src/services/feed/backend/criteria"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -157,6 +158,56 @@ Spectator.describe Feed::Queue do
         it "accepts a live question it already holds" do
           expect { Feed::Queue.enqueue(question.version_id.not_nil!, question.object_iri.not_nil!, live: true) }
             .not_to raise_error
+        end
+      end
+    end
+  end
+
+  describe ".enqueue_backfill" do
+    let_create!(:feed, owner: register.actor, draft: false, floor: KTISTEC_EPOCH)
+
+    def questions
+      Feed::Question.where(version_id: feed.version_id).sort_by!(&.id!)
+    end
+
+    context "given candidates" do
+      let_create!(:object, named: older)
+      let_create!(:object, named: newer)
+
+      it "enqueues the newest first" do
+        Feed::Queue.enqueue_backfill(feed)
+        expect(questions.map(&.object_iri)).to eq([newer.iri, older.iri])
+      end
+
+      it "enqueues questions as backfill" do
+        Feed::Queue.enqueue_backfill(feed)
+        expect(questions.map(&.live)).to eq([false, false])
+      end
+
+      context "given more than will fit" do
+        let_create!(:object, named: nil)
+
+        it "sheds questions that won't fit" do
+          Feed::Queue.enqueue_backfill(feed)
+          expect(questions.size).to eq(Feed::Queue.backfill_cap)
+        end
+      end
+
+      context "and a draft" do
+        before_each { feed.assign(draft: true).save }
+
+        it "enqueues nothing" do
+          Feed::Queue.enqueue_backfill(feed)
+          expect(questions).to be_empty
+        end
+      end
+
+      context "and no floor" do
+        before_each { feed.assign(floor: nil).save }
+
+        it "enqueues nothing" do
+          Feed::Queue.enqueue_backfill(feed)
+          expect(questions).to be_empty
         end
       end
     end

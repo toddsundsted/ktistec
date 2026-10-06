@@ -190,6 +190,7 @@ end
 
 macro finished
   {% if @top_level.has_constant?("Feed") && Feed.has_constant?("Queue") %}
+    Feed::Queue.page_size = 1
     Feed::Queue.backfill_cap = 2
     Feed::Queue.live_cap = 3
   {% end %}

@@ -692,14 +692,18 @@ Spectator.describe FeedsController do
         expect(robotics_feed.floor).to be_close(Feed::HORIZON.ago, 1.minute)
       end
 
-      it "schedules a backfill" do
-        post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc"
-        expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(robotics_feed))).to eq(1)
-      end
+      context "given a candidate" do
+        let_create!(:object, named: candidate, created_at: 1.day.ago)
 
-      it "schedules a backfill" do
-        post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc"})
-        expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(robotics_feed))).to eq(1)
+        it "enqueues a question" do
+          post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc"
+          expect(Feed::Question.where(version_id: robotics_feed.version_id).map(&.object_iri)).to eq([candidate.iri])
+        end
+
+        it "enqueues a question" do
+          post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc"})
+          expect(Feed::Question.where(version_id: robotics_feed.version_id).map(&.object_iri)).to eq([candidate.iri])
+        end
       end
 
       it "registers the feed's view" do
@@ -1206,27 +1210,17 @@ Spectator.describe FeedsController do
             expect(robotics_feed.floor).to eq(original_floor)
           end
 
-          it "schedules a backfill for the feed" do
-            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-            expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(robotics_feed))).to eq(1)
-          end
+          context "and a candidate" do
+            let_create!(:object, named: candidate, created_at: original_floor + 1.day)
 
-          it "schedules a backfill for the feed" do
-            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-            expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(robotics_feed))).to eq(1)
-          end
-
-          context "and the original has a backfill" do
-            before_each { Task::BackfillFeed.new(source_iri: actor.iri, subject_iri: Task::BackfillFeed.iri_for(feed)).save }
-
-            it "destroys the original's backfill" do
+            it "enqueues a question for the feed" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-              expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(0)
+              expect(Feed::Question.where(version_id: robotics_feed.version_id).map(&.object_iri)).to eq([candidate.iri])
             end
 
-            it "destroys the original's backfill" do
+            it "enqueues a question for the feed" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-              expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(0)
+              expect(Feed::Question.where(version_id: robotics_feed.version_id).map(&.object_iri)).to eq([candidate.iri])
             end
           end
         end
@@ -1683,14 +1677,18 @@ Spectator.describe FeedsController do
             expect(Feed.find(feed.id).floor).to eq(draft_floor)
           end
 
-          it "schedules a backfill" do
-            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-            expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(1)
-          end
+          context "given a candidate" do
+            let_create!(:object, named: candidate, created_at: draft_floor + 1.day)
 
-          it "schedules a backfill" do
-            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-            expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(1)
+            it "enqueues a question" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+              expect(Feed::Question.where(version_id: Feed.find(feed.id).version_id).map(&.object_iri)).to eq([candidate.iri])
+            end
+
+            it "enqueues a question" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+              expect(Feed::Question.where(version_id: Feed.find(feed.id).version_id).map(&.object_iri)).to eq([candidate.iri])
+            end
           end
 
           it "succeeds" do
@@ -1843,14 +1841,18 @@ Spectator.describe FeedsController do
               expect(Feed.find(feed.id).floor).to eq(draft_floor)
             end
 
-            it "schedules a backfill for the copy" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-              expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(1)
-            end
+            context "and a candidate" do
+              let_create!(:object, named: candidate, created_at: draft_floor + 1.day)
 
-            it "schedules a backfill for the copy" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-              expect(Task::BackfillFeed.count(subject_iri: Task::BackfillFeed.iri_for(feed))).to eq(1)
+              it "enqueues a question for the copy" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+                expect(Feed::Question.where(version_id: Feed.find(feed.id).version_id).map(&.object_iri)).to eq([candidate.iri])
+              end
+
+              it "enqueues a question for the copy" do
+                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+                expect(Feed::Question.where(version_id: Feed.find(feed.id).version_id).map(&.object_iri)).to eq([candidate.iri])
+              end
             end
 
             context "when the original is registered" do
@@ -2027,22 +2029,6 @@ Spectator.describe FeedsController do
         it "removes the materialized rows" do
           delete "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
           expect(materialized_count(feed)).to eq(0)
-        end
-      end
-
-      context "given a scheduled backfill" do
-        before_each { Task::BackfillFeed.new(source_iri: actor.iri, subject_iri: Task::BackfillFeed.iri_for(feed)).save }
-
-        pre_condition { expect(Task::BackfillFeed.count).to eq(1) }
-
-        it "destroys the backfill" do
-          delete "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_HTML
-          expect(Task::BackfillFeed.count).to eq(0)
-        end
-
-        it "destroys the backfill" do
-          delete "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
-          expect(Task::BackfillFeed.count).to eq(0)
         end
       end
 

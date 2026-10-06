@@ -1,9 +1,9 @@
 require "../framework/controller"
 require "../models/feed"
-require "../models/task/backfill_feed"
 require "../rules/feeds"
 require "../rules/trigger"
 require "../services/feed/judging"
+require "../services/feed/queue"
 require "../services/feed/window"
 require "../services/feed/backend/criteria/form"
 
@@ -133,7 +133,7 @@ class FeedsController
       if feed.valid?
         feed.save
         Rules::Feeds.register(feed)
-        Task::BackfillFeed.schedule_for(feed)
+        Feed::Queue.enqueue_backfill(feed)
         if accepts_json?
           created actor_feed_path(account.actor, feed), "feeds/edit", env: env, feed: feed, criteria: form_criteria(env, feed), contents: nil
         else
@@ -203,7 +203,7 @@ class FeedsController
         if original && original.owner == feed.owner
           unregister_and_destroy(original)
         end
-        Task::BackfillFeed.schedule_for(feed)
+        Feed::Queue.enqueue_backfill(feed)
         if accepts_json?
           created actor_feed_path(feed.owner, feed), "feeds/edit", env: env, feed: feed, criteria: form_criteria(env, feed), contents: nil
         else
@@ -230,7 +230,7 @@ class FeedsController
           published.publish
           Rules::Feeds.register(published)
           unregister_and_destroy(feed)
-          Task::BackfillFeed.schedule_for(published)
+          Feed::Queue.enqueue_backfill(published)
           if accepts_json?
             created actor_feed_path(published.owner, published), "feeds/edit", env: env, feed: published, criteria: form_criteria(env, published), contents: nil
           else
@@ -259,12 +259,10 @@ class FeedsController
     end
   end
 
-  # Removes a feed's runtime view and backfill before destroying the
-  # feed itself.
+  # Removes a feed's runtime view before destroying the feed itself.
   #
   private def self.unregister_and_destroy(feed)
     Rules::Feeds.unregister(feed)
-    Task::BackfillFeed.destroy_for(feed)
     feed.destroy
   end
 

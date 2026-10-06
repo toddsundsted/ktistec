@@ -11,6 +11,7 @@ require "../controllers/**" # ameba:disable Ktistec/NoRequireGlob
 require "../handlers/**"    # ameba:disable Ktistec/NoRequireGlob
 require "../workers/**"     # ameba:disable Ktistec/NoRequireGlob
 require "../services/feed/judging"
+require "../services/feed/queue"
 require "../services/feed/backend/criteria"
 
 Ktistec::Server.run do
@@ -31,6 +32,7 @@ Ktistec::Server.run do
   TaskWorker.start do
     Task.destroy_old_tasks
     Task.clean_up_running_tasks
+    Feed::Queue.release_batches
     Task::Backup.ensure_scheduled
     Task::Performance.ensure_scheduled
     Task::UpdateMetrics.ensure_scheduled
@@ -40,6 +42,7 @@ Ktistec::Server.run do
     Task::ReconcileTagStatistics.ensure_scheduled
     Task::CollectFeedDrafts.ensure_scheduled
     Task::CollectFeedOrphans.ensure_scheduled
+    Task::Feed::AnswerQuestions.ensure_scheduled
   end
   Session.clean_up_stale_sessions
   # track server starts

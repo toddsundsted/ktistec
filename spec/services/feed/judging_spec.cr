@@ -391,22 +391,6 @@ Spectator.describe Feed::Judging do
       expect(verdict_for(hit).try(&.included)).to be_true
     end
 
-    it "puts the matching object in the feed" do
-      Feed::Judging.answer(question)
-      expect(materialized).to eq([{hit.iri, hit.created_at}])
-    end
-
-    context "given another feed on the same version" do
-      let_create!(:feed, named: other, owner: actor, params: feed.params)
-
-      pre_condition { expect(other.version_id).to eq(feed.version_id) }
-
-      it "puts the matching object in the other feed" do
-        Feed::Judging.answer(question)
-        expect(materialized(other)).to eq([{hit.iri, hit.created_at}])
-      end
-    end
-
     context "given a post that is not a candidate" do
       before_each { hit.assign(visible: false).save }
 

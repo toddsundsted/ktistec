@@ -86,7 +86,6 @@ class Feed
       # the version may have been abandoned while the judge answered
       return if ::Feed.count(version_id: version_id) == 0
       write_verdict(feed, object, answer, live: question.live)
-      reconcile(views_for(feed), object)
     end
 
     # Judges a single object against every registered feed, writing

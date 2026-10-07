@@ -340,6 +340,28 @@ Spectator.describe Rules::Trigger do
     end
   end
 
+  describe ".reconcile_for_answer" do
+    let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    let_create!(:object, named: post, attributed_to: author, content: "<p>something alpha something</p>")
+    let_create(:feed_question, named: question, feed: feed, object: post)
+
+    it "materializes the answer" do
+      expect { Rules::Trigger.reconcile_for_answer(question) }
+        .to change { feed_row_count(feed) }.from(0).to(1)
+    end
+
+    context "given another feed on the same version" do
+      let_create!(:feed, named: other, owner: actor, params: feed.params)
+
+      pre_condition { expect(other.version_id).to eq(feed.version_id) }
+
+      it "materializes the answer in the other feed" do
+        expect { Rules::Trigger.reconcile_for_answer(question) }
+          .to change { feed_row_count(other) }.from(0).to(1)
+      end
+    end
+  end
+
   # each entry point that drives the maintainer must notify the
   # owner's subject. the subject family (notifications vs. timeline)
   # is incidental here: `notify` forwards `view.subjects`
@@ -452,6 +474,28 @@ Spectator.describe Rules::Trigger do
 
         it "does not notify" do
           Rules::Trigger.reconcile_for_feed(feed)
+          expect(notified).to be_empty
+        end
+      end
+    end
+
+    context "via reconcile_for_answer" do
+      let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+      let_create!(:object, named: post, attributed_to: author, content: "<p>something alpha something</p>")
+      let_create(:feed_question, named: question, feed: feed, object: post)
+
+      it "notifies the owner's feed subject" do
+        Rules::Trigger.reconcile_for_answer(question)
+        expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+      end
+
+      context "when nothing changes" do
+        let_create!(:feed_verdict, feed: feed, object: post, included: true)
+
+        before_each { put_in_feed(feed, post) }
+
+        it "does not notify" do
+          Rules::Trigger.reconcile_for_answer(question)
           expect(notified).to be_empty
         end
       end

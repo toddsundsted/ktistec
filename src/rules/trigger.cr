@@ -14,6 +14,7 @@ require "../models/activity_pub/activity/dislike"
 require "../models/activity_pub/activity/like"
 require "../models/activity_pub/activity/undo"
 require "../models/activity_pub/actor"
+require "../models/feed/question"
 require "../models/relationship/content/follow/thread"
 require "../models/relationship/content/follow/hashtag"
 require "../models/relationship/content/follow/mention"
@@ -176,6 +177,20 @@ module Rules
     def reconcile_for_feed(feed : ::Feed) : Nil
       view : Rules::View = Rules::Feeds.view_for(feed)
       notify([{view, feed.owner_iri.not_nil!}]) if Rules::Maintainer.reconcile(view)
+    end
+
+    # Re-evaluates the feeds on a question's version for its object,
+    # once the question is answered.
+    #
+    def reconcile_for_answer(question : Feed::Question) : Nil
+      # answer the question first, so its verdict exists as a base
+      # fact before the reconcile materializes it.
+      Feed::Judging.answer(question)
+      changed = [] of {Rules::View, String}
+      ::Feed.where(version_id: question.version_id).each do |feed|
+        changed.concat(Rules::Maintainer.reconcile_object_for(Rules::Feeds.view_for(feed), question.object_iri.not_nil!))
+      end
+      notify(changed)
     end
 
     # Notifies the pub/sub subjects for the changed `(view, owner)` pairs,

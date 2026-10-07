@@ -2,6 +2,7 @@ require "../../task"
 require "../mixins/singleton"
 require "../../../services/feed/judging"
 require "../../../services/feed/queue"
+require "../../../rules/trigger"
 
 class Task
   # Answers the questions in the queue.
@@ -26,13 +27,17 @@ class Task
     end
 
     private def answer(question)
-      ::Feed::Judging.answer(question)
+      reconcile_answer(question)
     rescue ex
       Log.error { "answering #{question.object_iri} for version #{question.version_id} failed: #{ex.class}: #{ex.message}" }
       failed = true
     ensure
       ::Feed::Queue.finish(question)
       retry_later(question) if failed
+    end
+
+    protected def reconcile_answer(question : ::Feed::Question) : Nil
+      Rules::Trigger.reconcile_for_answer(question)
     end
 
     private def retry_later(question)

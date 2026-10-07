@@ -6,6 +6,7 @@ require "./view/follow_mention"
 require "./view/public_tagged"
 require "./view/feed"
 require "../services/feed/judging"
+require "../services/feed/queue"
 require "../models/activity_pub/activity"
 require "../models/activity_pub/object"
 require "../models/activity_pub/activity/create"
@@ -51,11 +52,8 @@ module Rules
           activity.object_iri
         end
       if object_iri
-        # judge the object against the registered feeds first, so
-        # their verdicts exist as base facts before the reconcile
-        # materializes them.
         if (object = ActivityPub::Object.find?(iri: object_iri))
-          Feed::Judging.judge_arrival(object)
+          Feed::Queue.enqueue_arrival(object)
         end
         notify(Rules::Maintainer.reconcile_object(object_iri))
       end
@@ -71,7 +69,7 @@ module Rules
     # the views whose membership derives from the object's own state.
     #
     def reconcile_for_object(object : ActivityPub::Object) : Nil
-      Feed::Judging.judge_arrival(object)
+      Feed::Queue.enqueue_arrival(object)
       changed = [] of {Rules::View, String}
       Rules::View.registry.each do |view|
         next unless view.is_a?(Rules::View::Feed)

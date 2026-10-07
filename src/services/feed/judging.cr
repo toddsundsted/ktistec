@@ -88,21 +88,6 @@ class Feed
       write_verdict(feed, object, answer, live: question.live)
     end
 
-    # Judges a single object against every registered feed, writing
-    # (or refreshing) each feed's verdict.
-    #
-    def judge_arrival(object : ActivityPub::Object) : Nil
-      judged = Set(Int64?).new
-      Rules::View.registry.each do |view|
-        next unless view.is_a?(Rules::View::Feed)
-        next unless (feed = ::Feed.find?(view.feed_id))
-        next unless (backend = Backend.find?(feed.backend))
-        next unless Candidates.arrival_for(feed, object)
-        next unless judged.add?(feed.version_id)
-        write_verdict(feed, object, ask(backend, feed, object), live: true)
-      end
-    end
-
     # A judge's failure to answer.
     #
     private record Failure, failure : String, reason : String?

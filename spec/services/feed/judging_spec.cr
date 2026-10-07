@@ -426,6 +426,15 @@ Spectator.describe Feed::Judging do
       end
     end
 
+    context "given a past failure" do
+      let_create!(:feed_verdict, named: nil, feed: feed, object: hit, included: false, failure: Feed::Verdict::TRANSIENT)
+
+      it "replaces the failure" do
+        Feed::Judging.answer(question)
+        expect(verdict_for(hit).try(&.failed?)).to be_false
+      end
+    end
+
     context "when the judge fails" do
       register_backend("failing", FailingBackend.new)
 
@@ -452,165 +461,6 @@ Spectator.describe Feed::Judging do
             Feed::Judging.answer(question)
             expect(retry_for(hit).try(&.live)).to be_true
           end
-        end
-      end
-    end
-  end
-
-  describe ".judge_arrival" do
-    around_each do |proc|
-      saved = Rules::View.registry.dup
-      begin
-        proc.call
-      ensure
-        Rules::View.registry.clear
-        Rules::View.registry.concat(saved)
-      end
-    end
-
-    let_build(:object, named: hit, content: "<p>something alpha something</p>")
-    let_create(:create, named: hit_create, object: hit)
-    let_build(:object, named: miss, content: "<p>something gamma something</p>")
-    let_create(:create, named: miss_create, object: miss)
-
-    before_each do
-      put_in_inbox(actor, hit_create)
-      put_in_inbox(actor, miss_create)
-    end
-
-    pre_condition do
-      expect(Feed::Verdict.count(version_id: feed.version_id, object_iri: hit.iri)).to eq(0)
-      expect(Feed::Verdict.count(version_id: feed.version_id, object_iri: miss.iri)).to eq(0)
-    end
-
-    context "when the feed is not registered" do
-      pre_condition { expect(Feed::Candidates.arrival_for(feed, hit)).not_to be_nil }
-
-      it "writes no verdict" do
-        expect { Feed::Judging.judge_arrival(hit) }
-          .not_to change { Feed::Verdict.count(version_id: feed.version_id) }.from(0)
-      end
-    end
-
-    context "when the feed is registered" do
-      before_each { Rules::Feeds.register(feed) }
-
-      it "does not materialize the feed itself" do
-        Feed::Judging.judge_arrival(hit)
-        expect(materialized).to be_empty
-      end
-
-      it "writes a verdict" do
-        expect { Feed::Judging.judge_arrival(hit) }
-          .to change { Feed::Verdict.count(version_id: feed.version_id, object_iri: hit.iri) }.from(0).to(1)
-      end
-
-      it "includes the matching object" do
-        Feed::Judging.judge_arrival(hit)
-        verdict = Feed::Verdict.find(version_id: feed.version_id, object_iri: hit.iri)
-        expect(verdict.included).to be_true
-      end
-
-      context "given a matching object whose author is deleted" do
-        before_each { hit.attributed_to.delete! }
-
-        it "writes a verdict" do
-          expect { Feed::Judging.judge_arrival(hit) }
-            .to change { Feed::Verdict.count(version_id: feed.version_id, object_iri: hit.iri) }.from(0).to(1)
-        end
-      end
-
-      context "given a matching object whose author is blocked" do
-        before_each { hit.attributed_to.block! }
-
-        it "writes a verdict" do
-          expect { Feed::Judging.judge_arrival(hit) }
-            .to change { Feed::Verdict.count(version_id: feed.version_id, object_iri: hit.iri) }.from(0).to(1)
-        end
-      end
-
-      context "given a matching object that is not visible" do
-        let_build(:object, named: hidden, content: "<p>something alpha something</p>", visible: false)
-        let_create!(:feed_verdict, named: nil, feed: feed, object: hidden, included: true)
-
-        pre_condition { expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: hidden.iri).included).to be_true }
-
-        it "leaves the verdict included" do
-          Feed::Judging.judge_arrival(hidden)
-          expect(Feed::Verdict.find(version_id: feed.version_id, object_iri: hidden.iri).included).to be_true
-        end
-      end
-
-      context "given a non-matching object" do
-        it "writes a verdict" do
-          expect { Feed::Judging.judge_arrival(miss) }
-            .to change { Feed::Verdict.count(version_id: feed.version_id, object_iri: miss.iri) }.from(0).to(1)
-        end
-
-        it "excludes the non-matching object" do
-          Feed::Judging.judge_arrival(miss)
-          verdict = Feed::Verdict.find(version_id: feed.version_id, object_iri: miss.iri)
-          expect(verdict.included).to be_false
-        end
-      end
-    end
-
-    context "when two registered feeds share a version" do
-      register_backend("counting", CountingBackend.new)
-
-      let_create(:feed, named: one, owner: actor, backend: "counting")
-      let_create(:feed, named: two, owner: actor, backend: "counting")
-
-      before_each do
-        Rules::Feeds.register(one)
-        Rules::Feeds.register(two)
-      end
-
-      pre_condition { expect(one.version_id).to eq(two.version_id) }
-
-      it "judges the post once, not once per feed" do
-        expect { Feed::Judging.judge_arrival(hit) }.to change { CountingBackend.calls }.by(1)
-      end
-    end
-
-    context "when a registered feed's judge fails" do
-      register_backend("failing", FailingBackend.new)
-
-      let_create(:feed, named: failing, owner: actor, backend: "failing")
-      let_build(:object, named: boom, content: "<p>boom</p>")
-      let_create(:create, named: boom_create, object: boom)
-
-      # saving a post judges its arrival, so save every post before
-      # registering the feed.
-      before_each do
-        put_in_inbox(actor, boom_create)
-        Rules::Feeds.register(failing)
-      end
-
-      def verdict_for(object)
-        Feed::Verdict.find(version_id: failing.version_id, object_iri: object.iri)
-      end
-
-      it "records the failure" do
-        Feed::Judging.judge_arrival(boom)
-        expect(verdict_for(boom).failed?).to be_true
-      end
-
-      context "and the failure is transient" do
-        before_each { FailingBackend.error = Feed::Backend::TransientError.new("judge unavailable") }
-
-        it "asks again later as live" do
-          Feed::Judging.judge_arrival(boom)
-          expect(retry_for(boom, failing).try(&.live)).to be_true
-        end
-      end
-
-      context "given a failure for a post the judge can answer" do
-        let_create!(:feed_verdict, named: nil, feed: failing, object_iri: hit.iri, included: false, failure: Feed::Verdict::TRANSIENT)
-
-        it "replaces the failure" do
-          Feed::Judging.judge_arrival(hit)
-          expect(verdict_for(hit).included).to be_true
         end
       end
     end

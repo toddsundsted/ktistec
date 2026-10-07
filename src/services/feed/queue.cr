@@ -60,7 +60,7 @@ class Feed
 
     # Enqueues a published feed's candidates as backfill questions.
     #
-    # Silently sheds candidates if the queue is full.
+    # Silently sheds questions if the queue is full.
     #
     def enqueue_backfill(feed : ::Feed) : Nil
       return if feed.draft
@@ -76,6 +76,25 @@ class Feed
       end
     rescue err : FullError
       Log.warn { "backfill of feed #{feed.id} is incomplete: #{err.message}" }
+    end
+
+    # Enqueues an object as a live question for every registered
+    # feed's version it is a candidate for.
+    #
+    # Silently sheds the question if the queue is full.
+    #
+    def enqueue_arrival(object : ActivityPub::Object) : Nil
+      Rules::View.registry.each do |view|
+        next unless view.is_a?(Rules::View::Feed)
+        next unless (feed = ::Feed.find?(view.feed_id))
+        next unless (version_id = feed.version_id)
+        next unless Candidates.arrival_for(feed, object)
+        begin
+          enqueue(version_id, object.iri, live: true)
+        rescue err : FullError
+          Log.warn { "arrival of #{object.iri} for version #{version_id} is not judged: #{err.message}" }
+        end
+      end
     end
 
     # Pulls the next question that is due into a batch.

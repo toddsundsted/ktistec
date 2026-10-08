@@ -3,21 +3,6 @@ require "../../src/services/feed/backend/criteria"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"
-require "../spec_helper/feed/backend"
-
-# fails the way an unanticipated bug in judging might -- partway
-# through the publish transition, after the successor has been
-# created.
-#
-private class RaisingBackend < TestBackend
-  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
-    raise "judging failed"
-  end
-
-  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
-    [] of String
-  end
-end
 
 Spectator.describe FeedsController do
   setup_spec
@@ -692,18 +677,14 @@ Spectator.describe FeedsController do
         expect(robotics_feed.floor).to be_close(Feed::HORIZON.ago, 1.minute)
       end
 
-      context "given a candidate" do
-        let_create!(:object, named: candidate, created_at: 1.day.ago)
+      it "schedules the feed's backfill" do
+        post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc"
+        expect(Task::Feed::EnqueueBackfill.count(feed_id: robotics_feed.id.to_s)).to eq(1)
+      end
 
-        it "enqueues a question" do
-          post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc"
-          expect(Feed::Question.where(version_id: robotics_feed.version_id).map(&.object_iri)).to eq([candidate.iri])
-        end
-
-        it "enqueues a question" do
-          post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc"})
-          expect(Feed::Question.where(version_id: robotics_feed.version_id).map(&.object_iri)).to eq([candidate.iri])
-        end
+      it "schedules the feed's backfill" do
+        post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#cnc"})
+        expect(Task::Feed::EnqueueBackfill.count(feed_id: robotics_feed.id.to_s)).to eq(1)
       end
 
       it "registers the feed's view" do
@@ -1209,20 +1190,16 @@ Spectator.describe FeedsController do
             post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
             expect(robotics_feed.floor).to eq(original_floor)
           end
+        end
 
-          context "and a candidate" do
-            let_create!(:object, named: candidate, created_at: original_floor + 1.day)
+        it "schedules the feed's backfill" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+          expect(Task::Feed::EnqueueBackfill.count(feed_id: robotics_feed.id.to_s)).to eq(1)
+        end
 
-            it "enqueues a question for the feed" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-              expect(Feed::Question.where(version_id: robotics_feed.version_id).map(&.object_iri)).to eq([candidate.iri])
-            end
-
-            it "enqueues a question for the feed" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-              expect(Feed::Question.where(version_id: robotics_feed.version_id).map(&.object_iri)).to eq([candidate.iri])
-            end
-          end
+        it "schedules the feed's backfill" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+          expect(Task::Feed::EnqueueBackfill.count(feed_id: robotics_feed.id.to_s)).to eq(1)
         end
 
         context "when the original is registered" do
@@ -1261,52 +1238,14 @@ Spectator.describe FeedsController do
           expect(response.headers["Location"]).to eq("/actors/#{actor.username}/feeds/robotics")
         end
 
-        context "and the original has contents" do
-          let_create!(:object, named: kept)
-          let_create!(:hashtag, named: nil, subject: kept, name: "cnc")
-          let_create!(:hashtag, named: nil, subject: kept, name: "robotics")
-          let_create!(:feed_verdict, named: nil, feed: feed, object: kept, included: true)
+        it "leaves no draft behind" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+          expect(drafts_feeds).to be_empty
+        end
 
-          it "carries the retained post into the feed" do
-            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-            expect(robotics_feed.contents.map(&.iri)).to contain(kept.iri)
-          end
-
-          it "carries the retained post into the feed" do
-            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-            expect(robotics_feed.contents.map(&.iri)).to contain(kept.iri)
-          end
-
-          it "leaves no draft behind" do
-            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-            expect(drafts_feeds).to be_empty
-          end
-
-          it "leaves no draft behind" do
-            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-            expect(drafts_feeds).to be_empty
-          end
-
-          context "and the judge fails" do
-            around_each do |proc|
-              Feed::Backend.register("criteria", RaisingBackend.new)
-              begin
-                proc.call
-              ensure
-                Feed::Backend.register("criteria", Feed::Backend::Criteria.new)
-              end
-            end
-
-            it "succeeds" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
-              expect(response.status_code).to eq(302)
-            end
-
-            it "succeeds" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
-              expect(response.status_code).to eq(201)
-            end
-          end
+        it "leaves no draft behind" do
+          post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+          expect(drafts_feeds).to be_empty
         end
 
         context "given an earlier draft copy" do
@@ -1677,18 +1616,14 @@ Spectator.describe FeedsController do
             expect(Feed.find(feed.id).floor).to eq(draft_floor)
           end
 
-          context "given a candidate" do
-            let_create!(:object, named: candidate, created_at: draft_floor + 1.day)
+          it "schedules the feed's backfill" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
+            expect(Task::Feed::EnqueueBackfill.count(feed_id: feed.id.to_s)).to eq(1)
+          end
 
-            it "enqueues a question" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-              expect(Feed::Question.where(version_id: Feed.find(feed.id).version_id).map(&.object_iri)).to eq([candidate.iri])
-            end
-
-            it "enqueues a question" do
-              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-              expect(Feed::Question.where(version_id: Feed.find(feed.id).version_id).map(&.object_iri)).to eq([candidate.iri])
-            end
+          it "schedules the feed's backfill" do
+            post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
+            expect(Task::Feed::EnqueueBackfill.count(feed_id: feed.id.to_s)).to eq(1)
           end
 
           it "succeeds" do
@@ -1841,20 +1776,6 @@ Spectator.describe FeedsController do
               expect(Feed.find(feed.id).floor).to eq(draft_floor)
             end
 
-            context "and a candidate" do
-              let_create!(:object, named: candidate, created_at: draft_floor + 1.day)
-
-              it "enqueues a question for the copy" do
-                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                expect(Feed::Question.where(version_id: Feed.find(feed.id).version_id).map(&.object_iri)).to eq([candidate.iri])
-              end
-
-              it "enqueues a question for the copy" do
-                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                expect(Feed::Question.where(version_id: Feed.find(feed.id).version_id).map(&.object_iri)).to eq([candidate.iri])
-              end
-            end
-
             context "when the original is registered" do
               before_each { Rules::Feeds.register(original) }
 
@@ -1868,43 +1789,6 @@ Spectator.describe FeedsController do
               it "unregisters the original's view" do
                 post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
                 expect(Rules::View.registry.map(&.type)).not_to contain(original.feed_type)
-              end
-            end
-
-            context "and the original has contents" do
-              let_create!(:object, named: kept, content: "<p>keyword</p>", created_at: draft_floor + 1.day)
-              let_create!(:hashtag, named: nil, subject: kept, name: "cnc")
-              let_create!(:feed_verdict, named: nil, feed: original, object: kept, included: true)
-
-              it "carries the retained post into the copy" do
-                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                expect(Feed.find(feed.id).contents.map(&.iri)).to contain(kept.iri)
-              end
-
-              it "carries the retained post into the copy" do
-                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                expect(Feed.find(feed.id).contents.map(&.iri)).to contain(kept.iri)
-              end
-
-              context "and the judge fails" do
-                around_each do |proc|
-                  Feed::Backend.register("criteria", RaisingBackend.new)
-                  begin
-                    proc.call
-                  ensure
-                    Feed::Backend.register("criteria", Feed::Backend::Criteria.new)
-                  end
-                end
-
-                it "publishes the copy" do
-                  post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                  expect(Feed.find(feed.id).draft).to be_false
-                end
-
-                it "publishes the copy" do
-                  post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                  expect(Feed.find(feed.id).draft).to be_false
-                end
               end
             end
 

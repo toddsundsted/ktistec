@@ -2,8 +2,7 @@ require "../framework/controller"
 require "../models/feed"
 require "../rules/feeds"
 require "../rules/trigger"
-require "../services/feed/judging"
-require "../services/feed/queue"
+require "../models/task/feed/enqueue_backfill"
 require "../services/feed/window"
 require "../services/feed/backend/criteria/form"
 
@@ -24,9 +23,8 @@ require "../services/feed/backend/criteria/form"
 #    │                         ▼   │
 #    │                   ┌───────────┐──┐ publish [2]:
 #    └─ publish: ──────▶ │ published │◀─┘ create a draft feed;
-#       create feed;     └───────────┘    seed it with content;
-#       register feed                     publish and register it;
-#                                         unregister and destroy
+#       create feed;     └───────────┘    publish and register it;
+#       register feed                     unregister and destroy
 #                                         the original
 #
 # [1] A published feed is never demoted to a draft feed. Instead, a
@@ -37,7 +35,7 @@ require "../services/feed/backend/criteria/form"
 #   is created and the original published feed is unregistered and
 #   destroyed.
 #
-# Publishing is not atomic: it saves, seeds, publishes, registers, and
+# Publishing is not atomic: it saves, publishes, registers, and
 # destroys the original as separate steps.
 #
 # Deleting a feed in any state unregisters and destroys it.
@@ -133,7 +131,7 @@ class FeedsController
       if feed.valid?
         feed.save
         Rules::Feeds.register(feed)
-        Feed::Queue.enqueue_backfill(feed)
+        Task::Feed::EnqueueBackfill.new(owner: feed.owner, feed_id: feed.id.to_s).schedule
         if accepts_json?
           created actor_feed_path(account.actor, feed), "feeds/edit", env: env, feed: feed, criteria: form_criteria(env, feed), contents: nil
         else
@@ -195,15 +193,12 @@ class FeedsController
         redirect edit_actor_feed_path(feed.owner, feed)
       else
         feed.save
-        if original && original.owner == feed.owner
-          Feed::Judging.rejudge_contents(original, feed)
-        end
         feed.publish
         Rules::Feeds.register(feed)
         if original && original.owner == feed.owner
           unregister_and_destroy(original)
         end
-        Feed::Queue.enqueue_backfill(feed)
+        Task::Feed::EnqueueBackfill.new(owner: feed.owner, feed_id: feed.id.to_s).schedule
         if accepts_json?
           created actor_feed_path(feed.owner, feed), "feeds/edit", env: env, feed: feed, criteria: form_criteria(env, feed), contents: nil
         else
@@ -226,11 +221,10 @@ class FeedsController
         if published.valid?
           feed.drafts.each(&.destroy)
           published.save
-          Feed::Judging.rejudge_contents(feed, published)
           published.publish
           Rules::Feeds.register(published)
           unregister_and_destroy(feed)
-          Feed::Queue.enqueue_backfill(published)
+          Task::Feed::EnqueueBackfill.new(owner: published.owner, feed_id: published.id.to_s).schedule
           if accepts_json?
             created actor_feed_path(published.owner, published), "feeds/edit", env: env, feed: published, criteria: form_criteria(env, published), contents: nil
           else

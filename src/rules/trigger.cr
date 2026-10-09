@@ -6,6 +6,7 @@ require "./view/follow_mention"
 require "./view/public_tagged"
 require "./view/feed"
 require "../services/feed/judging"
+require "../services/feed/queue"
 require "../models/activity_pub/activity"
 require "../models/activity_pub/object"
 require "../models/activity_pub/activity/create"
@@ -14,6 +15,7 @@ require "../models/activity_pub/activity/dislike"
 require "../models/activity_pub/activity/like"
 require "../models/activity_pub/activity/undo"
 require "../models/activity_pub/actor"
+require "../models/feed/question"
 require "../models/relationship/content/follow/thread"
 require "../models/relationship/content/follow/hashtag"
 require "../models/relationship/content/follow/mention"
@@ -50,11 +52,8 @@ module Rules
           activity.object_iri
         end
       if object_iri
-        # judge the object against the registered feeds first, so
-        # their verdicts exist as base facts before the reconcile
-        # materializes them.
         if (object = ActivityPub::Object.find?(iri: object_iri))
-          Feed::Judging.judge_arrival(object)
+          Feed::Queue.enqueue_arrival(object)
         end
         notify(Rules::Maintainer.reconcile_object(object_iri))
       end
@@ -70,7 +69,7 @@ module Rules
     # the views whose membership derives from the object's own state.
     #
     def reconcile_for_object(object : ActivityPub::Object) : Nil
-      Feed::Judging.judge_arrival(object)
+      Feed::Queue.enqueue_arrival(object)
       changed = [] of {Rules::View, String}
       Rules::View.registry.each do |view|
         next unless view.is_a?(Rules::View::Feed)
@@ -176,6 +175,20 @@ module Rules
     def reconcile_for_feed(feed : ::Feed) : Nil
       view : Rules::View = Rules::Feeds.view_for(feed)
       notify([{view, feed.owner_iri.not_nil!}]) if Rules::Maintainer.reconcile(view)
+    end
+
+    # Re-evaluates the feeds on a question's version for its object,
+    # once the question is answered.
+    #
+    def reconcile_for_answer(question : Feed::Question) : Nil
+      # answer the question first, so its verdict exists as a base
+      # fact before the reconcile materializes it.
+      Feed::Judging.answer(question)
+      changed = [] of {Rules::View, String}
+      ::Feed.where(version_id: question.version_id).each do |feed|
+        changed.concat(Rules::Maintainer.reconcile_object_for(Rules::Feeds.view_for(feed), question.object_iri.not_nil!))
+      end
+      notify(changed)
     end
 
     # Notifies the pub/sub subjects for the changed `(view, owner)` pairs,

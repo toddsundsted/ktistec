@@ -1,11 +1,11 @@
 require "../framework/controller"
 require "../models/feed"
+require "../models/feed/verdict"
 require "../rules/feeds"
 require "../rules/trigger"
-require "../services/feed/judging"
-require "../services/feed/queue"
-require "../services/feed/window"
+require "../models/task/feed/enqueue_backfill"
 require "../services/feed/backend/criteria/form"
+require "../services/feed/queue"
 
 # The `FeedsController` manages the lifecycle of feeds and their
 # associated content windows (previews).
@@ -24,9 +24,8 @@ require "../services/feed/backend/criteria/form"
 #    │                         ▼   │
 #    │                   ┌───────────┐──┐ publish [2]:
 #    └─ publish: ──────▶ │ published │◀─┘ create a draft feed;
-#       create feed;     └───────────┘    seed it with content;
-#       register feed                     publish and register it;
-#                                         unregister and destroy
+#       create feed;     └───────────┘    publish and register it;
+#       register feed                     unregister and destroy
 #                                         the original
 #
 # [1] A published feed is never demoted to a draft feed. Instead, a
@@ -37,7 +36,7 @@ require "../services/feed/backend/criteria/form"
 #   is created and the original published feed is unregistered and
 #   destroyed.
 #
-# Publishing is not atomic: it saves, seeds, publishes, registers, and
+# Publishing is not atomic: it saves, publishes, registers, and
 # destroys the original as separate steps.
 #
 # Deleting a feed in any state unregisters and destroys it.
@@ -46,6 +45,15 @@ class FeedsController
   include Ktistec::Controller
 
   MAX_REQUEST_BYTES = 16_384
+
+  # The number of a draft's most recent candidates a preview queues
+  # to be judged.
+  #
+  class_property preview_limit : Int32 = 100
+
+  # The number of matches a preview shows.
+  #
+  class_property match_limit : Int32 = 20
 
   # Authorizes access to a user's feeds.
   #
@@ -122,7 +130,7 @@ class FeedsController
       feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: true, floor: Time.utc - Feed::HORIZON}))
       if feed.valid?
         feed.save
-        Feed::Window.new(feed).recompute
+        queue_preview(feed)
         redirect edit_actor_feed_path(account.actor, feed)
       else
         criteria = form_criteria(env, feed)
@@ -133,7 +141,7 @@ class FeedsController
       if feed.valid?
         feed.save
         Rules::Feeds.register(feed)
-        Feed::Queue.enqueue_backfill(feed)
+        Task::Feed::EnqueueBackfill.new(owner: feed.owner, feed_id: feed.id.to_s).schedule
         if accepts_json?
           created actor_feed_path(account.actor, feed), "feeds/edit", env: env, feed: feed, criteria: form_criteria(env, feed), contents: nil
         else
@@ -165,7 +173,7 @@ class FeedsController
       not_found
     end
 
-    contents = feed.draft ? Feed::Window.new(feed).contents : feed.contents(limit: Feed::Window::MATCH_CAP)
+    contents = feed.contents(limit: match_limit)
 
     criteria = form_criteria(env, feed)
 
@@ -191,19 +199,16 @@ class FeedsController
 
       if previewing?(env)
         feed.save
-        Feed::Window.new(feed).recompute
+        queue_preview(feed)
         redirect edit_actor_feed_path(feed.owner, feed)
       else
         feed.save
-        if original && original.owner == feed.owner
-          Feed::Judging.rejudge_contents(original, feed)
-        end
         feed.publish
         Rules::Feeds.register(feed)
         if original && original.owner == feed.owner
           unregister_and_destroy(original)
         end
-        Feed::Queue.enqueue_backfill(feed)
+        Task::Feed::EnqueueBackfill.new(owner: feed.owner, feed_id: feed.id.to_s).schedule
         if accepts_json?
           created actor_feed_path(feed.owner, feed), "feeds/edit", env: env, feed: feed, criteria: form_criteria(env, feed), contents: nil
         else
@@ -215,7 +220,7 @@ class FeedsController
         if feed.assign(**params).valid?
           feed.drafts.each(&.destroy)
           copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor})).save
-          Feed::Window.new(copy).recompute
+          queue_preview(copy)
           redirect edit_actor_feed_path(feed.owner, copy)
         else
           criteria = form_criteria(env, feed)
@@ -226,11 +231,10 @@ class FeedsController
         if published.valid?
           feed.drafts.each(&.destroy)
           published.save
-          Feed::Judging.rejudge_contents(feed, published)
           published.publish
           Rules::Feeds.register(published)
           unregister_and_destroy(feed)
-          Feed::Queue.enqueue_backfill(published)
+          Task::Feed::EnqueueBackfill.new(owner: published.owner, feed_id: published.id.to_s).schedule
           if accepts_json?
             created actor_feed_path(published.owner, published), "feeds/edit", env: env, feed: published, criteria: form_criteria(env, published), contents: nil
           else
@@ -277,6 +281,14 @@ class FeedsController
     else
       Feed::Backend::Criteria::Form.format(feed.params)
     end
+  end
+
+  # Queues a draft's most recent candidates to be judged, unless posts
+  # have already been judged under the draft's criteria.
+  #
+  private def self.queue_preview(feed)
+    return if Feed::Verdict.count(version_id: feed.version_id) > 0
+    Feed::Queue.enqueue_backfill(feed, limit: preview_limit, live: true)
   end
 
   # Whether the submission is a preview request instead of a publish

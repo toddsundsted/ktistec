@@ -5,6 +5,14 @@ require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
 require "../../../spec_helper/feed/backend"
 
+class AnswerQuestionsSpy < Task::Feed::AnswerQuestions
+  getter reconcile_calls = [] of String
+
+  protected def reconcile_answer(question : ::Feed::Question) : Nil
+    reconcile_calls << question.object_iri.not_nil!
+  end
+end
+
 Spectator.describe Task::Feed::AnswerQuestions do
   setup_spec
 
@@ -23,6 +31,8 @@ Spectator.describe Task::Feed::AnswerQuestions do
 
   let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
 
+  subject { AnswerQuestionsSpy.new }
+
   describe "#perform" do
     it "sets the next attempt at" do
       subject.perform
@@ -37,7 +47,7 @@ Spectator.describe Task::Feed::AnswerQuestions do
 
       it "answers them" do
         subject.perform
-        expect(Feed::Verdict.count(version_id: feed.version_id)).to eq(2)
+        expect(subject.reconcile_calls).to contain_exactly(hit.iri, miss.iri)
       end
 
       it "removes them" do

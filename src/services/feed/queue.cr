@@ -58,24 +58,48 @@ class Feed
       end
     end
 
-    # Enqueues a published feed's candidates as backfill questions.
+    # Enqueues a feed's unjudged candidates, newest first.
     #
-    # Silently sheds candidates if the queue is full.
+    # Silently sheds questions if the queue is full.
     #
-    def enqueue_backfill(feed : ::Feed) : Nil
-      return if feed.draft
+    def enqueue_backfill(feed : ::Feed, limit : Int32? = nil, live : Bool = false) : Nil
       return unless feed.floor
       version_id = feed.version_id.not_nil!
       floor_id = Candidates.floor_id(feed) || 0_i64
       cursor = nil
+      remaining = limit
       loop do
-        page = Candidates.candidates_for(feed, cursor, page_size, floor_id)
-        page.each { |object| enqueue(version_id, object.iri, live: false) }
-        break if page.size < page_size
+        size = remaining ? Math.min(page_size, remaining) : page_size
+        page = Candidates.candidates_for(feed, cursor, size, floor_id)
+        page.each { |object| enqueue(version_id, object.iri, live: live) }
+        break if page.size < size
+        if remaining
+          remaining -= page.size
+          break if remaining < 1
+        end
         cursor = page.last.id
       end
     rescue err : FullError
       Log.warn { "backfill of feed #{feed.id} is incomplete: #{err.message}" }
+    end
+
+    # Enqueues an object as a live question for every registered
+    # feed's version it is a candidate for.
+    #
+    # Silently sheds the question if the queue is full.
+    #
+    def enqueue_arrival(object : ActivityPub::Object) : Nil
+      Rules::View.registry.each do |view|
+        next unless view.is_a?(Rules::View::Feed)
+        next unless (feed = ::Feed.find?(view.feed_id))
+        next unless (version_id = feed.version_id)
+        next unless Candidates.arrival_for(feed, object)
+        begin
+          enqueue(version_id, object.iri, live: true)
+        rescue err : FullError
+          Log.warn { "arrival of #{object.iri} for version #{version_id} is not judged: #{err.message}" }
+        end
+      end
     end
 
     # Pulls the next question that is due into a batch.

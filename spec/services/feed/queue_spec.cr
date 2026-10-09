@@ -1,5 +1,6 @@
 require "../../../src/services/feed/queue"
 require "../../../src/services/feed/backend/criteria"
+require "../../../src/rules/feeds"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -179,9 +180,19 @@ Spectator.describe Feed::Queue do
         expect(questions.map(&.object_iri)).to eq([newer.iri, older.iri])
       end
 
+      it "enqueues only the newest" do
+        Feed::Queue.enqueue_backfill(feed, limit: 1)
+        expect(questions.map(&.object_iri)).to eq([newer.iri])
+      end
+
       it "enqueues questions as backfill" do
         Feed::Queue.enqueue_backfill(feed)
         expect(questions.map(&.live)).to eq([false, false])
+      end
+
+      it "enqueues questions as live" do
+        Feed::Queue.enqueue_backfill(feed, live: true)
+        expect(questions.map(&.live)).to eq([true, true])
       end
 
       context "given more than will fit" do
@@ -196,9 +207,9 @@ Spectator.describe Feed::Queue do
       context "and a draft" do
         before_each { feed.assign(draft: true).save }
 
-        it "enqueues nothing" do
+        it "enqueues the draft's candidates" do
           Feed::Queue.enqueue_backfill(feed)
-          expect(questions).to be_empty
+          expect(questions.map(&.object_iri)).to eq([newer.iri, older.iri])
         end
       end
 
@@ -207,6 +218,80 @@ Spectator.describe Feed::Queue do
 
         it "enqueues nothing" do
           Feed::Queue.enqueue_backfill(feed)
+          expect(questions).to be_empty
+        end
+      end
+    end
+  end
+
+  describe ".enqueue_arrival" do
+    around_each do |proc|
+      saved = Rules::View.registry.dup
+      begin
+        proc.call
+      ensure
+        Rules::View.registry.clear
+        Rules::View.registry.concat(saved)
+      end
+    end
+
+    let(actor) { register.actor }
+
+    let_build(:object)
+    let_create(:create, object: object)
+
+    before_each { put_in_inbox(actor, create) }
+
+    let_create!(:feed, owner: actor)
+
+    def questions
+      Feed::Question.where(version_id: feed.version_id, object_iri: object.iri)
+    end
+
+    it "enqueues nothing" do
+      Feed::Queue.enqueue_arrival(object)
+      expect(questions).to be_empty
+    end
+
+    context "when a feed is registered" do
+      before_each { Rules::Feeds.register(feed) }
+
+      it "enqueues a question" do
+        Feed::Queue.enqueue_arrival(object)
+        expect(questions.map(&.object_iri)).to eq([object.iri])
+      end
+
+      it "enqueues the question as live" do
+        Feed::Queue.enqueue_arrival(object)
+        expect(questions.map(&.live)).to eq([true])
+      end
+
+      context "and the object is not a candidate" do
+        before_each { object.update_property(:published, nil) }
+
+        pre_condition { expect(Feed::Candidates.arrival_for(feed, object)).to be_nil }
+
+        it "enqueues nothing" do
+          Feed::Queue.enqueue_arrival(object)
+          expect(questions).to be_empty
+        end
+      end
+    end
+
+    # creating each question saves a post, which arrives at any
+    # registered feed, so register the feed after.
+    context "when the queue is full" do
+      let_create!(:feed_question, named: nil)
+      let_create!(:feed_question, named: nil)
+      let_create!(:feed_question, named: nil)
+
+      pre_condition { expect(Feed::Question.count).to be >= Feed::Queue.live_cap }
+
+      context "and a feed is registered" do
+        before_each { Rules::Feeds.register(feed) }
+
+        it "sheds the question" do
+          Feed::Queue.enqueue_arrival(object)
           expect(questions).to be_empty
         end
       end

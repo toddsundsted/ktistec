@@ -123,6 +123,36 @@ Spectator.describe StreamingController do
     end
   end
 
+  describe "GET /stream/feeds/:id" do
+    it "returns 401 if not authorized" do
+      get "/stream/feeds/1"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if the feed does not exist" do
+        get "/stream/feeds/999999"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 400 if the id is not a number" do
+        get "/stream/feeds/foobar"
+        expect(response.status_code).to eq(400)
+      end
+
+      context "given another actor's feed" do
+        let_create!(:feed, named: other)
+
+        it "returns 404" do
+          get "/stream/feeds/#{other.id}"
+          expect(response.status_code).to eq(404)
+        end
+      end
+    end
+  end
+
   describe ".encode_baselines" do
     it "encodes no baselines" do
       expect(described_class.encode_baselines(Hash(Int64, Int64).new)).to be_empty
@@ -423,6 +453,44 @@ Spectator.describe StreamingController do
       </template></turbo-stream>
       \n
       HTML
+    end
+  end
+
+  describe ".replace_feed_preview" do
+    let(account) { register }
+
+    let_create!(:feed, owner: account.actor)
+
+    let(env) { make_env("GET", "/stream/feeds/#{feed.id}") }
+
+    subject do
+      String.build do |io|
+        described_class.replace_feed_preview(io, env, feed)
+      end
+    end
+
+    it "renders a Turbo Stream action" do
+      expect(subject).to eq <<-HTML
+      data: \
+      <turbo-stream action="replace" target="feed_preview"><template>\
+      <div id="feed_preview" class="ui segment feed-preview">\
+      <h3 class="ui header">Preview</h3>\
+      <div class="ui text">No matches yet.</div>\
+      </div>\
+      </template></turbo-stream>
+      \n
+      HTML
+    end
+
+    context "given a post in the feed" do
+      let_create!(:object, named: post)
+      let_create!(:feed_verdict, named: nil, feed: feed, object: post, included: true)
+
+      before_each { put_in_feed(feed, post) }
+
+      it "renders the post" do
+        expect(subject).to contain(%(id="object-#{post.id}"))
+      end
     end
   end
 

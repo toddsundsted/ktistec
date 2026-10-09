@@ -5,17 +5,8 @@ crystal:
 h1 = heading
 - partial "feeds/form"
 - if contents
-  .ui.segment.feed-preview
-    - if contents.empty?
-      h3.ui.header Preview
-      .ui.text There is nothing here yet. Adjust the criteria and <em>preview</em> again.
-    - else
-      h3.ui.header Preview
-        - if contents.size >= FeedsController.match_limit
-          .sub.header Showing the first #{FeedsController.match_limit} matches
-        - else
-          .sub.header Showing all #{pluralize(contents.size, "match")}
-      - partial "feeds/contents"
+  turbo-stream-source src=stream_path("feeds", feed.id)
+  - partial "feeds/preview"
 .ui.basic.tiny.delete-feed.modal
   .header
     i.trash.icon

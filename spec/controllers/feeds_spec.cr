@@ -1002,12 +1002,17 @@ Spectator.describe FeedsController do
 
       it "renders an empty preview" do
         get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'feed-preview')]//text()").map(&.text).join).to contain("There is nothing here yet")
+        expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'feed-preview')]//text()").map(&.text).join).to contain("No matches yet.")
       end
 
       it "renders an empty preview" do
         get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_JSON
         expect(JSON.parse(response.body)["matches"].as_a).to be_empty
+      end
+
+      it "updates the preview as posts are judged" do
+        get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//turbo-stream-source/@src").map(&.text)).to contain("/stream/feeds/#{feed.id}")
       end
 
       context "that is published and has contents" do

@@ -180,9 +180,19 @@ Spectator.describe Feed::Queue do
         expect(questions.map(&.object_iri)).to eq([newer.iri, older.iri])
       end
 
+      it "enqueues only the newest" do
+        Feed::Queue.enqueue_backfill(feed, limit: 1)
+        expect(questions.map(&.object_iri)).to eq([newer.iri])
+      end
+
       it "enqueues questions as backfill" do
         Feed::Queue.enqueue_backfill(feed)
         expect(questions.map(&.live)).to eq([false, false])
+      end
+
+      it "enqueues questions as live" do
+        Feed::Queue.enqueue_backfill(feed, live: true)
+        expect(questions.map(&.live)).to eq([true, true])
       end
 
       context "given more than will fit" do
@@ -197,9 +207,9 @@ Spectator.describe Feed::Queue do
       context "and a draft" do
         before_each { feed.assign(draft: true).save }
 
-        it "enqueues nothing" do
+        it "enqueues the draft's candidates" do
           Feed::Queue.enqueue_backfill(feed)
-          expect(questions).to be_empty
+          expect(questions.map(&.object_iri)).to eq([newer.iri, older.iri])
         end
       end
 

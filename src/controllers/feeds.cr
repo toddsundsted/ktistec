@@ -1,10 +1,11 @@
 require "../framework/controller"
 require "../models/feed"
+require "../models/feed/verdict"
 require "../rules/feeds"
 require "../rules/trigger"
 require "../models/task/feed/enqueue_backfill"
-require "../services/feed/window"
 require "../services/feed/backend/criteria/form"
+require "../services/feed/queue"
 
 # The `FeedsController` manages the lifecycle of feeds and their
 # associated content windows (previews).
@@ -44,6 +45,15 @@ class FeedsController
   include Ktistec::Controller
 
   MAX_REQUEST_BYTES = 16_384
+
+  # The number of a draft's most recent candidates a preview queues
+  # to be judged.
+  #
+  class_property preview_limit : Int32 = 100
+
+  # The number of matches a preview shows.
+  #
+  class_property match_limit : Int32 = 20
 
   # Authorizes access to a user's feeds.
   #
@@ -120,7 +130,7 @@ class FeedsController
       feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: true, floor: Time.utc - Feed::HORIZON}))
       if feed.valid?
         feed.save
-        Feed::Window.new(feed).recompute
+        queue_preview(feed)
         redirect edit_actor_feed_path(account.actor, feed)
       else
         criteria = form_criteria(env, feed)
@@ -163,7 +173,7 @@ class FeedsController
       not_found
     end
 
-    contents = feed.draft ? Feed::Window.new(feed).contents : feed.contents(limit: Feed::Window::MATCH_CAP)
+    contents = feed.contents(limit: match_limit)
 
     criteria = form_criteria(env, feed)
 
@@ -189,7 +199,7 @@ class FeedsController
 
       if previewing?(env)
         feed.save
-        Feed::Window.new(feed).recompute
+        queue_preview(feed)
         redirect edit_actor_feed_path(feed.owner, feed)
       else
         feed.save
@@ -210,7 +220,7 @@ class FeedsController
         if feed.assign(**params).valid?
           feed.drafts.each(&.destroy)
           copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor})).save
-          Feed::Window.new(copy).recompute
+          queue_preview(copy)
           redirect edit_actor_feed_path(feed.owner, copy)
         else
           criteria = form_criteria(env, feed)
@@ -271,6 +281,14 @@ class FeedsController
     else
       Feed::Backend::Criteria::Form.format(feed.params)
     end
+  end
+
+  # Queues a draft's most recent candidates to be judged, unless posts
+  # have already been judged under the draft's criteria.
+  #
+  private def self.queue_preview(feed)
+    return if Feed::Verdict.count(version_id: feed.version_id) > 0
+    Feed::Queue.enqueue_backfill(feed, limit: preview_limit, live: true)
   end
 
   # Whether the submission is a preview request instead of a publish

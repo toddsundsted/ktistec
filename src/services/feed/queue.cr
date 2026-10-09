@@ -58,20 +58,25 @@ class Feed
       end
     end
 
-    # Enqueues a published feed's candidates as backfill questions.
+    # Enqueues a feed's unjudged candidates, newest first.
     #
     # Silently sheds questions if the queue is full.
     #
-    def enqueue_backfill(feed : ::Feed) : Nil
-      return if feed.draft
+    def enqueue_backfill(feed : ::Feed, limit : Int32? = nil, live : Bool = false) : Nil
       return unless feed.floor
       version_id = feed.version_id.not_nil!
       floor_id = Candidates.floor_id(feed) || 0_i64
       cursor = nil
+      remaining = limit
       loop do
-        page = Candidates.candidates_for(feed, cursor, page_size, floor_id)
-        page.each { |object| enqueue(version_id, object.iri, live: false) }
-        break if page.size < page_size
+        size = remaining ? Math.min(page_size, remaining) : page_size
+        page = Candidates.candidates_for(feed, cursor, size, floor_id)
+        page.each { |object| enqueue(version_id, object.iri, live: live) }
+        break if page.size < size
+        if remaining
+          remaining -= page.size
+          break if remaining < 1
+        end
         cursor = page.last.id
       end
     rescue err : FullError

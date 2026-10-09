@@ -530,6 +530,7 @@ def feed_factory(clazz = Feed, owner_iri = nil, owner = false, params = nil, **o
     "name"      => random_string,
     "backend"   => "criteria",
     "params"    => params,
+    "floor"     => KTISTEC_EPOCH,
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 

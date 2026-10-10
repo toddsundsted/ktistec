@@ -18,9 +18,13 @@ class Task
     INTERVAL = 5.seconds
 
     def perform
-      while (question = ::Feed::Queue.pull)
-        answer(question)
-        Fiber.yield
+      loop do
+        batch = ::Feed::Queue.pull
+        break if batch.empty?
+        batch.each do |question|
+          answer(question)
+          Fiber.yield
+        end
       end
     ensure
       self.next_attempt_at = INTERVAL.from_now

@@ -47,7 +47,7 @@ Spectator.describe Task::Feed::AnswerQuestions do
 
       it "answers them" do
         subject.perform
-        expect(subject.reconcile_calls).to contain_exactly(hit.iri, miss.iri)
+        expect(subject.reconcile_calls).to contain_exactly(hit.iri, miss.iri).in_any_order
       end
 
       it "removes them" do

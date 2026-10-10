@@ -17,9 +17,9 @@ Spectator.describe Task::Feed::AnswerQuestions do
   setup_spec
 
   private class DestroyingBackend < TestBackend
-    def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
+    def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
       Feed::Version.find?(feed.version_id).try(&.destroy)
-      objects.map { Judgment.new(included: true) }
+      objects.map { Judgment.new(included: true).as(Judgment | Failure) }
     end
 
     def validate_params(params : Hash(String, JSON::Any)) : Array(String)

@@ -9,9 +9,9 @@ require "../../spec_helper/feed/backend"
 private class CannedBackend < TestBackend
   getter calls = [] of {Feed, Array(ActivityPub::Object)}
 
-  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
     calls << {feed, objects}
-    objects.map { Judgment.new(included: true, reason: "canned") }
+    objects.map { Judgment.new(included: true, reason: "canned").as(Judgment | Failure) }
   end
 
   def validate_params(params : Hash(String, JSON::Any)) : Array(String)

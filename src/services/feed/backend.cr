@@ -8,19 +8,30 @@ class Feed
   #
   # The interface between a feed and whatever decides membership: a
   # backend is given a feed's config and a batch of posts and returns
-  # a per-post verdict -- `{included, reason}` -- with order and
-  # identity preserved.
+  # a per-post verdict -- `{included, reason}` or `{failure, reason}`
+  # -- with order and identity preserved.
   #
   abstract class Backend
     # A verdict: in or out, and why.
     #
     record Judgment, included : Bool, reason : String? = nil
 
+    # A failure, and why.
+    #
+    record Failure, kind : Kind, reason : String? = nil do
+      enum Kind
+        Transient
+        Permanent
+      end
+    end
+
     # Judges a batch of objects for a feed.
     #
-    # Returns one `Judgment` per object, in the same order.
+    # Returns one `Judgment` or `Failure` per object, in the same order.
     #
-    abstract def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
+    # Raises if the judge can't answer for the entire batch.
+    #
+    abstract def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
 
     # Validates a feed's backend-owned params.
     #

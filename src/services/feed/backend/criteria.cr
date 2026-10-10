@@ -43,9 +43,9 @@ class Feed
         term.starts_with?(/https?:\/\//i)
       end
 
-      def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
+      def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
         active = active_groups(feed.params)
-        objects.map { |object| judge_one(object, active) }
+        objects.map { |object| judge_one(object, active).as(Judgment | Failure) }
       end
 
       # Sorts every group's selectors' term list.

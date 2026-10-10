@@ -30,30 +30,30 @@ class Feed
       write_verdict(feed, object, answer, live: question.live)
     end
 
-    # A judge's failure to answer.
-    #
-    private record Failure, failure : String, reason : String?
-
     # Asks the judge about an object.
     #
-    private def ask(backend, feed, object) : Backend::Judgment | Failure
+    private def ask(backend, feed, object) : Backend::Judgment | Backend::Failure
       backend.judge(feed, [object]).first
     rescue err : Backend::PermanentError
-      Log.warn { "judging #{object.iri} for feed #{feed.id} failed (permanent): #{err.message}" }
-      Failure.new(Verdict::PERMANENT, err.message)
+      Backend::Failure.new(:permanent, err.message)
     rescue err
-      Log.warn { "judging #{object.iri} for feed #{feed.id} failed (transient): #{err.message}" }
-      Failure.new(Verdict::TRANSIENT, err.message)
+      Backend::Failure.new(:transient, err.message)
     end
 
     RETRY_DELAY = 5.minutes
 
-    private def write_verdict(feed, object, answer : Backend::Judgment | Failure, live : Bool)
+    private def write_verdict(feed, object, answer : Backend::Judgment | Backend::Failure, live : Bool)
       version_id = feed.version_id
       verdict = Verdict.find?(version_id: version_id, object_iri: object.iri)
       case answer
-      in Failure
-        included, failure = false, answer.failure
+      in Backend::Failure
+        Log.warn { "judging #{object.iri} for feed #{feed.id} failed (#{answer.kind.to_s.downcase}): #{answer.reason}" }
+        included = false
+        failure =
+          case answer.kind
+          in .transient? then Verdict::TRANSIENT
+          in .permanent? then Verdict::PERMANENT
+          end
       in Backend::Judgment
         included, failure = answer.included, nil
       end

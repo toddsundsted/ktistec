@@ -6,10 +6,10 @@ require "../../../spec_helper/factory"
 require "../../../spec_helper/feed/backend"
 
 class AnswerQuestionsSpy < Task::Feed::AnswerQuestions
-  getter reconcile_calls = [] of String
+  getter reconcile_calls = [] of Array(String)
 
-  protected def reconcile_answer(question : ::Feed::Question) : Nil
-    reconcile_calls << question.object_iri.not_nil!
+  protected def reconcile_answer(batch : Array(::Feed::Question)) : Nil
+    reconcile_calls << batch.map(&.object_iri.not_nil!)
   end
 end
 
@@ -47,12 +47,27 @@ Spectator.describe Task::Feed::AnswerQuestions do
 
       it "answers them" do
         subject.perform
-        expect(subject.reconcile_calls).to contain_exactly(hit.iri, miss.iri).in_any_order
+        expect(subject.reconcile_calls.map(&.to_set)).to eq([Set{hit.iri, miss.iri}])
       end
 
       it "removes them" do
         subject.perform
         expect(Feed::Question.count).to eq(0)
+      end
+
+      context "when answering them fails" do
+        class FailingAnswerQuestions < Task::Feed::AnswerQuestions
+          protected def reconcile_answer(batch : Array(::Feed::Question)) : Nil
+            raise "reconcile failed"
+          end
+        end
+
+        let(failing) { FailingAnswerQuestions.new }
+
+        it "asks them again" do
+          failing.perform
+          expect(Feed::Question.where(batched: false).map(&.object_iri)).to contain_exactly(hit.iri, miss.iri).in_any_order
+        end
       end
     end
   end

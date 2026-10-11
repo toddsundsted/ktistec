@@ -21,27 +21,27 @@ class Task
       loop do
         batch = ::Feed::Queue.pull
         break if batch.empty?
-        batch.each do |question|
-          answer(question)
-          Fiber.yield
-        end
+        answer(batch)
+        Fiber.yield
       end
     ensure
       self.next_attempt_at = INTERVAL.from_now
     end
 
-    private def answer(question)
-      reconcile_answer(question)
+    private def answer(batch)
+      reconcile_answer(batch)
     rescue ex
-      Log.error { "answering #{question.object_iri} for version #{question.version_id} failed: #{ex.class}: #{ex.message}" }
+      Log.error { "answering #{batch.size} questions for version #{batch.first.version_id} failed: #{ex.class}: #{ex.message}" }
       failed = true
     ensure
-      ::Feed::Queue.finish(question)
-      retry_later(question) if failed
+      batch.each do |question|
+        ::Feed::Queue.finish(question)
+        retry_later(question) if failed
+      end
     end
 
-    protected def reconcile_answer(question : ::Feed::Question) : Nil
-      Rules::Trigger.reconcile_for_answer(question)
+    protected def reconcile_answer(batch : Array(::Feed::Question)) : Nil
+      Rules::Trigger.reconcile_for_answer(batch)
     end
 
     private def retry_later(question)

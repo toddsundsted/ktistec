@@ -177,16 +177,20 @@ module Rules
       notify([{view, feed.owner_iri.not_nil!}]) if Rules::Maintainer.reconcile(view)
     end
 
-    # Re-evaluates the feeds on a question's version for its object,
-    # once the question is answered.
+    # Re-evaluates the feeds on a batch's version for its objects,
+    # once the batch is answered.
     #
-    def reconcile_for_answer(question : Feed::Question) : Nil
-      # answer the question first, so its verdict exists as a base
-      # fact before the reconcile materializes it.
-      Feed::Judging.answer(question)
+    def reconcile_for_answer(batch : Array(Feed::Question)) : Nil
+      return unless (version_id = batch.first?.try(&.version_id))
+      # answer the batch first, so its verdicts exist as base facts
+      # before the reconcile materializes them.
+      Feed::Judging.answer(batch)
       changed = [] of {Rules::View, String}
-      ::Feed.where(version_id: question.version_id).each do |feed|
-        changed.concat(Rules::Maintainer.reconcile_object_for(Rules::Feeds.view_for(feed), question.object_iri.not_nil!))
+      ::Feed.where(version_id: version_id).each do |feed|
+        view = Rules::Feeds.view_for(feed)
+        batch.each do |question|
+          changed.concat(Rules::Maintainer.reconcile_object_for(view, question.object_iri.not_nil!))
+        end
       end
       notify(changed)
     end

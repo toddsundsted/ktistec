@@ -8,36 +8,45 @@ require "./queue"
 class Feed
   # Judging.
   #
-  # Given a question from the queue: ask the judge and write the
-  # verdict.
+  # Given a batch of questions from the queue: ask the judge and write
+  # the verdicts.
   #
   module Judging
     extend self
 
     Log = ::Log.for(self)
 
-    # Answers a question from the queue.
+    # Answers a batch of questions from the queue.
     #
-    def answer(question : Question) : Nil
-      return unless (version_id = question.version_id)
-      return unless (object = ActivityPub::Object.find?(iri: question.object_iri))
+    # The questions must all be on one version.
+    #
+    def answer(batch : Array(Question)) : Nil
+      return unless (version_id = batch.first?.try(&.version_id))
       feeds = ::Feed.where(version_id: version_id)
-      return unless (feed = feeds.find { |each| Candidates.arrival_for(each, object) })
+      return unless (feed = feeds.first?)
       return unless (backend = Backend.find?(feed.backend))
-      answer = ask(backend, feed, object)
+      asked = batch.compact_map do |question|
+        next unless (object = ActivityPub::Object.find?(iri: question.object_iri))
+        next unless feeds.any? { |each| Candidates.arrival_for(each, object) }
+        {question, object}
+      end
+      return if asked.empty?
+      answers = ask(backend, feed, asked.map(&.last))
       # the version may have been abandoned while the judge answered
       return if ::Feed.count(version_id: version_id) == 0
-      write_verdict(feed, object, answer, live: question.live)
+      asked.zip(answers) do |(question, object), answer|
+        write_verdict(feed, object, answer, live: question.live)
+      end
     end
 
-    # Asks the judge about an object.
+    # Asks the judge about the objects.
     #
-    private def ask(backend, feed, object) : Backend::Judgment | Backend::Failure
-      backend.judge(feed, [object]).first
+    private def ask(backend, feed, objects) : Array(Backend::Judgment | Backend::Failure)
+      backend.judge(feed, objects)
     rescue err : Backend::PermanentError
-      Backend::Failure.new(:permanent, err.message)
+      objects.map { Backend::Failure.new(:permanent, err.message).as(Backend::Judgment | Backend::Failure) }
     rescue err
-      Backend::Failure.new(:transient, err.message)
+      objects.map { Backend::Failure.new(:transient, err.message).as(Backend::Judgment | Backend::Failure) }
     end
 
     RETRY_DELAY = 5.minutes

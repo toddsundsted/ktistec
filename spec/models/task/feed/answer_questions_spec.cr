@@ -68,6 +68,19 @@ Spectator.describe Task::Feed::AnswerQuestions do
           failing.perform
           expect(Feed::Question.where(batched: false).map(&.object_iri)).to contain_exactly(hit.iri, miss.iri).in_any_order
         end
+
+        context "and the queue is full" do
+          let_create!(:feed_question, named: nil, due_at: 1.hour.from_now)
+          let_create!(:feed_question, named: nil, due_at: 1.hour.from_now)
+          let_create!(:feed_question, named: nil, due_at: 1.hour.from_now)
+
+          pre_condition { expect(Feed::Question.count(batched: false)).to be >= Feed::Queue.live_cap }
+
+          it "asks them again" do
+            failing.perform
+            expect(Feed::Question.where(batched: false).map(&.object_iri)).to contain(hit.iri, miss.iri)
+          end
+        end
       end
     end
   end

@@ -238,6 +238,19 @@ Spectator.describe Feed::Judging do
             end
           end
         end
+
+        context "and the queue is full" do
+          let_create!(:feed_question, named: nil)
+          let_create!(:feed_question, named: nil)
+          let_create!(:feed_question, named: nil)
+
+          pre_condition { expect(Feed::Question.count(batched: false)).to be >= Feed::Queue.live_cap }
+
+          it "asks again" do
+            Feed::Judging.answer([question])
+            expect(retry_for(hit)).not_to be_nil
+          end
+        end
       end
 
       context "and the failure is permanent" do

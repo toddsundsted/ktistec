@@ -37,6 +37,14 @@ class Feed
       enqueue(version_id, object_iri, live, due_at, cap: live ? live_cap : backfill_cap)
     end
 
+    # Enqueues a question again, to be asked later.
+    #
+    # The cap does not apply.
+    #
+    def requeue(version_id : Int64, object_iri : String, live : Bool, due_at : Time) : Nil
+      enqueue(version_id, object_iri, live, due_at, cap: nil)
+    end
+
     private def enqueue(version_id : Int64, object_iri : String, live : Bool, due_at : Time, cap : Int32?) : Nil
       if (question = Question.find?(version_id: version_id, object_iri: object_iri, batched: false))
         question.due_at = due_at unless pulled_first?(question, live, due_at, Time.utc)

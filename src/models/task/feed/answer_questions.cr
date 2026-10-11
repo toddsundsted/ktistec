@@ -45,9 +45,7 @@ class Task
     end
 
     private def retry_later(question)
-      ::Feed::Queue.enqueue(question.version_id.not_nil!, question.object_iri.not_nil!, live: question.live, due_at: ::Feed::Judging::RETRY_DELAY.from_now)
-    rescue err : ::Feed::Queue::FullError
-      Log.warn { "not retrying #{question.object_iri} for version #{question.version_id}: #{err.message}" }
+      ::Feed::Queue.requeue(question.version_id.not_nil!, question.object_iri.not_nil!, live: question.live, due_at: ::Feed::Judging::RETRY_DELAY.from_now)
     end
   end
 end

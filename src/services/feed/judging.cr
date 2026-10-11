@@ -73,11 +73,7 @@ class Feed
         reason: answer.reason,
       ).save
       if failure == Verdict::TRANSIENT && version_id
-        begin
-          Queue.enqueue(version_id, object.iri, live: live, due_at: RETRY_DELAY.from_now)
-        rescue err : Queue::FullError
-          Log.warn { "not retrying #{object.iri} for version #{version_id}: #{err.message}" }
-        end
+        Queue.requeue(version_id, object.iri, live: live, due_at: RETRY_DELAY.from_now)
       end
     end
   end

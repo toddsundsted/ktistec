@@ -40,6 +40,15 @@ module Rules
       {"from_iri = ? AND to_iri = ?", Array(DB::Any){key[:from_iri], key[:to_iri]}}
     end
 
+    # The SQL predicate and bind arguments identifying all of the
+    # view's stored rows, used to bound the batch reconcile's delete.
+    #
+    # Defaults to every row of the view's type.
+    #
+    def stored_scope : {String, Array(DB::Any)}
+      {"1", Array(DB::Any).new}
+    end
+
     # Whether members reposition on new support (recency views) or
     # stay fixed at first appearance (append-only views).
     #

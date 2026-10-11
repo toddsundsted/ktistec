@@ -71,6 +71,12 @@ module Rules
         {sql, args}
       end
 
+      # Every stored row belongs to the feed's owner.
+      #
+      def stored_scope : {String, Array(DB::Any)}
+        {"from_iri = ?", Array(DB::Any){@owner_iri}}
+      end
+
       def project(object_iri : String) : Array(Key)
         [{from_iri: @owner_iri, to_iri: object_iri}]
       end

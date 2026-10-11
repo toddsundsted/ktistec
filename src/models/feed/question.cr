@@ -34,26 +34,35 @@ class Feed
     @[Persistent]
     property batched : Bool = false
 
+    private DUE   = "batched = 0 AND due_at <= ?"
+    private ORDER = "ORDER BY live DESC, due_at ASC, id ASC"
+
+    # Returns the version of the next question to pull, or `nil` if
+    # no question is due.
+    #
+    def self.next_version_id(now : Time = Time.utc) : Int64?
+      where("#{DUE} #{ORDER} LIMIT 1", now).first?.try(&.version_id)
+    end
+
     private PULL = <<-SQL
       UPDATE feed_questions
          SET batched = 1, updated_at = ?
-       WHERE id = (
+       WHERE id IN (
          SELECT id
            FROM feed_questions
-          WHERE batched = 0
-            AND due_at <= ?
-          ORDER BY live DESC, due_at ASC, id ASC
-          LIMIT 1
+          WHERE #{DUE}
+            AND version_id = ?
+          #{ORDER}
+          LIMIT ?
        )
       RETURNING #{columns}
       SQL
 
-    # Pulls the next question that is due into a batch and returns it.
+    # Pulls the next `limit` questions on a version into a batch, and
+    # returns the batch.
     #
-    # Live before backfill, now before later -- ties broken by `id`.
-    #
-    def self.pull(now : Time = Time.utc) : self?
-      query_all(PULL, now, now).first?
+    def self.pull(version_id : Int64, limit : Int32, now : Time = Time.utc) : Array(self)
+      query_all(PULL, now, now, version_id, limit)
     end
   end
 end

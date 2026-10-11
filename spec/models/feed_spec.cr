@@ -6,8 +6,8 @@ require "../spec_helper/factory"
 require "../spec_helper/feed/backend"
 
 private class RejectingBackend < TestBackend
-  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
-    objects.map { Judgment.new(included: false) }
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
+    objects.map { Judgment.new(included: false).as(Judgment | Failure) }
   end
 
   def validate_params(params : Hash(String, JSON::Any)) : Array(String)

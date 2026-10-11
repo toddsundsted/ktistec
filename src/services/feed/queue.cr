@@ -102,10 +102,25 @@ class Feed
       end
     end
 
-    # Pulls the next question that is due into a batch.
+    # Pulls the next batch of questions that are due.
     #
-    def pull(now : Time = Time.utc) : Question?
-      Question.pull(now)
+    # The batch is the next question to pull and the questions after
+    # it on the same version, up to its judge's batch size.
+    #
+    def pull(now : Time = Time.utc) : Array(Question)
+      return [] of Question unless (version_id = Question.next_version_id(now))
+      Question.pull(version_id, batch_size(version_id), now)
+    end
+
+    # Returns the batch size the version's judge declares, or 1 if the
+    # version or its judge is gone.
+    #
+    private def batch_size(version_id : Int64) : Int32
+      if (version = Version.find?(version_id)) && (backend = Backend.find?(version.backend))
+        backend.cost(JSON.parse(version.params).as_h).batch_size
+      else
+        1
+      end
     end
 
     # Removes an answered question.

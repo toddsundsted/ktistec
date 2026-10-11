@@ -325,7 +325,7 @@ Spectator.describe Rules::Trigger do
     let_create(:feed_question, named: question, feed: feed, object: post)
 
     it "materializes the answer" do
-      expect { Rules::Trigger.reconcile_for_answer(question) }
+      expect { Rules::Trigger.reconcile_for_answer([question]) }
         .to change { feed_row_count(feed) }.from(0).to(1)
     end
 
@@ -335,8 +335,18 @@ Spectator.describe Rules::Trigger do
       pre_condition { expect(other.version_id).to eq(feed.version_id) }
 
       it "materializes the answer in the other feed" do
-        expect { Rules::Trigger.reconcile_for_answer(question) }
+        expect { Rules::Trigger.reconcile_for_answer([question]) }
           .to change { feed_row_count(other) }.from(0).to(1)
+      end
+    end
+
+    context "given another question in the batch" do
+      let_create!(:object, named: second_post, attributed_to: author, content: "<p>another alpha post</p>")
+      let_create(:feed_question, named: second, feed: feed, object: second_post)
+
+      it "materializes both answers" do
+        expect { Rules::Trigger.reconcile_for_answer([question, second]) }
+          .to change { feed_row_count(feed) }.from(0).to(2)
       end
     end
   end
@@ -476,8 +486,18 @@ Spectator.describe Rules::Trigger do
       let_create(:feed_question, named: question, feed: feed, object: post)
 
       it "notifies the owner's feed subject" do
-        Rules::Trigger.reconcile_for_answer(question)
+        Rules::Trigger.reconcile_for_answer([question])
         expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+      end
+
+      context "given another question in the batch" do
+        let_create!(:object, named: second_post, attributed_to: author, content: "<p>another alpha post</p>")
+        let_create(:feed_question, named: second, feed: feed, object: second_post)
+
+        it "notifies the owner's feed subject once" do
+          Rules::Trigger.reconcile_for_answer([question, second])
+          expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+        end
       end
 
       context "when nothing changes" do
@@ -486,7 +506,7 @@ Spectator.describe Rules::Trigger do
         before_each { put_in_feed(feed, post) }
 
         it "does not notify" do
-          Rules::Trigger.reconcile_for_answer(question)
+          Rules::Trigger.reconcile_for_answer([question])
           expect(notified).to be_empty
         end
       end

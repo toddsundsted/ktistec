@@ -4,6 +4,23 @@ require "../../../src/rules/feeds"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
+require "../../spec_helper/feed/backend"
+
+# Judges questions two at a time.
+#
+private class PairBackend < TestBackend
+  def cost(params : Hash(String, JSON::Any)) : Cost
+    Cost.new(batch_size: 2)
+  end
+
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
+    objects.map { Judgment.new(included: true).as(Judgment | Failure) }
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
 
 Spectator.describe Feed::Queue do
   setup_spec
@@ -299,10 +316,51 @@ Spectator.describe Feed::Queue do
   end
 
   describe ".pull" do
-    let_create!(:feed_question, version: version, due_at: now - 1.minute)
+    it "pulls nothing" do
+      expect(Feed::Queue.pull).to be_empty
+    end
 
-    it "pulls the question" do
-      expect(Feed::Queue.pull.try(&.id)).to eq(feed_question.id)
+    context "given a question" do
+      let_create!(:feed_question, named: earlier, version: version, due_at: now - 1.minute)
+
+      it "pulls the question" do
+        expect(Feed::Queue.pull.map(&.id)).to eq([earlier.id])
+      end
+
+      context "and a later question on the version" do
+        let_create!(:feed_question, named: later, version: version, due_at: now - 1.second)
+
+        it "pulls both questions" do
+          expect(Feed::Queue.pull.map(&.id)).to contain_exactly(earlier.id, later.id).in_any_order
+        end
+
+        context "and a judge whose batch size is smaller than the waiting questions" do
+          register_backend("pair", PairBackend.new)
+
+          let_create(:feed_version, named: version, backend: "pair")
+          let_create!(:feed_question, named: latest, version: version, due_at: now)
+
+          it "pulls the first questions" do
+            expect(Feed::Queue.pull.map(&.id)).to contain_exactly(earlier.id, later.id).in_any_order
+          end
+        end
+
+        context "and an unregistered judge" do
+          let_create(:feed_version, named: version, backend: "unregistered")
+
+          it "pulls the question" do
+            expect(Feed::Queue.pull.map(&.id)).to eq([earlier.id])
+          end
+        end
+      end
+
+      context "and a later question on another version" do
+        let_create!(:feed_question, named: other, due_at: now - 1.second)
+
+        it "pulls the question" do
+          expect(Feed::Queue.pull.map(&.id)).to eq([earlier.id])
+        end
+      end
     end
   end
 

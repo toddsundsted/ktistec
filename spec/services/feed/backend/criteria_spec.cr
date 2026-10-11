@@ -19,7 +19,7 @@ Spectator.describe Feed::Backend::Criteria do
     let_build(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}})).as_h)
     let_build(:object, content: "<p>something alpha something</p>")
 
-    let(judgment) { subject.judge(feed, [object]).first }
+    let(judgment) { subject.judge(feed, [object]).first.as(Feed::Backend::Judgment) }
 
     it "includes an object matching an any term" do
       expect(judgment.included).to be_true
@@ -137,7 +137,7 @@ Spectator.describe Feed::Backend::Criteria do
       let_build(:object, content: "<p>alpha beta</p>")
 
       # the any term matches -- absent the none term the object is in
-      pre_condition { expect(subject.judge(without_none, [object]).first.included).to be_true }
+      pre_condition { expect(subject.judge(without_none, [object]).first.as(Feed::Backend::Judgment).included).to be_true }
 
       it "does not include the object" do
         expect(judgment.included).to be_false
@@ -153,7 +153,7 @@ Spectator.describe Feed::Backend::Criteria do
       let_build(:object, named: hit, content: "<p>alpha</p>")
 
       it "preserves order and identity" do
-        expect(subject.judge(feed, [miss, hit]).map(&.included)).to eq([false, true])
+        expect(subject.judge(feed, [miss, hit]).map(&.as(Feed::Backend::Judgment).included)).to eq([false, true])
       end
     end
 
@@ -232,7 +232,7 @@ Spectator.describe Feed::Backend::Criteria do
       let_create!(:object, content: "<p>alpha</p>")
       let_create!(:hashtag, subject: object, name: "spoiler")
 
-      pre_condition { expect(subject.judge(without_none, [object]).first.included).to be_true }
+      pre_condition { expect(subject.judge(without_none, [object]).first.as(Feed::Backend::Judgment).included).to be_true }
 
       it "does not include the object" do
         expect(judgment.included).to be_false
@@ -385,7 +385,7 @@ Spectator.describe Feed::Backend::Criteria do
       let_create!(:object, content: "<p>alpha</p>")
       let_create!(:mention, subject: object, name: "alice@example.com", href: "https://example.com/actors/alice")
 
-      pre_condition { expect(subject.judge(without_none, [object]).first.included).to be_true }
+      pre_condition { expect(subject.judge(without_none, [object]).first.as(Feed::Backend::Judgment).included).to be_true }
 
       it "does not include the object" do
         expect(judgment.included).to be_false

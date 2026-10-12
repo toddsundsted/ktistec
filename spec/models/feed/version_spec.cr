@@ -9,20 +9,21 @@ Spectator.describe Feed::Version do
   setup_spec
 
   it "instantiates the class" do
-    expect(described_class.new(backend: "criteria", params: "{}")).to be_a(Feed::Version)
+    expect(described_class.new(owner_iri: "https://test.test/actors/owner", backend: "criteria", params: "{}")).to be_a(Feed::Version)
   end
 
   describe ".for" do
+    let_create(:actor, named: owner)
     let(params) { JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}, "hashtags": {"any": ["gamma"]}})).as_h }
 
-    subject { described_class.for("criteria", params) }
+    subject { described_class.for(owner, "criteria", params) }
 
     it "creates a version" do
       expect { subject }.to change { described_class.count }.by(1)
     end
 
     context "given an existing version" do
-      let!(existing) { described_class.for("criteria", JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}, "hashtags": {"any": ["gamma"]}})).as_h) }
+      let!(existing) { described_class.for(owner, "criteria", JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}, "hashtags": {"any": ["gamma"]}})).as_h) }
 
       it "returns the existing version" do
         expect(subject).to eq(existing)
@@ -52,6 +53,16 @@ Spectator.describe Feed::Version do
         end
       end
 
+      context "and another owner" do
+        let_create(:actor, named: another)
+
+        subject { described_class.for(another, "criteria", params) }
+
+        it "returns another version" do
+          expect(subject).not_to eq(existing)
+        end
+      end
+
       context "and another backend" do
         private class AnotherBackend < TestBackend
           def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
@@ -72,7 +83,7 @@ Spectator.describe Feed::Version do
           end
         end
 
-        subject { described_class.for("another", params) }
+        subject { described_class.for(owner, "another", params) }
 
         it "returns another version" do
           expect(subject).not_to eq(existing)
@@ -81,7 +92,7 @@ Spectator.describe Feed::Version do
     end
 
     context "given an unregistered backend" do
-      subject { described_class.for("unregistered", params) }
+      subject { described_class.for(owner, "unregistered", params) }
 
       it "raises an error" do
         expect { subject }.to raise_error(/is not a registered backend/)

@@ -32,25 +32,26 @@ up do |db|
       "id" integer PRIMARY KEY AUTOINCREMENT,
       "created_at" datetime NOT NULL,
       "updated_at" datetime NOT NULL,
+      "owner_iri" varchar(255) NOT NULL COLLATE NOCASE,
       "backend" varchar(63) NOT NULL,
       "params" text NOT NULL
     )
   STR
   db.exec <<-STR
-    CREATE UNIQUE INDEX idx_feed_versions_backend_params
-      ON feed_versions (backend ASC, params ASC)
+    CREATE UNIQUE INDEX idx_feed_versions_owner_iri_backend_params
+      ON feed_versions (owner_iri ASC, backend ASC, params ASC)
   STR
   add_column "feeds", "version_id", "integer", index: "ASC"
-  db.query_all("SELECT id, backend, params FROM feeds", as: {Int64, String, String?}).each do |id, backend, params|
+  db.query_all("SELECT id, owner_iri, backend, params FROM feeds", as: {Int64, String, String, String?}).each do |id, owner_iri, backend, params|
     stored = Hash(String, JSON::Any).from_json(params || "{}")
     key = canonicalize(JSON::Any.new(judging_params(stored))).to_json
-    db.exec(<<-STR, backend, key)
-      INSERT OR IGNORE INTO feed_versions (created_at, updated_at, backend, params)
-      VALUES (datetime('now'), datetime('now'), ?, ?)
+    db.exec(<<-STR, owner_iri, backend, key)
+      INSERT OR IGNORE INTO feed_versions (created_at, updated_at, owner_iri, backend, params)
+      VALUES (datetime('now'), datetime('now'), ?, ?, ?)
     STR
-    db.exec(<<-STR, backend, key, id)
+    db.exec(<<-STR, owner_iri, backend, key, id)
       UPDATE feeds
-         SET version_id = (SELECT id FROM feed_versions WHERE backend = ? AND params = ?)
+         SET version_id = (SELECT id FROM feed_versions WHERE owner_iri = ? AND backend = ? AND params = ?)
        WHERE id = ?
     STR
   end

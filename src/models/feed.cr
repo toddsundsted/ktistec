@@ -123,7 +123,7 @@ class Feed
   # Assigns the feed's version and generates the feed's slug.
   #
   def before_save
-    version_id = Version.for(backend, params).id
+    version_id = Version.for(owner, backend, params).id
     @version_changed = version_id != self.version_id
     self.version_id = version_id
     return if draft || slug

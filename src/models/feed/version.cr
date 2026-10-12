@@ -5,16 +5,17 @@ require "../../framework/model/common"
 require "../../services/feed/backend"
 
 class Feed
-  # A judge and the configuration its answers depend on.
-  #
-  # Immutable. Feeds with the same judge and the same such
-  # configuration share a version, and so share verdicts.
+  # A feed version.
   #
   class Version
     include Ktistec::Model
     include Ktistec::Model::Common
 
     @@table_name = "feed_versions"
+
+    @[Persistent]
+    property owner_iri : String
+    belongs_to owner, class_name: ActivityPub::Actor, foreign_key: owner_iri, primary_key: iri
 
     @[Persistent]
     property backend : String
@@ -24,17 +25,18 @@ class Feed
     @[Persistent]
     property params : String
 
-    # Returns the version for a backend and a params, creating it if
-    # it does not exist.
+    # Returns the version for an owner, a backend and a params,
+    # creating it if it does not exist.
     #
     # Raises if the backend is not registered.
     #
-    def self.for(backend : String, params : Hash(String, JSON::Any)) : self
+    def self.for(owner : ActivityPub::Actor, backend : String, params : Hash(String, JSON::Any)) : self
       unless (registered = Backend.find?(backend))
         raise "is not a registered backend: #{backend}"
       end
       canonical = canonicalize(JSON::Any.new(registered.judging_params(params))).to_json
-      find?(backend: backend, params: canonical) || new(backend: backend, params: canonical).save
+      find?(owner: owner, backend: backend, params: canonical) ||
+        new(owner: owner, backend: backend, params: canonical).save
     end
 
     # Orders every object's keys, so equal params serialize equally.

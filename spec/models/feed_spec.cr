@@ -174,8 +174,8 @@ Spectator.describe Feed do
       expect { feed.save }.to change { feed.version_id }.from(nil)
     end
 
-    context "given another feed with the same backend and params" do
-      let_create!(:feed, named: other, backend: "criteria", params: feed.params)
+    context "given another feed with the same owner, backend and params" do
+      let_create!(:feed, named: other, owner: feed.owner, backend: "criteria", params: feed.params)
 
       pre_condition { expect(other.version_id).not_to be_nil }
 

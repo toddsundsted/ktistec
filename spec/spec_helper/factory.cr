@@ -565,9 +565,15 @@ def feed_question_factory(clazz = Feed::Question, feed : Feed? = nil, version_id
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
-def feed_version_factory(clazz = Feed::Version, backend = "criteria", params = nil, **options)
+def feed_version_factory(clazz = Feed::Version, owner_iri = nil, owner = false, backend = "criteria", params = nil, **options)
+  owner = actor_factory(local: true) unless owner_iri || owner.nil? || owner
   params ||= JSON.parse(%({"keywords": {"any": ["keyword"]}})).as_h
-  clazz.new(**{backend: backend, params: params.to_json}.merge(options))
+  clazz.new({
+    "owner_iri" => owner_iri,
+    "owner"     => owner || nil,
+    "backend"   => backend,
+    "params"    => params.to_json,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
 # translation factory

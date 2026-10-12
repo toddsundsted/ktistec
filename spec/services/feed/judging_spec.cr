@@ -111,21 +111,6 @@ Spectator.describe Feed::Judging do
         Feed::Judging.answer([question])
         expect(verdict_for(hit)).to be_nil
       end
-
-      context "but is a candidate for another feed on the same version" do
-        let(recipient) { register.actor }
-        let_create!(:feed, named: other, owner: recipient, params: feed.params)
-        let_create(:create, object: hit)
-
-        before_each { put_in_inbox(recipient, create) }
-
-        pre_condition { expect(other.version_id).to eq(feed.version_id) }
-
-        it "includes the matching object" do
-          Feed::Judging.answer([question])
-          expect(verdict_for(hit).try(&.included)).to be_true
-        end
-      end
     end
 
     context "given another question in the batch" do

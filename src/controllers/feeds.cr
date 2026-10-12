@@ -283,11 +283,11 @@ class FeedsController
     end
   end
 
-  # Queues a draft's most recent candidates to be judged, unless posts
-  # have already been judged under the draft's criteria.
+  # Queues a draft's most recent candidates to be judged, unless a
+  # backfill already exists for the draft's criteria.
   #
   private def self.queue_preview(feed)
-    return if Feed::Verdict.count(version_id: feed.version_id) > 0
+    return if feed.version?.try(&.backfill_cursor)
     Feed::Queue.enqueue_backfill(feed, limit: preview_limit, live: true)
   end
 

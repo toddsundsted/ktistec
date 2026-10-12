@@ -19,17 +19,11 @@ class Feed
       #{Rules::View::Feed::CANDIDATE_SQL}
            AND id > ?
            AND id < ?
-           AND NOT EXISTS (
-             SELECT 1
-               FROM feed_verdicts v
-              WHERE v.version_id = ?
-                AND v.object_iri = objects.iri
-           )
          ORDER BY id DESC
          LIMIT ?
       SQL
 
-    # Returns the feed's unjudged candidates, newest first.
+    # Returns the feed's candidates, newest first.
     #
     # `cursor` is the object id to scan down from; `nil` starts at the
     # newest object. A caller that already knows the floor's id passes
@@ -44,7 +38,6 @@ class Feed
         *predicate_parameters(feed),
         floor_id || floor_id(feed) || 0_i64,
         cursor || Int64::MAX,
-        feed.version_id,
         # in SQLite, a negative limit means no limit
         limit || -1,
         include_deleted: true,

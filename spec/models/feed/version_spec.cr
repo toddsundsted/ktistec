@@ -99,4 +99,29 @@ Spectator.describe Feed::Version do
       end
     end
   end
+
+  describe "#cover_down_to" do
+    let_create(:feed_version, named: version)
+
+    it "sets the mark" do
+      version.cover_down_to(5_i64)
+      expect(version.backfill_cursor).to eq(5)
+    end
+
+    it "saves the mark" do
+      version.cover_down_to(5_i64)
+      expect(described_class.find(version.id).backfill_cursor).to eq(5)
+    end
+
+    context "given a lower mark saved through another instance" do
+      before_each { described_class.find(version.id).cover_down_to(3_i64) }
+
+      pre_condition { expect(version.backfill_cursor).to be_nil }
+
+      it "keeps the lower mark" do
+        version.cover_down_to(5_i64)
+        expect(version.backfill_cursor).to eq(3)
+      end
+    end
+  end
 end

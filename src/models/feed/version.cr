@@ -25,6 +25,26 @@ class Feed
     @[Persistent]
     property params : String
 
+    # The id of the oldest object the version's backfills have
+    # enqueued.
+    #
+    @[Persistent]
+    property backfill_cursor : Int64?
+
+    # Records that every candidate from `id` up has been asked about.
+    #
+    # Never moves the cursor up.
+    #
+    def cover_down_to(id : Int64) : Nil
+      query = <<-SQL
+        UPDATE feed_versions
+           SET backfill_cursor = MIN(COALESCE(backfill_cursor, ?), ?)
+         WHERE id = ?
+        RETURNING backfill_cursor
+      SQL
+      self.backfill_cursor = Ktistec.database.query_one(query, id, id, self.id, as: Int64?)
+    end
+
     # Returns the version for an owner, a backend and a params,
     # creating it if it does not exist.
     #

@@ -1584,7 +1584,7 @@ Spectator.describe FeedsController do
           end
 
           context "given a post already judged under the draft's criteria" do
-            let_create!(:feed_verdict, named: nil, feed: feed, object: hit, included: true)
+            before_each { Feed::Version.find(feed.version_id.not_nil!).assign(backfill_cursor: hit.id).save }
 
             context "and a post not yet judged" do
               let_create!(:object, named: unjudged, created_at: draft_floor + 1.day)

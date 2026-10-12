@@ -188,6 +188,10 @@ Spectator.describe Feed::Queue do
       Feed::Question.where(version_id: feed.version_id).sort_by!(&.id!)
     end
 
+    def cover(low)
+      Feed::Version.find(feed.version_id.not_nil!).assign(backfill_cursor: low).save
+    end
+
     context "given candidates" do
       let_create!(:object, named: older)
       let_create!(:object, named: newer)
@@ -212,12 +216,43 @@ Spectator.describe Feed::Queue do
         expect(questions.map(&.live)).to eq([true, true])
       end
 
+      context "and a page size larger than the candidates" do
+        around_each do |proc|
+          saved = Feed::Queue.page_size
+          Feed::Queue.page_size = 3
+          begin
+            proc.call
+          ensure
+            Feed::Queue.page_size = saved
+          end
+        end
+
+        it "covers the candidates it enqueued" do
+          Feed::Queue.enqueue_backfill(feed)
+          expect(Feed::Version.find(feed.version_id.not_nil!).backfill_cursor).to eq(older.id)
+        end
+      end
+
+      context "and an earlier backfill that covered the newest" do
+        before_each { cover(newer.id) }
+
+        it "enqueues only the oldest" do
+          Feed::Queue.enqueue_backfill(feed)
+          expect(questions.map(&.object_iri)).to eq([older.iri])
+        end
+      end
+
       context "given more than will fit" do
         let_create!(:object, named: nil)
 
         it "sheds questions that won't fit" do
           Feed::Queue.enqueue_backfill(feed)
           expect(questions.size).to eq(Feed::Queue.backfill_cap)
+        end
+
+        it "covers only the candidates it enqueued" do
+          Feed::Queue.enqueue_backfill(feed)
+          expect(Feed::Version.find(feed.version_id.not_nil!).backfill_cursor).to eq(newer.id)
         end
       end
 

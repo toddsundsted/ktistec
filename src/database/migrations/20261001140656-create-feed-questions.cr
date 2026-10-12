@@ -1,8 +1,21 @@
-require "json"
-
 require "../../framework/database"
 
 extend Ktistec::Database::Migration
+
+# a backfill task that is not complete is evidence of a backfill in
+# progress, so its feed is backfilled again. a published feed with no
+# such task is taken to be backfilled, so its version is covered from
+# its floor up.
+
+private ONGOING = <<-STR
+  EXISTS (
+    SELECT 1
+      FROM tasks t
+     WHERE t.type = 'Task::BackfillFeed'
+       AND t.complete = 0
+       AND t.subject_iri = f.owner_iri || '/feeds/' || f.id
+  )
+STR
 
 up do |db|
   db.exec <<-STR
@@ -26,74 +39,40 @@ up do |db|
     CREATE INDEX idx_feed_questions_batched_live_due_at
       ON feed_questions (batched ASC, live DESC, due_at ASC)
   STR
-  db.using_connection do |connection|
-    connection.exec <<-STR
-      CREATE TEMP TABLE backfills (
-        "subject_iri" text NOT NULL,
-        "floor_id" integer,
-        "cursor" integer
-      )
-    STR
-    query = "SELECT subject_iri, state FROM tasks WHERE type = 'Task::BackfillFeed' AND complete = 0"
-    connection.query_all(query, as: {String, String?}).each do |subject_iri, state|
-      progress = state.try { |json| JSON.parse(json).as_h? }
-      floor_id = progress.try(&.["floor_id"]?).try(&.as_i64?)
-      cursor = progress.try(&.["cursor"]?).try(&.as_i64?)
-      connection.exec("INSERT INTO backfills VALUES (?, ?, ?)", subject_iri, floor_id, cursor)
-    end
-    connection.exec <<-STR
-      INSERT OR IGNORE INTO feed_questions (created_at, updated_at, version_id, object_iri, live, due_at, batched)
-      SELECT datetime('now'), datetime('now'), c.version_id, c.iri, 0, datetime('now'), 0
-        FROM (
-          SELECT f.version_id, o.iri, o.id, ROW_NUMBER() OVER (PARTITION BY f.id ORDER BY o.id DESC) AS rank
-            -- `CROSS JOIN` pins the join order to backfills, feeds, objects
-            FROM backfills t
-            CROSS JOIN feeds f
-              ON t.subject_iri = f.owner_iri || '/feeds/' || f.id
-            CROSS JOIN objects o
-              -- copied from `Task::BackfillFeed#perform` and `Feed::Candidates.floor_id`
-              ON o.id > COALESCE(
-                   t.floor_id,
-                   (SELECT id FROM objects WHERE created_at <= f.floor ORDER BY id DESC LIMIT 1),
-                   0
-                 )
-             AND o.id < COALESCE(t.cursor, 9223372036854775807)
-              -- end of copy
-           WHERE f.version_id IS NOT NULL
-             AND f.draft = 0
-             AND f.floor IS NOT NULL
-             -- copied from `Rules::View::Feed::CANDIDATE_SQL`
-             AND o.published IS NOT NULL
-             AND o.special IS NULL
-             AND (
-               o.visible = 1
-               OR EXISTS (
-                 SELECT 1
-                   FROM relationships m
-                   JOIN activities a ON a.iri = m.to_iri
-                  WHERE m.type IN ('Relationship::Content::Inbox', 'Relationship::Content::Outbox')
-                    AND m.from_iri = f.owner_iri
-                    AND a.object_iri = o.iri
-                    AND a.undone_at IS NULL
-               )
-             )
-             -- end of copy
-             -- copied from `Feed::Candidates::CANDIDATES_SQL`
-             AND NOT EXISTS (
-               SELECT 1
-                 FROM feed_verdicts v
-                WHERE v.version_id = f.version_id
-                  AND v.object_iri = o.iri
-             )
-             -- end of copy
-        ) c
-       ORDER BY c.rank ASC, c.id DESC
-       -- copied from `Feed::Queue.backfill_cap`
-       LIMIT 100000
-       -- end of copy
-    STR
-    connection.exec("DROP TABLE backfills")
-  end
+  db.exec <<-STR
+    UPDATE feed_versions
+       SET backfill_cursor = (
+             SELECT MIN(COALESCE(
+                      -- copied from `Feed::Candidates.floor_id`
+                      (SELECT o.id FROM objects o WHERE o.created_at <= f.floor ORDER BY o.id DESC LIMIT 1),
+                      -- end of copy
+                      0
+                    ))
+               FROM feeds f
+              WHERE f.version_id = feed_versions.id
+                AND f.draft = 0
+                AND f.floor IS NOT NULL
+                AND NOT #{ONGOING}
+           )
+     WHERE EXISTS (
+       SELECT 1
+         FROM feeds f
+        WHERE f.version_id = feed_versions.id
+          AND f.draft = 0
+          AND f.floor IS NOT NULL
+          AND NOT #{ONGOING}
+     )
+  STR
+  db.exec <<-STR
+    INSERT INTO tasks (created_at, updated_at, type, source_iri, subject_iri, running, complete, next_attempt_at)
+    SELECT datetime('now'), datetime('now'), 'Task::Feed::EnqueueBackfill', f.owner_iri,
+           CAST(f.id AS TEXT),
+           0, 0, datetime('now')
+      FROM feeds f
+     WHERE f.draft = 0
+       AND f.floor IS NOT NULL
+       AND #{ONGOING}
+  STR
   db.exec <<-STR
     DELETE FROM tasks
      WHERE type = 'Task::BackfillFeed'
@@ -113,9 +92,19 @@ down do |db|
     -- end of copy
        AND EXISTS (
          SELECT 1
-           FROM feed_questions q
-          WHERE q.version_id = f.version_id
+           FROM tasks t
+          WHERE t.type = 'Task::Feed::EnqueueBackfill'
+            AND t.complete = 0
+            AND t.subject_iri = CAST(f.id AS TEXT)
        )
+  STR
+  db.exec <<-STR
+    DELETE FROM tasks
+     WHERE type = 'Task::Feed::EnqueueBackfill'
+  STR
+  db.exec <<-STR
+    UPDATE feed_versions
+       SET backfill_cursor = NULL
   STR
   db.exec <<-STR
     DROP TABLE feed_questions

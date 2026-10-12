@@ -34,7 +34,8 @@ up do |db|
       "updated_at" datetime NOT NULL,
       "owner_iri" varchar(255) NOT NULL COLLATE NOCASE,
       "backend" varchar(63) NOT NULL,
-      "params" text NOT NULL
+      "params" text NOT NULL,
+      "backfill_cursor" integer
     )
   STR
   db.exec <<-STR

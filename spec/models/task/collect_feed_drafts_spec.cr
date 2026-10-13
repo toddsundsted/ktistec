@@ -35,6 +35,25 @@ Spectator.describe Task::CollectFeedDrafts do
         expect(subject.perform).to eq(1)
       end
 
+      context "that is registered" do
+        around_each do |proc|
+          saved = Rules::View.registry.dup
+          begin
+            proc.call
+          ensure
+            Rules::View.registry.clear
+            Rules::View.registry.concat(saved)
+          end
+        end
+
+        before_each { Rules::Feeds.register(draft) }
+
+        it "unregisters the draft's view" do
+          subject.perform
+          expect(Rules::View.registry.map(&.type)).not_to contain(draft.feed_type)
+        end
+      end
+
       context "with contents" do
         let_build(:object)
 

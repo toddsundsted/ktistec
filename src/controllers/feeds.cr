@@ -130,6 +130,7 @@ class FeedsController
       feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: true, floor: Time.utc - Feed::HORIZON}))
       if feed.valid?
         feed.save
+        Rules::Feeds.register(feed)
         queue_preview(feed)
         redirect edit_actor_feed_path(account.actor, feed)
       else
@@ -199,6 +200,7 @@ class FeedsController
 
       if previewing?(env)
         feed.save
+        Rules::Feeds.register(feed)
         queue_preview(feed)
         redirect edit_actor_feed_path(feed.owner, feed)
       else
@@ -218,8 +220,9 @@ class FeedsController
     else
       if previewing?(env)
         if feed.assign(**params).valid?
-          feed.drafts.each(&.destroy)
+          feed.drafts.each { |draft| unregister_and_destroy(draft) }
           copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor})).save
+          Rules::Feeds.register(copy)
           queue_preview(copy)
           redirect edit_actor_feed_path(feed.owner, copy)
         else
@@ -229,7 +232,7 @@ class FeedsController
       else
         published = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor}))
         if published.valid?
-          feed.drafts.each(&.destroy)
+          feed.drafts.each { |draft| unregister_and_destroy(draft) }
           published.save
           published.publish
           Rules::Feeds.register(published)

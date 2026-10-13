@@ -1,6 +1,7 @@
 require "../task"
 require "./mixins/singleton"
 require "../feed"
+require "../../rules/feeds"
 
 class Task
   # Collection task for abandoned feed drafts.
@@ -31,7 +32,10 @@ class Task
 
     private def collect_abandoned_drafts(max_age_hours : Int32)
       drafts = ::Feed.where("draft = 1 AND updated_at < ?", max_age_hours.hours.ago)
-      drafts.each(&.destroy)
+      drafts.each do |draft|
+        Rules::Feeds.unregister(draft)
+        draft.destroy
+      end
       drafts.size
     end
   end

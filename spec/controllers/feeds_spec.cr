@@ -845,14 +845,14 @@ Spectator.describe FeedsController do
           expect(robotics_feed.floor).to be_close(Feed::HORIZON.ago, 1.minute)
         end
 
-        it "does not register the feed's view" do
+        it "registers the feed's view" do
           post "/actors/#{actor.username}/feeds", FORM_HEADERS, preview_form
-          expect(Rules::View.registry.map(&.type)).not_to contain(robotics_feed.feed_type)
+          expect(Rules::View.registry.map(&.type)).to contain(robotics_feed.feed_type)
         end
 
-        it "does not register the feed's view" do
+        it "registers the feed's view" do
           post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json
-          expect(Rules::View.registry.map(&.type)).not_to contain(robotics_feed.feed_type)
+          expect(Rules::View.registry.map(&.type)).to contain(robotics_feed.feed_type)
         end
 
         it "succeeds" do
@@ -1263,6 +1263,20 @@ Spectator.describe FeedsController do
             post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
             expect(Feed.find?(superseded.id)).to be_nil
           end
+
+          context "that is registered" do
+            before_each { Rules::Feeds.register(superseded) }
+
+            it "unregisters the superseded copy's view" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=%23robotics"
+              expect(Rules::View.registry.map(&.type)).not_to contain(superseded.feed_type)
+            end
+
+            it "unregisters the superseded copy's view" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#robotics"})
+              expect(Rules::View.registry.map(&.type)).not_to contain(superseded.feed_type)
+            end
+          end
         end
 
         context "given a blank name" do
@@ -1346,14 +1360,14 @@ Spectator.describe FeedsController do
           expect(Feed.find(feed.id).draft).to be_false
         end
 
-        it "does not register the copy's view" do
+        it "registers the copy's view" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
-          expect(Rules::View.registry.map(&.type)).not_to contain(copy.feed_type)
+          expect(Rules::View.registry.map(&.type)).to contain(copy.feed_type)
         end
 
-        it "does not register the copy's view" do
+        it "registers the copy's view" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
-          expect(Rules::View.registry.map(&.type)).not_to contain(copy.feed_type)
+          expect(Rules::View.registry.map(&.type)).to contain(copy.feed_type)
         end
 
         it "succeeds" do
@@ -1447,6 +1461,20 @@ Spectator.describe FeedsController do
             expect(Feed.find?(superseded.id)).to be_nil
           end
 
+          context "that is registered" do
+            before_each { Rules::Feeds.register(superseded) }
+
+            it "unregisters the superseded copy's view" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
+              expect(Rules::View.registry.map(&.type)).not_to contain(superseded.feed_type)
+            end
+
+            it "unregisters the superseded copy's view" do
+              post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
+              expect(Rules::View.registry.map(&.type)).not_to contain(superseded.feed_type)
+            end
+          end
+
           context "of a different feed" do
             let_create!(:feed, named: other, owner: actor, name: "Other")
 
@@ -1507,14 +1535,14 @@ Spectator.describe FeedsController do
             expect(Feed.find(feed.id).draft).to be_true
           end
 
-          it "does not register the draft's view" do
+          it "registers the draft's view" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
-            expect(Rules::View.registry.map(&.type)).not_to contain(feed.feed_type)
+            expect(Rules::View.registry.map(&.type)).to contain(feed.feed_type)
           end
 
-          it "does not register the draft's view" do
+          it "registers the draft's view" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
-            expect(Rules::View.registry.map(&.type)).not_to contain(feed.feed_type)
+            expect(Rules::View.registry.map(&.type)).to contain(feed.feed_type)
           end
 
           it "succeeds" do

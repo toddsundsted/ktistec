@@ -3,6 +3,10 @@ require "../../framework/database"
 extend Ktistec::Database::Migration
 
 up do |db|
+  db.exec <<-STR
+    DELETE FROM feed_verdicts
+     WHERE included = 0
+  STR
   add_column "feed_verdicts", "version_id", "integer"
   db.exec <<-STR
     UPDATE feed_verdicts

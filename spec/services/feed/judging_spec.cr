@@ -98,9 +98,18 @@ Spectator.describe Feed::Judging do
     context "given a post that does not match" do
       before_each { hit.assign(content: "<p>something gamma something</p>").save }
 
-      it "excludes the post" do
+      it "writes no verdict" do
         Feed::Judging.answer([question])
-        expect(verdict_for(hit).try(&.included)).to be_false
+        expect(verdict_for(hit)).to be_nil
+      end
+
+      context "and an existing verdict" do
+        let_create!(:feed_verdict, named: nil, feed: feed, object: hit, included: true)
+
+        it "deletes the verdict" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit)).to be_nil
+        end
       end
     end
 

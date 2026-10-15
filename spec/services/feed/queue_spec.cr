@@ -5,6 +5,7 @@ require "../../../src/rules/feeds"
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 require "../../spec_helper/feed/backend"
+require "../../spec_helper/rule/view"
 
 # Judges questions two at a time.
 #
@@ -304,15 +305,7 @@ Spectator.describe Feed::Queue do
   end
 
   describe ".enqueue_arrival" do
-    around_each do |proc|
-      saved = Rules::View.registry.dup
-      begin
-        proc.call
-      ensure
-        Rules::View.registry.clear
-        Rules::View.registry.concat(saved)
-      end
-    end
+    preserve_view_registry
 
     let(actor) { register.actor }
 

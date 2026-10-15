@@ -3,6 +3,7 @@ require "../../src/services/feed/backend/criteria"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"
+require "../spec_helper/rule/view"
 
 Spectator.describe FeedsController do
   setup_spec
@@ -12,15 +13,7 @@ Spectator.describe FeedsController do
   FORM_HEADERS = HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded", "Accept" => "text/html"}
   JSON_HEADERS = HTTP::Headers{"Content-Type" => "application/json", "Accept" => "application/json"}
 
-  around_each do |proc|
-    saved = Rules::View.registry.dup
-    begin
-      proc.call
-    ensure
-      Rules::View.registry.clear
-      Rules::View.registry.concat(saved)
-    end
-  end
+  preserve_view_registry
 
   let(actor) { register.actor }
 

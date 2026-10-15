@@ -10,6 +10,7 @@ require "../../src/models/relationship/content/notification/follow/thread"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
+require "../spec_helper/rule/view"
 
 Spectator.describe Rules::Trigger do
   setup_spec
@@ -42,15 +43,7 @@ Spectator.describe Rules::Trigger do
     Ktistec.database.query_one("SELECT COUNT(*) FROM relationships WHERE type = ?", feed.feed_type, as: Int64)
   end
 
-  around_each do |proc|
-    saved = Rules::View.registry.dup
-    begin
-      proc.call
-    ensure
-      Rules::View.registry.clear
-      Rules::View.registry.concat(saved)
-    end
-  end
+  preserve_view_registry
 
   describe ".reconcile_for_activity" do
     let_create!(:follow_hashtag_relationship, named: hashtag_follow, actor: actor, name: "foo")

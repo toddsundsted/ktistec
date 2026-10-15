@@ -21,9 +21,14 @@ class Task
       feed_id.to_i64?.try { |id| ::Feed.find?(id) }
     end
 
+    # Enqueues the next page of the feed's backfill and reschedules
+    # itself while candidates remain.
+    #
     def perform
       if (feed = feed?)
-        ::Feed::Queue.enqueue_backfill(feed)
+        if ::Feed::Queue.enqueue_backfill(feed, limit: ::Feed::Queue.page_size)
+          self.next_attempt_at = 5.seconds.from_now
+        end
       else
         Log.debug { "feed #{feed_id} is gone -- not enqueued" }
       end

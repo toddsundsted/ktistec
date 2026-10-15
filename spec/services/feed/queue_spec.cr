@@ -201,9 +201,17 @@ Spectator.describe Feed::Queue do
         expect(questions.map(&.object_iri)).to eq([newer.iri, older.iri])
       end
 
+      it "reports that no candidates remain" do
+        expect(Feed::Queue.enqueue_backfill(feed)).to be_false
+      end
+
       it "enqueues only the newest" do
         Feed::Queue.enqueue_backfill(feed, limit: 1)
         expect(questions.map(&.object_iri)).to eq([newer.iri])
+      end
+
+      it "reports that candidates remain" do
+        expect(Feed::Queue.enqueue_backfill(feed, limit: 1)).to be_true
       end
 
       it "enqueues questions as backfill" do
@@ -233,7 +241,7 @@ Spectator.describe Feed::Queue do
         end
       end
 
-      context "and an earlier backfill that covered the newest" do
+      context "and an earlier backfill that backfilled the newest" do
         before_each { cover(newer.id) }
 
         it "enqueues only the oldest" do
@@ -245,14 +253,29 @@ Spectator.describe Feed::Queue do
       context "given more than will fit" do
         let_create!(:object, named: nil)
 
-        it "sheds questions that won't fit" do
-          Feed::Queue.enqueue_backfill(feed)
-          expect(questions.size).to eq(Feed::Queue.backfill_cap)
-        end
-
         it "covers only the candidates it enqueued" do
           Feed::Queue.enqueue_backfill(feed)
           expect(Feed::Version.find(feed.version_id.not_nil!).backfill_cursor).to eq(newer.id)
+        end
+
+        it "reports that candidates remain" do
+          expect(Feed::Queue.enqueue_backfill(feed)).to be_true
+        end
+      end
+
+      context "and a page already queued" do
+        let_create!(:feed_question, version: feed.version, object: newer)
+
+        before_each { cover(newer.id) }
+
+        pre_condition { expect(questions.size).to eq(Feed::Queue.page_size) }
+
+        it "enqueues nothing" do
+          expect { Feed::Queue.enqueue_backfill(feed) }.not_to change { questions.size }
+        end
+
+        it "reports that candidates remain" do
+          expect(Feed::Queue.enqueue_backfill(feed)).to be_true
         end
       end
 
@@ -271,6 +294,10 @@ Spectator.describe Feed::Queue do
         it "enqueues nothing" do
           Feed::Queue.enqueue_backfill(feed)
           expect(questions).to be_empty
+        end
+
+        it "reports that no candidates remain" do
+          expect(Feed::Queue.enqueue_backfill(feed)).to be_false
         end
       end
     end

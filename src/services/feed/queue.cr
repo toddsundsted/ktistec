@@ -68,17 +68,21 @@ class Feed
 
     # Enqueues a feed's candidates, newest first.
     #
-    # Silently sheds questions if the queue is full.
+    # Enqueues nothing if a page of the version's questions is
+    # already queued.
     #
-    def enqueue_backfill(feed : ::Feed, limit : Int32? = nil, live : Bool = false) : Nil
-      return unless feed.floor
+    # Returns `true` if there is more to enqueue later.
+    #
+    def enqueue_backfill(feed : ::Feed, limit : Int32? = nil, live : Bool = false) : Bool
+      return false unless feed.floor
       version_id = feed.version_id.not_nil!
+      return true if Question.count(version_id: version_id, batched: false) >= page_size
       version = Version.find(version_id)
       floor_id = Candidates.floor_id(feed) || 0_i64
       remaining = limit
       cursor = version.backfill_cursor
       loop do
-        break if remaining && remaining < 1
+        return true if remaining && remaining < 1
         size = remaining ? Math.min(page_size, remaining) : page_size
         page = Candidates.candidates_for(feed, cursor, size, floor_id)
         page.each { |object| enqueue(version_id, object.iri, live: live) }
@@ -87,16 +91,17 @@ class Feed
           version.cover_down_to(cursor)
         end
         remaining -= page.size if remaining
-        break if page.size < size
+        return false if page.size < size
       end
     rescue err : FullError
       Log.warn { "backfill of feed #{feed.id} is incomplete: #{err.message}" }
+      true
     end
 
     # Enqueues an object as a live question for every registered
     # feed's version it is a candidate for.
     #
-    # Silently sheds the question if the queue is full.
+    # Sheds the question, with a warning, if the queue is full.
     #
     def enqueue_arrival(object : ActivityPub::Object) : Nil
       Rules::View.registry.each do |view|

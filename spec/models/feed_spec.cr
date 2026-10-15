@@ -135,14 +135,7 @@ Spectator.describe Feed do
     end
 
     context "when the backend rejects the params" do
-      around_each do |proc|
-        Feed::Backend.register("rejecting", RejectingBackend.new)
-        begin
-          proc.call
-        ensure
-          Feed::Backend.unregister("rejecting")
-        end
-      end
+      register_backend("rejecting", RejectingBackend.new)
 
       before_each { feed.assign(backend: "rejecting") }
 

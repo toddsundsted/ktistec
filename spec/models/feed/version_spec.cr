@@ -74,14 +74,7 @@ Spectator.describe Feed::Version do
           end
         end
 
-        around_each do |proc|
-          Feed::Backend.register("another", AnotherBackend.new)
-          begin
-            proc.call
-          ensure
-            Feed::Backend.unregister("another")
-          end
-        end
+        register_backend("another", AnotherBackend.new)
 
         subject { described_class.for(owner, "another", params) }
 

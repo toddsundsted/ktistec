@@ -1,10 +1,10 @@
-require "../../../src/models/task/collect_feed_orphans"
-require "../../../src/services/feed/backend/criteria"
+require "../../../../src/models/task/feed/collect_orphans"
+require "../../../../src/services/feed/backend/criteria"
 
-require "../../spec_helper/base"
-require "../../spec_helper/factory"
+require "../../../spec_helper/base"
+require "../../../spec_helper/factory"
 
-Spectator.describe Task::CollectFeedOrphans do
+Spectator.describe Task::Feed::CollectOrphans do
   setup_spec
 
   def materialized_count(feed)

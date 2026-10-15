@@ -218,7 +218,7 @@ class Feed
   # never pass through `Relationship`'s polymorphic loader.
   #
   # Deleting in SQL bypasses model hooks. If the associated models
-  # ever gain any, this and the methods in `Task::CollectFeedOrphans`
+  # ever gain any, this and the methods in `Task::Feed::CollectOrphans`
   # are the sites to revisit.
   #
   private def delete_materialized_rows

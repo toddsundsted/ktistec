@@ -1,10 +1,10 @@
-require "../../../src/models/task/collect_feed_drafts"
-require "../../../src/services/feed/backend/criteria"
+require "../../../../src/models/task/feed/collect_drafts"
+require "../../../../src/services/feed/backend/criteria"
 
-require "../../spec_helper/base"
-require "../../spec_helper/factory"
+require "../../../spec_helper/base"
+require "../../../spec_helper/factory"
 
-Spectator.describe Task::CollectFeedDrafts do
+Spectator.describe Task::Feed::CollectDrafts do
   setup_spec
 
   def materialized_count(feed)

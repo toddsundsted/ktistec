@@ -40,8 +40,8 @@ Ktistec::Server.run do
     Task::RunScripts.ensure_scheduled
     Task::CleanOauth.ensure_scheduled
     Task::ReconcileTagStatistics.ensure_scheduled
-    Task::CollectFeedDrafts.ensure_scheduled
-    Task::CollectFeedOrphans.ensure_scheduled
+    Task::Feed::CollectDrafts.ensure_scheduled
+    Task::Feed::CollectOrphans.ensure_scheduled
     Task::Feed::AnswerQuestions.ensure_scheduled
   end
   Session.clean_up_stale_sessions

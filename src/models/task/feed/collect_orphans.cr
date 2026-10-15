@@ -1,6 +1,6 @@
-require "../task"
-require "./mixins/singleton"
-require "../feed"
+require "../../task"
+require "../mixins/singleton"
+require "../../feed"
 
 class Task
   # Collection task for orphaned feed state.
@@ -10,7 +10,7 @@ class Task
   # membership rows (the `Relationship`s carrying the synthetic
   # `Feed::<id>` type) whose object no longer exists.
   #
-  class CollectFeedOrphans < Task
+  class Feed::CollectOrphans < Task
     include Singleton
 
     Log = ::Log.for(self)

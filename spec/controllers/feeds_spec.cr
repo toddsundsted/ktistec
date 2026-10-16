@@ -1345,12 +1345,12 @@ Spectator.describe FeedsController do
 
         it "leaves the original untouched" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
-          expect(Feed.find(feed.id).draft).to be_false
+          expect(feed.reload!.draft).to be_false
         end
 
         it "leaves the original untouched" do
           post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
-          expect(Feed.find(feed.id).draft).to be_false
+          expect(feed.reload!.draft).to be_false
         end
 
         it "registers the copy's view" do
@@ -1520,12 +1520,12 @@ Spectator.describe FeedsController do
 
           it "keeps the feed a draft" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, preview_form
-            expect(Feed.find(feed.id).draft).to be_true
+            expect(feed.reload!.draft).to be_true
           end
 
           it "keeps the feed a draft" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, preview_json
-            expect(Feed.find(feed.id).draft).to be_true
+            expect(feed.reload!.draft).to be_true
           end
 
           it "registers the draft's view" do
@@ -1648,12 +1648,12 @@ Spectator.describe FeedsController do
 
           it "publishes the draft" do
             expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form }
-              .to change { Feed.find(feed.id).draft }.from(true).to(false)
+              .to change { feed.reload!.draft }.from(true).to(false)
           end
 
           it "publishes the draft" do
             expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json }
-              .to change { Feed.find(feed.id).draft }.from(true).to(false)
+              .to change { feed.reload!.draft }.from(true).to(false)
           end
 
           it "registers the view" do
@@ -1668,12 +1668,12 @@ Spectator.describe FeedsController do
 
           it "carries the draft's floor forward" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-            expect(Feed.find(feed.id).floor).to eq(draft_floor)
+            expect(feed.reload!.floor).to eq(draft_floor)
           end
 
           it "carries the draft's floor forward" do
             post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-            expect(Feed.find(feed.id).floor).to eq(draft_floor)
+            expect(feed.reload!.floor).to eq(draft_floor)
           end
 
           it "schedules the feed's backfill" do
@@ -1719,12 +1719,12 @@ Spectator.describe FeedsController do
 
             it "does not publish the draft" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=&any=%23cnc"
-              expect(Feed.find(feed.id).draft).to be_true
+              expect(feed.reload!.draft).to be_true
             end
 
             it "does not publish the draft" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"#cnc"})
-              expect(Feed.find(feed.id).draft).to be_true
+              expect(feed.reload!.draft).to be_true
             end
           end
 
@@ -1769,22 +1769,22 @@ Spectator.describe FeedsController do
 
               it "moves the feed to another version" do
                 expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_changed_form }
-                  .to change { Feed.find(feed.id).version_id }
+                  .to change { feed.reload!.version_id }
               end
 
               it "moves the feed to another version" do
                 expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_changed_json }
-                  .to change { Feed.find(feed.id).version_id }
+                  .to change { feed.reload!.version_id }
               end
 
               it "keeps the previewed verdicts" do
-                expect { post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_changed_form }
-                  .not_to change { Feed::Verdict.count(id: feed_verdict.id) }.from(1)
+                post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_changed_form
+                expect(Feed::Verdict.find?(feed_verdict.id)).not_to be_nil
               end
 
               it "keeps the previewed verdicts" do
-                expect { post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_changed_json }
-                  .not_to change { Feed::Verdict.count(id: feed_verdict.id) }.from(1)
+                post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_changed_json
+                expect(Feed::Verdict.find?(feed_verdict.id)).not_to be_nil
               end
 
               it "drops the stale match" do
@@ -1818,22 +1818,22 @@ Spectator.describe FeedsController do
 
             it "publishes the copy" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-              expect(Feed.find(feed.id).draft).to be_false
+              expect(feed.reload!.draft).to be_false
             end
 
             it "publishes the copy" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-              expect(Feed.find(feed.id).draft).to be_false
+              expect(feed.reload!.draft).to be_false
             end
 
             it "carries the copy's floor forward" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-              expect(Feed.find(feed.id).floor).to eq(draft_floor)
+              expect(feed.reload!.floor).to eq(draft_floor)
             end
 
             it "carries the copy's floor forward" do
               post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-              expect(Feed.find(feed.id).floor).to eq(draft_floor)
+              expect(feed.reload!.floor).to eq(draft_floor)
             end
 
             context "when the original is registered" do
@@ -1857,12 +1857,12 @@ Spectator.describe FeedsController do
 
               it "publishes the copy" do
                 post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, publish_form
-                expect(Feed.find(feed.id).draft).to be_false
+                expect(feed.reload!.draft).to be_false
               end
 
               it "publishes the copy" do
                 post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, publish_json
-                expect(Feed.find(feed.id).draft).to be_false
+                expect(feed.reload!.draft).to be_false
               end
             end
           end
@@ -1957,12 +1957,12 @@ Spectator.describe FeedsController do
 
         it "keeps the verdicts" do
           delete "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_HTML
-          expect(Feed::Verdict.count(id: feed_verdict.id)).to eq(1)
+          expect(Feed::Verdict.find?(feed_verdict.id)).not_to be_nil
         end
 
         it "keeps the verdicts" do
           delete "/actors/#{actor.username}/feeds/#{feed.id}", ACCEPT_JSON
-          expect(Feed::Verdict.count(id: feed_verdict.id)).to eq(1)
+          expect(Feed::Verdict.find?(feed_verdict.id)).not_to be_nil
         end
 
         it "removes the materialized rows" do

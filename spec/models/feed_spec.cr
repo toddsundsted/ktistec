@@ -155,7 +155,8 @@ Spectator.describe Feed do
       before_each { feed.params = JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h }
 
       it "keeps the verdicts" do
-        expect { feed.save }.not_to change { Feed::Verdict.count(id: feed_verdict.id) }.from(1)
+        feed.save
+        expect(Feed::Verdict.find?(feed_verdict.id)).not_to be_nil
       end
     end
   end
@@ -210,7 +211,7 @@ Spectator.describe Feed do
         pre_condition { expect(feed.save.slug).to eq("the-fediverse") }
 
         it "keeps the slug" do
-          expect { feed.assign(name: "Something Else").save }.not_to change { Feed.find(feed.id).slug }
+          expect { feed.assign(name: "Something Else").save }.not_to change { feed.reload!.slug }
         end
       end
 
@@ -274,11 +275,11 @@ Spectator.describe Feed do
 
     it "persists the transition" do
       feed.publish
-      expect(Feed.find(feed.id).draft).to be_false
+      expect(feed.reload!.draft).to be_false
     end
 
     it "generates a slug" do
-      expect { feed.publish }.to change { Feed.find(feed.id).slug }.from(nil).to("the-fediverse")
+      expect { feed.publish }.to change { feed.reload!.slug }.from(nil).to("the-fediverse")
     end
 
     context "given a copy" do
@@ -292,7 +293,7 @@ Spectator.describe Feed do
       end
 
       it "inherits the slug" do
-        expect { feed.publish }.to change { Feed.find(feed.id).slug }.from(nil).to("the-original")
+        expect { feed.publish }.to change { feed.reload!.slug }.from(nil).to("the-original")
       end
     end
   end
@@ -319,7 +320,7 @@ Spectator.describe Feed do
     let_create(:feed, params: JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}})).as_h)
 
     it "round-trips through the database" do
-      params = Feed.find(feed.id).params
+      params = feed.reload!.params
       expect(params["keywords"].as_h["any"].as_a.map(&.as_s)).to eq(["alpha", "beta"])
     end
   end
@@ -328,7 +329,7 @@ Spectator.describe Feed do
     let_create(:feed, examples: [Feed::Example.new("https://remote/objects/1", true)])
 
     it "round-trips through the database" do
-      examples = Feed.find(feed.id).examples
+      examples = feed.reload!.examples
       expect(examples.size).to eq(1)
       expect(examples.first.object_iri).to eq("https://remote/objects/1")
       expect(examples.first.included).to be_true
@@ -397,7 +398,8 @@ Spectator.describe Feed do
     before_each { put_in_feed(other, another) }
 
     it "does not delete the feed's verdicts" do
-      expect { feed.destroy }.not_to change { Feed::Verdict.count(id: feed_verdict.id) }.from(1)
+      feed.destroy
+      expect(Feed::Verdict.find?(feed_verdict.id)).not_to be_nil
     end
 
     it "deletes the feed's materialized rows" do

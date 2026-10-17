@@ -24,13 +24,7 @@ Spectator.describe Feed::Backend do
 
   let(backend) { CannedBackend.new }
 
-  around_each do |proc|
-    begin
-      proc.call
-    ensure
-      described_class.unregister("canned")
-    end
-  end
+  after_each { described_class.unregister("canned") }
 
   describe ".register" do
     it "returns the backend" do
@@ -57,6 +51,13 @@ Spectator.describe Feed::Backend do
 
     it "returns nil" do
       expect(described_class.find?("missing")).to be_nil
+    end
+  end
+
+  describe ".names" do
+    it "returns the names of the registered backends" do
+      described_class.register("canned", backend)
+      expect(described_class.names).to contain("criteria", "canned")
     end
   end
 end

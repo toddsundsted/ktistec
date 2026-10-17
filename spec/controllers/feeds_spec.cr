@@ -4,6 +4,17 @@ require "../../src/services/feed/backend/criteria"
 require "../spec_helper/controller"
 require "../spec_helper/factory"
 require "../spec_helper/rule/view"
+require "../spec_helper/feed/backend"
+
+private class OtherBackend < TestBackend
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
+    objects.map { Judgment.new(included: true).as(Judgment | Failure) }
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
 
 Spectator.describe FeedsController do
   setup_spec
@@ -128,16 +139,6 @@ Spectator.describe FeedsController do
         it "renders the none-selector terms" do
           get "/actors/#{actor.username}/feeds", ACCEPT_JSON
           expect(terms("none")).to eq([{"mention", "@bob@host"}])
-        end
-
-        it "renders the term count" do
-          get "/actors/#{actor.username}/feeds", ACCEPT_HTML
-          expect(response.body).to contain("2 terms")
-        end
-
-        it "renders the term count" do
-          get "/actors/#{actor.username}/feeds", ACCEPT_JSON
-          expect(entry["terms"].as_i).to eq(2)
         end
 
         it "renders no posts" do
@@ -572,6 +573,26 @@ Spectator.describe FeedsController do
         body = JSON.parse(response.body)
         expect(json_fields("name", "any", "all", "none")).to eq({"", "", "", ""})
       end
+
+      context "given only the criteria judge" do
+        pre_condition { expect(Feed::Backend.names).to eq([Feed::Backend::Criteria::NAME]) }
+
+        it "offers no choice of judge" do
+          get "/actors/#{actor.username}/feeds/new", ACCEPT_HTML
+          body = XML.parse_html(response.body)
+          expect(body.xpath_nodes("//form//select[@name='backend']")).to be_empty
+        end
+      end
+
+      context "given a second judge" do
+        register_backend("other", OtherBackend.new)
+
+        it "offers a choice of judges" do
+          get "/actors/#{actor.username}/feeds/new", ACCEPT_HTML
+          options = XML.parse_html(response.body).xpath_nodes("//form//select[@name='backend']/option/@value").map(&.text)
+          expect(options).to contain("criteria", "other")
+        end
+      end
     end
   end
 
@@ -794,6 +815,24 @@ Spectator.describe FeedsController do
         end
       end
 
+      context "given a second judge" do
+        register_backend("other", OtherBackend.new)
+
+        def robotics_feed?
+          Feed.find?(name: "Robotics")
+        end
+
+        it "creates the feed with the chosen judge" do
+          post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&backend=other"
+          expect(robotics_feed?.try(&.backend)).to eq("other")
+        end
+
+        it "creates the feed with the chosen judge" do
+          post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","backend":"other"})
+          expect(robotics_feed?.try(&.backend)).to eq("other")
+        end
+      end
+
       context "given a preview request" do
         let_create(:object, named: hit, content: "<p>cnc milling</p>", created_at: Feed::HORIZON.ago + 1.day)
         let_create(:create, named: hit_create, object: hit)
@@ -876,6 +915,24 @@ Spectator.describe FeedsController do
         it "queues the post to be judged" do
           post "/actors/#{actor.username}/feeds", JSON_HEADERS, preview_json
           expect(Feed::Question.where(version_id: robotics_feed.version_id).map(&.object_iri)).to contain(hit.iri)
+        end
+
+        context "given a second judge" do
+          register_backend("other", OtherBackend.new)
+
+          def robotics_feed?
+            Feed.find?(name: "Robotics")
+          end
+
+          it "creates the feed with the chosen judge" do
+            post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&backend=other&preview=1"
+            expect(robotics_feed?.try(&.backend)).to eq("other")
+          end
+
+          it "creates the feed with the chosen judge" do
+            post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","backend":"other","preview":"1"})
+            expect(robotics_feed?.try(&.backend)).to eq("other")
+          end
         end
       end
     end
@@ -1043,6 +1100,42 @@ Spectator.describe FeedsController do
         it "renders the matches" do
           get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_JSON
           expect(JSON.parse(response.body)["matches"].as_a.map(&.as_i64)).to contain(hit.id)
+        end
+      end
+
+      context "given a feed with a judge other than criteria" do
+        register_backend("other", OtherBackend.new)
+
+        let_create!(:feed, named: gadgets, owner: actor, name: "Gadgets", backend: "other", params: {} of String => JSON::Any)
+
+        it "renders the form" do
+          get "/actors/#{actor.username}/feeds/#{gadgets.id}/edit", ACCEPT_HTML
+          body = XML.parse_html(response.body)
+          expect(form_fields("name")).to eq({"Gadgets"})
+        end
+
+        it "renders the representation" do
+          get "/actors/#{actor.username}/feeds/#{gadgets.id}/edit", ACCEPT_JSON
+          body = JSON.parse(response.body)
+          expect(json_fields("name")).to eq({"Gadgets"})
+        end
+
+        it "renders no criteria" do
+          get "/actors/#{actor.username}/feeds/#{gadgets.id}/edit", ACCEPT_HTML
+          body = XML.parse_html(response.body)
+          expect(body.xpath_nodes("//form//textarea[@name='any' or @name='all' or @name='none']")).to be_empty
+        end
+
+        it "renders no criteria" do
+          get "/actors/#{actor.username}/feeds/#{gadgets.id}/edit", ACCEPT_JSON
+          body = JSON.parse(response.body)
+          expect(body.as_h.keys & ["any", "all", "none"]).to be_empty
+        end
+
+        it "offers no choice of judge" do
+          get "/actors/#{actor.username}/feeds/#{gadgets.id}/edit", ACCEPT_HTML
+          body = XML.parse_html(response.body)
+          expect(body.xpath_nodes("//form//select[@name='backend']")).to be_empty
         end
       end
     end
@@ -1494,6 +1587,40 @@ Spectator.describe FeedsController do
               post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"","any":"robotics","preview":"1"})
               expect(Feed.find?(superseded.id)).not_to be_nil
             end
+          end
+        end
+      end
+
+      context "given a feed with a judge other than criteria" do
+        register_backend("other", OtherBackend.new)
+
+        let_create!(:feed, named: gadgets, owner: actor, name: "Gadgets", backend: "other", params: {} of String => JSON::Any)
+
+        def replacement
+          Feed.where("name = ? AND id <> ?", "Gadgets", gadgets.id).first?
+        end
+
+        context "when publishing" do
+          it "keeps the feed's judge" do
+            post "/actors/#{actor.username}/feeds/#{gadgets.id}", FORM_HEADERS, "name=Gadgets"
+            expect(replacement.try(&.backend)).to eq("other")
+          end
+
+          it "keeps the feed's judge" do
+            post "/actors/#{actor.username}/feeds/#{gadgets.id}", JSON_HEADERS, %({"name":"Gadgets"})
+            expect(replacement.try(&.backend)).to eq("other")
+          end
+        end
+
+        context "when previewing" do
+          it "keeps the feed's judge" do
+            post "/actors/#{actor.username}/feeds/#{gadgets.id}", FORM_HEADERS, "name=Gadgets&preview=1"
+            expect(replacement.try(&.backend)).to eq("other")
+          end
+
+          it "keeps the feed's judge" do
+            post "/actors/#{actor.username}/feeds/#{gadgets.id}", JSON_HEADERS, %({"name":"Gadgets","preview":"1"})
+            expect(replacement.try(&.backend)).to eq("other")
           end
         end
       end

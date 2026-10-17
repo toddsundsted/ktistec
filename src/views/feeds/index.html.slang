@@ -43,7 +43,7 @@
             else
               stats.count > 0 ? pluralize(stats.count, "post") : "no posts"
             end
-          _meta = [pluralize(summary.count, "term"), _posts]
+          _meta = [_posts]
           if (_newest = stats.newest)
             _meta << "newest #{distance_of_time_in_words(_newest)} ago"
           end

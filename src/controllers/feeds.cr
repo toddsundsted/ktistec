@@ -110,7 +110,7 @@ class FeedsController
       not_found
     end
 
-    feed = Feed.new(owner: account.actor, backend: "criteria", name: "")
+    feed = Feed.new(owner: account.actor, backend: Feed::Backend::Criteria::NAME, name: "")
 
     criteria = form_criteria(env, feed)
 
@@ -124,10 +124,11 @@ class FeedsController
 
     cap_request_body env, MAX_REQUEST_BYTES
 
+    backend = backend_param(env)
     params = feed_params(env)
 
     if previewing?(env)
-      feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: true, floor: Time.utc - Feed::HORIZON}))
+      feed = Feed.new(**params.merge({owner: account.actor, backend: backend, draft: true, floor: Time.utc - Feed::HORIZON}))
       if feed.valid?
         feed.save
         Rules::Feeds.register(feed)
@@ -138,7 +139,7 @@ class FeedsController
         unprocessable_entity "feeds/new", env: env, feed: feed, criteria: criteria, contents: nil
       end
     else
-      feed = Feed.new(**params.merge({owner: account.actor, backend: "criteria", draft: false, floor: Time.utc - Feed::HORIZON}))
+      feed = Feed.new(**params.merge({owner: account.actor, backend: backend, draft: false, floor: Time.utc - Feed::HORIZON}))
       if feed.valid?
         feed.save
         Rules::Feeds.register(feed)
@@ -221,7 +222,7 @@ class FeedsController
       if previewing?(env)
         if feed.assign(**params).valid?
           feed.drafts.each { |draft| unregister_and_destroy(draft) }
-          copy = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor})).save
+          copy = Feed.new(**params.merge({owner: feed.owner, backend: feed.backend, draft: true, copy_of: feed.id, floor: feed.floor})).save
           Rules::Feeds.register(copy)
           queue_preview(copy)
           redirect edit_actor_feed_path(feed.owner, copy)
@@ -230,7 +231,7 @@ class FeedsController
           unprocessable_entity "feeds/edit", env: env, feed: feed, criteria: criteria, contents: nil
         end
       else
-        published = Feed.new(**params.merge({owner: feed.owner, backend: "criteria", draft: true, copy_of: feed.id, floor: feed.floor}))
+        published = Feed.new(**params.merge({owner: feed.owner, backend: feed.backend, draft: true, copy_of: feed.id, floor: feed.floor}))
         if published.valid?
           feed.drafts.each { |draft| unregister_and_destroy(draft) }
           published.save
@@ -300,6 +301,14 @@ class FeedsController
   private def self.previewing?(env)
     params = normalize_params(env.params.body.presence || env.params.json)
     params.has_key?("preview")
+  end
+
+  # Returns the judge the submission names, or the criteria judge if
+  # it names none.
+  #
+  private def self.backend_param(env)
+    params = normalize_params(env.params.body.presence || env.params.json)
+    params["backend"]?.as?(String) || Feed::Backend::Criteria::NAME
   end
 
   private def self.feed_params(env)

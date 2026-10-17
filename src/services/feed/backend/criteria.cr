@@ -20,6 +20,8 @@ class Feed
     # wins, across groups.
     #
     class Criteria < Backend
+      NAME = "criteria"
+
       REVISION = "1"
 
       def revision(params : Hash(String, JSON::Any)) : String
@@ -348,6 +350,6 @@ class Feed
       GROUPS = [Keywords.new, Hashtags.new, Mentions.new] of Group
     end
 
-    register "criteria", Criteria.new
+    register Criteria::NAME, Criteria.new
   end
 end

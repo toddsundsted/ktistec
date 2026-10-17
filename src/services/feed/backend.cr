@@ -82,10 +82,16 @@ class Feed
       @@registry[name] = backend
     end
 
-    # Returns the backend.
+    # Returns the registered backend for a name, or `nil`.
     #
     def self.find?(name : String) : Backend?
       @@registry[name]?
+    end
+
+    # Returns the names of the registered backends.
+    #
+    def self.names : Array(String)
+      @@registry.keys
     end
   end
 end

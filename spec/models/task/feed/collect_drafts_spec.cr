@@ -1,10 +1,11 @@
-require "../../../src/models/task/collect_feed_drafts"
-require "../../../src/services/feed/backend/criteria"
+require "../../../../src/models/task/feed/collect_drafts"
+require "../../../../src/services/feed/backend/criteria"
 
-require "../../spec_helper/base"
-require "../../spec_helper/factory"
+require "../../../spec_helper/base"
+require "../../../spec_helper/factory"
+require "../../../spec_helper/rule/view"
 
-Spectator.describe Task::CollectFeedDrafts do
+Spectator.describe Task::Feed::CollectDrafts do
   setup_spec
 
   def materialized_count(feed)
@@ -35,17 +36,23 @@ Spectator.describe Task::CollectFeedDrafts do
         expect(subject.perform).to eq(1)
       end
 
+      context "that is registered" do
+        preserve_view_registry
+
+        before_each { Rules::Feeds.register(draft) }
+
+        it "unregisters the draft's view" do
+          subject.perform
+          expect(Rules::View.registry.map(&.type)).not_to contain(draft.feed_type)
+        end
+      end
+
       context "with contents" do
         let_build(:object)
-        let_create!(:feed_verdict, feed: draft, object: object)
 
         before_each { put_in_feed(draft, object) }
 
         pre_condition { expect(materialized_count(draft)).to eq(1) }
-
-        it "deletes the draft's verdicts" do
-          expect { subject.perform }.to change { Feed::Verdict.count(feed_id: draft.id) }.from(1).to(0)
-        end
 
         it "deletes the draft's materialized rows" do
           expect { subject.perform }.to change { materialized_count(draft) }.from(1).to(0)

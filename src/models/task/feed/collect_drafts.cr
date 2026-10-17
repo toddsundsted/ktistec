@@ -1,15 +1,15 @@
-require "../task"
-require "./mixins/singleton"
-require "../feed"
+require "../../task"
+require "../mixins/singleton"
+require "../../feed"
+require "../../../rules/feeds"
 
 class Task
   # Collection task for abandoned feed drafts.
   #
   # Drafts are destroyed one at a time, through the model, so
-  # `Feed#before_destroy` deletes each draft's verdicts and
-  # materialized rows.
+  # `Feed#before_destroy` deletes each draft's materialized rows.
   #
-  class CollectFeedDrafts < Task
+  class Feed::CollectDrafts < Task
     include Singleton
 
     Log = ::Log.for(self)
@@ -31,8 +31,11 @@ class Task
     end
 
     private def collect_abandoned_drafts(max_age_hours : Int32)
-      drafts = Feed.where("draft = 1 AND updated_at < ?", max_age_hours.hours.ago)
-      drafts.each(&.destroy)
+      drafts = ::Feed.where("draft = 1 AND updated_at < ?", max_age_hours.hours.ago)
+      drafts.each do |draft|
+        Rules::Feeds.unregister(draft)
+        draft.destroy
+      end
       drafts.size
     end
   end

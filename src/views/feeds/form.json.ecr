@@ -1,11 +1,17 @@
 {
 <%= error_block(feed) %>
-<%= field_pair(feed, id) %>
-<%= field_pair(feed, name) %>
-<%= field_pair(feed, description) %>
+<%- if feed.copy_of -%>
+"copy_of":<%= feed.copy_of %>,
+<%- end -%>
+<%- if contents -%>
+"matches":<%= contents.map(&.id).to_a.to_json %>,
+<%- end -%>
+<%- if feed.backend == Feed::Backend::Criteria::NAME -%>
 "any":<%= criteria[:any].to_json %>,
 "all":<%= criteria[:all].to_json %>,
-"none":<%= criteria[:none].to_json %><% if contents %>,
-"matches":<%= contents.map(&.id).to_a.to_json %><% end %><% if feed.copy_of %>,
-"copy_of":<%= feed.copy_of %><% end %>
+"none":<%= criteria[:none].to_json %>,
+<%- end -%>
+<%= field_pair(feed, id) %>
+<%= field_pair(feed, name) %>
+<%= field_pair(feed, description, comma: false) %>
 }

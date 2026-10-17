@@ -1,151 +1,84 @@
 require "../../models/feed"
+require "../../models/feed/question"
 require "../../models/feed/verdict"
-require "../../rules/feeds"
-require "../../rules/maintainer"
-require "../../rules/view/feed"
 require "./backend"
 require "./candidates"
+require "./queue"
 
 class Feed
-  # The synchronous judging entrypoint.
+  # Judging.
   #
-  # Given a feed: fetch its candidates, judge them via the feed's
-  # backend, write verdicts, and after each write explicitly reconcile
-  # the feed's view for that object.
-  #
-  # Invariant: a judge pass must not yield to another fiber between
-  # candidate selection and its last verdict write. A criteria edit
-  # deletes the feed's verdicts (see `Feed#before_update`); a verdict
-  # written after that delete from a stale in-flight pass would
-  # survive as apparently current, and candidates with verdicts are
-  # never re-judged.
+  # Given a batch of questions from the queue: ask the judge and write
+  # the verdicts.
   #
   module Judging
     extend self
 
     Log = ::Log.for(self)
 
-    # Judges a feed's unjudged candidates, most recently arrived
-    # first.
+    # Answers a batch of questions from the queue.
     #
-    # `limit` caps how many candidates are scanned; `match_limit`
-    # stops the scan early once that many matches have been found. A
-    # verdict is written for every candidate scanned (included and
-    # excluded alike).
+    # The questions must all be on one version.
     #
-    # Returns the number of candidates scanned.
-    #
-    def judge(feed : ::Feed, limit : Int32? = nil, match_limit : Int32? = nil) : Int32
-      unless (backend = Backend.find?(feed.backend))
-        raise "is not a registered backend: #{feed.backend}"
+    def answer(batch : Array(Question)) : Nil
+      return unless (version_id = batch.first?.try(&.version_id))
+      feeds = ::Feed.where(version_id: version_id)
+      return unless (feed = feeds.first?)
+      return unless (backend = Backend.find?(feed.backend))
+      asked = batch.compact_map do |question|
+        next unless (object = ActivityPub::Object.find?(iri: question.object_iri))
+        next unless feeds.any? { |each| Candidates.arrival_for(each, object) }
+        {question, object}
       end
-      view = Rules::Feeds.view_for(feed)
-      candidates = Candidates.candidates_for(feed, limit: limit)
-      matches = 0
-      scanned = 0
-      candidates.each do |object|
-        break if match_limit && matches >= match_limit
-        judgment = backend.judge(feed, [object]).first
-        write_verdict(feed, object, object.created_at, judgment)
-        Rules::Maintainer.reconcile_object_for(view, object.iri)
-        matches += 1 if judgment.included
-        scanned += 1
+      return if asked.empty?
+      answers = ask(backend, feed, asked.map(&.last))
+      # the version may have been abandoned while the judge answered
+      return if ::Feed.count(version_id: version_id) == 0
+      asked.zip(answers) do |(question, object), answer|
+        write_verdict(feed, object, answer, live: question.live)
       end
-      scanned
     end
 
-    # Re-judges the objects a feed currently contains under another
-    # feed's criteria, seeding the survivors into the target feed.
+    # Asks the judge about the objects.
     #
-    # Used at the publish transition so editing a feed's criteria no
-    # longer discards its accumulated contents.
-    #
-    # Returns the number of survivors seeded.
-    #
-    def rejudge_contents(source : ::Feed, target : ::Feed) : Int32
-      unless (backend = Backend.find?(target.backend))
-        raise "is not a registered backend: #{target.backend}"
-      end
-      view = Rules::Feeds.view_for(target)
-      seeded = 0
-      Verdict.where(feed_id: source.id, included: true).each do |verdict|
-        next unless (object = verdict.object?)
-        judgment = backend.judge(target, [object]).first
-        next unless judgment.included
-        write_verdict(target, object, verdict.position, judgment)
-        Rules::Maintainer.reconcile_object_for(view, object.iri)
-        seeded += 1
-      end
-      seeded
+    private def ask(backend, feed, objects) : Array(Backend::Judgment | Backend::Failure)
+      backend.judge(feed, objects)
+    rescue err : Backend::PermanentError
+      objects.map { Backend::Failure.new(:permanent, err.message).as(Backend::Judgment | Backend::Failure) }
+    rescue err
+      objects.map { Backend::Failure.new(:transient, err.message).as(Backend::Judgment | Backend::Failure) }
     end
 
-    # The result of one backfill batch.
-    #
-    # `cursor` is the object id to resume below. `done` reports that
-    # the scan has reached the feed's floor.
-    #
-    record Batch, scanned : Int32, included : Int32, cursor : Int64?, done : Bool
+    RETRY_DELAY = 5.minutes
 
-    # Judges one batch of a feed's unjudged candidates, newest first.
-    #
-    # Writes a verdict only for posts the feed includes. An excluded
-    # post therefore stays a candidate. Skipping excluded verdicts
-    # keeps the backfill from writing a row for every post the server
-    # has ever held, for every feed.
-    #
-    def backfill(feed : ::Feed, cursor : Int64?, limit : Int32, floor_id : Int64? = nil) : Batch
-      unless (backend = Backend.find?(feed.backend))
-        raise "is not a registered backend: #{feed.backend}"
-      end
-      view = Rules::Feeds.view_for(feed)
-      candidates = Candidates.candidates_for(feed, cursor, limit, floor_id)
-      included = 0
-      candidates.each do |object|
-        judgment = backend.judge(feed, [object]).first
-        if judgment.included
-          write_verdict(feed, object, object.created_at, judgment)
-          Rules::Maintainer.reconcile_object_for(view, object.iri)
-          included += 1
+    private def write_verdict(feed, object, answer : Backend::Judgment | Backend::Failure, live : Bool)
+      version_id = feed.version_id
+      verdict = Verdict.find?(version_id: version_id, object_iri: object.iri)
+      case answer
+      in Backend::Failure
+        Log.warn { "judging #{object.iri} for feed #{feed.id} failed (#{answer.kind.to_s.downcase}): #{answer.reason}" }
+        included = false
+        failure =
+          case answer.kind
+          in .transient? then Verdict::TRANSIENT
+          in .permanent? then Verdict::PERMANENT
+          end
+      in Backend::Judgment
+        unless answer.included
+          verdict.try(&.destroy)
+          return
         end
+        included, failure = true, nil
       end
-      # the scan never leaves the feed's window, so a short batch
-      # means no unjudged candidates remain.
-      Batch.new(
-        scanned: candidates.size,
-        included: included,
-        cursor: candidates.last?.try(&.id),
-        done: candidates.size < limit,
-      )
-    end
-
-    # Judges a single object against every registered feed, writing
-    # (or refreshing) each feed's verdict.
-    #
-    def judge_arrival(object : ActivityPub::Object) : Nil
-      Rules::View.registry.each do |view|
-        next unless view.is_a?(Rules::View::Feed)
-        next unless (feed = ::Feed.find?(view.feed_id))
-        next unless (backend = Backend.find?(feed.backend))
-        if (arrival = Candidates.arrival_for(feed, object))
-          judgment = backend.judge(feed, [object]).first
-          write_verdict(feed, object, arrival, judgment)
-        elsif (verdict = Verdict.find?(feed_id: feed.id, object_iri: object.iri))
-          verdict.assign(included: false, reason: "not a candidate").save
-        end
-      end
-    end
-
-    # Writes (or refreshes) a feed's verdict for one object.
-    #
-    private def write_verdict(feed, object, arrival, judgment)
-      verdict =
-        Verdict.find?(feed_id: feed.id, object_iri: object.iri) ||
-          Verdict.new(feed: feed, object: object, included: judgment.included, position: arrival)
+      verdict ||= Verdict.new(version_id: version_id, object: object, included: included)
       verdict.assign(
-        included: judgment.included,
-        reason: judgment.reason,
-        position: arrival,
+        included: included,
+        failure: failure,
+        reason: answer.reason,
       ).save
+      if failure == Verdict::TRANSIENT && version_id
+        Queue.requeue(version_id, object.iri, live: live, due_at: RETRY_DELAY.from_now)
+      end
     end
   end
 end

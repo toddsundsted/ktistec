@@ -28,23 +28,6 @@ Spectator.describe Feed::Candidates do
         expect(candidates).to eq([object])
       end
 
-      context "when the object has a verdict" do
-        let_create!(:feed_verdict, feed: feed, object: object, included: false)
-
-        it "does not return the object" do
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(1)
-          expect(candidates).to be_empty
-        end
-
-        context "and the criteria change" do
-          before_each { feed.assign(params: JSON.parse(%({"keywords": {"any": ["changed"]}})).as_h).save }
-
-          it "returns the object" do
-            expect(candidates).to eq([object])
-          end
-        end
-      end
-
       # deletion and blocking are reversible, and neither goes through
       # `save`, so nothing would re-judge on reversal
 

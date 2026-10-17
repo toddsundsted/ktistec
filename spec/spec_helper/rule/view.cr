@@ -1,3 +1,18 @@
+# Saves the view registry before each example in the enclosing
+# group, and restores it after.
+#
+macro preserve_view_registry
+  around_each do |proc|
+    saved = Rules::View.registry.dup
+    begin
+      proc.call
+    ensure
+      Rules::View.registry.clear
+      Rules::View.registry.concat(saved)
+    end
+  end
+end
+
 module ViewSpecHelper
   # The membership rows (`from_iri`, `to_iri`, `position`).
   #

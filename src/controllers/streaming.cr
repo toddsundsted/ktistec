@@ -2,6 +2,7 @@ require "../framework/controller"
 require "../framework/topic"
 
 require "./deck"
+require "./feeds"
 require "../rules/feeds"
 require "../models/feed"
 require "../models/relationship/content/follow/hashtag"
@@ -64,6 +65,14 @@ class StreamingController
   def self.replace_pane_refresh(io, actor, feed, id = false)
     body = render "src/views/deck/refresh.html.slang"
     stream_replace(io, target: "feed-#{feed.id}-refresh", body: body, id: id)
+  end
+
+  # Renders action to replace a feed's preview.
+  #
+  def self.replace_feed_preview(io, env, feed)
+    contents = feed.contents(limit: FeedsController.match_limit) # ameba:disable Lint/UselessAssign
+    body = render "src/views/feeds/preview.html.slang"
+    stream_replace(io, target: "feed_preview", body: body)
   end
 
   # Limits the number of long-lived connections.
@@ -328,6 +337,27 @@ class StreamingController
           if (name = subject) && (feed = panes[name]?)
             advance_pane(env.response, actor, feed, baselines)
           end
+        end
+      end
+    end
+  end
+
+  get "/stream/feeds/:id" do |env|
+    id = id_param(env)
+    unless (feed = Feed.find?(id)) && feed.owner_iri == env.account.actor.iri
+      not_found
+    end
+    setup_response(env.response)
+    replace_feed_preview(env.response, env, feed)
+    subscribe "/actor/refresh", Rules::Feeds.view_for(feed).subjects(env.account.username).first do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        else
+          replace_feed_preview(env.response, env, feed)
         end
       end
     end

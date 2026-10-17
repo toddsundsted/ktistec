@@ -3,6 +3,67 @@ require "../../../src/services/feed/backend/criteria"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
+require "../../spec_helper/feed/backend"
+
+private class FailingBackend < TestBackend
+  class_property error : Exception = Feed::Backend::TransientError.new("judge unavailable")
+
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
+    objects.map do |object|
+      raise FailingBackend.error if object.content.try(&.includes?("boom"))
+      Judgment.new(included: true).as(Judgment | Failure)
+    end
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
+
+private class ReportingBackend < TestBackend
+  class_property kind : Feed::Backend::Failure::Kind = :transient
+
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
+    objects.map do |object|
+      if object.content.try(&.includes?("boom"))
+        Failure.new(ReportingBackend.kind, "post is unreadable")
+      else
+        Judgment.new(included: true)
+      end
+    end
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
+
+private class RecordingBackend < TestBackend
+  class_getter calls = [] of Array(String)
+
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
+    RecordingBackend.calls << objects.map(&.iri)
+    objects.map { Judgment.new(included: true).as(Judgment | Failure) }
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
+
+# Deletes the feeds it judges for, as if their owner deleted them
+# while it was answering.
+#
+private class FeedDeletingBackend < TestBackend
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
+    Feed.where(version_id: feed.version_id).each(&.destroy)
+    objects.map { Judgment.new(included: true).as(Judgment | Failure) }
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
 
 Spectator.describe Feed::Judging do
   setup_spec
@@ -11,414 +72,265 @@ Spectator.describe Feed::Judging do
 
   let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
 
-  def materialized
-    Ktistec.database.query_all(
-      "SELECT to_iri, created_at FROM relationships WHERE type = ?",
-      feed.feed_type, as: {String, Time})
+  def retry_for(object, feed = self.feed)
+    Feed::Question.find?(version_id: feed.version_id, object_iri: object.iri, batched: false)
   end
 
-  describe ".judge" do
-    it "judges nothing" do
-      expect(Feed::Judging.judge(feed)).to eq(0)
+  describe ".answer" do
+    let_create!(:object, named: hit, content: "<p>something alpha something</p>")
+
+    let_create(:feed_question, named: question, feed: feed, object: hit, batched: true)
+
+    def verdict_for(object, feed = self.feed)
+      Feed::Verdict.find?(version_id: feed.version_id, object_iri: object.iri)
     end
 
-    context "given objects" do
-      let_create!(:object, named: hit, content: "<p>something alpha something</p>")
-      let_create!(:object, named: miss, content: "<p>something gamma something</p>")
-
-      it "judges the candidates" do
-        expect(Feed::Judging.judge(feed)).to eq(2)
-      end
-
-      it "writes a verdict per candidate" do
-        expect { Feed::Judging.judge(feed) }
-          .to change { Feed::Verdict.count(feed_id: feed.id) }.from(0).to(2)
-      end
-
-      it "includes the matching object" do
-        Feed::Judging.judge(feed)
-        verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri)
-        expect(verdict.included).to be_true
-        expect(verdict.reason).to match(/alpha/)
-        expect(verdict.position).to eq(hit.created_at)
-      end
-
-      it "excludes the non-matching object" do
-        Feed::Judging.judge(feed)
-        verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: miss.iri)
-        expect(verdict.included).to be_false
-      end
-
-      it "materializes the matching object at its position" do
-        Feed::Judging.judge(feed)
-        expect(materialized).to eq([{hit.iri, hit.created_at}])
-      end
-
-      it "judges nothing on a second run" do
-        Feed::Judging.judge(feed)
-        expect(Feed::Judging.judge(feed)).to eq(0)
-      end
-
-      it "judges candidates in batches ordered by arrival" do
-        expect(Feed::Judging.judge(feed, limit: 1)).to eq(1)
-        expect(Feed::Verdict.count(feed_id: feed.id, object_iri: miss.iri)).to eq(1)
-        expect(Feed::Judging.judge(feed, limit: 1)).to eq(1)
-        expect(Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri)).to eq(1)
-        expect(Feed::Judging.judge(feed, limit: 1)).to eq(0)
-      end
-
-      context "when the match limit is reached" do
-        # "something" matches both objects
-        let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["something"]}})).as_h)
-
-        pre_condition { expect(Feed::Candidates.candidates_for(feed).size).to eq(2) }
-
-        it "judges only the first candidate" do
-          expect(Feed::Judging.judge(feed, match_limit: 1)).to eq(1)
-        end
-
-        it "writes a verdict only for the judged candidate" do
-          expect { Feed::Judging.judge(feed, match_limit: 1) }
-            .to change { Feed::Verdict.count(feed_id: feed.id) }.from(0).to(1)
-        end
-
-        it "judges the unjudged candidate on a second run" do
-          Feed::Judging.judge(feed, match_limit: 1)
-          expect(Feed::Judging.judge(feed, match_limit: 1)).to eq(1)
-        end
-      end
-
-      context "when the policy is edited" do
-        before_each do
-          Feed::Judging.judge(feed)
-          feed.assign(params: JSON.parse(%({"keywords": {"any": ["gamma"]}})).as_h).save
-        end
-
-        pre_condition do
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(0)
-          expect(materialized).to be_empty
-        end
-
-        it "re-judges all candidates" do
-          expect(Feed::Judging.judge(feed)).to eq(2)
-        end
-
-        it "writes fresh verdicts" do
-          Feed::Judging.judge(feed)
-          expect(Feed::Verdict.count(feed_id: feed.id)).to eq(2)
-        end
-
-        it "repopulates the feed under the new policy" do
-          Feed::Judging.judge(feed)
-          expect(materialized).to eq([{miss.iri, miss.created_at}])
-        end
-
-        it "leaves no stale rows after a bounded re-judge" do
-          Feed::Judging.judge(feed, match_limit: 1)
-          expect(materialized).to eq([{miss.iri, miss.created_at}])
-        end
-      end
+    it "includes the matching object" do
+      Feed::Judging.answer([question])
+      expect(verdict_for(hit).try(&.included)).to be_true
     end
 
-    context "given an unregistered backend" do
-      before_each { feed.assign(backend: "missing").save(skip_validation: true) }
-
-      it "raises an error" do
-        expect { Feed::Judging.judge(feed) }.to raise_error(/is not a registered backend/)
-      end
+    it "records the judge's reason" do
+      Feed::Judging.answer([question])
+      expect(verdict_for(hit).try(&.reason)).to match(/alpha/)
     end
 
-    context "given a non-positive limit" do
-      it "raises an error" do
-        expect { Feed::Judging.judge(feed, limit: 0) }.to raise_error(ArgumentError, "limit must be positive")
-      end
-    end
-  end
-
-  describe ".rejudge_contents" do
-    let_create!(:feed, named: source, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
-    let_create!(:feed, named: target, owner: actor, params: JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h)
-
-    def materialized_in(feed)
-      Ktistec.database.query_all(
-        "SELECT to_iri, created_at FROM relationships WHERE type = ?",
-        feed.feed_type, as: {String, Time})
-    end
-
-    context "given included members of the source feed" do
-      let_build(:object, named: kept, content: "<p>alpha beta</p>")
-      let_build(:object, named: dropped, content: "<p>alpha gamma</p>")
-      let(kept_position) { Time.utc(2026, 1, 2) }
-      let_create!(:feed_verdict, named: nil, feed: source, object: kept, included: true, position: kept_position)
-      let_create!(:feed_verdict, named: nil, feed: source, object: dropped, included: true)
-
-      it "seeds the surviving member" do
-        Feed::Judging.rejudge_contents(source, target)
-        expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri).try(&.included)).to be_true
-      end
-
-      it "materializes the surviving member at its arrival position" do
-        Feed::Judging.rejudge_contents(source, target)
-        expect(materialized_in(target)).to eq([{kept.iri, kept_position}])
-      end
-
-      it "returns the number seeded" do
-        expect(Feed::Judging.rejudge_contents(source, target)).to eq(1)
-      end
-
-      it "writes only included verdicts" do
-        Feed::Judging.rejudge_contents(source, target)
-        expect(Feed::Verdict.count(feed_id: target.id)).to eq(1)
-      end
-
-      it "does not include the dropped member" do
-        Feed::Judging.rejudge_contents(source, target)
-        expect(Feed::Verdict.find?(feed_id: target.id, object_iri: dropped.iri)).to be_nil
-      end
-
-      it "leaves the source untouched" do
-        expect { Feed::Judging.rejudge_contents(source, target) }
-          .not_to change { Feed::Verdict.count(feed_id: source.id) }.from(2)
-      end
-
-      context "and an excluded member the target's criteria would match" do
-        let_build(:object, named: excluded, content: "<p>beta</p>")
-        let_create!(:feed_verdict, named: nil, feed: source, object: excluded, included: false)
-
-        pre_condition { expect(Feed::Verdict.find(feed_id: source.id, object_iri: excluded.iri).included).to be_false }
-
-        it "does not include the excluded member" do
-          Feed::Judging.rejudge_contents(source, target)
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri)).not_to be_nil
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: excluded.iri)).to be_nil
-        end
-      end
-
-      context "and a member whose object was deleted" do
-        let_build(:object, named: deleted, content: "<p>alpha beta</p>")
-        let_create!(:feed_verdict, named: nil, feed: source, object: deleted, included: true)
-
-        before_each { deleted.delete! }
-
-        pre_condition { expect(Feed::Verdict.find(feed_id: source.id, object_iri: deleted.iri).included).to be_true }
-
-        it "does not include the deleted member" do
-          Feed::Judging.rejudge_contents(source, target)
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: kept.iri)).not_to be_nil
-          expect(Feed::Verdict.find?(feed_id: target.id, object_iri: deleted.iri)).to be_nil
-        end
-      end
-
-      # in draft->publish the target already holds its own
-      # preview-window verdicts, so a survivor can arrive already
-      # having a target verdict; rejudge must upsert it, not add a
-      # second row..
-      context "and the target already has a verdict for the survivor" do
-        let(stale_position) { Time.utc(2020, 1, 1) }
-        let_create!(:feed_verdict, named: nil, feed: target, object: kept, included: true, position: stale_position)
-
-        pre_condition { expect(Feed::Verdict.count(feed_id: target.id, object_iri: kept.iri)).to eq(1) }
-
-        it "does not duplicate the survivor's verdict" do
-          expect { Feed::Judging.rejudge_contents(source, target) }
-            .not_to change { Feed::Verdict.count(feed_id: target.id, object_iri: kept.iri) }.from(1)
-        end
-
-        it "overwrites the position with the source's arrival" do
-          Feed::Judging.rejudge_contents(source, target)
-          expect(Feed::Verdict.find(feed_id: target.id, object_iri: kept.iri).position).to eq(kept_position)
-        end
-      end
-    end
-
-    context "given an unregistered target backend" do
-      before_each { target.assign(backend: "missing").save(skip_validation: true) }
-
-      it "raises an error" do
-        expect { Feed::Judging.rejudge_contents(source, target) }.to raise_error(/is not a registered backend/)
-      end
-    end
-  end
-
-  describe ".backfill" do
-    let(cursor) { nil }
-    let(limit) { 10 }
-
-    subject { Feed::Judging.backfill(feed, cursor, limit) }
-
-    it "scans nothing" do
-      expect(subject.scanned).to eq(0)
-    end
-
-    it "reports no cursor" do
-      expect(subject.cursor).to be_nil
-    end
-
-    it "is done" do
-      expect(subject.done).to be_true
-    end
-
-    context "given objects" do
-      let_create!(:object, named: hit, content: "<p>something alpha something</p>")
-      let_create!(:object, named: miss, content: "<p>something gamma something</p>")
-
-      it "scans both objects" do
-        expect(subject.scanned).to eq(2)
-      end
-
-      it "reports the last object scanned as the cursor" do
-        expect(subject.cursor).to eq(hit.id)
-      end
-
-      it "counts the matching object" do
-        expect(subject.included).to eq(1)
-      end
-
-      it "writes a verdict for the matching object" do
-        subject
-        expect(Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri).included).to be_true
-      end
-
-      # only `included` verdicts are written -- a verdict for every
-      # object the server has ever held, for every feed, is what the
-      # backfill must not write.
-      it "writes no verdict for the non-matching object" do
-        subject
-        expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: miss.iri)).to be_nil
-      end
-
-      it "materializes the matching object at its position" do
-        subject
-        expect(materialized).to eq([{hit.iri, hit.created_at}])
-      end
-
-      context "when the batch is truncated" do
-        let(limit) { 1 }
-
-        it "reports the last object scanned as the cursor" do
-          expect(subject.cursor).to eq(miss.id)
-        end
-
-        it "is not done" do
-          expect(subject.done).to be_false
-        end
-      end
-
-      context "when the feed's floor is at the oldest object" do
-        before_each { feed.assign(floor: hit.created_at).save }
-
-        it "does not scan the object at the floor" do
-          expect(subject.scanned).to eq(1)
-        end
-
-        it "writes no verdict for it" do
-          subject
-          expect(Feed::Verdict.find?(feed_id: feed.id, object_iri: hit.iri)).to be_nil
-        end
-      end
-
-      context "when the feed's floor is at the newest object" do
-        before_each { feed.assign(floor: miss.created_at).save }
-
-        it "scans nothing" do
-          expect(subject.scanned).to eq(0)
-        end
-
-        it "is done" do
-          expect(subject.done).to be_true
-        end
-      end
-    end
-
-    context "given an unregistered backend" do
-      before_each { feed.assign(backend: "missing").save(skip_validation: true) }
-
-      it "raises an error" do
-        expect { subject }.to raise_error(/is not a registered backend/)
-      end
-    end
-  end
-
-  describe ".judge_arrival" do
-    around_each do |proc|
-      saved = Rules::View.registry.dup
-      begin
-        proc.call
-      ensure
-        Rules::View.registry.clear
-        Rules::View.registry.concat(saved)
-      end
-    end
-
-    let_build(:object, named: hit, content: "<p>something alpha something</p>")
-    let_create(:create, named: hit_create, object: hit)
-    let_build(:object, named: miss, content: "<p>something gamma something</p>")
-    let_create(:create, named: miss_create, object: miss)
-
-    before_each do
-      put_in_inbox(actor, hit_create)
-      put_in_inbox(actor, miss_create)
-    end
-
-    pre_condition { expect(Feed::Verdict.count).to eq(0) }
-
-    context "when the feed is not registered" do
-      pre_condition { expect(Feed::Candidates.arrival_for(feed, hit)).not_to be_nil }
+    context "given a post that does not match" do
+      before_each { hit.assign(content: "<p>something gamma something</p>").save }
 
       it "writes no verdict" do
-        expect { Feed::Judging.judge_arrival(hit) }
-          .not_to change { Feed::Verdict.count(feed_id: feed.id) }.from(0)
+        Feed::Judging.answer([question])
+        expect(verdict_for(hit)).to be_nil
+      end
+
+      context "and an existing verdict" do
+        let_create!(:feed_verdict, named: nil, feed: feed, object: hit, included: true)
+
+        it "deletes the verdict" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit)).to be_nil
+        end
       end
     end
 
-    context "when the feed is registered" do
-      before_each { Rules::Feeds.register(feed) }
+    context "given a post that is not a candidate" do
+      before_each { hit.assign(visible: false).save }
 
-      it "does not materialize the feed itself" do
-        Feed::Judging.judge_arrival(hit)
-        expect(materialized).to be_empty
+      it "writes no verdict" do
+        Feed::Judging.answer([question])
+        expect(verdict_for(hit)).to be_nil
+      end
+    end
+
+    context "given another question in the batch" do
+      register_backend("recording", RecordingBackend.new)
+
+      let_create!(:feed, owner: actor, backend: "recording")
+      let_create!(:object, named: other, content: "<p>something else</p>")
+      let_create(:feed_question, named: second, feed: feed, object: other, batched: true)
+
+      before_each { RecordingBackend.calls.clear }
+
+      it "asks the judge once" do
+        Feed::Judging.answer([question, second])
+        expect(RecordingBackend.calls).to eq([[hit.iri, other.iri]])
       end
 
-      it "writes a verdict" do
-        expect { Feed::Judging.judge_arrival(hit) }
-          .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
+      it "writes a verdict for both" do
+        Feed::Judging.answer([question, second])
+        expect([verdict_for(hit), verdict_for(other)].map(&.try(&.included))).to eq([true, true])
       end
 
-      it "includes the matching object at its position" do
-        Feed::Judging.judge_arrival(hit)
-        verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: hit.iri)
-        expect(verdict.included).to be_true
-        expect(verdict.position).to eq(hit.created_at)
+      context "whose post is not a candidate" do
+        before_each { other.assign(visible: false).save }
+
+        it "does not ask the judge about it" do
+          Feed::Judging.answer([question, second])
+          expect(RecordingBackend.calls).to eq([[hit.iri]])
+        end
+
+        it "does not write a verdict for it" do
+          Feed::Judging.answer([question, second])
+          expect(verdict_for(other)).to be_nil
+        end
       end
+    end
 
-      context "given a matching object whose author is deleted" do
-        before_each { hit.attributed_to.delete! }
+    context "when the feed is deleted while the judge answers" do
+      register_backend("feed-deleting", FeedDeletingBackend.new)
 
-        it "writes a verdict" do
-          expect { Feed::Judging.judge_arrival(hit) }
-            .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
+      let_create!(:feed, owner: actor, backend: "feed-deleting")
+
+      it "discards the answer" do
+        Feed::Judging.answer([question])
+        expect(verdict_for(hit)).to be_nil
+      end
+    end
+
+    context "given a past failure" do
+      let_create!(:feed_verdict, named: nil, feed: feed, object: hit, included: false, failure: Feed::Verdict::TRANSIENT)
+
+      it "replaces the failure" do
+        Feed::Judging.answer([question])
+        expect(verdict_for(hit).try(&.failed?)).to be_false
+      end
+    end
+
+    context "when the judge fails" do
+      register_backend("failing", FailingBackend.new)
+
+      let_create!(:feed, owner: actor, backend: "failing")
+      let_create!(:object, named: hit, content: "<p>boom</p>")
+
+      context "and the failure is transient" do
+        before_each { FailingBackend.error = Feed::Backend::TransientError.new("judge unavailable") }
+
+        it "records a transient failure" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.failure)).to eq(Feed::Verdict::TRANSIENT)
+        end
+
+        it "records the failure's reason" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.reason)).to match(/judge unavailable/)
+        end
+
+        it "asks again later" do
+          Feed::Judging.answer([question])
+          expect(retry_for(hit).try(&.due_at)).to be_close(Feed::Judging::RETRY_DELAY.from_now, delta: 1.second)
+        end
+
+        it "asks again as backfill" do
+          Feed::Judging.answer([question])
+          expect(retry_for(hit).try(&.live)).to be_false
+        end
+
+        context "and the question is live" do
+          before_each { question.assign(live: true).save }
+
+          it "asks again as live" do
+            Feed::Judging.answer([question])
+            expect(retry_for(hit).try(&.live)).to be_true
+          end
+        end
+
+        context "given another question in the batch" do
+          let_create!(:object, named: other, content: "<p>something else</p>")
+          let_create(:feed_question, named: second, feed: feed, object: other, batched: true)
+
+          it "records a transient failure" do
+            Feed::Judging.answer([question, second])
+            expect(verdict_for(other).try(&.failure)).to eq(Feed::Verdict::TRANSIENT)
+          end
+
+          context "that is live" do
+            before_each { second.assign(live: true).save }
+
+            it "asks again as live" do
+              Feed::Judging.answer([question, second])
+              expect(retry_for(other).try(&.live)).to be_true
+            end
+          end
+        end
+
+        context "and the queue is full" do
+          let_create!(:feed_question, named: nil)
+          let_create!(:feed_question, named: nil)
+          let_create!(:feed_question, named: nil)
+
+          pre_condition { expect(Feed::Question.count(batched: false)).to be >= Feed::Queue.live_cap }
+
+          it "asks again" do
+            Feed::Judging.answer([question])
+            expect(retry_for(hit)).not_to be_nil
+          end
         end
       end
 
-      context "given a matching object whose author is blocked" do
-        before_each { hit.attributed_to.block! }
+      context "and the failure is permanent" do
+        before_each { FailingBackend.error = Feed::Backend::PermanentError.new("judge misconfigured") }
 
-        it "writes a verdict" do
-          expect { Feed::Judging.judge_arrival(hit) }
-            .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: hit.iri) }.from(0).to(1)
+        it "records a permanent failure" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.failure)).to eq(Feed::Verdict::PERMANENT)
+        end
+
+        it "records the failure's reason" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.reason)).to match(/judge misconfigured/)
+        end
+
+        it "does not ask again" do
+          Feed::Judging.answer([question])
+          expect(retry_for(hit)).to be_nil
         end
       end
 
-      context "given a non-matching object" do
-        it "writes a verdict" do
-          expect { Feed::Judging.judge_arrival(miss) }
-            .to change { Feed::Verdict.count(feed_id: feed.id, object_iri: miss.iri) }.from(0).to(1)
+      context "and the failure is unclassified" do
+        before_each { FailingBackend.error = Exception.new("judge crashed") }
+
+        it "records a transient failure" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.failure)).to eq(Feed::Verdict::TRANSIENT)
+        end
+      end
+    end
+
+    context "when the judge reports a failure" do
+      register_backend("reporting", ReportingBackend.new)
+
+      let_create!(:feed, owner: actor, backend: "reporting")
+      let_create!(:object, named: hit, content: "<p>boom</p>")
+
+      context "and the failure is transient" do
+        before_each { ReportingBackend.kind = :transient }
+
+        it "records a transient failure" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.failure)).to eq(Feed::Verdict::TRANSIENT)
         end
 
-        it "excludes the non-matching object" do
-          Feed::Judging.judge_arrival(miss)
-          verdict = Feed::Verdict.find(feed_id: feed.id, object_iri: miss.iri)
-          expect(verdict.included).to be_false
+        it "records the failure's reason" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.reason)).to match(/post is unreadable/)
+        end
+
+        it "asks again later" do
+          Feed::Judging.answer([question])
+          expect(retry_for(hit).try(&.due_at)).to be_close(Feed::Judging::RETRY_DELAY.from_now, delta: 1.second)
+        end
+
+        it "asks again as backfill" do
+          Feed::Judging.answer([question])
+          expect(retry_for(hit).try(&.live)).to be_false
+        end
+
+        context "and the question is live" do
+          before_each { question.assign(live: true).save }
+
+          it "asks again as live" do
+            Feed::Judging.answer([question])
+            expect(retry_for(hit).try(&.live)).to be_true
+          end
+        end
+      end
+
+      context "and the failure is permanent" do
+        before_each { ReportingBackend.kind = :permanent }
+
+        it "records a permanent failure" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.failure)).to eq(Feed::Verdict::PERMANENT)
+        end
+
+        it "records the failure's reason" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.reason)).to match(/post is unreadable/)
+        end
+
+        it "does not ask again" do
+          Feed::Judging.answer([question])
+          expect(retry_for(hit)).to be_nil
         end
       end
     end

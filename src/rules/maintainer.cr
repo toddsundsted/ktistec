@@ -24,7 +24,8 @@ module Rules
     #
     def reconcile(view : View) : Bool
       query, args = view.membership
-      apply(view.type, query, args, "1", Array(DB::Any).new, view.repositions?)
+      scope, scope_args = view.stored_scope
+      apply(view.type, query, args, scope, scope_args, view.repositions?)
     end
 
     # Re-evaluates one key to an insert, delete, reposition, or no-op.
@@ -44,8 +45,8 @@ module Rules
     # position has moved, in one transaction.
     #
     # `query` selects `(from_iri, to_iri, position)`; `scope` bounds the
-    # delete to the rows owned by the reconciled key (the whole
-    # collection, for the batch path).
+    # delete to the rows owned by the reconciled key (the view's
+    # stored scope, for the batch path).
     #
     private def apply(type : String, query : String, query_args : Array(DB::Any), scope : String, scope_args : Array(DB::Any), repositions : Bool) : Bool
       now = Time.utc

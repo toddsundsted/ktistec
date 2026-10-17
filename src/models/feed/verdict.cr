@@ -1,9 +1,9 @@
 require "../../framework/model"
 require "../../framework/model/common"
-require "../feed"
+require "./version"
 
 class Feed
-  # A judge's verdict on one object, for one feed.
+  # A judge's verdict on one object, for one version.
   #
   class Verdict
     include Ktistec::Model
@@ -12,9 +12,9 @@ class Feed
     @@table_name = "feed_verdicts"
 
     @[Persistent]
-    property feed_id : Int64?
-    belongs_to feed, class_name: ::Feed, foreign_key: feed_id, primary_key: id, inverse_of: verdicts
-    validates(feed) { "missing: #{feed_id}" unless feed? }
+    property version_id : Int64?
+    belongs_to version, class_name: Feed::Version, foreign_key: version_id, primary_key: id
+    validates(version) { "missing: #{version_id}" unless version? }
 
     @[Persistent]
     property object_iri : String?
@@ -27,10 +27,27 @@ class Feed
     @[Persistent]
     property reason : String?
 
-    # The time the object arrived -- the `created_at` of the earliest
-    # mailbox row that delivered it to the feed's owner.
-    #
+    TRANSIENT = "transient"
+    PERMANENT = "permanent"
+
     @[Persistent]
-    property position : Time
+    property failure : String?
+    validates(failure) do
+      if (failure = self.failure)
+        if !failure.in?(TRANSIENT, PERMANENT)
+          "is not a failure: #{failure}"
+        elsif included
+          "can't be included"
+        end
+      end
+    end
+
+    def excluded? : Bool
+      !included && !failed?
+    end
+
+    def failed? : Bool
+      !failure.nil?
+    end
   end
 end

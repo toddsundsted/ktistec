@@ -2,17 +2,10 @@ require "../../src/rules/view"
 require "../../src/rules/view/feed"
 
 require "../spec_helper/base"
+require "../spec_helper/rule/view"
 
 Spectator.describe Rules::View do
-  around_each do |proc|
-    saved = Rules::View.registry.dup
-    begin
-      proc.call
-    ensure
-      Rules::View.registry.clear
-      Rules::View.registry.concat(saved)
-    end
-  end
+  preserve_view_registry
 
   let(view) { Rules::View::Feed.new(feed_id: 1_i64, owner_iri: "https://test.test/actors/owner") }
 

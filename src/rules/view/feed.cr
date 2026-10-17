@@ -8,10 +8,35 @@ module Rules
     # instances are constructed and registered from those rows --
     # never here.
     #
-    # An object is a member when it has a verdict for the feed that is
-    # `included` and current.
+    # An object is a member when it is a candidate for the feed and
+    # has a verdict for the feed's version that is `included`.
     #
     class Feed < View
+      INBOX  = "Relationship::Content::Inbox"
+      OUTBOX = "Relationship::Content::Outbox"
+
+      # The candidate predicate, over `objects`. `Feed::Candidates`
+      # embeds it too, so membership and candidacy agree by
+      # construction. Binds the inbox and outbox types and the feed
+      # owner's IRI.
+      #
+      CANDIDATE_SQL = <<-SQL
+           objects.published IS NOT NULL
+           AND objects.special IS NULL
+           AND (
+             objects.visible = 1
+             OR EXISTS (
+               SELECT 1
+                 FROM relationships m
+                 JOIN activities a ON a.iri = m.to_iri
+                WHERE m.type IN (?, ?)
+                  AND m.from_iri = ?
+                  AND a.object_iri = objects.iri
+                  AND a.undone_at IS NULL
+             )
+           )
+      SQL
+
       getter feed_id : Int64
       getter owner_iri : String
 
@@ -23,24 +48,33 @@ module Rules
       end
 
       def membership(key : Key? = nil) : {String, Array(DB::Any)}
+        args = Array(DB::Any){@owner_iri, @feed_id, INBOX, OUTBOX, @owner_iri}
         if key
           scope = "AND v.object_iri = ?"
-          args = Array(DB::Any){@owner_iri, @feed_id, key[:to_iri]}
+          args << key[:to_iri]
         else
           scope = ""
-          args = Array(DB::Any){@owner_iri, @feed_id}
         end
         sql = <<-SQL
           SELECT ? AS from_iri,
                  v.object_iri AS to_iri,
-                 v.position AS position
-            FROM feed_verdicts v
-            JOIN objects o ON o.iri = v.object_iri
-           WHERE v.feed_id = ?
+                 objects.created_at AS position
+            FROM feeds f
+            JOIN feed_verdicts v ON v.version_id = f.version_id
+            JOIN objects ON objects.iri = v.object_iri
+           WHERE f.id = ?
              AND v.included = 1
+             AND (f.floor IS NULL OR objects.created_at > f.floor)
+             AND #{CANDIDATE_SQL}
              #{scope}
         SQL
         {sql, args}
+      end
+
+      # Every stored row belongs to the feed's owner.
+      #
+      def stored_scope : {String, Array(DB::Any)}
+        {"from_iri = ?", Array(DB::Any){@owner_iri}}
       end
 
       def project(object_iri : String) : Array(Key)

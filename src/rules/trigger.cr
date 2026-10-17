@@ -1,3 +1,4 @@
+require "./feeds"
 require "./maintainer"
 require "./view/follow_thread"
 require "./view/follow_hashtag"
@@ -5,6 +6,7 @@ require "./view/follow_mention"
 require "./view/public_tagged"
 require "./view/feed"
 require "../services/feed/judging"
+require "../services/feed/queue"
 require "../models/activity_pub/activity"
 require "../models/activity_pub/object"
 require "../models/activity_pub/activity/create"
@@ -13,6 +15,7 @@ require "../models/activity_pub/activity/dislike"
 require "../models/activity_pub/activity/like"
 require "../models/activity_pub/activity/undo"
 require "../models/activity_pub/actor"
+require "../models/feed/question"
 require "../models/relationship/content/follow/thread"
 require "../models/relationship/content/follow/hashtag"
 require "../models/relationship/content/follow/mention"
@@ -49,11 +52,8 @@ module Rules
           activity.object_iri
         end
       if object_iri
-        # judge the object against the registered feeds first, so
-        # their verdicts exist as base facts before the reconcile
-        # materializes them.
         if (object = ActivityPub::Object.find?(iri: object_iri))
-          Feed::Judging.judge_arrival(object)
+          Feed::Queue.enqueue_arrival(object)
         end
         notify(Rules::Maintainer.reconcile_object(object_iri))
       end
@@ -69,7 +69,7 @@ module Rules
     # the views whose membership derives from the object's own state.
     #
     def reconcile_for_object(object : ActivityPub::Object) : Nil
-      Feed::Judging.judge_arrival(object)
+      Feed::Queue.enqueue_arrival(object)
       changed = [] of {Rules::View, String}
       Rules::View.registry.each do |view|
         next unless view.is_a?(Rules::View::Feed)
@@ -170,6 +170,31 @@ module Rules
       reconcile_for_mention(follow.from_iri, follow.href)
     end
 
+    # Rebuilds a feed's contents from its version's verdicts.
+    #
+    def reconcile_for_feed(feed : ::Feed) : Nil
+      view : Rules::View = Rules::Feeds.view_for(feed)
+      notify([{view, feed.owner_iri.not_nil!}]) if Rules::Maintainer.reconcile(view)
+    end
+
+    # Re-evaluates the feeds on a batch's version for its objects,
+    # once the batch is answered.
+    #
+    def reconcile_for_answer(batch : Array(Feed::Question)) : Nil
+      return unless (version_id = batch.first?.try(&.version_id))
+      # answer the batch first, so its verdicts exist as base facts
+      # before the reconcile materializes them.
+      Feed::Judging.answer(batch)
+      changed = [] of {Rules::View, String}
+      ::Feed.where(version_id: version_id).each do |feed|
+        view = Rules::Feeds.view_for(feed)
+        batch.each do |question|
+          changed.concat(Rules::Maintainer.reconcile_object_for(view, question.object_iri.not_nil!))
+        end
+      end
+      notify(changed)
+    end
+
     # Notifies the pub/sub subjects for the changed `(view, owner)` pairs,
     # waking subscribed clients to refresh.
     #
@@ -201,6 +226,9 @@ Relationship::Content::Follow::Hashtag::OBSERVERS.observe(:destroy) { |follow| R
 
 # evict the mention-follow notification when its follow is removed.
 Relationship::Content::Follow::Mention::OBSERVERS.observe(:destroy) { |follow| Rules::Trigger.reconcile_for_mention_follow(follow) }
+
+# rebuild a feed's contents when it moves to another version.
+Feed::OBSERVERS.observe(:version) { |feed| Rules::Trigger.reconcile_for_feed(feed) }
 
 # re-evaluate the public hashtag feed when a hashtag is added or removed.
 Tag::OBSERVERS.observe(:create) { |tag| Rules::Trigger.reconcile_for_tag(tag) if tag.is_a?(Tag::Hashtag) }

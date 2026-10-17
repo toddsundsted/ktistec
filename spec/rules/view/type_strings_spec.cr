@@ -125,4 +125,9 @@ Spectator.describe "Rules::View type-string constants" do
     expect(Rules::View::TimelineAnnounce::UPDATE).to eq(ActivityPub::Activity::Update.to_s)
     expect(Rules::View::TimelineAnnounce::ANNOUNCE).to eq(ActivityPub::Activity::Announce.to_s)
   end
+
+  it "Feed" do
+    expect(Rules::View::Feed::INBOX).to eq(Relationship::Content::Inbox.to_s)
+    expect(Rules::View::Feed::OUTBOX).to eq(Relationship::Content::Outbox.to_s)
+  end
 end

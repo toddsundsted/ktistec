@@ -10,6 +10,7 @@ require "../../src/models/relationship/content/notification/follow/thread"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
+require "../spec_helper/rule/view"
 
 Spectator.describe Rules::Trigger do
   setup_spec
@@ -34,19 +35,15 @@ Spectator.describe Rules::Trigger do
     Notification::Follow::Mention.count(from_iri: actor.iri, to_iri: href)
   end
 
+  def question_count(feed, object)
+    Feed::Question.count(version_id: feed.version_id, object_iri: object.iri)
+  end
+
   def feed_row_count(feed)
     Ktistec.database.query_one("SELECT COUNT(*) FROM relationships WHERE type = ?", feed.feed_type, as: Int64)
   end
 
-  around_each do |proc|
-    saved = Rules::View.registry.dup
-    begin
-      proc.call
-    ensure
-      Rules::View.registry.clear
-      Rules::View.registry.concat(saved)
-    end
-  end
+  preserve_view_registry
 
   describe ".reconcile_for_activity" do
     let_create!(:follow_hashtag_relationship, named: hashtag_follow, actor: actor, name: "foo")
@@ -68,9 +65,9 @@ Spectator.describe Rules::Trigger do
         Rules::Feeds.register(feed)
       end
 
-      it "materializes the arriving object into the feed" do
+      it "asks about the arriving object" do
         expect { Rules::Trigger.reconcile_for_activity(activity) }
-          .to change { feed_row_count(feed) }.from(0).to(1)
+          .to change { question_count(feed, post) }.from(0).to(1)
       end
 
       context "and the activity is an Undo" do
@@ -79,20 +76,9 @@ Spectator.describe Rules::Trigger do
 
         pre_condition { expect(activity.object?.try(&.object_iri)).to eq(post.iri) }
 
-        it "materializes the undone activity's object into the feed" do
+        it "asks about the undone activity's object" do
           expect { Rules::Trigger.reconcile_for_activity(activity) }
-            .to change { feed_row_count(feed) }.from(0).to(1)
-        end
-      end
-
-      context "and the object is not visible" do
-        before_each { post.update_property(:visible, false) }
-
-        pre_condition { expect(Feed::Candidates.arrival_for(feed, post)).not_to be_nil }
-
-        it "materializes the arriving object into the feed" do
-          expect { Rules::Trigger.reconcile_for_activity(activity) }
-            .to change { feed_row_count(feed) }.from(0).to(1)
+            .to change { question_count(feed, post) }.from(0).to(1)
         end
       end
     end
@@ -104,20 +90,15 @@ Spectator.describe Rules::Trigger do
 
     before_each { Rules::Feeds.register(feed) }
 
-    it "materializes a matching object into the feed" do
+    it "asks about the object" do
       expect { Rules::Trigger.reconcile_for_object(post) }
-        .to change { feed_row_count(feed) }.from(0).to(1)
-    end
-
-    it "writes the verdict before materializing it" do
-      expect { Rules::Trigger.reconcile_for_object(post) }
-        .to change { Feed::Verdict.count(feed_id: feed.id, included: true) }.from(0).to(1)
+        .to change { question_count(feed, post) }.from(0).to(1)
     end
 
     context "given a member" do
-      before_each { Rules::Trigger.reconcile_for_object(post) }
+      let_create!(:feed_verdict, feed: feed, object: post, included: true)
 
-      pre_condition { expect(feed_row_count(feed)).to eq(1) }
+      before_each { put_in_feed(feed, post) }
 
       context "when an edit ends its candidacy" do
         before_each { post.update_property(:visible, false) }
@@ -128,14 +109,10 @@ Spectator.describe Rules::Trigger do
           expect { Rules::Trigger.reconcile_for_object(post) }
             .to change { feed_row_count(feed) }.from(1).to(0)
         end
-      end
 
-      context "when an edit stops it matching" do
-        before_each { post.update_property(:content, "<p>nothing of interest</p>") }
-
-        it "evicts the feed row" do
+        it "leaves the verdict included" do
           expect { Rules::Trigger.reconcile_for_object(post) }
-            .to change { feed_row_count(feed) }.from(1).to(0)
+            .not_to change { Feed::Verdict.find(version_id: feed.version_id, object_iri: post.iri).included }.from(true)
         end
       end
     end
@@ -148,9 +125,9 @@ Spectator.describe Rules::Trigger do
 
     let_build(:object, named: post, attributed_to: author, content: "<p>something alpha something</p>")
 
-    it "materializes the object into the feed" do
+    it "asks about the object" do
       expect { post.save }
-        .to change { feed_row_count(feed) }.from(0).to(1)
+        .to change { question_count(feed, post) }.from(0).to(1)
     end
   end
 
@@ -324,6 +301,49 @@ Spectator.describe Rules::Trigger do
     end
   end
 
+  describe ".reconcile_for_feed" do
+    let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    let_build(:object, named: post, attributed_to: author)
+    let_create!(:feed_verdict, feed: feed, object: post, included: true)
+
+    it "materializes the version's verdicts" do
+      expect { Rules::Trigger.reconcile_for_feed(feed) }
+        .to change { feed_row_count(feed) }.from(0).to(1)
+    end
+  end
+
+  describe ".reconcile_for_answer" do
+    let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    let_create!(:object, named: post, attributed_to: author, content: "<p>something alpha something</p>")
+    let_create(:feed_question, named: question, feed: feed, object: post)
+
+    it "materializes the answer" do
+      expect { Rules::Trigger.reconcile_for_answer([question]) }
+        .to change { feed_row_count(feed) }.from(0).to(1)
+    end
+
+    context "given another feed on the same version" do
+      let_create!(:feed, named: other, owner: actor, params: feed.params)
+
+      pre_condition { expect(other.version_id).to eq(feed.version_id) }
+
+      it "materializes the answer in the other feed" do
+        expect { Rules::Trigger.reconcile_for_answer([question]) }
+          .to change { feed_row_count(other) }.from(0).to(1)
+      end
+    end
+
+    context "given another question in the batch" do
+      let_create!(:object, named: second_post, attributed_to: author, content: "<p>another alpha post</p>")
+      let_create(:feed_question, named: second, feed: feed, object: second_post)
+
+      it "materializes both answers" do
+        expect { Rules::Trigger.reconcile_for_answer([question, second]) }
+          .to change { feed_row_count(feed) }.from(0).to(2)
+      end
+    end
+  end
+
   # each entry point that drives the maintainer must notify the
   # owner's subject. the subject family (notifications vs. timeline)
   # is incidental here: `notify` forwards `view.subjects`
@@ -367,9 +387,21 @@ Spectator.describe Rules::Trigger do
 
       before_each { Rules::Feeds.register(feed) }
 
-      it "notifies the owner's feed subject" do
-        Rules::Trigger.reconcile_for_object(post)
-        expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+      context "given a member" do
+        let_create!(:feed_verdict, feed: feed, object: post, included: true)
+
+        before_each { put_in_feed(feed, post) }
+
+        context "when an edit ends its candidacy" do
+          before_each { post.update_property(:visible, false) }
+
+          pre_condition { expect(Feed::Candidates.arrival_for(feed, post)).to be_nil }
+
+          it "notifies the owner's feed subject" do
+            Rules::Trigger.reconcile_for_object(post)
+            expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+          end
+        end
       end
     end
 
@@ -415,6 +447,86 @@ Spectator.describe Rules::Trigger do
           Rules::Trigger.reconcile_for_hashtag(actor.iri, "foo")
           expect(notified).to be_empty
         end
+      end
+    end
+
+    context "via reconcile_for_feed" do
+      let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+      let_build(:object, named: post, attributed_to: author)
+      let_create!(:feed_verdict, feed: feed, object: post, included: true)
+
+      it "notifies the owner's feed subject" do
+        Rules::Trigger.reconcile_for_feed(feed)
+        expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+      end
+
+      context "when nothing changes" do
+        before_each do
+          Rules::Trigger.reconcile_for_feed(feed)
+          notified.clear
+        end
+
+        it "does not notify" do
+          Rules::Trigger.reconcile_for_feed(feed)
+          expect(notified).to be_empty
+        end
+      end
+    end
+
+    context "via reconcile_for_answer" do
+      let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+      let_create!(:object, named: post, attributed_to: author, content: "<p>something alpha something</p>")
+      let_create(:feed_question, named: question, feed: feed, object: post)
+
+      it "notifies the owner's feed subject" do
+        Rules::Trigger.reconcile_for_answer([question])
+        expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+      end
+
+      context "given another question in the batch" do
+        let_create!(:object, named: second_post, attributed_to: author, content: "<p>another alpha post</p>")
+        let_create(:feed_question, named: second, feed: feed, object: second_post)
+
+        it "notifies the owner's feed subject once" do
+          Rules::Trigger.reconcile_for_answer([question, second])
+          expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+        end
+      end
+
+      context "when nothing changes" do
+        let_create!(:feed_verdict, feed: feed, object: post, included: true)
+
+        before_each { put_in_feed(feed, post) }
+
+        it "does not notify" do
+          Rules::Trigger.reconcile_for_answer([question])
+          expect(notified).to be_empty
+        end
+      end
+    end
+  end
+
+  describe "when a feed is saved" do
+    let_create!(:feed, owner: actor, params: JSON.parse(%({"keywords": {"any": ["alpha"]}})).as_h)
+    let_build(:object, named: post, attributed_to: author)
+    let_create!(:feed_verdict, feed: feed, object: post, included: true)
+
+    before_each { put_in_feed(feed, post) }
+
+    context "with params of another version" do
+      before_each { feed.assign(params: JSON.parse(%({"keywords": {"any": ["beta"]}})).as_h) }
+
+      it "drops the post from the feed" do
+        expect { feed.save }.to change { feed_row_count(feed) }.from(1).to(0)
+      end
+    end
+
+    context "given a new feed with the same params" do
+      let_build(:feed, named: joining, owner: actor, params: feed.params)
+
+      it "includes the posts judged for them" do
+        joining.save
+        expect(feed_row_count(joining)).to eq(1)
       end
     end
   end

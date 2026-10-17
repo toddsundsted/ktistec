@@ -3,6 +3,7 @@ require "../../models/activity_pub"
 require "../../models/activity_pub/object"
 require "../../models/relationship/content/inbox"
 require "../../models/relationship/content/outbox"
+require "../../rules/view/feed"
 
 class Feed
   # The candidate source.
@@ -12,42 +13,17 @@ class Feed
   module Candidates
     extend self
 
-    # The candidate predicate.
-    #
-    private PREDICATE_SQL = <<-SQL
-           published IS NOT NULL
-           AND special IS NULL
-           AND (
-             visible = 1
-             OR EXISTS (
-               SELECT 1
-                 FROM relationships m
-                 JOIN activities a ON a.iri = m.to_iri
-                WHERE m.type IN (?, ?)
-                  AND m.from_iri = ?
-                  AND a.object_iri = objects.iri
-                  AND a.undone_at IS NULL
-             )
-           )
-      SQL
-
     # The scan.
     #
     private CANDIDATES_SQL = <<-SQL
-      #{PREDICATE_SQL}
+      #{Rules::View::Feed::CANDIDATE_SQL}
            AND id > ?
            AND id < ?
-           AND NOT EXISTS (
-             SELECT 1
-               FROM feed_verdicts v
-              WHERE v.feed_id = ?
-                AND v.object_iri = objects.iri
-           )
          ORDER BY id DESC
          LIMIT ?
       SQL
 
-    # Returns the feed's unjudged candidates, newest first.
+    # Returns the feed's candidates, newest first.
     #
     # `cursor` is the object id to scan down from; `nil` starts at the
     # newest object. A caller that already knows the floor's id passes
@@ -62,7 +38,6 @@ class Feed
         *predicate_parameters(feed),
         floor_id || floor_id(feed) || 0_i64,
         cursor || Int64::MAX,
-        feed.id,
         # in SQLite, a negative limit means no limit
         limit || -1,
         include_deleted: true,
@@ -88,7 +63,7 @@ class Feed
         SELECT created_at
           FROM objects
          WHERE iri = ?
-           AND #{PREDICATE_SQL}
+           AND #{Rules::View::Feed::CANDIDATE_SQL}
            AND (? IS NULL OR created_at > ?)
       SQL
       Ktistec.database.query_one?(

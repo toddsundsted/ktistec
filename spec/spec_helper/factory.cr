@@ -530,20 +530,49 @@ def feed_factory(clazz = Feed, owner_iri = nil, owner = false, params = nil, **o
     "name"      => random_string,
     "backend"   => "criteria",
     "params"    => params,
+    "floor"     => KTISTEC_EPOCH,
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
-def feed_verdict_factory(clazz = Feed::Verdict, feed_id = nil, feed = false, object_iri = nil, object = false, position = nil, **options)
-  feed = feed_factory unless feed_id || feed.nil? || feed
+def feed_verdict_factory(clazz = Feed::Verdict, feed : Feed? = nil, version_id = nil, version = false, object_iri = nil, object = false, **options)
+  if feed
+    feed.save if feed.new_record?
+    version_id = feed.version_id
+  end
+  version = feed_version_factory unless version_id || version.nil? || version
   object = object_factory unless object_iri || object.nil? || object
-  position ||= KTISTEC_EPOCH + (KTISTEC_FACTORY_STATE[:moment] += 1).second
   clazz.new({
-    "feed_id"    => feed_id,
-    "feed"       => feed || nil,
+    "version_id" => version_id,
+    "version"    => version || nil,
     "object_iri" => object_iri,
     "object"     => object || nil,
     "included"   => true,
-    "position"   => position,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
+end
+
+def feed_question_factory(clazz = Feed::Question, feed : Feed? = nil, version_id = nil, version = false, object_iri = nil, object = false, **options)
+  if feed
+    feed.save if feed.new_record?
+    version_id = feed.version_id
+  end
+  version = feed_version_factory.save unless version_id || version.nil? || version
+  object = object_factory unless object_iri || object.nil? || object
+  clazz.new({
+    "version_id" => version_id,
+    "version"    => version || nil,
+    "object_iri" => object_iri,
+    "object"     => object || nil,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
+end
+
+def feed_version_factory(clazz = Feed::Version, owner_iri = nil, owner = false, backend = "criteria", params = nil, **options)
+  owner = actor_factory(local: true) unless owner_iri || owner.nil? || owner
+  params ||= JSON.parse(%({"keywords": {"any": ["keyword"]}})).as_h
+  clazz.new({
+    "owner_iri" => owner_iri,
+    "owner"     => owner || nil,
+    "backend"   => backend,
+    "params"    => params.to_json,
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 

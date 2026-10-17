@@ -20,6 +20,20 @@ class Feed
     # wins, across groups.
     #
     class Criteria < Backend
+      NAME = "criteria"
+
+      REVISION = "1"
+
+      def revision(params : Hash(String, JSON::Any)) : String
+        REVISION
+      end
+
+      COST = Cost.new(batch_size: 250)
+
+      def cost(params : Hash(String, JSON::Any)) : Cost
+        COST
+      end
+
       SELECTORS = %w(any all none)
       POSITIVE  = %w(any all)
 
@@ -31,9 +45,9 @@ class Feed
         term.starts_with?(/https?:\/\//i)
       end
 
-      def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
+      def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
         active = active_groups(feed.params)
-        objects.map { |object| judge_one(object, active) }
+        objects.map { |object| judge_one(object, active).as(Judgment | Failure) }
       end
 
       # Sorts every group's selectors' term list.
@@ -336,6 +350,6 @@ class Feed
       GROUPS = [Keywords.new, Hashtags.new, Mentions.new] of Group
     end
 
-    register "criteria", Criteria.new
+    register Criteria::NAME, Criteria.new
   end
 end

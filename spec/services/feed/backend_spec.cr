@@ -6,12 +6,12 @@ require "../../spec_helper/base"
 require "../../spec_helper/factory"
 require "../../spec_helper/feed/backend"
 
-private class CannedBackend < Feed::Backend
+private class CannedBackend < TestBackend
   getter calls = [] of {Feed, Array(ActivityPub::Object)}
 
-  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment)
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
     calls << {feed, objects}
-    objects.map { Judgment.new(included: true, reason: "canned") }
+    objects.map { Judgment.new(included: true, reason: "canned").as(Judgment | Failure) }
   end
 
   def validate_params(params : Hash(String, JSON::Any)) : Array(String)
@@ -24,13 +24,7 @@ Spectator.describe Feed::Backend do
 
   let(backend) { CannedBackend.new }
 
-  around_each do |proc|
-    begin
-      proc.call
-    ensure
-      described_class.unregister("canned")
-    end
-  end
+  after_each { described_class.unregister("canned") }
 
   describe ".register" do
     it "returns the backend" do
@@ -58,5 +52,28 @@ Spectator.describe Feed::Backend do
     it "returns nil" do
       expect(described_class.find?("missing")).to be_nil
     end
+  end
+
+  describe ".names" do
+    it "returns the names of the registered backends" do
+      described_class.register("canned", backend)
+      expect(described_class.names).to contain("criteria", "canned")
+    end
+  end
+end
+
+Spectator.describe Feed::Backend::TransientError do
+  subject { described_class.new("judge unavailable") }
+
+  it "is a judging error" do
+    expect(subject).to be_a(Feed::Backend::Error)
+  end
+end
+
+Spectator.describe Feed::Backend::PermanentError do
+  subject { described_class.new("judge misconfigured") }
+
+  it "is a judging error" do
+    expect(subject).to be_a(Feed::Backend::Error)
   end
 end

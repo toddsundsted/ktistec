@@ -1,5 +1,6 @@
 require "../../../src/services/feed/queue"
 require "../../../src/services/feed/backend/criteria"
+require "../../../src/models/task/feed/answer_questions"
 require "../../../src/rules/feeds"
 
 require "../../spec_helper/base"
@@ -50,6 +51,15 @@ Spectator.describe Feed::Queue do
     it "is due when scheduled" do
       Feed::Queue.enqueue(version.id!, object_iri, live: false, due_at: now + 1.hour)
       expect(waiting.first.due_at).to eq(now + 1.hour)
+    end
+
+    context "given a drain that is not yet due" do
+      let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
+
+      it "makes the drain due now" do
+        Feed::Queue.enqueue(version.id!, object_iri, live: false)
+        expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
+      end
     end
 
     context "given an existing question" do
@@ -301,6 +311,15 @@ Spectator.describe Feed::Queue do
           expect(Feed::Queue.enqueue_backfill(feed)).to be_false
         end
       end
+
+      context "given a drain that is not yet due" do
+        let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
+
+        it "makes the drain due now" do
+          Feed::Queue.enqueue_backfill(feed)
+          expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
+        end
+      end
     end
   end
 
@@ -346,6 +365,15 @@ Spectator.describe Feed::Queue do
         it "enqueues nothing" do
           Feed::Queue.enqueue_arrival(object)
           expect(questions).to be_empty
+        end
+      end
+
+      context "given a drain that is not yet due" do
+        let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
+
+        it "makes the drain due now" do
+          Feed::Queue.enqueue_arrival(object)
+          expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
         end
       end
     end

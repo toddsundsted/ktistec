@@ -1,4 +1,5 @@
 require "../../models/feed/question"
+require "../../models/task/feed/answer_questions"
 require "./candidates"
 
 class Feed
@@ -34,7 +35,8 @@ class Feed
     # Raises `FullError` if the queue is full.
     #
     def enqueue(version_id : Int64, object_iri : String, live : Bool, due_at : Time = Time.utc) : Nil
-      enqueue(version_id, object_iri, live, due_at, cap: live ? live_cap : backfill_cap)
+      insert(version_id, object_iri, live, due_at, live ? live_cap : backfill_cap)
+      ::Task::Feed::AnswerQuestions.run_now
     end
 
     # Enqueues a question again, to be asked later.
@@ -42,10 +44,10 @@ class Feed
     # The cap does not apply.
     #
     def requeue(version_id : Int64, object_iri : String, live : Bool, due_at : Time) : Nil
-      enqueue(version_id, object_iri, live, due_at, cap: nil)
+      insert(version_id, object_iri, live, due_at, nil)
     end
 
-    private def enqueue(version_id : Int64, object_iri : String, live : Bool, due_at : Time, cap : Int32?) : Nil
+    private def insert(version_id : Int64, object_iri : String, live : Bool, due_at : Time, cap : Int32?) : Nil
       if (question = Question.find?(version_id: version_id, object_iri: object_iri, batched: false))
         question.due_at = due_at unless pulled_first?(question, live, due_at, Time.utc)
         question.live ||= live
@@ -74,6 +76,7 @@ class Feed
     # Returns `true` if there is more to enqueue later.
     #
     def enqueue_backfill(feed : ::Feed, limit : Int32? = nil, live : Bool = false) : Bool
+      enqueued = false
       return false unless feed.floor
       version_id = feed.version_id.not_nil!
       return true if Question.count(version_id: version_id, batched: false) >= page_size
@@ -85,7 +88,10 @@ class Feed
         return true if remaining && remaining < 1
         size = remaining ? Math.min(page_size, remaining) : page_size
         page = Candidates.candidates_for(feed, cursor, size, floor_id)
-        page.each { |object| enqueue(version_id, object.iri, live: live) }
+        page.each do |object|
+          insert(version_id, object.iri, live, Time.utc, live ? live_cap : backfill_cap)
+          enqueued = true
+        end
         if (last = page.last?)
           cursor = last.id!
           version.cover_down_to(cursor)
@@ -96,6 +102,8 @@ class Feed
     rescue err : FullError
       Log.warn { "backfill of feed #{feed.id} is incomplete: #{err.message}" }
       true
+    ensure
+      ::Task::Feed::AnswerQuestions.run_now if enqueued
     end
 
     # Enqueues an object as a live question for every registered
@@ -104,17 +112,20 @@ class Feed
     # Sheds the question, with a warning, if the queue is full.
     #
     def enqueue_arrival(object : ActivityPub::Object) : Nil
+      enqueued = false
       Rules::View.registry.each do |view|
         next unless view.is_a?(Rules::View::Feed)
         next unless (feed = ::Feed.find?(view.feed_id))
         next unless (version_id = feed.version_id)
         next unless Candidates.arrival_for(feed, object)
         begin
-          enqueue(version_id, object.iri, live: true)
+          insert(version_id, object.iri, true, Time.utc, live_cap)
+          enqueued = true
         rescue err : FullError
           Log.warn { "arrival of #{object.iri} for version #{version_id} is not judged: #{err.message}" }
         end
       end
+      ::Task::Feed::AnswerQuestions.run_now if enqueued
     end
 
     # Pulls the next batch of questions that are due.
@@ -153,7 +164,7 @@ class Feed
     def release_batches : Nil
       Question.where(batched: true).each do |question|
         question.destroy
-        enqueue(question.version_id.not_nil!, question.object_iri.not_nil!, question.live, question.due_at, cap: nil)
+        insert(question.version_id.not_nil!, question.object_iri.not_nil!, question.live, question.due_at, nil)
       end
     end
   end

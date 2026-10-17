@@ -47,6 +47,24 @@ class Task
         instance.schedule if instance.runnable? && instance.next_attempt_at.nil?
         instance
       end
+
+      # Makes the active instance due now, and wakes the task worker.
+      #
+      # Does nothing if the instance is running or complete.
+      #
+      def self.run_now : Nil
+        query = <<-SQL
+          UPDATE tasks
+             SET next_attempt_at = ?
+           WHERE type = ?
+             AND running = 0
+             AND complete = 0
+             AND backtrace IS NULL
+             AND next_attempt_at > ?
+        SQL
+        now = Time.utc
+        TaskWorker.wake if {{@type}}.exec(query, now, {{@type}}.name, now) > 0
+      end
     end
   end
 end

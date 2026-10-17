@@ -10,7 +10,7 @@ class TaskWorker
 
   Log = ::Log.for(self)
 
-  @@channel = Channel(Task).new
+  @@channel = Channel(Bool).new
 
   @@performing_tasks = 0
 
@@ -68,17 +68,22 @@ class TaskWorker
   end
 
   def self.schedule(task)
+    task.save
+    wake
+    task
+  end
+
+  # Wakes the worker if it is waiting for work.
+  #
+  def self.wake : Nil
     if Kemal.config.env != "test"
       select
-      when @@channel.send task.save
+      when @@channel.send true
         # no-op
       when timeout(0.seconds)
         # no-op
       end
-    else
-      task.save
     end
-    task
   end
 
   protected def work(now = Time.utc)

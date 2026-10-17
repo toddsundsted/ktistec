@@ -163,4 +163,30 @@ Spectator.describe Task::Singleton do
       end
     end
   end
+
+  describe ".run_now" do
+    let(now) { Time.utc }
+
+    it "does not create an instance" do
+      expect { SingletonTask.run_now }.not_to change { SingletonTask.count }
+    end
+
+    context "given a task scheduled later" do
+      let!(task) { SingletonTask.new.assign(next_attempt_at: now + 1.day).save }
+
+      it "makes the task due now" do
+        SingletonTask.run_now
+        expect(task.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
+      end
+
+      context "that is running" do
+        before_each { task.assign(running: true).save }
+
+        it "doesn't change the task's time" do
+          SingletonTask.run_now
+          expect(task.reload!.next_attempt_at).to eq(now + 1.day)
+        end
+      end
+    end
+  end
 end

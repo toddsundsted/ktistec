@@ -82,6 +82,12 @@ class Feed
       @@registry[name] = backend
     end
 
+    # Unregisters a backend.
+    #
+    def self.unregister(name : String) : Nil
+      @@registry.delete(name)
+    end
+
     # Returns the registered backend for a name, or `nil`.
     #
     def self.find?(name : String) : Backend?

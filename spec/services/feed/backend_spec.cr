@@ -32,6 +32,15 @@ Spectator.describe Feed::Backend do
     end
   end
 
+  describe ".unregister" do
+    before_each { described_class.register("canned", backend) }
+
+    it "removes the backend" do
+      described_class.unregister("canned")
+      expect(described_class.find?("canned")).to be_nil
+    end
+  end
+
   describe "#judging_params" do
     it "returns the params unchanged" do
       params = JSON.parse(%({"anything":{"any":["alpha"]}})).as_h

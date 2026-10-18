@@ -13,8 +13,10 @@ require "../workers/**"     # ameba:disable Ktistec/NoRequireGlob
 require "../services/feed/judging"
 require "../services/feed/queue"
 require "../services/feed/backend/criteria"
+require "../services/feed/judges"
 
 Ktistec::Server.run do
+  Feed::Judges.scan
   Rules::Feeds.register_all
   Kemal.config.extra_options do |opts|
     opts.on("--full-garbage-collection-on-startup", "Runs full garbage collection on startup") do
@@ -43,6 +45,7 @@ Ktistec::Server.run do
     Task::Feed::CollectDrafts.ensure_scheduled
     Task::Feed::CollectOrphans.ensure_scheduled
     Task::Feed::AnswerQuestions.ensure_scheduled
+    Task::Feed::DiscoverJudges.ensure_scheduled
   end
   Session.clean_up_stale_sessions
   # track server starts

@@ -79,4 +79,33 @@ Spectator.describe Feed::Backend::Executable do
       end
     end
   end
+
+  describe "#cost" do
+    context "given a judge that declares a batch size" do
+      before_each { write_judge("# ktistec: batch-size=10") }
+
+      it "returns the batch size" do
+        expect(subject.cost({} of String => JSON::Any).batch_size).to eq(10)
+      end
+    end
+
+    context "given a judge that declares a batch size of 0" do
+      before_each { write_judge("# ktistec: batch-size=0") }
+
+      it "returns a batch size of 1" do
+        expect(subject.cost({} of String => JSON::Any).batch_size).to eq(1)
+      end
+    end
+
+    context "given a compiled judge" do
+      before_each do
+        File.write(path, Bytes[0x7f, 0x45, 0x4c, 0x46, 0xff, 0x0a])
+        File.chmod(path, 0o755)
+      end
+
+      it "returns a batch size of 1" do
+        expect(subject.cost({} of String => JSON::Any).batch_size).to eq(1)
+      end
+    end
+  end
 end

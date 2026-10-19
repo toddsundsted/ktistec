@@ -5,7 +5,7 @@ class Feed
     # Unregisters every judge.
     #
     def clear! : Nil
-      @@registered.each { |name| Backend.unregister(name) }
+      @@registered.each_key { |name| Backend.unregister(name) }
       @@registered.clear
     end
   end

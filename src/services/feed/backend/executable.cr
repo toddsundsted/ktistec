@@ -5,6 +5,13 @@ class Feed
   abstract class Backend
     # A judge that is an executable file.
     #
+    # A judge may declare settings in its first lines, after any
+    # comment syntax:
+    #
+    #     # ktistec: batch-size=10
+    #
+    # Settings are read when the judge is created.
+    #
     class Executable < Backend
       Log = ::Log.for(self)
 
@@ -12,9 +19,17 @@ class Feed
 
       class_property grace : Time::Span = 10.seconds
 
+      FRONT_MATTER_LINES = 10
+
+      FRONT_MATTER = /\bktistec: ([a-z][a-z-]*)=(\S+)/
+
       getter path : String
 
+      @batch_size : Int32
+
       def initialize(@path : String)
+        front_matter = read_front_matter
+        @batch_size = batch_size_from(front_matter)
       end
 
       def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
@@ -39,7 +54,33 @@ class Feed
       end
 
       def cost(params : Hash(String, JSON::Any)) : Cost
-        Cost.new(batch_size: 1)
+        Cost.new(batch_size: @batch_size)
+      end
+
+      private def read_front_matter : Hash(String, String)
+        front_matter = {} of String => String
+        File.open(path) do |file|
+          FRONT_MATTER_LINES.times do
+            break unless (line = file.gets) && line.valid_encoding?
+            if (match = FRONT_MATTER.match(line))
+              front_matter[match[1]] = match[2]
+            end
+          end
+        end
+        front_matter
+      end
+
+      private def batch_size_from(front_matter : Hash(String, String)) : Int32
+        if (value = front_matter["batch-size"]?)
+          if (batch_size = value.to_i?) && batch_size > 0
+            batch_size
+          else
+            Log.warn { "judge #{path} declares a malformed batch size: #{value}" }
+            1
+          end
+        else
+          1
+        end
       end
 
       # Runs the judge until it exits or runs past the deadline.

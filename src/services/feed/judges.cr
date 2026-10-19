@@ -16,33 +16,37 @@ class Feed
 
     NAME = /\A[a-zA-Z0-9][a-zA-Z0-9._-]*\z/
 
-    @@registered = Set(String).new
+    # Registered judges, by name and when last modified.
+    #
+    @@registered = {} of String => Time
 
-    # Scans the directory, registering judges that appeared and
-    # unregistering judges that disappeared.
+    # Scans the directory, registering judges that appeared or
+    # changed and unregistering judges that disappeared.
     #
     def scan : Nil
       found = discover
-      (Backend.names - @@registered.to_a).each do |name|
+      (Backend.names - @@registered.keys).each do |name|
         if found.delete(name)
           Log.warn { "judge #{name} is not registered: a built-in backend has that name" }
         end
       end
-      (@@registered - found.keys).each do |name|
+      (@@registered.keys - found.keys).each do |name|
         Backend.unregister(name)
         @@registered.delete(name)
         Log.info { "judge #{name} is gone" }
       end
-      found.each do |name, path|
-        next if @@registered.includes?(name)
-        Backend.register(name, Backend::Executable.new(path))
-        @@registered << name
+      found.each do |name, modified_at|
+        next if @@registered[name]? == modified_at
+        Backend.register(name, Backend::Executable.new(File.join(directory, name)))
+        @@registered[name] = modified_at
         Log.info { "judge #{name} is registered" }
       end
     end
 
-    private def discover : Hash(String, String)
-      found = {} of String => String
+    # Returns the judges in the directory, and when each was modified.
+    #
+    private def discover : Hash(String, Time)
+      found = {} of String => Time
       children =
         begin
           Dir.children(directory)
@@ -51,17 +55,17 @@ class Feed
         end
       children.each do |name|
         next unless NAME.matches?(name)
-        path = File.join(directory, name)
-        found[name] = path if judge?(path)
+        if (info = judge?(File.join(directory, name)))
+          found[name] = info.modification_time
+        end
       end
       found
     end
 
-    private def judge?(path : String) : Bool
+    private def judge?(path : String) : File::Info?
       info = File.info(path)
-      info.file? && info.permissions.owner_execute?
+      info if info.file? && info.permissions.owner_execute?
     rescue File::Error
-      false
     end
   end
 end

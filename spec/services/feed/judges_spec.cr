@@ -54,6 +54,18 @@ Spectator.describe Feed::Judges do
           end
         end
 
+        context "and is edited" do
+          before_each do
+            File.write(path, "#!/bin/sh\n# ktistec: batch-size=10\n")
+            File.touch(path, 1.minute.from_now)
+          end
+
+          it "picks up the edit" do
+            described_class.scan
+            expect(Feed::Backend.find?("summarize").try(&.cost({} of String => JSON::Any).batch_size)).to eq(10)
+          end
+        end
+
         context "and whose directory is removed" do
           before_each { FileUtils.rm_rf(judges_dir) }
 

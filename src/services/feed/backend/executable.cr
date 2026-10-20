@@ -11,6 +11,12 @@ class Feed
     #     # ktistec: batch-size=10
     #     # ktistec: revision=2
     #
+    # And the params a feed may give it:
+    #
+    #     # ktistec: param=minimum type=integer required
+    #
+    # A param's type is `integer` or `string` (the default).
+    #
     # Settings are read when the judge is created.
     #
     class Executable < Backend
@@ -22,9 +28,22 @@ class Feed
 
       FRONT_MATTER_LINES = 10
 
-      FRONT_MATTER = /\bktistec: ([a-z][a-z-]*)=(\S+)/
+      FRONT_MATTER = /\bktistec: ([a-z][a-z-]*)=(\S+)(.*)/
+
+      # A param a feed may give the judge.
+      #
+      # `type` is `nil` if the declaration is malformed.
+      #
+      record Param, name : String, type : Type?, required : Bool do
+        enum Type
+          Integer
+          String
+        end
+      end
 
       getter path : String
+
+      getter declared_params : Array(Param)
 
       @batch_size : Int32
 
@@ -32,12 +51,19 @@ class Feed
 
       # Creates the judge.
       #
-      # A `revision` overrides the one the judge declares.
+      # A `previous` judge's revision and params override the ones the
+      # judge declares.
       #
-      def initialize(@path : String, revision : String? = nil)
-        front_matter = read_front_matter
-        @batch_size = batch_size_from(front_matter)
-        @revision = revision || front_matter["revision"]? || ""
+      def initialize(@path : String, previous : Executable? = nil)
+        settings, declared_params = read_front_matter
+        @batch_size = batch_size_from(settings)
+        if previous
+          @revision = previous.@revision
+          @declared_params = previous.declared_params
+        else
+          @revision = settings["revision"]? || ""
+          @declared_params = declared_params
+        end
       end
 
       def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
@@ -54,7 +80,19 @@ class Feed
       end
 
       def validate_params(params : Hash(String, JSON::Any)) : Array(String)
-        [] of String
+        declared_params.compact_map do |param|
+          unless (type = param.type)
+            next "#{param.name} is a malformed param"
+          end
+          if (value = params[param.name]?)
+            case type
+            in .integer? then "#{param.name} must be an integer" unless value.as_i64?
+            in .string?  then "#{param.name} must be a string" unless value.as_s?
+            end
+          elsif param.required
+            "#{param.name} is required"
+          end
+        end
       end
 
       def revision(params : Hash(String, JSON::Any)) : String
@@ -65,21 +103,41 @@ class Feed
         Cost.new(batch_size: @batch_size)
       end
 
-      private def read_front_matter : Hash(String, String)
-        front_matter = {} of String => String
+      private def read_front_matter : {Hash(String, String), Array(Param)}
+        settings = {} of String => String
+        declared_params = [] of Param
         File.open(path) do |file|
           FRONT_MATTER_LINES.times do
             break unless (line = file.gets) && line.valid_encoding?
-            if (match = FRONT_MATTER.match(line))
-              front_matter[match[1]] = match[2]
+            next unless (match = FRONT_MATTER.match(line))
+            if match[1] == "param"
+              declared_params << param_from(match[2], match[3].split)
+            else
+              settings[match[1]] = match[2]
             end
           end
         end
-        front_matter
+        {settings, declared_params}
       end
 
-      private def batch_size_from(front_matter : Hash(String, String)) : Int32
-        if (value = front_matter["batch-size"]?)
+      private def param_from(name : String, tokens : Array(String)) : Param
+        type = Param::Type::String
+        required = false
+        tokens.each do |token|
+          if token == "required"
+            required = true
+          elsif token.starts_with?("type=") && (parsed = Param::Type.parse?(token.lchop("type=")))
+            type = parsed
+          else
+            type = nil
+            break
+          end
+        end
+        Param.new(name, type, required)
+      end
+
+      private def batch_size_from(settings : Hash(String, String)) : Int32
+        if (value = settings["batch-size"]?)
           if (batch_size = value.to_i?) && batch_size > 0
             batch_size
           else

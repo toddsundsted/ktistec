@@ -80,6 +80,44 @@ Spectator.describe Feed::Backend::Executable do
     end
   end
 
+  describe "#validate_params" do
+    context "given a judge that declares a required integer param" do
+      before_each { write_judge("# ktistec: param=minimum type=integer required") }
+
+      it "accepts an integer" do
+        expect(subject.validate_params({"minimum" => JSON::Any.new(5_i64)})).to be_empty
+      end
+
+      it "rejects a string" do
+        expect(subject.validate_params({"minimum" => JSON::Any.new("5")})).to eq(["minimum must be an integer"])
+      end
+
+      it "rejects a missing value" do
+        expect(subject.validate_params({} of String => JSON::Any)).to eq(["minimum is required"])
+      end
+    end
+
+    context "given a judge that declares a param without a type" do
+      before_each { write_judge("# ktistec: param=label") }
+
+      it "accepts a missing value" do
+        expect(subject.validate_params({} of String => JSON::Any)).to be_empty
+      end
+
+      it "rejects an integer" do
+        expect(subject.validate_params({"label" => JSON::Any.new(5_i64)})).to eq(["label must be a string"])
+      end
+    end
+
+    context "given a judge that declares a param of an unknown type" do
+      before_each { write_judge("# ktistec: param=minimum type=float required") }
+
+      it "rejects the param" do
+        expect(subject.validate_params({"minimum" => JSON::Any.new(5_i64)})).to eq(["minimum is a malformed param"])
+      end
+    end
+  end
+
   describe "#revision" do
     context "given a judge that declares a revision" do
       before_each { write_judge("# ktistec: revision=2") }

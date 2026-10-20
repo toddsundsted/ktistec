@@ -37,9 +37,9 @@ class Feed
       end
       found.each do |name, modified_at|
         next if @@registered[name]? == modified_at
-        # an edit takes effect now, except a new revision, which takes effect only at startup
-        revision = Backend.find?(name).try(&.revision({} of String => JSON::Any)) if @@registered[name]?
-        Backend.register(name, Backend::Executable.new(File.join(directory, name), revision))
+        # an edit takes effect now, except a new revision or new params, which take effect only at startup
+        previous = Backend.find?(name).as?(Backend::Executable) if @@registered[name]?
+        Backend.register(name, Backend::Executable.new(File.join(directory, name), previous))
         @@registered[name] = modified_at
         Log.info { "judge #{name} is registered" }
       end

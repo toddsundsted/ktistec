@@ -78,6 +78,18 @@ Spectator.describe Feed::Judges do
           end
         end
 
+        context "and is edited to declare a required param" do
+          before_each do
+            File.write(path, "#!/bin/sh\n# ktistec: param=minimum type=integer required\n")
+            File.touch(path, 1.minute.from_now)
+          end
+
+          it "does not require the param" do
+            described_class.scan
+            expect(Feed::Backend.find?("summarize").try(&.validate_params({} of String => JSON::Any))).to be_empty
+          end
+        end
+
         context "and whose directory is removed" do
           before_each { FileUtils.rm_rf(judges_dir) }
 

@@ -54,7 +54,7 @@ Spectator.describe Feed::Judges do
           end
         end
 
-        context "and is edited" do
+        context "and is edited to declare a new batch size" do
           before_each do
             File.write(path, "#!/bin/sh\n# ktistec: batch-size=10\n")
             File.touch(path, 1.minute.from_now)
@@ -63,6 +63,18 @@ Spectator.describe Feed::Judges do
           it "picks up the edit" do
             described_class.scan
             expect(Feed::Backend.find?("summarize").try(&.cost({} of String => JSON::Any).batch_size)).to eq(10)
+          end
+        end
+
+        context "and is edited to declare a new revision" do
+          before_each do
+            File.write(path, "#!/bin/sh\n# ktistec: revision=2\n")
+            File.touch(path, 1.minute.from_now)
+          end
+
+          it "keeps its revision" do
+            described_class.scan
+            expect(Feed::Backend.find?("summarize").try(&.revision({} of String => JSON::Any))).to eq("")
           end
         end
 

@@ -25,6 +25,11 @@ class Feed
     @[Persistent]
     property params : String
 
+    # The backend's revision.
+    #
+    @[Persistent]
+    property revision : String = ""
+
     # The id of the oldest object the version's backfills have
     # enqueued.
     #
@@ -45,8 +50,8 @@ class Feed
       self.backfill_cursor = Ktistec.database.query_one(query, id, id, self.id, as: Int64?)
     end
 
-    # Returns the version for an owner, a backend and a params,
-    # creating it if it does not exist.
+    # Returns the version for an owner, a backend and a params, at the
+    # backend's revision, creating it if it does not exist.
     #
     # Raises if the backend is not registered.
     #
@@ -55,8 +60,9 @@ class Feed
         raise "is not a registered backend: #{backend}"
       end
       canonical = canonicalize(JSON::Any.new(registered.judging_params(params))).to_json
-      find?(owner: owner, backend: backend, params: canonical) ||
-        new(owner: owner, backend: backend, params: canonical).save
+      revision = registered.revision(params)
+      find?(owner: owner, backend: backend, params: canonical, revision: revision) ||
+        new(owner: owner, backend: backend, params: canonical, revision: revision).save
     end
 
     # Orders every object's keys, so equal params serialize equally.

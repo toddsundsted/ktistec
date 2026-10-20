@@ -82,6 +82,14 @@ Spectator.describe Feed::Version do
           expect(subject).not_to eq(existing)
         end
       end
+
+      context "and the revision has changed" do
+        before_each { existing.assign(revision: "0").save }
+
+        it "returns another version" do
+          expect(subject).not_to eq(existing)
+        end
+      end
     end
 
     context "given an unregistered backend" do

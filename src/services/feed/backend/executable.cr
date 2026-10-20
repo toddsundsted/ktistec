@@ -9,6 +9,7 @@ class Feed
     # comment syntax:
     #
     #     # ktistec: batch-size=10
+    #     # ktistec: revision=2
     #
     # Settings are read when the judge is created.
     #
@@ -27,9 +28,16 @@ class Feed
 
       @batch_size : Int32
 
-      def initialize(@path : String)
+      @revision : String
+
+      # Creates the judge.
+      #
+      # A `revision` overrides the one the judge declares.
+      #
+      def initialize(@path : String, revision : String? = nil)
         front_matter = read_front_matter
         @batch_size = batch_size_from(front_matter)
+        @revision = revision || front_matter["revision"]? || ""
       end
 
       def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
@@ -50,7 +58,7 @@ class Feed
       end
 
       def revision(params : Hash(String, JSON::Any)) : String
-        ""
+        @revision
       end
 
       def cost(params : Hash(String, JSON::Any)) : Cost

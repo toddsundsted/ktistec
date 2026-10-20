@@ -80,6 +80,16 @@ Spectator.describe Feed::Backend::Executable do
     end
   end
 
+  describe "#revision" do
+    context "given a judge that declares a revision" do
+      before_each { write_judge("# ktistec: revision=2") }
+
+      it "returns the revision" do
+        expect(subject.revision({} of String => JSON::Any)).to eq("2")
+      end
+    end
+  end
+
   describe "#cost" do
     context "given a judge that declares a batch size" do
       before_each { write_judge("# ktistec: batch-size=10") }

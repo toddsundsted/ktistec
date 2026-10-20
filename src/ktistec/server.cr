@@ -14,10 +14,12 @@ require "../services/feed/judging"
 require "../services/feed/queue"
 require "../services/feed/backend/criteria"
 require "../services/feed/judges"
+require "../services/feed/revisions"
 
 Ktistec::Server.run do
   Feed::Judges.scan
   Rules::Feeds.register_all
+  Feed::Revisions.update
   Kemal.config.extra_options do |opts|
     opts.on("--full-garbage-collection-on-startup", "Runs full garbage collection on startup") do
       puts "WARNING: Garbage collection can take a long time and cannot be safely interrupted."

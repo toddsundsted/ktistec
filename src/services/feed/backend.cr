@@ -40,6 +40,23 @@ class Feed
     #
     abstract def validate_params(params : Hash(String, JSON::Any)) : Array(String)
 
+    # A param a feed may give the judge.
+    #
+    # `type` is `nil` if the declaration is malformed.
+    #
+    record Param, name : String, type : Type?, required : Bool do
+      enum Type
+        Integer
+        String
+      end
+    end
+
+    # Returns the params a feed may give the judge.
+    #
+    def declared_params : Array(Param)
+      [] of Param
+    end
+
     # Returns a feed's params reduced to what decides membership.
     #
     # In canonical form.

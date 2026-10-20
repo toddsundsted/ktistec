@@ -30,17 +30,6 @@ class Feed
 
       FRONT_MATTER = /\bktistec: ([a-z][a-z-]*)=(\S+)(.*)/
 
-      # A param a feed may give the judge.
-      #
-      # `type` is `nil` if the declaration is malformed.
-      #
-      record Param, name : String, type : Type?, required : Bool do
-        enum Type
-          Integer
-          String
-        end
-      end
-
       getter path : String
 
       getter declared_params : Array(Param)

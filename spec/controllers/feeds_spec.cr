@@ -1,5 +1,6 @@
 require "../../src/controllers/feeds"
 require "../../src/services/feed/backend/criteria"
+require "../../src/services/feed/backend/executable"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"
@@ -27,6 +28,15 @@ Spectator.describe FeedsController do
   preserve_view_registry
 
   let(actor) { register.actor }
+
+  # deletes the file after reading it to create the declarations
+  def judge_declaring_minimum
+    path = File.tempname("ktistec", "judge")
+    File.write(path, "#!/bin/sh\n# ktistec: param=minimum type=integer required\n")
+    Feed::Backend::Executable.new(path)
+  ensure
+    File.delete?(path) if path
+  end
 
   describe "GET /actors/:username/feeds" do
     it "returns 401 if not authorized" do
@@ -592,6 +602,28 @@ Spectator.describe FeedsController do
           options = XML.parse_html(response.body).xpath_nodes("//form//select[@name='backend']/option/@value").map(&.text)
           expect(options).to contain("criteria", "other")
         end
+
+        it "renders the form for the judge the owner chooses" do
+          get "/actors/#{actor.username}/feeds/new?backend=other", ACCEPT_HTML
+          backends = XML.parse_html(response.body).xpath_nodes("//form//input[@name='backend']/@value").map(&.text)
+          expect(backends).to eq(["other"])
+        end
+      end
+
+      context "given a judge that declares an integer param" do
+        register_backend("hashtags", judge_declaring_minimum)
+
+        it "renders a field for the param" do
+          get "/actors/#{actor.username}/feeds/new?backend=hashtags", ACCEPT_HTML
+          params = XML.parse_html(response.body).xpath_nodes("//form//input[@name='params[minimum]']/@value").map(&.text)
+          expect(params).to eq([""])
+        end
+
+        it "renders a representation for the param" do
+          get "/actors/#{actor.username}/feeds/new?backend=hashtags", ACCEPT_JSON
+          params = JSON.parse(response.body)["params"]?
+          expect(params).to eq({"minimum" => nil})
+        end
       end
     end
   end
@@ -830,6 +862,34 @@ Spectator.describe FeedsController do
         it "creates the feed with the chosen judge" do
           post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","backend":"other"})
           expect(robotics_feed?.try(&.backend)).to eq("other")
+        end
+      end
+
+      context "given a judge that declares an integer param" do
+        register_backend("hashtags", judge_declaring_minimum)
+
+        it "saves the param as a number" do
+          post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Tags&backend=hashtags&params%5Bminimum%5D=5"
+          expect(Feed.find?(name: "Tags").try(&.params)).to eq({"minimum" => JSON::Any.new(5_i64)})
+        end
+
+        it "saves the param as a number" do
+          post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Tags","backend":"hashtags","params":{"minimum":5}})
+          expect(Feed.find?(name: "Tags").try(&.params)).to eq({"minimum" => JSON::Any.new(5_i64)})
+        end
+
+        context "and a submitted value that isn't an integer" do
+          it "reports that the param must be an integer" do
+            post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Tags&backend=hashtags&params%5Bminimum%5D=five"
+            message = XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first?
+            expect(message.try(&.text)).to contain("minimum must be an integer")
+          end
+
+          it "reports that the param must be an integer" do
+            post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Tags","backend":"hashtags","params":{"minimum":"five"}})
+            errors = JSON.parse(response.body)["errors"].as_h
+            expect(errors[""].as_a).to contain("minimum must be an integer")
+          end
         end
       end
 
@@ -1136,6 +1196,23 @@ Spectator.describe FeedsController do
           get "/actors/#{actor.username}/feeds/#{gadgets.id}/edit", ACCEPT_HTML
           body = XML.parse_html(response.body)
           expect(body.xpath_nodes("//form//select[@name='backend']")).to be_empty
+        end
+      end
+
+      context "given a feed with a judge that declares an integer param" do
+        register_backend("hashtags", judge_declaring_minimum)
+
+        let_create!(:feed, named: tags, owner: actor, name: "Tags", backend: "hashtags", params: {"minimum" => JSON::Any.new(5_i64)})
+
+        it "renders the param's value" do
+          get "/actors/#{actor.username}/feeds/#{tags.id}/edit", ACCEPT_HTML
+          body = XML.parse_html(response.body)
+          expect(form_fields("params[minimum]")).to eq({"5"})
+        end
+
+        it "renders the param's value" do
+          get "/actors/#{actor.username}/feeds/#{tags.id}/edit", ACCEPT_JSON
+          expect(JSON.parse(response.body).dig?("params", "minimum")).to eq(5)
         end
       end
     end
@@ -1622,6 +1699,26 @@ Spectator.describe FeedsController do
             post "/actors/#{actor.username}/feeds/#{gadgets.id}", JSON_HEADERS, %({"name":"Gadgets","preview":"1"})
             expect(replacement.try(&.backend)).to eq("other")
           end
+        end
+      end
+
+      context "given a feed with a judge that declares an integer param" do
+        register_backend("hashtags", judge_declaring_minimum)
+
+        let_create!(:feed, named: tags, owner: actor, name: "Tags", backend: "hashtags", params: {"minimum" => JSON::Any.new(5_i64)})
+
+        def replacement
+          Feed.where("name = ? AND id <> ?", "Tags", tags.id).first?
+        end
+
+        it "changes the param" do
+          post "/actors/#{actor.username}/feeds/#{tags.id}", FORM_HEADERS, "name=Tags&params%5Bminimum%5D=7"
+          expect(replacement.try(&.params)).to eq({"minimum" => JSON::Any.new(7_i64)})
+        end
+
+        it "changes the param" do
+          post "/actors/#{actor.username}/feeds/#{tags.id}", JSON_HEADERS, %({"name":"Tags","params":{"minimum":7}})
+          expect(replacement.try(&.params)).to eq({"minimum" => JSON::Any.new(7_i64)})
         end
       end
 

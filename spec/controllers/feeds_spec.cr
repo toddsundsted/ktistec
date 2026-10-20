@@ -603,6 +603,12 @@ Spectator.describe FeedsController do
           expect(options).to contain("criteria", "other")
         end
 
+        it "renders a button to choose the judge" do
+          get "/actors/#{actor.username}/feeds/new", ACCEPT_HTML
+          buttons = XML.parse_html(response.body).xpath_nodes("//form[.//select[@name='backend']]//button[@type='submit']")
+          expect(buttons).not_to be_empty
+        end
+
         it "renders the form for the judge the owner chooses" do
           get "/actors/#{actor.username}/feeds/new?backend=other", ACCEPT_HTML
           backends = XML.parse_html(response.body).xpath_nodes("//form//input[@name='backend']/@value").map(&.text)

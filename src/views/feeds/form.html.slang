@@ -13,10 +13,9 @@ crystal:
   placeholder = "Add a keyword, #hashtag, or @mention, then press Enter"
   judges = feed.new_record? ? Feed::Backend.names.to_h { |name| {name, name} } : {} of String => String
 - if judges.size > 1
-  form.ui.form method="GET" action=new_actor_feed_path(owner) data-controller="checkbox-submit" data-turbo-frame="judge"
-    = select_tag("Judge", feed, backend, judges, data: {action: "change->checkbox-submit#change"})
-    noscript
-      button.ui.button type="submit" Choose
+  form.ui.form method="GET" action=new_actor_feed_path(owner) data-controller="submit-on-change" data-turbo-frame="judge"
+    = select_tag("Judge", feed, backend, judges, data: {action: "change->submit-on-change#change"})
+    button.ui.button type="submit" data-submit-on-change-target="fallback" Choose
 = form_tag(feed, action, data: {controller: "unsaved-changes"}) do
   = error_messages(feed)
   = input_tag("Name", feed, name, placeholder: "e.g. Fediverse")

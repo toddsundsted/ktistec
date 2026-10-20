@@ -1,17 +1,25 @@
 import { describe, expect, it, beforeEach, vi } from "vitest"
-import CheckboxSubmitController from "../controllers/checkbox_submit_controller"
+import SubmitOnChangeController from "../controllers/submit_on_change_controller"
 
-describe("CheckboxSubmitController", () => {
+describe("SubmitOnChangeController", () => {
   let controller
   let element
+  let fallback
 
   beforeEach(() => {
     element = document.createElement("div")
     document.body.appendChild(element)
+    fallback = document.createElement("button")
+    element.appendChild(fallback)
 
-    controller = Object.create(CheckboxSubmitController.prototype)
+    controller = Object.create(SubmitOnChangeController.prototype)
     Object.defineProperty(controller, "element", {
       value: element,
+      writable: true,
+      configurable: true,
+    })
+    Object.defineProperty(controller, "fallbackTargets", {
+      value: [fallback],
       writable: true,
       configurable: true,
     })
@@ -36,5 +44,9 @@ describe("CheckboxSubmitController", () => {
     controller.change({})
 
     expect(clickSpy).toHaveBeenCalled()
+  })
+
+  it("hides its fallback buttons", () => {
+    expect(fallback.style.display).toBe("none")
   })
 })

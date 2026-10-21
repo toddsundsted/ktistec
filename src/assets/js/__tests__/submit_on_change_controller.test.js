@@ -46,6 +46,12 @@ describe("SubmitOnChangeController", () => {
     expect(clickSpy).toHaveBeenCalled()
   })
 
+  it("removes the hidden submit input on disconnect", () => {
+    controller.disconnect()
+
+    expect(element.querySelectorAll('input[type="submit"]').length).toBe(0)
+  })
+
   it("hides its fallback buttons", () => {
     expect(fallback.style.display).toBe("none")
   })

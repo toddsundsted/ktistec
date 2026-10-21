@@ -21,6 +21,10 @@ export default class extends Controller {
     this.fallbackTargets.forEach((fallback) => fallback.style.display = "none")
   }
 
+  disconnect() {
+    this.input.remove()
+  }
+
   change(event) {
     this.input.click()
   }

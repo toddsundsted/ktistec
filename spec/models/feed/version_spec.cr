@@ -37,7 +37,7 @@ Spectator.describe Feed::Version do
         end
       end
 
-      context "and params with ignored keys" do
+      context "and params that differ only in keys the judge ignores" do
         let(params) { JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}, "hashtags": {"any": ["gamma"]}, "order": {"any": ["beta"]}})).as_h }
 
         it "returns the existing version" do
@@ -77,6 +77,14 @@ Spectator.describe Feed::Version do
         register_backend("another", AnotherBackend.new)
 
         subject { described_class.for(owner, "another", params) }
+
+        it "returns another version" do
+          expect(subject).not_to eq(existing)
+        end
+      end
+
+      context "and the revision has changed" do
+        before_each { existing.assign(revision: "0").save }
 
         it "returns another version" do
           expect(subject).not_to eq(existing)

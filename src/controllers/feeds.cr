@@ -110,7 +110,9 @@ class FeedsController
       not_found
     end
 
-    feed = Feed.new(owner: account.actor, backend: Feed::Backend::Criteria::NAME, name: "")
+    backend = env.params.query["backend"]? || Feed::Backend::Criteria::NAME
+
+    feed = Feed.new(owner: account.actor, backend: backend, name: "")
 
     criteria = form_criteria(env, feed)
 
@@ -125,7 +127,7 @@ class FeedsController
     cap_request_body env, MAX_REQUEST_BYTES
 
     backend = backend_param(env)
-    params = feed_params(env)
+    params = feed_params(env, backend)
 
     if previewing?(env)
       feed = Feed.new(**params.merge({owner: account.actor, backend: backend, draft: true, floor: Time.utc - Feed::HORIZON}))
@@ -189,7 +191,7 @@ class FeedsController
 
     cap_request_body env, MAX_REQUEST_BYTES
 
-    params = feed_params(env)
+    params = feed_params(env, feed.backend)
 
     if feed.draft
       original = feed.original?
@@ -311,14 +313,36 @@ class FeedsController
     params["backend"]?.as?(String) || Feed::Backend::Criteria::NAME
   end
 
-  private def self.feed_params(env)
+  private def self.feed_params(env, backend)
     params = normalize_params(env.params.body.presence || env.params.json)
-    criteria = criteria_strings(params)
     {
       name:        params["name"]?.as?(String) || "",
       description: params["description"]?.as?(String),
-      params:      Feed::Backend::Criteria::Form.parse(criteria[:any], criteria[:all], criteria[:none]),
+      params:      judge_params(params, backend),
     }
+  end
+
+  # Returns the judge's params from the submission.
+  #
+  # The criteria judge's come from its criteria. Any other judge's
+  # come from the params it declares.
+  #
+  private def self.judge_params(params, backend)
+    if backend == Feed::Backend::Criteria::NAME
+      criteria = criteria_strings(params)
+      Feed::Backend::Criteria::Form.parse(criteria[:any], criteria[:all], criteria[:none])
+    else
+      declared_params = Feed::Backend.find?(backend).try(&.declared_params) || [] of Feed::Backend::Param
+      declared_params.each_with_object({} of String => JSON::Any) do |param, judge_params|
+        next unless (value = params["params[#{param.name}]"]?.as?(String))
+        judge_params[param.name] =
+          if param.type.try(&.integer?) && (integer = value.to_i64?)
+            JSON::Any.new(integer)
+          else
+            JSON::Any.new(value)
+          end
+      end
+    end
   end
 
   private def self.criteria_strings(params)

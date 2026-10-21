@@ -40,6 +40,23 @@ class Feed
     #
     abstract def validate_params(params : Hash(String, JSON::Any)) : Array(String)
 
+    # A param a feed may give the judge.
+    #
+    # `type` is `nil` if the declaration is malformed.
+    #
+    record Param, name : String, type : Type?, required : Bool do
+      enum Type
+        Integer
+        String
+      end
+    end
+
+    # Returns the params a feed may give the judge.
+    #
+    def declared_params : Array(Param)
+      [] of Param
+    end
+
     # Returns a feed's params reduced to what decides membership.
     #
     # In canonical form.
@@ -80,6 +97,12 @@ class Feed
     #
     def self.register(name : String, backend : Backend) : Backend
       @@registry[name] = backend
+    end
+
+    # Unregisters a backend.
+    #
+    def self.unregister(name : String) : Nil
+      @@registry.delete(name)
     end
 
     # Returns the registered backend for a name, or `nil`.

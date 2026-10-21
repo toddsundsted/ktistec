@@ -10,6 +10,9 @@
 "any":<%= criteria[:any].to_json %>,
 "all":<%= criteria[:all].to_json %>,
 "none":<%= criteria[:none].to_json %>,
+<%- else -%>
+<%- declared_params = Feed::Backend.find?(feed.backend).try(&.declared_params) || [] of Feed::Backend::Param -%>
+"params":<%= declared_params.select(&.type).to_h { |param| {param.name, feed.params[param.name]?} }.to_json %>,
 <%- end -%>
 <%= field_pair(feed, id) %>
 <%= field_pair(feed, name) %>

@@ -572,13 +572,13 @@ Spectator.describe FeedsController do
         expect(response.status_code).to eq(200)
       end
 
-      it "renders the form" do
+      it "renders an empty form" do
         get "/actors/#{actor.username}/feeds/new", ACCEPT_HTML
         body = XML.parse_html(response.body)
         expect(form_fields("name", "any", "all", "none")).to eq({"", "", "", ""})
       end
 
-      it "renders the representation" do
+      it "renders an empty representation" do
         get "/actors/#{actor.username}/feeds/new", ACCEPT_JSON
         body = JSON.parse(response.body)
         expect(json_fields("name", "any", "all", "none")).to eq({"", "", "", ""})

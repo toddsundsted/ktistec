@@ -37,7 +37,7 @@ Spectator.describe Feed::Version do
         end
       end
 
-      context "and params with ignored keys" do
+      context "and params that differ only in keys the judge ignores" do
         let(params) { JSON.parse(%({"keywords": {"any": ["alpha", "beta"]}, "hashtags": {"any": ["gamma"]}, "order": {"any": ["beta"]}})).as_h }
 
         it "returns the existing version" do

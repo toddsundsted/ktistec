@@ -14,7 +14,7 @@ require "../status_id"
 require "./account"
 
 module API
-  module V1::Serializers
+  module Mastodon::V1
     # Serializes object data to Mastodon Status JSON format.
     #
     # See: https://docs.joinmastodon.org/entities/Status/

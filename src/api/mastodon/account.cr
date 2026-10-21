@@ -9,7 +9,7 @@ require "../../safe/safe_uri"
 require "../../utils/avatar"
 
 module API
-  module V1::Serializers
+  module Mastodon::V1
     # Serializes account data to Mastodon Account JSON format.
     #
     # See: https://docs.joinmastodon.org/entities/Account/

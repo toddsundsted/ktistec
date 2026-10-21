@@ -295,7 +295,7 @@ Spectator.describe APIController do
   end
 
   describe "GET /api/v1/instance" do
-    before_each { API::V1::Serializers::Instance.clear_cache! }
+    before_each { API::Mastodon::V1::Instance.clear_cache! }
 
     it "succeeds" do
       get "/api/v1/instance"
@@ -315,7 +315,7 @@ Spectator.describe APIController do
   end
 
   describe "GET /api/v2/instance" do
-    before_each { API::V2::Serializers::Instance.clear_cache! }
+    before_each { API::Mastodon::V2::Instance.clear_cache! }
 
     it "succeeds" do
       get "/api/v2/instance"

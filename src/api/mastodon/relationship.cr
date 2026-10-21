@@ -3,7 +3,7 @@ require "json"
 require "../../models/activity_pub/actor"
 
 module API
-  module V1::Serializers
+  module Mastodon::V1
     # Serializes relationship data to Mastodon Relationship JSON format.
     #
     # See: https://docs.joinmastodon.org/entities/Relationship/

@@ -1,10 +1,10 @@
-require "../../../src/api/serializers/account"
+require "../../../src/api/mastodon/account"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
 # expose the private rounding helper for testing
-module API::V1::Serializers
+module API::Mastodon::V1
   struct Account
     def self.approximate(count : Int64) : Int64
       previous_def
@@ -12,7 +12,7 @@ module API::V1::Serializers
   end
 end
 
-Spectator.describe API::V1::Serializers::Account do
+Spectator.describe API::Mastodon::V1::Account do
   setup_spec
 
   describe ".approximate" do

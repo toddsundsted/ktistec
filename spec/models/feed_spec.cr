@@ -347,7 +347,7 @@ Spectator.describe Feed do
   describe "#stats" do
     let_create(:feed)
 
-    it "reports zero" do
+    it "returns a count of zero" do
       expect(feed.stats.count).to eq(0)
     end
 
@@ -435,7 +435,7 @@ Spectator.describe Feed do
       post(3)
       post(4)
 
-      it "returns the most recently objects first" do
+      it "returns the most recent objects first" do
         expect(feed.contents).to eq([object4, object3, object2, object1])
       end
 
@@ -484,12 +484,12 @@ Spectator.describe Feed do
         expect(contents.cursor_end).to eq(object3.id)
       end
 
-      it "paginates the results" do
+      it "pages back from a max_id" do
         expect(feed.contents(max_id: object3.id, limit: 2)).to eq([object2, object1])
         expect(feed.contents(max_id: object3.id, limit: 2).has_next?).not_to be_true
       end
 
-      it "paginates the results" do
+      it "pages forward from a min_id" do
         expect(feed.contents(min_id: object1.id, limit: 2)).to eq([object3, object2])
         expect(feed.contents(min_id: object1.id, limit: 2).has_prev?).to be_true
       end

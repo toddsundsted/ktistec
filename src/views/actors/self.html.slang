@@ -25,16 +25,16 @@ crystal:
     a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
       i.horizontal.sliders.icon
       .menu
-        form data-controller="checkbox-submit" data-turbo-frame="main-timeline" data-turbo-action="replace"
+        form data-controller="submit-on-change" data-turbo-frame="main-timeline" data-turbo-action="replace"
           = params_to_inputs(env.params.query, exclude: ["filters"])
           input type="hidden" name="filters" value=""
           .item
             .ui.slider.checkbox
-              input#timeline-no-shares type="checkbox" name="filters" value="no-shares" data-action="change->checkbox-submit#change" checked=filters.includes?("no-shares")
+              input#timeline-no-shares type="checkbox" name="filters" value="no-shares" data-action="change->submit-on-change#change" checked=filters.includes?("no-shares")
               label for="timeline-no-shares" Don't include shared posts
           .item
             .ui.slider.checkbox
-              input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->checkbox-submit#change" checked=filters.includes?("no-replies")
+              input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->submit-on-change#change" checked=filters.includes?("no-replies")
               label for="timeline-no-replies" Don't include replies
 - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
 - partial "partials/editor"

@@ -24,6 +24,8 @@ class Feed
           <<-SQL,
           CREATE TABLE authors (
             iri TEXT PRIMARY KEY,
+            type TEXT,
+            handle TEXT,
             followed INTEGER,
             rate_7 REAL,
             rate_30 REAL,
@@ -98,11 +100,13 @@ class Feed
               serialized_stats.posting_rate.median,
               serialized_stats.posting_rate.q3,
             )
-            objects.compact_map(&.attributed_to_iri).uniq!.each do |iri|
-              serialized_author = Serializers::Author.from(iri, feed.owner_iri, now)
+            objects.compact_map(&.attributed_to?(include_deleted: true)).uniq!(&.iri).each do |actor|
+              serialized_author = Serializers::Author.from(actor, feed.owner_iri, now)
               db.exec(
-                "INSERT INTO authors (iri, followed, rate_7, rate_30, rate_90) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO authors (iri, type, handle, followed, rate_7, rate_30, rate_90) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 serialized_author.iri,
+                serialized_author.type,
+                serialized_author.handle,
                 serialized_author.followed,
                 serialized_author.rate_7,
                 serialized_author.rate_30,

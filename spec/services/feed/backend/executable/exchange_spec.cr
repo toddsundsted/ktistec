@@ -79,14 +79,28 @@ Spectator.describe Feed::Backend::Executable::Exchange do
 
     it "writes the posts' authors" do
       described_class.write(path, feed, [object], now)
-      author = Serializers::Author.from(object.attributed_to_iri.not_nil!, feed.owner_iri, now)
-      expect(query("SELECT iri, followed, rate_7, rate_30, rate_90 FROM authors", as: {String, Bool, Float64, Float64, Float64})).to eq({author.iri, author.followed, author.rate_7, author.rate_30, author.rate_90})
+      author = Serializers::Author.from(object.attributed_to, feed.owner_iri, now)
+      expect(query(
+        "SELECT iri, type, handle, followed, rate_7, rate_30, rate_90 FROM authors",
+        as: {String, String, String, Bool, Float64, Float64, Float64},
+      )).to eq({
+        author.iri,
+        author.type,
+        author.handle,
+        author.followed,
+        author.rate_7,
+        author.rate_30,
+        author.rate_90,
+      })
     end
 
     it "writes the stats" do
       described_class.write(path, feed, [object], now)
       stats = Serializers::Stats.from(feed.owner_iri, now).posting_rate
-      expect(query("SELECT posting_rate_q1, posting_rate_median, posting_rate_q3 FROM stats", as: {Float64?, Float64?, Float64?})).to eq({stats.q1, stats.median, stats.q3})
+      expect(query(
+        "SELECT posting_rate_q1, posting_rate_median, posting_rate_q3 FROM stats",
+        as: {Float64?, Float64?, Float64?},
+      )).to eq({stats.q1, stats.median, stats.q3})
     end
 
     context "given another post by the same author" do
@@ -95,6 +109,19 @@ Spectator.describe Feed::Backend::Executable::Exchange do
       it "writes each author once" do
         described_class.write(path, feed, [object, another], now)
         expect(query("SELECT count(*) FROM authors", as: Int64)).to eq(1)
+      end
+    end
+
+    context "given a saved post" do
+      before_each { object.save }
+
+      context "whose author was deleted" do
+        before_each { object.attributed_to.delete! }
+
+        it "writes the author" do
+          described_class.write(path, feed, [object.reload!], now)
+          expect(query("SELECT iri FROM authors", as: String)).to eq(object.attributed_to_iri)
+        end
       end
     end
   end

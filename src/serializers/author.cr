@@ -1,10 +1,15 @@
 require "../framework/database"
+require "../models/activity_pub/actor"
 
 module Serializers
   # An author view-object.
   #
   struct Author
     getter iri : String
+
+    getter type : String
+
+    getter handle : String
 
     # Whether the feed's owner follows the author.
     #
@@ -22,7 +27,15 @@ module Serializers
     #
     getter rate_90 : Float64
 
-    def initialize(@iri : String, @followed : Bool, @rate_7 : Float64, @rate_30 : Float64, @rate_90 : Float64)
+    def initialize(
+      @iri : String,
+      @type : String,
+      @handle : String,
+      @followed : Bool,
+      @rate_7 : Float64,
+      @rate_30 : Float64,
+      @rate_90 : Float64,
+    )
     end
 
     private FOLLOWED = <<-SQL
@@ -58,10 +71,25 @@ module Serializers
     #
     # Facts about the author are as seen by `owner_iri`.
     #
-    def self.from(iri : String, owner_iri : String?, now : Time) : Author
-      followed = Ktistec.database.scalar(FOLLOWED, owner_iri, iri).as(Int64) > 0
-      rate_7, rate_30, rate_90 = Ktistec.database.query_one(RATES, now - 7.days, now - 30.days, iri, now - 90.days, as: {Float64, Float64, Float64})
-      new(iri: iri, followed: followed, rate_7: rate_7, rate_30: rate_30, rate_90: rate_90)
+    def self.from(actor : ActivityPub::Actor, owner_iri : String?, now : Time) : Author
+      followed = Ktistec.database.scalar(FOLLOWED, owner_iri, actor.iri).as(Int64) > 0
+      rate_7, rate_30, rate_90 = Ktistec.database.query_one(
+        RATES,
+        now - 7.days,
+        now - 30.days,
+        actor.iri,
+        now - 90.days,
+        as: {Float64, Float64, Float64},
+      )
+      new(
+        iri: actor.iri,
+        type: actor.type.split("::").last,
+        handle: actor.handle,
+        followed: followed,
+        rate_7: rate_7,
+        rate_30: rate_30,
+        rate_90: rate_90,
+      )
     end
   end
 end

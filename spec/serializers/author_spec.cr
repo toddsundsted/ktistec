@@ -1,4 +1,5 @@
 require "../../src/serializers/author"
+require "../../src/models/activity_pub/actor/person"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
@@ -10,12 +11,20 @@ Spectator.describe Serializers::Author do
     let(now) { Time.utc(2026, 10, 22) }
 
     let_create(:actor, named: :owner)
-    let_create(:actor, named: :author)
+    let_create(:person, named: :author, iri: "https://remote/actors/alice", username: "alice")
 
-    subject { described_class.from(author.iri, owner.iri, now) }
+    subject { described_class.from(author, owner.iri, now) }
 
     it "carries the author's IRI" do
       expect(subject.iri).to eq(author.iri)
+    end
+
+    it "carries the author's type" do
+      expect(subject.type).to eq("Person")
+    end
+
+    it "carries the author's handle" do
+      expect(subject.handle).to eq("alice@remote")
     end
 
     describe "#followed" do

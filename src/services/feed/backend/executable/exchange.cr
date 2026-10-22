@@ -2,8 +2,10 @@ require "db"
 require "sqlite3"
 
 require "../executable"
+require "../../../../serializers/author"
 require "../../../../serializers/feed"
 require "../../../../serializers/post"
+require "../../../../serializers/stats"
 
 class Feed
   abstract class Backend
@@ -18,6 +20,16 @@ class Feed
 
         SCHEMA = [
           "CREATE TABLE feed (name TEXT, description TEXT, params TEXT)",
+          "CREATE TABLE stats (posting_rate_q1 REAL, posting_rate_median REAL, posting_rate_q3 REAL)",
+          <<-SQL,
+          CREATE TABLE authors (
+            iri TEXT PRIMARY KEY,
+            followed INTEGER,
+            rate_7 REAL,
+            rate_30 REAL,
+            rate_90 REAL
+          )
+          SQL
           <<-SQL,
           CREATE TABLE posts (
             iri TEXT PRIMARY KEY,
@@ -34,7 +46,8 @@ class Feed
             language TEXT,
             sensitive INTEGER,
             hashtags TEXT,
-            mentions TEXT
+            mentions TEXT,
+            author TEXT REFERENCES authors(iri)
           )
           SQL
           <<-SQL,
@@ -70,16 +83,36 @@ class Feed
 
         # Writes the questions about `objects` for `feed`.
         #
-        def write(path : String, feed : ::Feed, objects : Array(ActivityPub::Object)) : Nil
+        # Stats are computed over windows ending at `now`.
+        #
+        def write(path : String, feed : ::Feed, objects : Array(ActivityPub::Object), now : Time = Time.utc) : Nil
           DB.open("sqlite3://#{path}") do |db|
             db.exec("PRAGMA user_version = #{VERSION}")
             SCHEMA.each { |sql| db.exec(sql) }
             serialized_feed = Serializers::Feed.from(feed)
             db.exec("INSERT INTO feed (name, description, params) VALUES (?, ?, ?)", serialized_feed.name, serialized_feed.description, serialized_feed.params.to_json)
+            serialized_stats = Serializers::Stats.from(feed.owner_iri, now)
+            db.exec(
+              "INSERT INTO stats (posting_rate_q1, posting_rate_median, posting_rate_q3) VALUES (?, ?, ?)",
+              serialized_stats.posting_rate.q1,
+              serialized_stats.posting_rate.median,
+              serialized_stats.posting_rate.q3,
+            )
+            objects.compact_map(&.attributed_to_iri).uniq!.each do |iri|
+              serialized_author = Serializers::Author.from(iri, feed.owner_iri, now)
+              db.exec(
+                "INSERT INTO authors (iri, followed, rate_7, rate_30, rate_90) VALUES (?, ?, ?, ?, ?)",
+                serialized_author.iri,
+                serialized_author.followed,
+                serialized_author.rate_7,
+                serialized_author.rate_30,
+                serialized_author.rate_90,
+              )
+            end
             objects.each do |object|
               serialized_post = Serializers::Post.from(object)
               db.exec(
-                "INSERT INTO posts (iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO posts (iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 serialized_post.iri,
                 serialized_post.type,
                 serialized_post.name,
@@ -95,6 +128,7 @@ class Feed
                 serialized_post.sensitive,
                 serialized_post.hashtags.to_json,
                 serialized_post.mentions.to_json,
+                serialized_post.author,
               )
             end
           end

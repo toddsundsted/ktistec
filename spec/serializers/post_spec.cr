@@ -96,6 +96,10 @@ Spectator.describe Serializers::Post do
     it "carries the post's mentions" do
       expect(subject.mentions).to eq([Serializers::Post::Tag.new("alice@remote", "https://remote/actors/alice")])
     end
+
+    it "carries the post's author's IRI" do
+      expect(subject.author).to eq(object.attributed_to_iri)
+    end
   end
 
   describe Serializers::Post::Attachment do

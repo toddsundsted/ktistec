@@ -33,25 +33,30 @@ Spectator.describe Feed::Backend::Executable::Exchange do
   )
 
   describe ".write" do
+    let(now) { Time.utc(2026, 10, 23) }
+
+    let_create!(:follow_relationship, actor: feed.owner, object: object.attributed_to, confirmed: true)
+    let_create!(:object, named: nil, attributed_to: object.attributed_to, published: now - 1.day)
+
     def query(sql, as types)
       DB.open("sqlite3://#{path}", &.query_one(sql, as: types))
     end
 
     it "records the format's version" do
-      described_class.write(path, feed, [object])
+      described_class.write(path, feed, [object], now)
       expect(query("PRAGMA user_version", as: Int64)).to eq(Feed::Backend::Executable::Exchange::VERSION)
     end
 
     it "writes the feed" do
-      described_class.write(path, feed, [object])
+      described_class.write(path, feed, [object], now)
       expect(query("SELECT name, description, params FROM feed", as: {String, String, String})).to eq({"Cats", "Posts about cats", %({"topic":"cats"})})
     end
 
     it "writes the posts" do
-      described_class.write(path, feed, [object])
+      described_class.write(path, feed, [object], now)
       expect(query(
-        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions FROM posts",
-        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String},
+        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author FROM posts",
+        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String},
       )).to eq({
         object.iri,
         "Object",
@@ -68,7 +73,29 @@ Spectator.describe Feed::Backend::Executable::Exchange do
         1_i64,
         %([{"name":"cats","href":"https://remote/tags/cats"}]),
         %([{"name":"alice@remote","href":"https://remote/actors/alice"}]),
+        object.attributed_to_iri,
       })
+    end
+
+    it "writes the posts' authors" do
+      described_class.write(path, feed, [object], now)
+      author = Serializers::Author.from(object.attributed_to_iri.not_nil!, feed.owner_iri, now)
+      expect(query("SELECT iri, followed, rate_7, rate_30, rate_90 FROM authors", as: {String, Bool, Float64, Float64, Float64})).to eq({author.iri, author.followed, author.rate_7, author.rate_30, author.rate_90})
+    end
+
+    it "writes the stats" do
+      described_class.write(path, feed, [object], now)
+      stats = Serializers::Stats.from(feed.owner_iri, now).posting_rate
+      expect(query("SELECT posting_rate_q1, posting_rate_median, posting_rate_q3 FROM stats", as: {Float64?, Float64?, Float64?})).to eq({stats.q1, stats.median, stats.q3})
+    end
+
+    context "given another post by the same author" do
+      let_build(:object, named: :another, attributed_to: object.attributed_to)
+
+      it "writes each author once" do
+        described_class.write(path, feed, [object, another], now)
+        expect(query("SELECT count(*) FROM authors", as: Int64)).to eq(1)
+      end
     end
   end
 

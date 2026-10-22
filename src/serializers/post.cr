@@ -50,6 +50,8 @@ module Serializers
 
     getter mentions : Array(Tag)
 
+    getter author : String?
+
     def initialize(
       @iri : String,
       @type : String,
@@ -66,6 +68,7 @@ module Serializers
       @sensitive : Bool,
       @hashtags : Array(Tag),
       @mentions : Array(Tag),
+      @author : String?,
     )
     end
 
@@ -89,6 +92,7 @@ module Serializers
         sensitive: object.sensitive,
         hashtags: object.hashtags.map { |hashtag| Tag.new(hashtag.name, hashtag.href) },
         mentions: object.mentions.map { |mention| Tag.new(mention.name, mention.href) },
+        author: object.attributed_to_iri,
       )
     end
   end

@@ -2,6 +2,8 @@ require "db"
 require "sqlite3"
 
 require "../executable"
+require "../../../../serializers/feed"
+require "../../../../serializers/post"
 
 class Feed
   abstract class Backend
@@ -54,9 +56,11 @@ class Feed
           DB.open("sqlite3://#{path}") do |db|
             db.exec("PRAGMA user_version = #{VERSION}")
             SCHEMA.each { |sql| db.exec(sql) }
-            db.exec("INSERT INTO feed VALUES (?, ?, ?)", feed.name, feed.description, feed.params.to_json)
+            serialized_feed = Serializers::Feed.from(feed)
+            db.exec("INSERT INTO feed (name, description, params) VALUES (?, ?, ?)", serialized_feed.name, serialized_feed.description, serialized_feed.params.to_json)
             objects.each do |object|
-              db.exec("INSERT INTO posts VALUES (?, ?)", object.iri, object.content)
+              serialized_post = Serializers::Post.from(object)
+              db.exec("INSERT INTO posts (iri, content) VALUES (?, ?)", serialized_post.iri, serialized_post.content)
             end
           end
         end

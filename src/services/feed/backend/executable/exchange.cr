@@ -18,7 +18,25 @@ class Feed
 
         SCHEMA = [
           "CREATE TABLE feed (name TEXT, description TEXT, params TEXT)",
-          "CREATE TABLE posts (iri TEXT PRIMARY KEY, content TEXT)",
+          <<-SQL,
+          CREATE TABLE posts (
+            iri TEXT PRIMARY KEY,
+            type TEXT,
+            name TEXT,
+            summary TEXT,
+            content TEXT,
+            audience TEXT,
+            attachments TEXT,
+            published TEXT,
+            in_reply_to TEXT,
+            thread TEXT,
+            quote TEXT,
+            language TEXT,
+            sensitive INTEGER,
+            hashtags TEXT,
+            mentions TEXT
+          )
+          SQL
           <<-SQL,
           CREATE TABLE answers (
             iri TEXT PRIMARY KEY REFERENCES posts(iri),
@@ -60,7 +78,24 @@ class Feed
             db.exec("INSERT INTO feed (name, description, params) VALUES (?, ?, ?)", serialized_feed.name, serialized_feed.description, serialized_feed.params.to_json)
             objects.each do |object|
               serialized_post = Serializers::Post.from(object)
-              db.exec("INSERT INTO posts (iri, content) VALUES (?, ?)", serialized_post.iri, serialized_post.content)
+              db.exec(
+                "INSERT INTO posts (iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                serialized_post.iri,
+                serialized_post.type,
+                serialized_post.name,
+                serialized_post.summary,
+                serialized_post.content,
+                serialized_post.audience.to_json,
+                serialized_post.attachments.to_json,
+                serialized_post.published,
+                serialized_post.in_reply_to,
+                serialized_post.thread,
+                serialized_post.quote,
+                serialized_post.language,
+                serialized_post.sensitive,
+                serialized_post.hashtags.to_json,
+                serialized_post.mentions.to_json,
+              )
             end
           end
         end

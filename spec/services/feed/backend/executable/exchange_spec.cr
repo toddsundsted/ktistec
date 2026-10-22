@@ -11,7 +11,26 @@ Spectator.describe Feed::Backend::Executable::Exchange do
   after_each { File.delete?(path) }
 
   let_build(:feed, name: "Cats", description: "Posts about cats", params: JSON.parse(%({"topic":"cats"})).as_h)
-  let_build(:object, content: "<p>A cat</p>")
+
+  let(attachment) { ActivityPub::Object::Attachment.new("https://remote/cat.jpg", "image/jpeg", "A cat") }
+  let_build(:hashtag, name: "cats", href: "https://remote/tags/cats")
+  let_build(:mention, name: "alice@remote", href: "https://remote/actors/alice")
+  let_build(
+    :object,
+    name: "Cats",
+    summary: "<p>About a cat</p>",
+    content: "<p>A cat</p>",
+    audience: ["https://remote/c/cats"],
+    attachments: [attachment],
+    published: Time.utc(2026, 10, 22, 12, 0, 0),
+    in_reply_to_iri: "https://remote/objects/parent",
+    thread: "https://remote/objects/root",
+    quote_iri: "https://remote/objects/quoted",
+    language: "en",
+    sensitive: true,
+    hashtags: [hashtag],
+    mentions: [mention],
+  )
 
   describe ".write" do
     def query(sql, as types)
@@ -30,7 +49,26 @@ Spectator.describe Feed::Backend::Executable::Exchange do
 
     it "writes the posts" do
       described_class.write(path, feed, [object])
-      expect(query("SELECT iri, content FROM posts", as: {String, String})).to eq({object.iri, "<p>A cat</p>"})
+      expect(query(
+        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions FROM posts",
+        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String},
+      )).to eq({
+        object.iri,
+        "Object",
+        "Cats",
+        "<p>About a cat</p>",
+        "<p>A cat</p>",
+        %(["https://remote/c/cats"]),
+        %([{"url":"https://remote/cat.jpg","media_type":"image/jpeg","caption":"A cat"}]),
+        "2026-10-22 12:00:00.000",
+        "https://remote/objects/parent",
+        "https://remote/objects/root",
+        "https://remote/objects/quoted",
+        "en",
+        1_i64,
+        %([{"name":"cats","href":"https://remote/tags/cats"}]),
+        %([{"name":"alice@remote","href":"https://remote/actors/alice"}]),
+      })
     end
   end
 

@@ -49,20 +49,20 @@ Spectator.describe Feed::Queue do
         .to change { waiting.size }.by(1)
     end
 
-    it "is due now" do
+    it "enqueues a question that is due now" do
       Feed::Queue.enqueue(version.id!, object_iri, live: false)
       expect(waiting.first.due_at).to be_close(now, delta: 1.second)
     end
 
-    it "is due when scheduled" do
+    it "enqueues a question that is due when scheduled" do
       Feed::Queue.enqueue(version.id!, object_iri, live: false, due_at: now + 1.hour)
       expect(waiting.first.due_at).to eq(now + 1.hour)
     end
 
-    context "given a drain that is not yet due" do
+    context "given the task that answers questions is not yet due" do
       let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
 
-      it "makes the drain due now" do
+      it "makes the task due now" do
         Feed::Queue.enqueue(version.id!, object_iri, live: false)
         expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
       end
@@ -129,7 +129,7 @@ Spectator.describe Feed::Queue do
       end
     end
 
-    context "given a batched question" do
+    context "given a question for the post that is in a batch" do
       let_create!(:feed_question, version: version, object_iri: object_iri, batched: true)
 
       it "enqueues another" do
@@ -138,7 +138,7 @@ Spectator.describe Feed::Queue do
       end
     end
 
-    context "given a question for another version" do
+    context "given a question for the post on another version" do
       let_create!(:feed_question, object_iri: object_iri)
 
       it "enqueues another" do
@@ -147,7 +147,7 @@ Spectator.describe Feed::Queue do
       end
     end
 
-    context "given a waiting question and a batched question" do
+    context "given a waiting question and a question in a batch" do
       let_create!(:feed_question, named: nil)
       let_create!(:feed_question, named: nil, batched: true)
 
@@ -222,12 +222,12 @@ Spectator.describe Feed::Queue do
         expect(Feed::Queue.enqueue_backfill(feed)).to be_false
       end
 
-      it "enqueues only the newest" do
+      it "enqueues only the newest, given a limit of one" do
         Feed::Queue.enqueue_backfill(feed, limit: 1)
         expect(questions.map(&.object_iri)).to eq([newer.iri])
       end
 
-      it "reports that candidates remain" do
+      it "reports that candidates remain, given a limit of one" do
         expect(Feed::Queue.enqueue_backfill(feed, limit: 1)).to be_true
       end
 
@@ -252,7 +252,7 @@ Spectator.describe Feed::Queue do
           end
         end
 
-        it "covers the candidates it enqueued" do
+        it "records that it backfilled down to the oldest candidate" do
           Feed::Queue.enqueue_backfill(feed)
           expect(Feed::Version.find(feed.version_id.not_nil!).backfill_cursor).to eq(older.id)
         end
@@ -267,10 +267,10 @@ Spectator.describe Feed::Queue do
         end
       end
 
-      context "given more than will fit" do
+      context "and more than fit in a page" do
         let_create!(:object, named: nil)
 
-        it "covers only the candidates it enqueued" do
+        it "records that it backfilled only down to the last candidate it enqueued" do
           Feed::Queue.enqueue_backfill(feed)
           expect(Feed::Version.find(feed.version_id.not_nil!).backfill_cursor).to eq(newer.id)
         end
@@ -296,7 +296,7 @@ Spectator.describe Feed::Queue do
         end
       end
 
-      context "and a draft" do
+      context "and the feed is a draft" do
         before_each { feed.assign(draft: true).save }
 
         it "enqueues the draft's candidates" do
@@ -305,7 +305,7 @@ Spectator.describe Feed::Queue do
         end
       end
 
-      context "and no floor" do
+      context "and the feed has no floor" do
         before_each { feed.assign(floor: nil).save }
 
         it "enqueues nothing" do
@@ -318,10 +318,10 @@ Spectator.describe Feed::Queue do
         end
       end
 
-      context "given a drain that is not yet due" do
+      context "and the task that answers questions is not yet due" do
         let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
 
-        it "makes the drain due now" do
+        it "makes the task due now" do
           Feed::Queue.enqueue_backfill(feed)
           expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
         end
@@ -374,10 +374,10 @@ Spectator.describe Feed::Queue do
         end
       end
 
-      context "given a drain that is not yet due" do
+      context "and the task that answers questions is not yet due" do
         let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
 
-        it "makes the drain due now" do
+        it "makes the task due now" do
           Feed::Queue.enqueue_arrival(object)
           expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
         end
@@ -528,10 +528,10 @@ Spectator.describe Feed::Queue do
       end
     end
 
-    context "given a waiting question for the pair" do
+    context "given a waiting question for the post" do
       let_create!(:feed_question, named: nil, version: version, object_iri: object_iri)
 
-      it "leaves only one question for the pair" do
+      it "leaves only one question for the post" do
         Feed::Queue.release_batches
         expect(Feed::Question.count(version_id: version.id, object_iri: object_iri)).to eq(1)
       end

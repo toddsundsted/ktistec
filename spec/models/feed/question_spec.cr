@@ -11,18 +11,18 @@ Spectator.describe Feed::Question do
   let_create(:feed_version, named: version)
 
   describe ".next_version_id" do
-    it "returns nil" do
+    it "returns nil, given no questions" do
       expect(described_class.next_version_id).to be_nil
     end
 
     context "given a question" do
       let_create!(:feed_question, version: version, due_at: now - 1.minute)
 
-      it "returns its version" do
+      it "returns its version once it is due" do
         expect(described_class.next_version_id).to eq(version.id)
       end
 
-      context "that is not due" do
+      context "that is not yet due" do
         before_each { feed_question.assign(due_at: now + 1.minute).save }
 
         it "returns nil" do
@@ -66,7 +66,7 @@ Spectator.describe Feed::Question do
   end
 
   describe ".pull" do
-    it "pulls nothing" do
+    it "pulls nothing, given no questions" do
       expect(described_class.pull(version.id!, 2)).to be_empty
     end
 

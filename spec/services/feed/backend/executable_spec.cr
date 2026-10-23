@@ -91,7 +91,7 @@ Spectator.describe Feed::Backend::Executable do
     context "given a judge that doesn't answer" do
       before_each { write_judge("exit 0") }
 
-      it "returns a transient failure" do
+      it "returns a transient failure for the post" do
         expect(subject.judge(feed, [object]).first.as(Feed::Backend::Failure).kind).to eq(Feed::Backend::Failure::Kind::Transient)
       end
     end

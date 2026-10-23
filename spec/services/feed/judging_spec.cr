@@ -85,7 +85,7 @@ Spectator.describe Feed::Judging do
       Feed::Verdict.find?(version_id: feed.version_id, object_iri: object.iri)
     end
 
-    it "includes the matching object" do
+    it "includes a post that matches" do
       Feed::Judging.answer([question])
       expect(verdict_for(hit).try(&.included)).to be_true
     end
@@ -131,7 +131,7 @@ Spectator.describe Feed::Judging do
 
       before_each { RecordingBackend.calls.clear }
 
-      it "asks the judge once" do
+      it "asks the judge about both at once" do
         Feed::Judging.answer([question, second])
         expect(RecordingBackend.calls).to eq([[hit.iri, other.iri]])
       end
@@ -225,7 +225,7 @@ Spectator.describe Feed::Judging do
           let_create!(:object, named: other, content: "<p>something else</p>")
           let_create(:feed_question, named: second, feed: feed, object: other, batched: true)
 
-          it "records a transient failure" do
+          it "records a transient failure for it too" do
             Feed::Judging.answer([question, second])
             expect(verdict_for(other).try(&.failure)).to eq(Feed::Verdict::TRANSIENT)
           end

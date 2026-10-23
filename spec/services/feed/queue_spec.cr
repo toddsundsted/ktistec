@@ -37,6 +37,12 @@ Spectator.describe Feed::Queue do
     Feed::Question.where(batched: false)
   end
 
+  around_each do |proc|
+    proc.call
+  ensure
+    Feed::Queue.paused.each { |name| Feed::Queue.resume(name) }
+  end
+
   describe ".enqueue" do
     it "enqueues a question" do
       expect { Feed::Queue.enqueue(version.id!, object_iri, live: false) }
@@ -398,6 +404,34 @@ Spectator.describe Feed::Queue do
     end
   end
 
+  describe ".paused_until" do
+    before_each { Feed::Queue.pause("judge", now + 1.hour) }
+
+    it "returns when the pause ends" do
+      expect(Feed::Queue.paused_until("judge")).to eq(now + 1.hour)
+    end
+  end
+
+  describe ".paused" do
+    before_each { Feed::Queue.pause("judge", now + 1.hour) }
+
+    it "returns the judge" do
+      expect(Feed::Queue.paused(now)).to eq(["judge"])
+    end
+
+    it "returns nothing once the pause ends" do
+      expect(Feed::Queue.paused(now + 1.hour)).to be_empty
+    end
+
+    context "that is resumed" do
+      before_each { Feed::Queue.resume("judge") }
+
+      it "returns nothing" do
+        expect(Feed::Queue.paused(now)).to be_empty
+      end
+    end
+  end
+
   describe ".pull" do
     it "pulls nothing" do
       expect(Feed::Queue.pull).to be_empty
@@ -408,6 +442,18 @@ Spectator.describe Feed::Queue do
 
       it "pulls the question" do
         expect(Feed::Queue.pull.map(&.id)).to eq([earlier.id])
+      end
+
+      context "whose judge is paused" do
+        before_each { Feed::Queue.pause(version.backend, now + 1.hour) }
+
+        it "pulls nothing" do
+          expect(Feed::Queue.pull(now)).to be_empty
+        end
+
+        it "pulls the question once the pause ends" do
+          expect(Feed::Queue.pull(now + 1.hour).map(&.id)).to eq([earlier.id])
+        end
       end
 
       context "and a later question on the version" do

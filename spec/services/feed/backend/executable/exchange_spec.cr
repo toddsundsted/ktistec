@@ -164,4 +164,20 @@ Spectator.describe Feed::Backend::Executable::Exchange do
       end
     end
   end
+
+  describe ".unavailable" do
+    before_each { described_class.write(path, feed, [object]) }
+
+    it "returns nothing" do
+      expect(described_class.unavailable(path)).to be_nil
+    end
+
+    context "given a judge that reported it is unavailable" do
+      before_each { DB.open("sqlite3://#{path}", &.exec("INSERT INTO unavailable (reason, retry_after) VALUES ('unavailable', '2026-11-01 00:00:00')")) }
+
+      it "returns the judge's reason and when to retry" do
+        expect(described_class.unavailable(path).try { |unavailable| {unavailable.reason, unavailable.retry_after} }).to eq({"unavailable", Time.utc(2026, 11, 1)})
+      end
+    end
+  end
 end

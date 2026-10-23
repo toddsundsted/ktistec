@@ -46,6 +46,14 @@ Spectator.describe Feed::Question do
           expect(described_class.next_version_id).to eq(other.id)
         end
 
+        context "whose judge is excluded" do
+          let_create(:feed_version, named: other, backend: "other")
+
+          it "returns the later question's version" do
+            expect(described_class.next_version_id(excluding: ["other"])).to eq(version.id)
+          end
+        end
+
         context "but the later question is live" do
           before_each { feed_question.assign(live: true).save }
 

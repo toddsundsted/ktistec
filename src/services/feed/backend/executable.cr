@@ -59,6 +59,9 @@ class Feed
         file = File.tempname("ktistec", "exchange")
         Exchange.write(file, feed, objects)
         status = run(file)
+        if (unavailable = Exchange.unavailable(file))
+          raise UnavailableError.new(unavailable.reason || "judge #{path} is unavailable", unavailable.retry_after)
+        end
         raise TransientError.new("judge #{path} exited with #{status}") unless status.success?
         answers = Exchange.read(file)
         objects.map do |object|

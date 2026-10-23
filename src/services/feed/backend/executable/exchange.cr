@@ -61,6 +61,12 @@ class Feed
             CHECK ((included IS NULL) <> (failure IS NULL))
           )
           SQL
+          <<-SQL,
+          CREATE TABLE unavailable (
+            reason TEXT,
+            retry_after TEXT
+          )
+          SQL
         ]
 
         struct Answer
@@ -81,6 +87,14 @@ class Feed
               Failure.new(:transient, "malformed answer")
             end
           end
+        end
+
+        struct Unavailable
+          include DB::Serializable
+
+          getter reason : String?
+
+          getter retry_after : Time?
         end
 
         # Writes the questions about `objects` for `feed`.
@@ -144,6 +158,14 @@ class Feed
           DB.open("sqlite3://#{path}") do |db|
             answers = Answer.from_rs(db.query("SELECT iri, included, failure, reason FROM answers"))
             answers.to_h { |answer| {answer.iri, answer.to_answer} }
+          end
+        end
+
+        # Reads whether the judge reported that it is unavailable.
+        #
+        def unavailable(path : String) : Unavailable?
+          DB.open("sqlite3://#{path}") do |db|
+            Unavailable.from_rs(db.query("SELECT reason, retry_after FROM unavailable ORDER BY rowid LIMIT 1")).first?
           end
         end
       end

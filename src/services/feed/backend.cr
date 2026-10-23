@@ -91,6 +91,16 @@ class Feed
     class PermanentError < Error
     end
 
+    # Raised when a judge can't judge, for now.
+    #
+    class UnavailableError < Error
+      getter retry_after : Time?
+
+      def initialize(message : String? = nil, @retry_after : Time? = nil)
+        super(message)
+      end
+    end
+
     @@registry = {} of String => Backend
 
     # Registers a backend.

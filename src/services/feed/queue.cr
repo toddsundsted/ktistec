@@ -128,13 +128,43 @@ class Feed
       ::Task::Feed::AnswerQuestions.run_now if enqueued
     end
 
+    # Paused judges.
+    #
+    @@paused = {} of String => Time
+
+    # Pauses a judge until `until`.
+    #
+    def pause(name : String, until time : Time) : Nil
+      @@paused[name] = time
+    end
+
+    # Resumes a paused judge.
+    #
+    def resume(name : String) : Nil
+      @@paused.delete(name)
+    end
+
+    # Returns when a judge's pause ends, or `nil` if it isn't paused.
+    #
+    def paused_until(name : String) : Time?
+      @@paused[name]?
+    end
+
+    # Returns the judges paused at `now`.
+    #
+    def paused(now : Time = Time.utc) : Array(String)
+      @@paused.reject! { |_, time| time <= now }
+      @@paused.keys
+    end
+
     # Pulls the next batch of questions that are due.
     #
     # The batch is the next question to pull and the questions after
-    # it on the same version, up to its judge's batch size.
+    # it on the same version, up to its judge's batch size. Questions
+    # on a paused judge's versions are not pulled.
     #
     def pull(now : Time = Time.utc) : Array(Question)
-      return [] of Question unless (version_id = Question.next_version_id(now))
+      return [] of Question unless (version_id = Question.next_version_id(now, excluding: paused(now)))
       Question.pull(version_id, batch_size(version_id), now)
     end
 

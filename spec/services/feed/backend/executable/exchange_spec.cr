@@ -11,26 +11,118 @@ Spectator.describe Feed::Backend::Executable::Exchange do
   after_each { File.delete?(path) }
 
   let_build(:feed, name: "Cats", description: "Posts about cats", params: JSON.parse(%({"topic":"cats"})).as_h)
-  let_build(:object, content: "<p>A cat</p>")
+
+  let(attachment) { ActivityPub::Object::Attachment.new("https://remote/cat.jpg", "image/jpeg", "A cat") }
+  let_build(:hashtag, name: "cats", href: "https://remote/tags/cats")
+  let_build(:mention, name: "alice@remote", href: "https://remote/actors/alice")
+  let_build(
+    :object,
+    name: "Cats",
+    summary: "<p>About a cat</p>",
+    content: "<p>A cat</p>",
+    audience: ["https://remote/c/cats"],
+    attachments: [attachment],
+    published: Time.utc(2026, 10, 22, 12, 0, 0),
+    in_reply_to_iri: "https://remote/objects/parent",
+    thread: "https://remote/objects/root",
+    quote_iri: "https://remote/objects/quoted",
+    language: "en",
+    sensitive: true,
+    hashtags: [hashtag],
+    mentions: [mention],
+  )
 
   describe ".write" do
+    let(now) { Time.utc(2026, 10, 23) }
+
+    let_create!(:follow_relationship, actor: feed.owner, object: object.attributed_to, confirmed: true)
+    let_create!(:object, named: nil, attributed_to: object.attributed_to, published: now - 1.day)
+
     def query(sql, as types)
       DB.open("sqlite3://#{path}", &.query_one(sql, as: types))
     end
 
     it "records the format's version" do
-      described_class.write(path, feed, [object])
+      described_class.write(path, feed, [object], now)
       expect(query("PRAGMA user_version", as: Int64)).to eq(Feed::Backend::Executable::Exchange::VERSION)
     end
 
     it "writes the feed" do
-      described_class.write(path, feed, [object])
+      described_class.write(path, feed, [object], now)
       expect(query("SELECT name, description, params FROM feed", as: {String, String, String})).to eq({"Cats", "Posts about cats", %({"topic":"cats"})})
     end
 
     it "writes the posts" do
-      described_class.write(path, feed, [object])
-      expect(query("SELECT iri, content FROM posts", as: {String, String})).to eq({object.iri, "<p>A cat</p>"})
+      described_class.write(path, feed, [object], now)
+      expect(query(
+        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author FROM posts",
+        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String},
+      )).to eq({
+        object.iri,
+        "Object",
+        "Cats",
+        "<p>About a cat</p>",
+        "<p>A cat</p>",
+        %(["https://remote/c/cats"]),
+        %([{"url":"https://remote/cat.jpg","media_type":"image/jpeg","caption":"A cat"}]),
+        "2026-10-22 12:00:00.000",
+        "https://remote/objects/parent",
+        "https://remote/objects/root",
+        "https://remote/objects/quoted",
+        "en",
+        1_i64,
+        %([{"name":"cats","href":"https://remote/tags/cats"}]),
+        %([{"name":"alice@remote","href":"https://remote/actors/alice"}]),
+        object.attributed_to_iri,
+      })
+    end
+
+    it "writes the posts' authors" do
+      described_class.write(path, feed, [object], now)
+      author = Serializers::Author.from(object.attributed_to, feed.owner_iri, now)
+      expect(query(
+        "SELECT iri, type, handle, followed, rate_7, rate_30, rate_90 FROM authors",
+        as: {String, String, String, Bool, Float64, Float64, Float64},
+      )).to eq({
+        author.iri,
+        author.type,
+        author.handle,
+        author.followed,
+        author.rate_7,
+        author.rate_30,
+        author.rate_90,
+      })
+    end
+
+    it "writes the stats" do
+      described_class.write(path, feed, [object], now)
+      stats = Serializers::Stats.from(feed.owner_iri, now).posting_rate
+      expect(query(
+        "SELECT posting_rate_q1, posting_rate_median, posting_rate_q3 FROM stats",
+        as: {Float64?, Float64?, Float64?},
+      )).to eq({stats.q1, stats.median, stats.q3})
+    end
+
+    context "given another post by the same author" do
+      let_build(:object, named: :another, attributed_to: object.attributed_to)
+
+      it "writes each author once" do
+        described_class.write(path, feed, [object, another], now)
+        expect(query("SELECT count(*) FROM authors", as: Int64)).to eq(1)
+      end
+    end
+
+    context "given a saved post" do
+      before_each { object.save }
+
+      context "whose author was deleted" do
+        before_each { object.attributed_to.delete! }
+
+        it "writes the author" do
+          described_class.write(path, feed, [object.reload!], now)
+          expect(query("SELECT iri FROM authors", as: String)).to eq(object.attributed_to_iri)
+        end
+      end
     end
   end
 
@@ -69,6 +161,22 @@ Spectator.describe Feed::Backend::Executable::Exchange do
 
       it "returns a transient failure" do
         expect(described_class.read(path)[object.iri].as(Feed::Backend::Failure).kind).to eq(Feed::Backend::Failure::Kind::Transient)
+      end
+    end
+  end
+
+  describe ".unavailable" do
+    before_each { described_class.write(path, feed, [object]) }
+
+    it "returns nothing" do
+      expect(described_class.unavailable(path)).to be_nil
+    end
+
+    context "given a judge that reported it is unavailable" do
+      before_each { DB.open("sqlite3://#{path}", &.exec("INSERT INTO unavailable (reason, retry_after) VALUES ('unavailable', '2026-11-01 00:00:00')")) }
+
+      it "returns the judge's reason and when to retry" do
+        expect(described_class.unavailable(path).try { |unavailable| {unavailable.reason, unavailable.retry_after} }).to eq({"unavailable", Time.utc(2026, 11, 1)})
       end
     end
   end

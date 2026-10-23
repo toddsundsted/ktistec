@@ -40,8 +40,18 @@ class Feed
     # Returns the version of the next question to pull, or `nil` if
     # no question is due.
     #
-    def self.next_version_id(now : Time = Time.utc) : Int64?
-      where("#{DUE} #{ORDER} LIMIT 1", now).first?.try(&.version_id)
+    def self.next_version_id(now : Time = Time.utc, excluding : Array(String) = [] of String) : Int64?
+      backends = Array.new(excluding.size, "?").join(", ")
+      args = [now] of DB::Any
+      args.concat(excluding)
+      query_all(<<-SQL, args: args).first?.try(&.version_id)
+        SELECT #{columns}
+          FROM #{table}
+         WHERE #{DUE}
+           AND version_id NOT IN (SELECT id FROM feed_versions WHERE backend IN (#{backends}))
+         #{ORDER}
+         LIMIT 1
+        SQL
     end
 
     private PULL = <<-SQL

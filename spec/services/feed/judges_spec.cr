@@ -4,6 +4,7 @@ require "../../../src/services/feed/judges"
 require "../../../src/services/feed/backend/criteria"
 
 require "../../spec_helper/base"
+require "../../spec_helper/factory"
 require "../../spec_helper/feed/judges"
 
 Spectator.describe Feed::Judges do
@@ -87,6 +88,62 @@ Spectator.describe Feed::Judges do
           it "does not require the param" do
             described_class.scan
             expect(Feed::Backend.find?("summarize").try(&.validate_params({} of String => JSON::Any))).to be_empty
+          end
+        end
+
+        context "and is paused" do
+          before_each { Feed::Queue.pause("summarize", until: 1.hour.from_now) }
+
+          it "keeps the judge paused while its file is unchanged" do
+            described_class.scan
+            expect(Feed::Queue.paused_until("summarize")).not_to be_nil
+          end
+
+          context "and is touched" do
+            before_each { File.touch(path, 1.minute.from_now) }
+
+            it "resumes the judge" do
+              described_class.scan
+              expect(Feed::Queue.paused_until("summarize")).to be_nil
+            end
+          end
+        end
+
+        context "and it fails" do
+          let(actor) { register.actor }
+
+          let_create!(:feed, owner: actor, backend: "summarize")
+          let_create(:feed_question, feed: feed, batched: true)
+
+          def fail_a_batch
+            Feed::Judging.answer([feed_question])
+          end
+
+          before_each do
+            File.write(path, "#!/bin/sh\nexit 1\n")
+            File.touch(path, 1.minute.from_now)
+            described_class.scan
+          end
+
+          context "and is one failed batch away from being paused" do
+            before_each { (Feed::Judging::FAILURES_BEFORE_PAUSE - 1).times { fail_a_batch } }
+
+            it "is paused by its next failed batch" do
+              fail_a_batch
+              expect(Feed::Queue.paused_until("summarize")).not_to be_nil
+            end
+
+            context "but is touched" do
+              before_each do
+                File.touch(path, 2.minutes.from_now)
+                described_class.scan
+              end
+
+              it "restarts its count of failed batches" do
+                fail_a_batch
+                expect(Feed::Queue.paused_until("summarize")).to be_nil
+              end
+            end
           end
         end
 

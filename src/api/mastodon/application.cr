@@ -3,7 +3,7 @@ require "json"
 require "../../models/oauth2/provider/client"
 
 module API
-  module V1::Serializers
+  module Mastodon::V1
     # Serializes an OAuth2 client to Mastodon Application JSON format.
     #
     # See: https://docs.joinmastodon.org/entities/Application/

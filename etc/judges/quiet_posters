@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+# ktistec: batch-size=100
+
+"""A feed judge that includes posts from followed authors who post no
+more often than the median followed author.
+
+To use it, make it executable: `chmod +x etc/judges/quiet_posters`
+"""
+
+import sqlite3
+import sys
+
+
+def main():
+    if len(sys.argv) != 2:
+        print("usage: quiet_posters <exchange file>", file=sys.stderr)
+        return 1
+
+    db = sqlite3.connect(sys.argv[1])
+    (median,) = db.execute("SELECT posting_rate_median FROM stats").fetchone()
+    posts = db.execute(
+        "SELECT p.iri, a.followed, a.rate_90 FROM posts p LEFT JOIN authors a ON a.iri = p.author"
+    ).fetchall()
+    if median is None:
+        print(f"judging {len(posts)} posts", flush=True)
+    else:
+        print(f"judging {len(posts)} posts (at or below {median:.3f} posts per day)", flush=True)
+    for iri, followed, rate in posts:
+        if median is None:
+            included, reason = False, "no followed author has posted"
+        elif not followed:
+            included, reason = False, "author not followed"
+        else:
+            included, reason = rate <= median, f"{rate:.3f} posts per day"
+        db.execute(
+            "INSERT INTO answers (iri, included, reason) VALUES (?, ?, ?)",
+            (iri, int(included), reason),
+        )
+        verdict = "included" if included else "excluded"
+        print(f"{verdict} {iri} ({reason})", flush=True)
+    db.commit()
+    db.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

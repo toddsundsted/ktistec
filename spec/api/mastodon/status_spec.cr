@@ -1,9 +1,9 @@
-require "../../../src/api/serializers/status"
+require "../../../src/api/mastodon/status"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
-Spectator.describe API::V1::Serializers::Status do
+Spectator.describe API::Mastodon::V1::Status do
   setup_spec
 
   describe ".from_object" do

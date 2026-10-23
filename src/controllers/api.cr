@@ -13,11 +13,11 @@ require "../services/oauth2/client_registration"
 require "../services/object_factory"
 require "../services/outbox_activity_processor"
 require "../services/upload_service"
-require "../api/serializers/application"
-require "../api/serializers/instance"
-require "../api/serializers/account"
-require "../api/serializers/status"
-require "../api/serializers/relationship"
+require "../api/mastodon/application"
+require "../api/mastodon/instance"
+require "../api/mastodon/account"
+require "../api/mastodon/status"
+require "../api/mastodon/relationship"
 require "../api/status_id"
 require "./oauth2"
 
@@ -113,7 +113,7 @@ class APIController
     case result
     in OAuth2::ClientRegistration::Success
       client = result.client
-      app = API::V1::Serializers::Application.from_client(client, include_secret: true, website: website)
+      app = API::Mastodon::V1::Application.from_client(client, include_secret: true, website: website)
       app.to_json
     in OAuth2::ClientRegistration::Failure
       Log.debug { result.error }
@@ -122,11 +122,11 @@ class APIController
   end
 
   get "/api/v1/instance" do
-    API::V1::Serializers::Instance.current.to_json
+    API::Mastodon::V1::Instance.current.to_json
   end
 
   get "/api/v2/instance" do
-    API::V2::Serializers::Instance.current.to_json
+    API::Mastodon::V2::Instance.current.to_json
   end
 
   get "/api/v1/accounts/verify_credentials" do |env|
@@ -134,7 +134,7 @@ class APIController
       unauthorized "api/error", error: "The access token is invalid"
     end
 
-    API::V1::Serializers::Account.from_account(account, account.actor, include_source: true).to_json
+    API::Mastodon::V1::Account.from_account(account, account.actor, include_source: true).to_json
   end
 
   patch "/api/v1/accounts/update_credentials" do |env|
@@ -208,7 +208,7 @@ class APIController
     if account.valid?
       account.save
       ActorUpdateDistributor.distribute(account)
-      API::V1::Serializers::Account.from_account(account, actor, include_source: true).to_json
+      API::Mastodon::V1::Account.from_account(account, actor, include_source: true).to_json
     else
       errors = account.errors.map { |field, messages| "#{field}: #{messages.join(", ")}" }.join("; ")
       unprocessable_entity "api/error", error: errors
@@ -225,9 +225,9 @@ class APIController
     accounts = ids.compact_map do |id|
       if (actor = ActivityPub::Actor.find?(id.to_i64))
         if actor.local? && (account = Account.find?(iri: actor.iri))
-          API::V1::Serializers::Account.from_account(account, actor)
+          API::Mastodon::V1::Account.from_account(account, actor)
         else
-          API::V1::Serializers::Account.from_actor(actor)
+          API::Mastodon::V1::Account.from_actor(actor)
         end
       end
     rescue ArgumentError
@@ -247,9 +247,9 @@ class APIController
     end
 
     if actor.local? && (account = Account.find?(iri: actor.iri))
-      API::V1::Serializers::Account.from_account(account, actor).to_json
+      API::Mastodon::V1::Account.from_account(account, actor).to_json
     else
-      API::V1::Serializers::Account.from_actor(actor).to_json
+      API::Mastodon::V1::Account.from_actor(actor).to_json
     end
   end
 
@@ -274,7 +274,7 @@ class APIController
         end
 
       body = (accounts[offset, limit]? || [] of Account).map do |a|
-        API::V1::Serializers::Account.from_account(a, a.actor)
+        API::Mastodon::V1::Account.from_account(a, a.actor)
       end
 
       body.to_json
@@ -290,9 +290,9 @@ class APIController
     end
 
     if actor.local? && (account = Account.find?(iri: actor.iri))
-      API::V1::Serializers::Account.from_account(account, actor).to_json
+      API::Mastodon::V1::Account.from_account(account, actor).to_json
     else
-      API::V1::Serializers::Account.from_actor(actor).to_json
+      API::Mastodon::V1::Account.from_actor(actor).to_json
     end
   end
 
@@ -316,7 +316,7 @@ class APIController
         actor.known_posts(**params)
       end
     statuses = posts.map do |object|
-      API::V1::Serializers::Status.from_object(object, actor: account.actor)
+      API::Mastodon::V1::Status.from_object(object, actor: account.actor)
     end
 
     if (link = link_header("/api/v1/accounts/#{actor.id}/statuses", statuses, params[:limit]))
@@ -365,12 +365,12 @@ class APIController
             Relationship::Content::Inbox.find?(owner: actor, activity: activity)
         end
         if announce.is_a?(ActivityPub::Activity::Announce)
-          API::V1::Serializers::Status.from_announce(announce, actor: actor)
+          API::Mastodon::V1::Status.from_announce(announce, actor: actor)
         else
-          API::V1::Serializers::Status.from_object(object, actor: actor)
+          API::Mastodon::V1::Status.from_object(object, actor: actor)
         end
       else
-        API::V1::Serializers::Status.from_object(object, actor: actor)
+        API::Mastodon::V1::Status.from_object(object, actor: actor)
       end
     end
 
@@ -392,7 +392,7 @@ class APIController
 
     posts = ActivityPub::Object.federated_posts(**params)
     statuses = posts.map do |object|
-      API::V1::Serializers::Status.from_object(object, actor: actor)
+      API::Mastodon::V1::Status.from_object(object, actor: actor)
     end
 
     if (link = link_header("/api/v1/timelines/public", statuses, params[:limit]))
@@ -417,7 +417,7 @@ class APIController
       end
 
     statuses = posts.map do |object|
-      API::V1::Serializers::Status.from_object(object, actor: actor)
+      API::Mastodon::V1::Status.from_object(object, actor: actor)
     end
 
     if (link = link_header("/api/v1/timelines/tag/#{URI.encode_path_segment(hashtag)}", statuses, params[:limit]))
@@ -445,18 +445,18 @@ class APIController
   # serializes the status addressed by a status id: a reblog wrapper
   # for an announce id, the object itself otherwise.
 
-  private def self.serialize_status?(id : String, actor : ActivityPub::Actor?) : API::V1::Serializers::Status?
+  private def self.serialize_status?(id : String, actor : ActivityPub::Actor?) : API::Mastodon::V1::Status?
     if (decoded = API::StatusID.decode(id))
       kind, internal_id = decoded
       begin
         case kind
         when :object
           if (object = ActivityPub::Object.find?(internal_id))
-            API::V1::Serializers::Status.from_object(object, actor: actor)
+            API::Mastodon::V1::Status.from_object(object, actor: actor)
           end
         when :announce
           if (announce = ActivityPub::Activity::Announce.find?(internal_id))
-            API::V1::Serializers::Status.from_announce(announce, actor: actor)
+            API::Mastodon::V1::Status.from_announce(announce, actor: actor)
           end
         end
       rescue Ktistec::Model::NotFound
@@ -488,11 +488,11 @@ class APIController
     end
 
     ancestors = object.ancestors.reject(&.id.== object.id).map do |ancestor|
-      API::V1::Serializers::Status.from_object(ancestor, actor: actor)
+      API::Mastodon::V1::Status.from_object(ancestor, actor: actor)
     end
 
     descendants = object.descendants.reject(&.id.== object.id).map do |descendant|
-      API::V1::Serializers::Status.from_object(descendant, actor: actor)
+      API::Mastodon::V1::Status.from_object(descendant, actor: actor)
     end
 
     {ancestors: ancestors, descendants: descendants}.to_json
@@ -576,7 +576,7 @@ class APIController
 
     OutboxActivityProcessor.process(account, activity)
 
-    API::V1::Serializers::Status.from_object(object, actor: account.actor).to_json
+    API::Mastodon::V1::Status.from_object(object, actor: account.actor).to_json
   end
 
   post "/api/v1/statuses/:id/favourite" do |env|
@@ -604,7 +604,7 @@ class APIController
       OutboxActivityProcessor.process(account, activity)
     end
 
-    API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    API::Mastodon::V1::Status.from_object(object, actor: actor).to_json
   end
 
   post "/api/v1/statuses/:id/unfavourite" do |env|
@@ -631,7 +631,7 @@ class APIController
       OutboxActivityProcessor.process(account, undo)
     end
 
-    API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    API::Mastodon::V1::Status.from_object(object, actor: actor).to_json
   end
 
   post "/api/v1/statuses/:id/reblog" do |env|
@@ -662,7 +662,7 @@ class APIController
       OutboxActivityProcessor.process(account, activity)
     end
 
-    API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    API::Mastodon::V1::Status.from_object(object, actor: actor).to_json
   end
 
   post "/api/v1/statuses/:id/unreblog" do |env|
@@ -691,7 +691,7 @@ class APIController
       OutboxActivityProcessor.process(account, undo)
     end
 
-    API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    API::Mastodon::V1::Status.from_object(object, actor: actor).to_json
   end
 
   post "/api/v1/statuses/:id/bookmark" do |env|
@@ -707,7 +707,7 @@ class APIController
     bookmark = Relationship::Content::Bookmark.find_or_new(actor: actor, object: object)
     bookmark.save if bookmark.new_record?
 
-    API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    API::Mastodon::V1::Status.from_object(object, actor: actor).to_json
   end
 
   post "/api/v1/statuses/:id/unbookmark" do |env|
@@ -723,7 +723,7 @@ class APIController
     bookmark = Relationship::Content::Bookmark.find?(actor: actor, object: object)
     bookmark.destroy if bookmark
 
-    API::V1::Serializers::Status.from_object(object, actor: actor).to_json
+    API::Mastodon::V1::Status.from_object(object, actor: actor).to_json
   end
 
   get "/api/v1/preferences" do |env|
@@ -750,7 +750,7 @@ class APIController
 
     relationships = ids.compact_map do |id|
       if (other = ActivityPub::Actor.find?(id.to_i64))
-        API::V1::Serializers::Relationship.from_actors(actor, other)
+        API::Mastodon::V1::Relationship.from_actors(actor, other)
       end
     rescue ArgumentError
     end
@@ -836,7 +836,7 @@ class APIController
       OutboxActivityProcessor.process(account, activity)
     end
 
-    API::V1::Serializers::Status.build_poll(question, actor).not_nil!.to_json
+    API::Mastodon::V1::Status.build_poll(question, actor).not_nil!.to_json
   end
 
   get "/api/v1/accounts/:id/following" do |env|
@@ -853,7 +853,7 @@ class APIController
     public = (account.actor != actor)
     following = actor.all_following(**params, public: public)
     accounts = following.map do |followed|
-      API::V1::Serializers::Account.from_actor(followed)
+      API::Mastodon::V1::Account.from_actor(followed)
     end
 
     if (link = link_header("/api/v1/accounts/#{actor.id}/following", accounts, params[:limit]))
@@ -877,7 +877,7 @@ class APIController
     public = (account.actor != actor)
     followers = actor.all_followers(**params, public: public)
     accounts = followers.map do |follower|
-      API::V1::Serializers::Account.from_actor(follower)
+      API::Mastodon::V1::Account.from_actor(follower)
     end
 
     if (link = link_header("/api/v1/accounts/#{actor.id}/followers", accounts, params[:limit]))
@@ -909,7 +909,7 @@ class APIController
       OutboxActivityProcessor.process(account, activity)
     end
 
-    API::V1::Serializers::Relationship.from_actors(actor, other).to_json
+    API::Mastodon::V1::Relationship.from_actors(actor, other).to_json
   end
 
   post "/api/v1/accounts/:id/unfollow" do |env|
@@ -936,7 +936,7 @@ class APIController
       end
     end
 
-    API::V1::Serializers::Relationship.from_actors(actor, other).to_json
+    API::Mastodon::V1::Relationship.from_actors(actor, other).to_json
   end
 
   get "/api/v1/follow_requests" do |env|
@@ -951,7 +951,7 @@ class APIController
 
     requests = actor.all_follow_requests(**params)
     accounts = requests.map do |requester|
-      API::V1::Serializers::Account.from_actor(requester)
+      API::Mastodon::V1::Account.from_actor(requester)
     end
 
     if (link = link_header("/api/v1/follow_requests", accounts, params[:limit]))
@@ -985,7 +985,7 @@ class APIController
       end
     end
 
-    API::V1::Serializers::Relationship.from_actors(actor, other).to_json
+    API::Mastodon::V1::Relationship.from_actors(actor, other).to_json
   end
 
   post "/api/v1/follow_requests/:id/reject" do |env|
@@ -1012,7 +1012,7 @@ class APIController
       end
     end
 
-    API::V1::Serializers::Relationship.from_actors(actor, other).to_json
+    API::Mastodon::V1::Relationship.from_actors(actor, other).to_json
   end
 
   # stub endpoints to prevent 404 errors during client initialization

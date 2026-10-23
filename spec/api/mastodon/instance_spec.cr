@@ -1,4 +1,4 @@
-require "../../../src/api/serializers/instance"
+require "../../../src/api/mastodon/instance"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -14,7 +14,7 @@ private macro with_setting(setting, value)
   end
 end
 
-Spectator.describe API::V1::Serializers::Instance do
+Spectator.describe API::Mastodon::V1::Instance do
   setup_spec
 
   before_each { described_class.clear_cache! }
@@ -23,7 +23,7 @@ Spectator.describe API::V1::Serializers::Instance do
     subject { described_class.current }
 
     it "returns an Instance" do
-      expect(subject).to be_a(API::V1::Serializers::Instance)
+      expect(subject).to be_a(API::Mastodon::V1::Instance)
     end
 
     context "uri" do
@@ -261,7 +261,7 @@ Spectator.describe API::V1::Serializers::Instance do
   end
 end
 
-Spectator.describe API::V2::Serializers::Instance do
+Spectator.describe API::Mastodon::V2::Instance do
   setup_spec
 
   before_each { described_class.clear_cache! }
@@ -270,7 +270,7 @@ Spectator.describe API::V2::Serializers::Instance do
     subject { described_class.current }
 
     it "returns an Instance" do
-      expect(subject).to be_a(API::V2::Serializers::Instance)
+      expect(subject).to be_a(API::Mastodon::V2::Instance)
     end
 
     context "domain" do

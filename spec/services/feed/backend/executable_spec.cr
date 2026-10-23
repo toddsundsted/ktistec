@@ -45,10 +45,53 @@ Spectator.describe Feed::Backend::Executable do
       end
     end
 
+    context "given a judge that reports it is unavailable" do
+      let(answers) { File.tempname("ktistec", "answers") }
+
+      before_each do
+        Feed::Backend::Executable::Exchange.write(answers, feed, [object])
+        DB.open("sqlite3://#{answers}", &.exec("INSERT INTO unavailable (reason, retry_after) VALUES ('unavailable', '2026-11-01 00:00:00')"))
+        write_judge(%(cp "#{answers}" "$1"))
+      end
+
+      after_each { File.delete?(answers) }
+
+      it "reports the judge unavailable, with the judge's reason" do
+        expect { subject.judge(feed, [object]) }.to raise_error(Feed::Backend::UnavailableError, "unavailable")
+      end
+
+      it "reports the judge unavailable, with the time to retry" do
+        error =
+          begin
+            subject.judge(feed, [object])
+            nil
+          rescue err : Feed::Backend::UnavailableError
+            err
+          end
+        expect(error.try(&.retry_after)).to eq(Time.utc(2026, 11, 1))
+      end
+
+      context "without a reason" do
+        before_each { DB.open("sqlite3://#{answers}", &.exec("UPDATE unavailable SET reason = NULL")) }
+
+        it "reports the judge unavailable, with a default reason" do
+          expect { subject.judge(feed, [object]) }.to raise_error(Feed::Backend::UnavailableError, "judge #{path} is unavailable")
+        end
+      end
+
+      context "and exits with an error" do
+        before_each { write_judge(%(cp "#{answers}" "$1"\nexit 1)) }
+
+        it "reports the judge unavailable" do
+          expect { subject.judge(feed, [object]) }.to raise_error(Feed::Backend::UnavailableError)
+        end
+      end
+    end
+
     context "given a judge that doesn't answer" do
       before_each { write_judge("exit 0") }
 
-      it "returns a transient failure" do
+      it "returns a transient failure for the post" do
         expect(subject.judge(feed, [object]).first.as(Feed::Backend::Failure).kind).to eq(Feed::Backend::Failure::Kind::Transient)
       end
     end

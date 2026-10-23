@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+# ktistec: batch-size=100
+# ktistec: param=length type=integer
+
+"""A feed judge that includes posts with a title and more than `length`
+characters of text.
+
+To use it, make it executable: `chmod +x etc/judges/long_reads`
+"""
+
+import json
+import sqlite3
+import sys
+from html.parser import HTMLParser
+
+# Mastodon's standard maximum post length, in characters
+MASTODON_LIMIT = 500
+
+
+class Text(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.parts = []
+
+    def handle_data(self, data):
+        self.parts.append(data)
+
+
+def length_of(content):
+    parser = Text()
+    parser.feed(content or "")
+    return len("".join(parser.parts).strip())
+
+
+def main():
+    if len(sys.argv) != 2:
+        print("usage: long_reads <exchange file>", file=sys.stderr)
+        return 1
+
+    db = sqlite3.connect(sys.argv[1])
+    (params,) = db.execute("SELECT params FROM feed").fetchone()
+    limit = json.loads(params).get("length", MASTODON_LIMIT)
+    posts = db.execute("SELECT iri, name, content FROM posts").fetchall()
+    print(f"judging {len(posts)} posts (over {limit} characters)", flush=True)
+    for iri, name, content in posts:
+        length = length_of(content)
+        if not (name or "").strip():
+            included, reason = False, "no title"
+        else:
+            included, reason = length > limit, f"{length} characters"
+        db.execute(
+            "INSERT INTO answers (iri, included, reason) VALUES (?, ?, ?)",
+            (iri, int(included), reason),
+        )
+        verdict = "included" if included else "excluded"
+        print(f"{verdict} {iri} ({reason})", flush=True)
+    db.commit()
+    db.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

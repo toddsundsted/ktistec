@@ -5,7 +5,7 @@ require "../../models/account"
 require "../../controllers/well_known"
 
 module API
-  module V1::Serializers
+  module Mastodon::V1
     # Serializes instance metadata to Mastodon Instance v1 JSON format.
     #
     # See: https://docs.joinmastodon.org/entities/V1_Instance/
@@ -255,7 +255,7 @@ module API
     end
   end
 
-  module V2::Serializers
+  module Mastodon::V2
     # Serializes instance metadata to Mastodon Instance v2 JSON format.
     #
     # See: https://docs.joinmastodon.org/entities/Instance/

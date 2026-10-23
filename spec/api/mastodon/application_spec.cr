@@ -1,10 +1,10 @@
-require "../../../src/api/serializers/application"
+require "../../../src/api/mastodon/application"
 require "../../../src/models/oauth2/provider/client"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
-Spectator.describe API::V1::Serializers::Application do
+Spectator.describe API::Mastodon::V1::Application do
   setup_spec
 
   describe ".from_client" do

@@ -1,9 +1,9 @@
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
-require "../../../src/api/serializers/relationship"
+require "../../../src/api/mastodon/relationship"
 
-Spectator.describe API::V1::Serializers::Relationship do
+Spectator.describe API::Mastodon::V1::Relationship do
   setup_spec
 
   describe ".from_actors" do

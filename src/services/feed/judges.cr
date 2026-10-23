@@ -1,5 +1,7 @@
 require "./backend"
 require "./backend/executable"
+require "./judging"
+require "./queue"
 
 class Feed
   # Executable judges.
@@ -41,6 +43,9 @@ class Feed
         previous = Backend.find?(name).as?(Backend::Executable) if @@registered[name]?
         Backend.register(name, Backend::Executable.new(File.join(directory, name), previous))
         @@registered[name] = modified_at
+        # a changed judge resumes and gets a fresh start
+        Queue.resume(name)
+        Judging.forget(name)
         Log.info { "judge #{name} is registered" }
       end
     end

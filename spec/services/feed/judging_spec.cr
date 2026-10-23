@@ -85,7 +85,7 @@ Spectator.describe Feed::Judging do
       Feed::Verdict.find?(version_id: feed.version_id, object_iri: object.iri)
     end
 
-    it "includes the matching object" do
+    it "includes a post that matches" do
       Feed::Judging.answer([question])
       expect(verdict_for(hit).try(&.included)).to be_true
     end
@@ -131,7 +131,7 @@ Spectator.describe Feed::Judging do
 
       before_each { RecordingBackend.calls.clear }
 
-      it "asks the judge once" do
+      it "asks the judge about both at once" do
         Feed::Judging.answer([question, second])
         expect(RecordingBackend.calls).to eq([[hit.iri, other.iri]])
       end
@@ -179,6 +179,13 @@ Spectator.describe Feed::Judging do
     context "when the judge fails" do
       register_backend("failing", FailingBackend.new)
 
+      around_each do |proc|
+        proc.call
+      ensure
+        Feed::Judging.forget("failing")
+        Feed::Queue.resume("failing")
+      end
+
       let_create!(:feed, owner: actor, backend: "failing")
       let_create!(:object, named: hit, content: "<p>boom</p>")
 
@@ -218,7 +225,7 @@ Spectator.describe Feed::Judging do
           let_create!(:object, named: other, content: "<p>something else</p>")
           let_create(:feed_question, named: second, feed: feed, object: other, batched: true)
 
-          it "records a transient failure" do
+          it "records a transient failure for it too" do
             Feed::Judging.answer([question, second])
             expect(verdict_for(other).try(&.failure)).to eq(Feed::Verdict::TRANSIENT)
           end
@@ -243,6 +250,99 @@ Spectator.describe Feed::Judging do
           it "asks again" do
             Feed::Judging.answer([question])
             expect(retry_for(hit)).not_to be_nil
+          end
+        end
+
+        it "does not pause the judge before the limit is reached" do
+          (Feed::Judging::FAILURES_BEFORE_PAUSE - 1).times { Feed::Judging.answer([question]) }
+          expect(Feed::Queue.paused_until("failing")).to be_nil
+        end
+
+        context "when one batch fewer than the limit has failed" do
+          before_each { (Feed::Judging::FAILURES_BEFORE_PAUSE - 1).times { Feed::Judging.answer([question]) } }
+
+          it "pauses the judge after the next batch fails" do
+            Feed::Judging.answer([question])
+            expect(Feed::Queue.paused_until("failing")).to be_close(Feed::Judging::PAUSE.from_now, delta: 1.second)
+          end
+
+          it "asks again later about the batch" do
+            Feed::Judging.answer([question])
+            expect(retry_for(hit).try(&.due_at)).to be_close(Feed::Judging::RETRY_DELAY.from_now, delta: 1.second)
+          end
+
+          context "but the next batch succeeds" do
+            before_each do
+              hit.assign(content: "<p>fine</p>").save
+              Feed::Judging.answer([question])
+              hit.assign(content: "<p>boom</p>").save
+            end
+
+            it "does not pause the judge" do
+              Feed::Judging.answer([question])
+              expect(Feed::Queue.paused_until("failing")).to be_nil
+            end
+          end
+
+          context "and the judge was paused before" do
+            before_each { Feed::Judging.answer([question]) }
+
+            it "pauses the judge again, for twice as long" do
+              Feed::Judging.answer([question])
+              expect(Feed::Queue.paused_until("failing")).to be_close((Feed::Judging::PAUSE * 2).from_now, delta: 1.second)
+            end
+          end
+
+          context "and the judge was paused many times before" do
+            before_each { 10.times { Feed::Judging.answer([question]) } }
+
+            it "pauses the judge for no longer than the longest pause" do
+              Feed::Judging.answer([question])
+              expect(Feed::Queue.paused_until("failing")).to be_close(Feed::Judging::LONGEST_PAUSE.from_now, delta: 1.second)
+            end
+          end
+        end
+      end
+
+      context "because the judge is unavailable" do
+        let(retry_after) { nil.as(Time?) }
+
+        before_each { FailingBackend.error = Feed::Backend::UnavailableError.new("unavailable", retry_after) }
+
+        it "pauses the judge" do
+          Feed::Judging.answer([question])
+          expect(Feed::Queue.paused_until("failing")).to be_close(Feed::Judging::PAUSE.from_now, delta: 1.second)
+        end
+
+        it "keeps the question waiting, at its original time" do
+          Feed::Judging.answer([question])
+          expect(retry_for(hit).try(&.due_at)).to be_close(question.due_at, delta: 1.second)
+        end
+
+        context "and says to retry before the pause would end" do
+          let(retry_after) { 1.minute.from_now.as(Time?) }
+
+          it "pauses the judge until then" do
+            Feed::Judging.answer([question])
+            expect(Feed::Queue.paused_until("failing")).to eq(retry_after)
+          end
+        end
+
+        context "and says to retry after the pause would end" do
+          let(retry_after) { 1.hour.from_now.as(Time?) }
+
+          it "does not lengthen the pause" do
+            Feed::Judging.answer([question])
+            expect(Feed::Queue.paused_until("failing")).to be_close(Feed::Judging::PAUSE.from_now, delta: 1.second)
+          end
+        end
+
+        context "and says to retry in the past" do
+          let(retry_after) { 1.minute.ago.as(Time?) }
+
+          it "pauses the judge for the full pause" do
+            Feed::Judging.answer([question])
+            expect(Feed::Queue.paused_until("failing")).to be_close(Feed::Judging::PAUSE.from_now, delta: 1.second)
           end
         end
       end
@@ -278,6 +378,12 @@ Spectator.describe Feed::Judging do
 
     context "when the judge reports a failure" do
       register_backend("reporting", ReportingBackend.new)
+
+      around_each do |proc|
+        proc.call
+      ensure
+        Feed::Judging.forget("reporting")
+      end
 
       let_create!(:feed, owner: actor, backend: "reporting")
       let_create!(:object, named: hit, content: "<p>boom</p>")

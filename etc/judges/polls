@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+# ktistec: batch-size=100
+
+"""A feed judge that includes polls.
+
+To use it, make it executable: `chmod +x etc/judges/polls`
+"""
+
+import sqlite3
+import sys
+
+
+def main():
+    if len(sys.argv) != 2:
+        print("usage: polls <exchange file>", file=sys.stderr)
+        return 1
+
+    db = sqlite3.connect(sys.argv[1])
+    posts = db.execute("SELECT iri, type FROM posts").fetchall()
+    print(f"judging {len(posts)} posts", flush=True)
+    for iri, type in posts:
+        if type != "Question":
+            included, reason = False, "not a poll"
+        else:
+            included, reason = True, "a poll"
+        db.execute(
+            "INSERT INTO answers (iri, included, reason) VALUES (?, ?, ?)",
+            (iri, int(included), reason),
+        )
+        verdict = "included" if included else "excluded"
+        print(f"{verdict} {iri} ({reason})", flush=True)
+    db.commit()
+    db.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

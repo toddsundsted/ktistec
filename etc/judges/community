@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+# ktistec: batch-size=100
+# ktistec: param=exclude type=string
+
+"""A feed judge that includes posts in a community (on Lemmy, PieFed,
+NodeBB, etc.), except posts in the `exclude` community.
+
+To use it, make it executable: `chmod +x etc/judges/community`
+"""
+
+import json
+import sqlite3
+import sys
+
+
+def main():
+    if len(sys.argv) != 2:
+        print("usage: community <exchange file>", file=sys.stderr)
+        return 1
+
+    db = sqlite3.connect(sys.argv[1])
+    (params,) = db.execute("SELECT params FROM feed").fetchone()
+    exclude = json.loads(params).get("exclude")
+    posts = db.execute("SELECT iri, audience FROM posts").fetchall()
+    if exclude is None:
+        print(f"judging {len(posts)} posts", flush=True)
+    else:
+        print(f"judging {len(posts)} posts (excluding {exclude})", flush=True)
+    for iri, audience in posts:
+        communities = json.loads(audience)
+        if not communities:
+            included, reason = False, "no community"
+        elif exclude in communities:
+            included, reason = False, f"in {exclude}"
+        else:
+            included, reason = True, f"in {', '.join(communities)}"
+        db.execute(
+            "INSERT INTO answers (iri, included, reason) VALUES (?, ?, ?)",
+            (iri, int(included), reason),
+        )
+        verdict = "included" if included else "excluded"
+        print(f"{verdict} {iri} ({reason})", flush=True)
+    db.commit()
+    db.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1136,12 +1136,26 @@ Spectator.describe ActorsController do
 
       it "syncs the featured collection" do
         post "/remote/actors/#{actor.id}/refresh"
-        expect(Task::RefreshActor.find(actor: actor).state.sync_featured_collection).to be_true
+        expect(Task::RefreshActor.find(actor: actor).sync_featured_collection).to be_true
       end
 
       it "does not sync the featured collection" do
         post "/remote/actors/#{actor.id}/refresh", HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"}, "sync-featured-collection=false"
-        expect(Task::RefreshActor.find(actor: actor).state.sync_featured_collection).to be_false
+        expect(Task::RefreshActor.find(actor: actor).sync_featured_collection).to be_false
+      end
+
+      context "given a scheduled refresh task" do
+        before_each { Task::RefreshActor.new(source: actor, actor: actor).save }
+
+        it "does not schedule another refresh task" do
+          expect { post "/remote/actors/#{actor.id}/refresh" }
+            .not_to change { Task::RefreshActor.count(actor: actor) }
+        end
+
+        it "succeeds" do
+          post "/remote/actors/#{actor.id}/refresh"
+          expect(response.status_code).to eq(200)
+        end
       end
 
       it "renders a turbo stream replace message" do

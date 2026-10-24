@@ -86,29 +86,6 @@ Spectator.describe Task::RefreshActor do
     end
   end
 
-  describe ".exists?" do
-    let!(existing) { described_class.new(**options).save }
-
-    it "returns true if existing task is scheduled" do
-      expect(described_class.exists?(actor.iri)).to be_true
-    end
-
-    it "returns true if existing task is running" do
-      existing.assign(running: true).save
-      expect(described_class.exists?(actor.iri)).to be_true
-    end
-
-    it "returns false if existing task is complete" do
-      existing.assign(complete: true).save
-      expect(described_class.exists?(actor.iri)).to be_false
-    end
-
-    it "returns false if existing task has a backtrace" do
-      existing.assign(backtrace: ["error"]).save
-      expect(described_class.exists?(actor.iri)).to be_false
-    end
-  end
-
   describe "#perform" do
     subject do
       described_class.new(
@@ -412,9 +389,7 @@ Spectator.describe Task::RefreshActor do
       end
 
       context "with `sync_featured_collection` disabled" do
-        let(state) { Task::RefreshActor::State.new(sync_featured_collection: false) }
-
-        before_each { subject.assign(state: state) }
+        before_each { subject.assign(sync_featured_collection: false) }
 
         it "does not fetch the featured collection" do
           subject.perform

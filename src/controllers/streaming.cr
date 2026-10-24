@@ -33,8 +33,8 @@ class StreamingController
   #
   def self.replace_actor_icon(io, id)
     actor = ActivityPub::Actor.find(id)
-    # omit "data-actor-id" so that replacement can only be attempted once
-    body = Ktistec::ViewHelper.actor_icon(actor, "ui avatar image", include_actor_id: false).to_s
+    # mark the icon "refreshed" so that refresh can only be attempted once
+    body = Ktistec::ViewHelper.actor_icon(actor, "ui avatar image", refreshed: true).to_s
     stream_replace(io, selector: "img[data-actor-id='#{actor.id}']", body: body)
   end
 

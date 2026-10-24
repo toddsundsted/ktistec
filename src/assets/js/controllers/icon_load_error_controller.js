@@ -2,6 +2,10 @@ import { Controller } from "@hotwired/stimulus"
 
 /**
  * Refresh actors with unloadable icon images.
+ *
+ * An icon marked with `data-actor-refreshed` has already been
+ * refreshed, so it is replaced with the fallback and the actor is not
+ * refreshed again.
  */
 export default class extends Controller {
   connect() {
@@ -15,7 +19,7 @@ export default class extends Controller {
         replacement.setAttribute("src", "/images/avatars/fallback.png")
         replacement.dataset.actorId = element.dataset.actorId
         element.replaceWith(replacement)
-        if (Ktistec.auth) {
+        if (Ktistec.auth && !("actorRefreshed" in element.dataset)) {
           let xhr = new XMLHttpRequest()
           let data = "sync-featured-collection=false"
           xhr.open("POST", `/remote/actors/${element.dataset.actorId}/refresh`, true)

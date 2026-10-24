@@ -386,7 +386,8 @@ Spectator.describe "helpers" do
     let_build(:actor)
 
     let(classes) { nil }
-    subject { XML.parse_html(self.class.actor_icon(actor, classes), PARSER_OPTIONS) }
+    let(refreshed) { false }
+    subject { XML.parse_html(self.class.actor_icon(actor, classes, refreshed: refreshed), PARSER_OPTIONS) }
 
     context "given an icon" do
       before_each { actor.assign(icon: "https://example.com/icon.png", name: "Test Actor").save }
@@ -405,6 +406,22 @@ Spectator.describe "helpers" do
 
       it "renders an img tag with loading attribute" do
         expect(subject.xpath_nodes("//img/@loading").map(&.text)).to contain_exactly("lazy")
+      end
+
+      it "does not mark the icon as refreshed" do
+        expect(subject.xpath_nodes("//img/@data-actor-refreshed")).to be_empty
+      end
+
+      context "and refreshed" do
+        let(refreshed) { true }
+
+        it "marks the icon as refreshed" do
+          expect(subject.xpath_nodes("//img/@data-actor-refreshed")).not_to be_empty
+        end
+
+        it "renders an img tag with data-actor-id attribute" do
+          expect(subject.xpath_nodes("//img/@data-actor-id").map(&.text)).to contain_exactly(actor.id.to_s)
+        end
       end
 
       context "and classes" do

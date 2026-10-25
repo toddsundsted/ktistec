@@ -77,6 +77,40 @@ module Ktistec
       end
     end
 
+    # Features of the linked SQLite3 library.
+    #
+    record Features, version : String, json : Bool, stat4 : Bool, fts5 : Bool, icu : Bool do
+      include JSON::Serializable
+    end
+
+    class_property! features : Features
+
+    # Probes the linked SQLite3 library for features.
+    #
+    # Probes test behavior where possible because compile options are
+    # interpreted differently across versions and may be omitted from
+    # the build entirely.
+    #
+    # STAT4 can only be detected via compile options or by its effect
+    # on `ANALYZE` (only STAT4 builds populate `sqlite_stat4`), so this
+    # must run after `ANALYZE`.
+    #
+    def self.probe_features
+      self.features = Features.new(
+        version: String.new(LibSQLite3.version),
+        json: probe?("SELECT json_valid('{}')"),
+        stat4: probe?("SELECT sqlite_compileoption_used('ENABLE_STAT4')") || probe?("SELECT EXISTS (SELECT 1 FROM sqlite_stat4)"),
+        fts5: probe?("SELECT EXISTS (SELECT 1 FROM pragma_module_list WHERE name = 'fts5')"),
+        icu: probe?("SELECT upper('é') = 'É'"),
+      )
+    end
+
+    def self.probe?(query)
+      Ktistec.database.scalar(query) == 1
+    rescue ::SQLite3::Exception | DB::Error
+      false
+    end
+
     LibSQLite3.version.tap do |version|
       version = String.new(version)
       if LibSQLite3.version_number < 3035000

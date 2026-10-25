@@ -27,6 +27,11 @@ module Ktistec
   # gather query planner statistics
   Ktistec.database.exec("ANALYZE")
 
+  # probe the SQLite3 library for features
+  Ktistec::SQLite3.probe_features.tap do |features|
+    Log.info { "SQLite3 #{features.version}: json=#{features.json} stat4=#{features.stat4} fts5=#{features.fts5} icu=#{features.icu}" }
+  end
+
   # Model-like class for managing log levels.
   #
   class LogLevel

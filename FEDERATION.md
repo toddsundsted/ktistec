@@ -68,6 +68,7 @@ NodeInfo schema 2.1 is available via `/.well-known/nodeinfo`, conforming to FEP-
 - `usage.users` - Total users and monthly active users
 - `usage.localPosts` - Count of local posts
 - `metadata.nodeName` - Server name (per FEP-0151 conventions)
+- `metadata.sqlite` - Linked SQLite3 version and what features it supports
 
 ### HTTP request signing
 

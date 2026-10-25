@@ -118,6 +118,7 @@ class WellKnownController
       },
       metadata: {
         nodeName: Ktistec.site,
+        sqlite:   Ktistec::SQLite3.features,
       },
     }
     env.response.content_type = "application/jrd+json"

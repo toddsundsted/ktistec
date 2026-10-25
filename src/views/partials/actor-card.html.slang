@@ -1,5 +1,5 @@
 - _account = env.account?
-.ui.actor.card
+.ui.actor.card data-controller="icon-load-error"
   - if actor.blocked?
     .blocked.content
       em This actor is blocked!

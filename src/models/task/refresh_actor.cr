@@ -19,13 +19,9 @@ class Task
         "missing: #{subject_iri}"
       elsif actor.local?
         "local: #{subject_iri}"
-      elsif !(instances = self.class.where(EXISTS_QUERY, subject_iri)).empty? && instances.any? { |instance| instance.id != self.id }
+      elsif self.class.where(EXISTS_QUERY, subject_iri).any? { |instance| instance.id != self.id && instance.sync_featured_collection == sync_featured_collection }
         "scheduled: #{subject_iri}"
       end
-    end
-
-    def self.exists?(iri)
-      !where(EXISTS_QUERY, iri).empty?
     end
 
     class Failure
@@ -56,11 +52,22 @@ class Task
     @[Insignificant]
     property state : State { State.new }
 
+    @[Assignable]
+    @sync_featured_collection : Bool?
+
+    def sync_featured_collection
+      state.sync_featured_collection
+    end
+
+    def sync_featured_collection=(sync_featured_collection : Bool)
+      state.sync_featured_collection = sync_featured_collection
+    end
+
     def perform
       if (instance = ActivityPub::Actor.dereference?(source, actor.iri, ignore_cached: true))
         instance.verify_handle!
         instance.save.up!
-        sync_featured_collection(instance) if state.sync_featured_collection
+        sync_featured_collection(instance) if sync_featured_collection
         Ktistec::Topic{"/actor/refresh"}.notify_subscribers(actor.id.to_s)
       else
         actor.down!
@@ -68,6 +75,7 @@ class Task
         failures << Failure.new(message)
         Log.debug { message }
       end
+      Ktistec::Topic{"/actor/#{actor.id}/refresh"}.notify_subscribers if sync_featured_collection
     end
 
     private def sync_featured_collection(actor)

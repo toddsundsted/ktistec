@@ -98,6 +98,37 @@ describe("IconLoadErrorController", () => {
     expect(xhrInstance.send).toHaveBeenCalled()
   })
 
+  describe("given an actor icon that was already refreshed", () => {
+    let img
+    let requests
+
+    beforeEach(() => {
+      global.Ktistec = { auth: true, csrf: "test-csrf-token" }
+
+      requests = 0
+      global.XMLHttpRequest = function () {
+        requests += 1
+        return { open: vi.fn(), setRequestHeader: vi.fn(), send: vi.fn() }
+      }
+
+      img = document.createElement("img")
+      img.dataset.actorId = "123"
+      img.dataset.actorRefreshed = ""
+      element.appendChild(img)
+
+      controller.connect()
+      img.dispatchEvent(new Event("error", { bubbles: false }))
+    })
+
+    it("replaces the icon with the fallback image", () => {
+      expect(element.querySelector("img").getAttribute("src")).toBe("/images/avatars/fallback.png")
+    })
+
+    it("does not refresh the actor", () => {
+      expect(requests).toBe(0)
+    })
+  })
+
   it("does not send a refresh request when not authenticated", () => {
     global.Ktistec = { auth: false }
 

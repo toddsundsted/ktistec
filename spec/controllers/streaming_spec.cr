@@ -321,7 +321,7 @@ Spectator.describe StreamingController do
     it "renders a Turbo Stream action" do
       expect(subject).to eq <<-HTML
       data: \
-      <turbo-stream action="replace" targets="img[data-actor-id='#{actor.id}']"><template>#{Ktistec::ViewHelper.actor_icon(actor, "ui avatar image", include_actor_id: false)}\
+      <turbo-stream action="replace" targets="img[data-actor-id='#{actor.id}']"><template>#{Ktistec::ViewHelper.actor_icon(actor, "ui avatar image", refreshed: true)}\
       </template></turbo-stream>
       \n
       HTML

@@ -97,6 +97,12 @@ INSERT INTO migrations VALUES(20260721183245,'add-floor-to-feeds');
 INSERT INTO migrations VALUES(20260825140851,'rebuild-feeds-on-the-object-clock');
 INSERT INTO migrations VALUES(20260827183955,'add-slug-to-feeds');
 INSERT INTO migrations VALUES(20260828064319,'add-feed-order-to-accounts');
+INSERT INTO migrations VALUES(20260926094929,'create-feed-versions');
+INSERT INTO migrations VALUES(20260927173454,'key-feed-verdicts-to-versions');
+INSERT INTO migrations VALUES(20260929170015,'add-failure-to-feed-verdicts');
+INSERT INTO migrations VALUES(20261001140656,'create-feed-questions');
+INSERT INTO migrations VALUES(20261014215422,'move-feed-tasks-under-feed');
+INSERT INTO migrations VALUES(20261019065700,'add-revision-to-feed-versions');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -336,17 +342,38 @@ CREATE TABLE feeds (
     "draft" boolean NOT NULL DEFAULT 0,
     "copy_of" integer,
     "floor" datetime,
-    "slug" varchar(255)
+    "slug" varchar(255),
+    "version_id" integer
   );
 CREATE TABLE feed_verdicts (
     "id" integer PRIMARY KEY AUTOINCREMENT,
     "created_at" datetime NOT NULL,
     "updated_at" datetime NOT NULL,
-    "feed_id" integer,
     "object_iri" varchar(255) NOT NULL COLLATE NOCASE,
     "included" boolean NOT NULL,
     "reason" text,
-    "position" datetime NOT NULL
+    "version_id" integer,
+    "failure" varchar(15)
+  );
+CREATE TABLE feed_versions (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "owner_iri" varchar(255) NOT NULL COLLATE NOCASE,
+    "backend" varchar(63) NOT NULL,
+    "params" text NOT NULL,
+    "backfill_cursor" integer,
+    "revision" varchar(63) NOT NULL DEFAULT ""
+  );
+CREATE TABLE feed_questions (
+    "id" integer PRIMARY KEY AUTOINCREMENT,
+    "created_at" datetime NOT NULL,
+    "updated_at" datetime NOT NULL,
+    "version_id" integer NOT NULL,
+    "object_iri" varchar(255) NOT NULL COLLATE NOCASE,
+    "live" boolean NOT NULL,
+    "due_at" datetime NOT NULL,
+    "batched" boolean NOT NULL
   );
 CREATE INDEX idx_accounts_iri
     ON accounts (iri ASC);
@@ -371,12 +398,21 @@ CREATE INDEX idx_actors_username
     ON actors (username COLLATE NOCASE ASC);
 CREATE UNIQUE INDEX idx_collections_iri
     ON collections (iri ASC);
-CREATE UNIQUE INDEX idx_feed_verdicts_feed_id_object_iri
-    ON feed_verdicts (feed_id ASC, object_iri ASC);
+CREATE INDEX idx_feed_questions_batched_live_due_at
+    ON feed_questions (batched ASC, live DESC, due_at ASC);
+CREATE UNIQUE INDEX idx_feed_questions_version_id_object_iri
+    ON feed_questions (version_id ASC, object_iri ASC)
+    WHERE batched = 0;
+CREATE UNIQUE INDEX idx_feed_verdicts_version_id_object_iri
+    ON feed_verdicts (version_id ASC, object_iri ASC);
+CREATE UNIQUE INDEX idx_feed_versions_owner_iri_backend_params_revision
+    ON feed_versions (owner_iri ASC, backend ASC, params ASC, revision ASC);
 CREATE INDEX idx_feeds_owner_iri
     ON feeds (owner_iri ASC);
 CREATE INDEX idx_feeds_owner_iri_slug
     ON feeds (owner_iri ASC, slug ASC);
+CREATE INDEX idx_feeds_version_id
+    ON feeds (version_id ASC);
 CREATE INDEX idx_filter_terms_actor_id
     ON filter_terms (actor_id ASC);
 CREATE INDEX idx_last_times_name

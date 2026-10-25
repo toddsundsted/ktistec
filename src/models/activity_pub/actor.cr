@@ -1213,7 +1213,7 @@ module ActivityPub
           ""
         end
       exclude_replies_clause =
-        exclude_replies ? "AND o.in_reply_to_iri IS NULL" : ""
+        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
       max_cursor = translate_object_id_to_timeline_created_at_and_id(max_id, inclusion_clause, exclude_replies_clause) if max_id
       min_cursor = translate_object_id_to_timeline_created_at_and_id(min_id, inclusion_clause, exclude_replies_clause) if min_id
       query = <<-QUERY
@@ -1259,7 +1259,7 @@ module ActivityPub
           ""
         end
       exclude_replies_clause =
-        exclude_replies ? "AND o.in_reply_to_iri IS NULL" : ""
+        exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
       query = <<-QUERY
           SELECT count(t.id)
             FROM relationships AS t

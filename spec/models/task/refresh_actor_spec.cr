@@ -26,8 +26,9 @@ Spectator.describe Task::RefreshActor do
 
   let(options) do
     {
-      source_iri:  source.iri,
-      subject_iri: actor.iri,
+      source_iri:               source.iri,
+      subject_iri:              actor.iri,
+      sync_featured_collection: true,
     }
   end
 
@@ -51,7 +52,7 @@ Spectator.describe Task::RefreshActor do
       expect(new_relationship.errors.values.flatten).to contain_exactly("local: #{actor.iri}")
     end
 
-    context "when task already exists for that actor" do
+    context "when a task already exists for that actor" do
       let!(existing) { described_class.new(**options).save }
 
       it "rejects task" do
@@ -78,6 +79,11 @@ Spectator.describe Task::RefreshActor do
         new_relationship = described_class.new(**options)
         expect(new_relationship.valid?).to be_true
       end
+
+      it "successfully validates a task that does not sync the featured collection" do
+        new_relationship = described_class.new(**options.merge({sync_featured_collection: false}))
+        expect(new_relationship.valid?).to be_true
+      end
     end
 
     it "successfully validates task" do
@@ -91,8 +97,11 @@ Spectator.describe Task::RefreshActor do
       described_class.new(
         source: source,
         actor: actor,
+        sync_featured_collection: sync_featured_collection,
       )
     end
+
+    let(sync_featured_collection) { true }
 
     before_each do
       HTTP::Client.actors << actor.dup.assign(username: "foobar")
@@ -136,28 +145,64 @@ Spectator.describe Task::RefreshActor do
       end
     end
 
-    context "given a subscription" do
-      let(notifications) { [0] }
+    context "given subscriptions" do
+      let(icon_notifications) { [0] }
+      let(page_notifications) { [0] }
 
-      let(topic) { Ktistec::Topic{"/actor/refresh"} }
+      make_subscription(Ktistec::Topic{"/actor/refresh"}) { icon_notifications[0] += 1 }
+      make_subscription(Ktistec::Topic{"/actor/#{actor.id}/refresh"}) { page_notifications[0] += 1 }
 
-      make_subscription(topic) { notifications[0] += 1 }
-
-      it "notifies subscribers" do
+      it "notifies subscribers to the actor's page" do
         expect do
           subject.perform
           Fiber.yield
-        end.to change { notifications[0] }.by(1)
+        end.to change { page_notifications[0] }.by(1)
+      end
+
+      it "notifies subscribers to actor icon refreshes" do
+        expect do
+          subject.perform
+          Fiber.yield
+        end.to change { icon_notifications[0] }.by(1)
       end
 
       context "when refresh fails" do
         before_each { actor.assign(iri: "https://remote/returns-404") }
 
-        it "does not notify subscribers" do
+        it "notifies subscribers to the actor's page" do
           expect do
             subject.perform
             Fiber.yield
-          end.not_to change { notifications[0] }
+          end.to change { page_notifications[0] }.by(1)
+        end
+      end
+
+      context "when the task does not sync the featured collection" do
+        let(sync_featured_collection) { false }
+
+        it "notifies subscribers to actor icon refreshes" do
+          expect do
+            subject.perform
+            Fiber.yield
+          end.to change { icon_notifications[0] }.by(1)
+        end
+
+        it "does not notify subscribers to the actor's page" do
+          expect do
+            subject.perform
+            Fiber.yield
+          end.not_to change { page_notifications[0] }
+        end
+
+        context "and refresh fails" do
+          before_each { actor.assign(iri: "https://remote/returns-404") }
+
+          it "does not notify subscribers to actor icon refreshes" do
+            expect do
+              subject.perform
+              Fiber.yield
+            end.not_to change { icon_notifications[0] }
+          end
         end
       end
     end
@@ -190,26 +235,13 @@ Spectator.describe Task::RefreshActor do
       end
     end
 
-    it "documents the error if fetch fails" do
+    it "records the failure if refresh fails" do
       actor.iri = "https://remote/returns-404"
       expect { subject.perform }
         .to change { subject.failures.dup }
     end
 
     alias Pin = Relationship::Content::Pin
-
-    it "does not create any pins" do
-      expect { subject.perform }.not_to change { Pin.count }
-    end
-
-    context "given a local actor with a collection of featured posts" do
-      let_create(:actor, local: true)
-
-      it "does not fetch the featured collection" do
-        subject.perform
-        expect(HTTP::Client.requests).not_to have("GET #{actor.featured}")
-      end
-    end
 
     context "given a remote actor with a collection of featured posts" do
       let_create(:object, named: :object1, attributed_to: actor)
@@ -237,13 +269,13 @@ Spectator.describe Task::RefreshActor do
         expect(HTTP::Client.requests).to have("GET #{featured_iri}")
       end
 
-      it "creates pins for featured objects" do
+      it "pins the objects in the featured collection" do
         expect { subject.perform }.to change { Pin.count }.by(2)
         expect(Pin.find?(actor: actor, object: object1)).to be_truthy
         expect(Pin.find?(actor: actor, object: object2)).to be_truthy
       end
 
-      it "does not dereference cached objects" do
+      it "does not fetch objects that are already cached" do
         subject.perform
         expect(HTTP::Client.requests).not_to have("GET #{object1.iri}")
         expect(HTTP::Client.requests).not_to have("GET #{object2.iri}")
@@ -255,13 +287,13 @@ Spectator.describe Task::RefreshActor do
           object2.destroy
         end
 
-        it "dereferences the objects" do
+        it "fetches the objects" do
           subject.perform
           expect(HTTP::Client.requests).to have("GET #{object1.iri}")
           expect(HTTP::Client.requests).to have("GET #{object2.iri}")
         end
 
-        it "saves the objects" do
+        it "caches the objects" do
           subject.perform
           expect(ActivityPub::Object.find?(iri: object1.iri)).to be_truthy
           expect(ActivityPub::Object.find?(iri: object2.iri)).to be_truthy
@@ -286,6 +318,8 @@ Spectator.describe Task::RefreshActor do
       end
 
       context "when featured collection fetch fails" do
+        let_create!(:pin_relationship, actor: actor, object: object1)
+
         before_each do
           actor.assign(featured: "https://remote/returns-500").save
           HTTP::Client.actors << actor.assign(username: "changed")
@@ -293,6 +327,10 @@ Spectator.describe Task::RefreshActor do
 
         it "refreshes the actor" do
           expect { subject.perform }.to change { actor.reload!.username }
+        end
+
+        it "keeps existing pins" do
+          expect { subject.perform }.not_to change { !!Pin.find?(actor: actor, object: object1) }
         end
 
         it "does not fail" do
@@ -307,17 +345,18 @@ Spectator.describe Task::RefreshActor do
           HTTP::Client.objects << object1
         end
 
-        it "skips the failed pin" do
+        it "does not pin the object" do
           expect { subject.perform }.not_to change { !!Pin.find?(actor: actor, object: object1) }
         end
 
-        it "creates remaining pins" do
+        it "pins the other objects in the featured collection" do
           expect { subject.perform }.to change { !!Pin.find?(actor: actor, object: object2) }.from(false).to(true)
         end
       end
 
-      context "when pin validation fails" do
-        let_create(:object, named: :other_object)
+      context "when an object in the featured collection is attributed to another actor" do
+        let_create(:actor, named: :other)
+        let_create(:object, named: :other_object, attributed_to: other)
 
         let(collection) do
           ActivityPub::Collection.new(
@@ -330,7 +369,7 @@ Spectator.describe Task::RefreshActor do
           HTTP::Client.objects << other_object
         end
 
-        it "skips the invalid pin" do
+        it "does not pin the object" do
           expect { subject.perform }.not_to change { !!Pin.find?(actor: actor, object: other_object) }
         end
 
@@ -339,7 +378,7 @@ Spectator.describe Task::RefreshActor do
         end
       end
 
-      context "with paginated collection" do
+      context "given a paginated collection" do
         let(first_page) do
           ActivityPub::Collection.new(
             iri: "#{featured_iri}?page=1",
@@ -369,18 +408,13 @@ Spectator.describe Task::RefreshActor do
           HTTP::Client.objects << object3
         end
 
-        it "fetches the featured collection" do
-          subject.perform
-          expect(HTTP::Client.requests).to have("GET #{featured_iri}")
-        end
-
-        it "traverses all pages" do
+        it "fetches every page" do
           subject.perform
           expect(HTTP::Client.requests).to have("GET #{featured_iri}?page=1")
           expect(HTTP::Client.requests).to have("GET #{featured_iri}?page=2")
         end
 
-        it "creates pins for featured objects" do
+        it "pins the objects on every page" do
           expect { subject.perform }.to change { Pin.count }.by(3)
           expect(Pin.find?(actor: actor, object: object1)).to be_truthy
           expect(Pin.find?(actor: actor, object: object2)).to be_truthy
@@ -388,8 +422,8 @@ Spectator.describe Task::RefreshActor do
         end
       end
 
-      context "with `sync_featured_collection` disabled" do
-        before_each { subject.assign(sync_featured_collection: false) }
+      context "when the task does not sync the featured collection" do
+        let(sync_featured_collection) { false }
 
         it "does not fetch the featured collection" do
           subject.perform

@@ -1134,18 +1134,18 @@ Spectator.describe ActorsController do
           .to change { Task::RefreshActor.find?(actor: actor) }
       end
 
-      it "syncs the featured collection" do
+      it "schedules a task that syncs the featured collection" do
         post "/remote/actors/#{actor.id}/refresh"
         expect(Task::RefreshActor.find(actor: actor).sync_featured_collection).to be_true
       end
 
-      it "does not sync the featured collection" do
+      it "schedules a task that does not sync the featured collection" do
         post "/remote/actors/#{actor.id}/refresh", HTTP::Headers{"Content-Type" => "application/x-www-form-urlencoded"}, "sync-featured-collection=false"
         expect(Task::RefreshActor.find(actor: actor).sync_featured_collection).to be_false
       end
 
-      context "given a scheduled refresh task" do
-        before_each { Task::RefreshActor.new(source: actor, actor: actor).save }
+      context "given a scheduled task that syncs the featured collection" do
+        before_each { Task::RefreshActor.new(source: actor, actor: actor, sync_featured_collection: true).save }
 
         it "does not schedule another refresh task" do
           expect { post "/remote/actors/#{actor.id}/refresh" }
@@ -1158,12 +1158,21 @@ Spectator.describe ActorsController do
         end
       end
 
-      it "renders a turbo stream replace message" do
+      context "given a scheduled task that does not sync the featured collection" do
+        before_each { Task::RefreshActor.new(source: actor, actor: actor, sync_featured_collection: false).save }
+
+        it "schedules a task that syncs the featured collection" do
+          expect { post "/remote/actors/#{actor.id}/refresh" }
+            .to change { Task::RefreshActor.where(actor: actor).count(&.sync_featured_collection) }.by(1)
+        end
+      end
+
+      it "replaces the refresh button" do
         post "/remote/actors/#{actor.id}/refresh", HTTP::Headers{"Accept" => "text/vnd.turbo-stream.html"}
         expect(XML.parse_html(response.body).xpath_nodes("//turbo-stream[@action='replace']/@target")).to contain_exactly("actor-#{actor.id}-refresh-button")
       end
 
-      it "it succeeds" do
+      it "succeeds" do
         post "/remote/actors/#{actor.id}/refresh"
         expect(response.status_code).to eq(200)
       end

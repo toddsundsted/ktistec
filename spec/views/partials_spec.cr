@@ -567,6 +567,18 @@ Spectator.describe "partials" do
         end
       end
 
+      context "and actor is local" do
+        before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
+
+        it "does not render a button to refresh" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Refresh")
+        end
+
+        it "does not render the last refresh time" do
+          expect(subject.xpath_nodes("//div[contains(@class, 'status')]/text()")).not_to have(/refreshed/)
+        end
+      end
+
       context "and actor is blocked" do
         before_each { actor.block! }
 

@@ -256,11 +256,9 @@ class ActorsController
       not_found
     end
 
-    unless Task::RefreshActor.exists?(actor.iri)
-      sync_featured_collection = env.params.body["sync-featured-collection"]? != "false"
-      state = Task::RefreshActor::State.new(sync_featured_collection: sync_featured_collection)
-      Task::RefreshActor.new(source: env.account.actor, actor: actor, state: state).schedule
-    end
+    sync_featured_collection = env.params.body["sync-featured-collection"]? != "false"
+    task = Task::RefreshActor.new(source: env.account.actor, actor: actor, sync_featured_collection: sync_featured_collection)
+    task.schedule if task.valid?
 
     if accepts_turbo_stream?
       id = "actor-#{actor.id}-refresh-button"

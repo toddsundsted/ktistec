@@ -359,6 +359,10 @@ Spectator.describe "partials" do
       end
     end
 
+    it "enables icon repair" do
+      expect(subject.xpath_nodes("//*[contains(@data-controller,'icon-load-error')]//img[@data-actor-id='#{actor.id}']")).not_to be_empty
+    end
+
     context "if anonymous" do
       it "does not render an internal link to the actor" do
         expect(subject.xpath_nodes("//a/@href")).not_to have("/remote/actors/#{actor.id}")
@@ -563,6 +567,18 @@ Spectator.describe "partials" do
         end
       end
 
+      context "and actor is local" do
+        before_each { actor.assign(iri: "https://test.test/actors/foo_bar").save }
+
+        it "does not render a button to refresh" do
+          expect(subject.xpath_nodes("//button[@type='submit']/text()")).not_to have("Refresh")
+        end
+
+        it "does not render the last refresh time" do
+          expect(subject.xpath_nodes("//div[contains(@class, 'status')]/text()")).not_to have(/refreshed/)
+        end
+      end
+
       context "and actor is blocked" do
         before_each { actor.block! }
 
@@ -660,6 +676,10 @@ Spectator.describe "partials" do
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
+    end
+
+    it "enables icon repair" do
+      expect(subject.xpath_nodes("//*[contains(@data-controller,'icon-load-error')]//img[@data-actor-id='#{actor.id}']")).not_to be_empty
     end
 
     context "if anonymous" do

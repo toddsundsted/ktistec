@@ -248,14 +248,18 @@ class StreamingController
 
   get "/stream/actors/:id" do |env|
     id = id_param(env)
-    unless ActivityPub::Actor.find?(id)
+    unless (actor = ActivityPub::Actor.find?(id))
       not_found
     end
     setup_response(env.response)
-    subscribe "/actor/refresh" do |subject, values|
-      values.each do
+    subscribe "/actor/refresh", "/actor/#{actor.id}/refresh" do |subject, values|
+      values.each do |value|
         case subject
         when "/actor/refresh"
+          if (actor_id = value.to_i64?)
+            replace_actor_icon(env.response, actor_id)
+          end
+        else
           stream_refresh(env.response)
         end
       end

@@ -1,6 +1,6 @@
 - _account = env.account?
 - _emojis = Tag::Emoji.where(subject: actor)
-.ui.actor.segments
+.ui.actor.segments data-controller="icon-load-error"
   - if actor.blocked?
     .ui.basic.blocked.segment
       = actor.display_name

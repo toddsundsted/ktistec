@@ -359,6 +359,10 @@ Spectator.describe "partials" do
       end
     end
 
+    it "enables icon repair" do
+      expect(subject.xpath_nodes("//*[contains(@data-controller,'icon-load-error')]//img[@data-actor-id='#{actor.id}']")).not_to be_empty
+    end
+
     context "if anonymous" do
       it "does not render an internal link to the actor" do
         expect(subject.xpath_nodes("//a/@href")).not_to have("/remote/actors/#{actor.id}")
@@ -660,6 +664,10 @@ Spectator.describe "partials" do
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
+    end
+
+    it "enables icon repair" do
+      expect(subject.xpath_nodes("//*[contains(@data-controller,'icon-load-error')]//img[@data-actor-id='#{actor.id}']")).not_to be_empty
     end
 
     context "if anonymous" do

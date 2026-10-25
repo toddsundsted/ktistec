@@ -25,7 +25,7 @@ Spectator.describe Rules::View::PublicTagged do
     end
   end
 
-  # within one `reconcile_object` pass `PublicTimeline` must create
+  # within one `reconcile_objects` pass `PublicTimeline` must create
   # the row before `PublicTagged` reads it, or a fresh tagged public
   # post is silently missed until its next tag change.
 
@@ -37,7 +37,7 @@ Spectator.describe Rules::View::PublicTagged do
     before_each { put_in_outbox(actor, activity) }
 
     it "materializes the row" do
-      expect { Rules::Maintainer.reconcile_object(post.iri) }
+      expect { Rules::Maintainer.reconcile_objects([post.iri]) }
         .to change { Relationship::Content::PublicTagged.count(to_iri: post.iri) }.from(0).to(1)
     end
   end

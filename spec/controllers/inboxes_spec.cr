@@ -1108,6 +1108,66 @@ Spectator.describe InboxesController do
       end
     end
 
+    context "given a local post" do
+      let_create(:object, attributed_to: actor)
+
+      context "and a Create attributed to its author" do
+        let_build(:create, actor: actor, object: object)
+
+        it "does not save the activity" do
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .not_to change { ActivityPub::Activity.count }
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "logs a warning" do
+          entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+          expect(entries.select(&.severity.warn?).map(&.message)).to have(/\] unknown activity attributed/)
+        end
+      end
+
+      context "and an Update attributed to its author" do
+        let_build(:update, actor: actor, object: object)
+
+        it "does not save the activity" do
+          expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+            .not_to change { ActivityPub::Activity.count }
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "logs a warning" do
+          entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+          expect(entries.select(&.severity.warn?).map(&.message)).to have(/\] unknown activity attributed/)
+        end
+      end
+
+      context "and a Create we sent" do
+        let_create(:create, actor: actor, object: object)
+
+        it "logs a trace" do
+          entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+          expect(entries.select(&.severity.trace?).map(&.message)).to have(/\] known activity attributed/)
+        end
+      end
+
+      context "and an Update we sent" do
+        let_create(:update, actor: actor, object: object)
+
+        it "logs a trace" do
+          entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+          expect(entries.select(&.severity.trace?).map(&.message)).to have(/\] known activity attributed/)
+        end
+      end
+    end
+
     context "when the other actor is down" do
       let_build(:activity, actor: other, to: [actor.iri])
 
@@ -3204,7 +3264,7 @@ Spectator.describe InboxesController do
 
                   it "warns of the forgery" do
                     entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/that we never sent/)
+                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown activity/)
                   end
 
                   it "is successful" do
@@ -3218,7 +3278,7 @@ Spectator.describe InboxesController do
 
                   it "logs the echo" do
                     entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
                   end
 
                   context "and we since undid it" do
@@ -3226,7 +3286,7 @@ Spectator.describe InboxesController do
 
                     it "logs the echo" do
                       entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
                     end
                   end
                 end
@@ -3326,7 +3386,7 @@ Spectator.describe InboxesController do
 
                   it "warns of the forgery" do
                     entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/that we never sent/)
+                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown activity/)
                   end
 
                   it "is successful" do
@@ -3340,7 +3400,7 @@ Spectator.describe InboxesController do
 
                   it "logs the echo" do
                     entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
                   end
 
                   context "and we since undid it" do
@@ -3348,7 +3408,7 @@ Spectator.describe InboxesController do
 
                     it "logs the echo" do
                       entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
                     end
                   end
                 end
@@ -3613,7 +3673,7 @@ Spectator.describe InboxesController do
 
               it "warns of the forgery" do
                 entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                expect(entries.select(&.severity.warn?).map(&.message)).to have(/that we never sent/)
+                expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown activity/)
               end
 
               it "is successful" do
@@ -3627,7 +3687,7 @@ Spectator.describe InboxesController do
 
               it "logs the echo" do
                 entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                expect(entries.select(&.severity.trace?).map(&.message)).to have(/ignoring relay echo/)
+                expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
               end
             end
           end

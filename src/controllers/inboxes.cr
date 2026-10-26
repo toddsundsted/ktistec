@@ -335,11 +335,17 @@ class InboxesController
 
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
-    if inner_ld && (activity_actor_iri = activity.actor_iri) && Ktistec::Model::Linked.local?(activity_actor_iri)
+    if (activity_actor_iri = activity.actor_iri) && Ktistec::Model::Linked.local?(activity_actor_iri)
       if ActivityPub::Activity.find?(activity.iri, include_undone: true)
-        Log.trace { "[#{request_id}] ignoring relay echo of activity by local actor=#{activity_actor_iri} relayed by #{outer_actor_iri}" }
+        if inner_ld
+          Log.trace { "[#{request_id}] relayed known activity attributed to local actor=#{activity_actor_iri}" }
+        else
+          Log.trace { "[#{request_id}] known activity attributed to local actor=#{activity_actor_iri}" }
+        end
+      elsif inner_ld
+        Log.warn { "[#{request_id}] relayed unknown activity attributed to local actor=#{activity_actor_iri} iri=#{activity.iri} relayer=#{outer_actor_iri}" }
       else
-        Log.warn { "[#{request_id}] #{outer_actor_iri} relayed an activity by local actor=#{activity_actor_iri} that we never sent iri=#{activity.iri}" }
+        Log.warn { "[#{request_id}] unknown activity attributed to local actor=#{activity_actor_iri} iri=#{activity.iri}" }
       end
       ok
     end

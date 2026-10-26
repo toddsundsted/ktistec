@@ -55,7 +55,7 @@ module Rules
         if (object = ActivityPub::Object.find?(iri: object_iri))
           Feed::Queue.enqueue_arrival(object)
         end
-        notify(Rules::Maintainer.reconcile_object(object_iri))
+        notify(Rules::Maintainer.reconcile_objects([object_iri]))
       end
     end
 
@@ -110,11 +110,7 @@ module Rules
           JOIN relationships f ON f.type = ? AND f.to_iri = t.href
          WHERE o.attributed_to_iri = ?
         SQL
-      changed = [] of {Rules::View, String}
-      object_iris.uniq.each do |object_iri|
-        changed.concat(Rules::Maintainer.reconcile_object(object_iri))
-      end
-      notify(changed)
+      notify(Rules::Maintainer.reconcile_objects(object_iris.uniq))
     end
 
     # Re-evaluates the materialized views affected by a hashtag being

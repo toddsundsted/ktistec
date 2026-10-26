@@ -1,6 +1,26 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.14.0]
+### Added
+- Algorithmic feeds, judged by executables in `etc/judges`.
+- Accept community-relayed votes authorized by the object's audience.
+- Include the linked SQLite3 version and its features in NodeInfo.
+
+### Fixed
+- Pick up a remote actor's rotated public key.
+- Don't save actors embedded in community-relayed activities.
+- Ignore community-relayed and directly delivered activities attributed to a local actor.
+- Reload an actor's page only when that actor's Refresh button is pressed.
+- Hide the Refresh button on a local actor's panel.
+- Fall back to the default avatar when a refreshed icon fails to load.
+- Enable icon repair on actor panels and actor cards.
+- Keep the no-replies timeline queries on the timeline index.
+
+### Changed
+- Judge feed posts in the background instead of in the request.
+- Reconcile each key once when an actor is blocked or unblocked.
+
 ## [v3.13.0]
 ### Added
 - Link the feed deck from the secondary nav bar.
@@ -964,6 +984,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.14.0]: https://github.com/toddsundsted/ktistec/compare/f175932e...35c3ef5c
 [v3.13.0]: https://github.com/toddsundsted/ktistec/compare/02c9f7d8...4f3c2f40
 [v3.12.1]: https://github.com/toddsundsted/ktistec/compare/874107ab...d26efc2c
 [v3.12.0]: https://github.com/toddsundsted/ktistec/compare/e2554566...603276f0

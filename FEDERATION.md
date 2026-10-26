@@ -68,6 +68,7 @@ NodeInfo schema 2.1 is available via `/.well-known/nodeinfo`, conforming to FEP-
 - `usage.users` - Total users and monthly active users
 - `usage.localPosts` - Count of local posts
 - `metadata.nodeName` - Server name (per FEP-0151 conventions)
+- `metadata.sqlite` - Linked SQLite3 version and what features it supports
 
 ### HTTP request signing
 
@@ -76,6 +77,7 @@ Ktistec uses [HTTP Signatures](https://datatracker.ietf.org/doc/html/draft-cavag
 **Requirements:**
 - Signatures are **required** for all POST requests to the inbox
 - Signatures are **used** for GET requests when fetching actor data
+- Keys may be rotated; Ktistec refetches the actor's key when a signature fails to verify
 
 **Supported algorithms:**
 - `rsa-sha256`
@@ -137,6 +139,7 @@ Senders often use terms they never declare. To expand those documents rather tha
 - `Like` - Express approval
 - `Dislike` - Express disapproval
 - `Announce` - Boost/share content
+- A `Like` or `Dislike` (or its `Undo`) relayed in a community's (`Group`) `Announce` is accepted when the object's `audience` names the community and the voter's actor can be fetched
 
 **Relationship activities:**
 - `Follow` - Request to follow an actor
@@ -211,6 +214,7 @@ Locally uploaded media files are stored on the instance and served from the `/up
 - Objects
   - `Update(Object)` activities modify existing objects
   - Only `Create` and `Update` may carry an embedded object. On any other activity -- `Announce`, `Like`, `Delete`, `Undo` -- an inline object node is ignored and only its `id` is retained; the object is then taken from cache or dereferenced from that `id`. An activity that merely references an object cannot rewrite it.
+  - Actors and objects embedded in an activity relayed in an `Announce` are not trusted; they must be fetchable from their origin.
   - The updated object replaces the original
   - `updated` timestamp is set
 - Actors

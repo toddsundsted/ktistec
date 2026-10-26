@@ -2,6 +2,7 @@ require "../../src/rules/maintainer"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
+require "../spec_helper/rule/view"
 
 # An identity-keyed view.
 #
@@ -114,6 +115,17 @@ private class SyntheticStableKeyedView < Rules::View
   def project(object_iri : String) : Array(Rules::View::Key)
     group = Ktistec.database.query_one?("SELECT attributed_to_iri FROM objects WHERE iri = ?", object_iri, as: String)
     group ? [{from_iri: "owner", to_iri: group}] : [] of Rules::View::Key
+  end
+end
+
+# A stable-keyed recency view that counts its reconciles.
+#
+private class SyntheticCountingView < SyntheticStableKeyedView
+  getter reconciles = 0
+
+  def membership(key : Rules::View::Key? = nil) : {String, Array(DB::Any)}
+    @reconciles += 1 if key
+    super
   end
 end
 
@@ -351,33 +363,48 @@ Spectator.describe Rules::Maintainer do
     end
   end
 
-  describe ".reconcile_object" do
-    context "an identity-keyed view" do
+  describe ".reconcile_objects" do
+    preserve_view_registry
+
+    context "given several objects" do
       let(view) { SyntheticIdentityKeyedView.new }
 
-      let_create!(:object)
+      let_create!(:object, named: first)
+      let_create!(:object, named: second)
 
       before_each { Rules::View.register(view) }
-      after_each { Rules::View.registry.delete(view) }
 
-      it "projects the object to itself" do
-        Rules::Maintainer.reconcile_object(object.iri)
-        expect(materialized(view)).to contain(object.iri)
+      it "reconciles every object" do
+        Rules::Maintainer.reconcile_objects([first.iri, second.iri])
+        expect(materialized(view)).to eq(Set{first.iri, second.iri})
       end
     end
 
-    context "a representative-keyed view" do
+    context "given several objects in a group" do
       let(view) { SyntheticRepresentativeKeyedView.new }
 
       let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
       let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
 
       before_each { Rules::View.register(view) }
-      after_each { Rules::View.registry.delete(view) }
 
-      it "projects a member to its group's representative" do
-        Rules::Maintainer.reconcile_object(first.iri)
+      it "materializes the group's newest object" do
+        Rules::Maintainer.reconcile_objects([first.iri])
         expect(materialized(view)).to eq(Set{second.iri})
+      end
+    end
+
+    context "given objects that share a key" do
+      let(view) { SyntheticCountingView.new }
+
+      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+
+      before_each { Rules::View.register(view) }
+
+      it "reconciles the key once" do
+        Rules::Maintainer.reconcile_objects([first.iri, second.iri])
+        expect(view.reconciles).to eq(1)
       end
     end
   end
@@ -424,20 +451,21 @@ Spectator.describe Rules::Maintainer do
     end
 
     context "given a registered view" do
+      preserve_view_registry
+
       before_each { Rules::View.register(view) }
-      after_each { Rules::View.registry.delete(view) }
 
       it "returns the changed pairs" do
-        expect(Rules::Maintainer.reconcile_object(object.iri)).to eq([{view, "owner"}])
+        expect(Rules::Maintainer.reconcile_objects([object.iri])).to contain({view, "owner"})
       end
 
       context "given an inserted key" do
-        before_each { Rules::Maintainer.reconcile_object(object.iri) }
+        before_each { Rules::Maintainer.reconcile_objects([object.iri]) }
 
         pre_condition { expect(materialized(view)).to contain(object.iri) }
 
         it "returns no pairs" do
-          expect(Rules::Maintainer.reconcile_object(object.iri)).to be_empty
+          expect(Rules::Maintainer.reconcile_objects([object.iri])).to be_empty
         end
       end
     end

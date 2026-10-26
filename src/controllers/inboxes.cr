@@ -225,13 +225,38 @@ class InboxesController
     end
   end
 
+  # Returns the relaying community.
+  #
+  private def self.relaying_community(signer, outer_actor_iri)
+    signer if signer && signer.iri == outer_actor_iri && signer.type == "ActivityPub::Actor::Group"
+  end
+
+  # Returns true if the `Like`, `Dislike` or `Undo` of either is
+  # relayable by the community.
+  #
+  private def self.relayable_by?(community, activity : ActivityPub::Activity)
+    case activity
+    when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
+      (object = ActivityPub::Object.find?(activity.object_iri)) &&
+        relayable_by?(community, object)
+    when ActivityPub::Activity::Undo
+      (undone = ActivityPub::Activity.find?(activity.object_iri, include_undone: true)) &&
+        relayable_by?(community, undone)
+    end
+  end
+
+  # Returns true if activities concerning the object are relayable by
+  # the community.
+  #
+  private def self.relayable_by?(community, object : ActivityPub::Object)
+    !!((audience = object.audience) && audience.includes?(community.iri) &&
+      Account.all.any? { |local| Relationship::Social::Follow.find?(actor: local.actor, object: community) })
+  end
+
   # Authorizes a community-relayed `Delete`.
   #
   private def self.relay_delete_authorized?(key_pair, community, object, transient, deadline)
-    if (audience = object.audience) && audience.includes?(community.iri) &&
-       Account.all.any? { |local| Relationship::Social::Follow.find?(actor: local.actor, object: community) }
-      return true
-    end
+    return true if relayable_by?(community, object)
     object_gone_at_origin?(key_pair, object.iri, transient, deadline)
   end
 
@@ -310,6 +335,21 @@ class InboxesController
 
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
+    if (activity_actor_iri = activity.actor_iri) && Ktistec::Model::Linked.local?(activity_actor_iri)
+      if ActivityPub::Activity.find?(activity.iri, include_undone: true)
+        if inner_ld
+          Log.trace { "[#{request_id}] relayed known activity attributed to local actor=#{activity_actor_iri}" }
+        else
+          Log.trace { "[#{request_id}] known activity attributed to local actor=#{activity_actor_iri}" }
+        end
+      elsif inner_ld
+        Log.warn { "[#{request_id}] relayed unknown activity attributed to local actor=#{activity_actor_iri} iri=#{activity.iri} relayer=#{outer_actor_iri}" }
+      else
+        Log.warn { "[#{request_id}] unknown activity attributed to local actor=#{activity_actor_iri} iri=#{activity.iri}" }
+      end
+      ok
+    end
+
     # this is, strictly speaking, not required because this method
     # should be idempotent, but it avoids a lot of unnecessary work.
 
@@ -349,10 +389,12 @@ class InboxesController
     # its verification key. 2) verify the signature against the raw
     # body. 3a) a relayed Delete is authenticated by the relaying
     # community's (Group) Announce signature. 3b) a directly-delivered
-    # activity is authenticated when the signer is its own actor.
-    # otherwise, verify the activity by 4) returning it from the
-    # database if we already hold it, and retrieving it from its
-    # origin if we do not, or 5) as a last resort, checking the
+    # activity is authenticated when the signer is its own actor. 3c)
+    # a relayed activity is authenticated by the community's Announce
+    # signature when the object it acts on is relayable by the
+    # community. otherwise, verify the activity by 4) returning it
+    # from the database if we already hold it, and retrieving it from
+    # its origin if we do not, or 5) as a last resort, checking the
     # existence of its object or actor. finally, 6) associate the
     # verified activity with its actor.
 
@@ -418,10 +460,18 @@ class InboxesController
     else
       actor, _ = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
 
+      # 3c
+
+      if inner_ld && (community = relaying_community(signer, outer_actor_iri)) &&
+         relayable_by?(community, activity)
+        via_community = community
+        verified = true
+      end
+
       # 4
 
       temporary =
-        if activity.iri.presence
+        if !verified && activity.iri.presence
           try_dereference(transient, request_id) do
             ActivityPub::Activity.dereference(fetch_identity, activity.iri, deadline: deadline)
           end
@@ -430,7 +480,7 @@ class InboxesController
       if temporary
         activity = temporary
         verified = true
-      else
+      elsif !verified
         Log.trace { "[#{request_id}] fetch from origin failed" }
       end
 
@@ -470,10 +520,11 @@ class InboxesController
       end
     end
 
-    # the relayed-Delete path tolerates an unreachable inner actor (the
-    # community's signature is the authentication); every other path
-    # requires the actor be present.
-    unless actor || via_community
+    # the relayed-Delete path tolerates an unreachable inner actor
+    # (the community's signature is the authentication). every other
+    # path -- including the other relayed activities -- requires the
+    # actor be present.
+    unless actor || (via_community && activity.is_a?(ActivityPub::Activity::Delete))
       bad_request_or_bad_gateway("Actor Not Present")
     end
 

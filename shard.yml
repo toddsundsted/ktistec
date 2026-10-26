@@ -1,5 +1,5 @@
 name: ktistec
-version: 3.13.0
+version: 3.14.0
 
 description: |
   Ktistec is an ActivityPub server for individual users and small groups.
@@ -36,6 +36,6 @@ development_dependencies:
 crystal: 1.19.1
 
 libraries:
-  libsqlite3: ">= 3.11.0"
+  libsqlite3: ">= 3.35.0"
 
 license: AGPL-3.0-only

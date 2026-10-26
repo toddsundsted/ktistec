@@ -91,15 +91,19 @@ module Rules
       changed
     end
 
-    # Re-evaluates every registered view for a changed object,
-    # projecting the object to each view's affected key(s).
+    # Re-evaluates every registered view for changed objects,
+    # projecting each object to each view's affected key(s) and
+    # reconciling each key exactly once.
     #
     # Returns the `(view, owner)` pairs that changed.
     #
-    def reconcile_object(object_iri : String) : Array({View, String})
+    def reconcile_objects(object_iris : Array(String)) : Array({View, String})
       changed = [] of {View, String}
       View.registry.each do |view|
-        changed.concat(reconcile_object_for(view, object_iri))
+        keys = object_iris.flat_map { |object_iri| view.project(object_iri) }.uniq!
+        keys.each do |key|
+          changed << {view, key[:from_iri]} if reconcile_for(view, key)
+        end
       end
       changed
     end

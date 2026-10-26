@@ -1108,6 +1108,66 @@ Spectator.describe InboxesController do
       end
     end
 
+    context "given a local post" do
+      let_create(:object, attributed_to: actor)
+
+      context "and a Create attributed to its author" do
+        let_build(:create, actor: actor, object: object)
+
+        it "does not save the activity" do
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .not_to change { ActivityPub::Activity.count }
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "logs a warning" do
+          entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+          expect(entries.select(&.severity.warn?).map(&.message)).to have(/\] unknown activity attributed/)
+        end
+      end
+
+      context "and an Update attributed to its author" do
+        let_build(:update, actor: actor, object: object)
+
+        it "does not save the activity" do
+          expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+            .not_to change { ActivityPub::Activity.count }
+        end
+
+        it "is successful" do
+          post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true)
+          expect(response.status_code).to eq(200)
+        end
+
+        it "logs a warning" do
+          entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+          expect(entries.select(&.severity.warn?).map(&.message)).to have(/\] unknown activity attributed/)
+        end
+      end
+
+      context "and a Create we sent" do
+        let_create(:create, actor: actor, object: object)
+
+        it "logs a trace" do
+          entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+          expect(entries.select(&.severity.trace?).map(&.message)).to have(/\] known activity attributed/)
+        end
+      end
+
+      context "and an Update we sent" do
+        let_create(:update, actor: actor, object: object)
+
+        it "logs a trace" do
+          entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+          expect(entries.select(&.severity.trace?).map(&.message)).to have(/\] known activity attributed/)
+        end
+      end
+    end
+
     context "when the other actor is down" do
       let_build(:activity, actor: other, to: [actor.iri])
 
@@ -3123,10 +3183,6 @@ Spectator.describe InboxesController do
         end
       end
 
-      # only `Delete` is relay-trusted: a social signal (like `Like`)
-      # must still be origin-verified, so the community's signature
-      # does not authenticate it.
-
       context "wrapped Like activity" do
         let_create(:object, attributed_to: actor)
         let_build(:like, actor: lemmy_user, object: object)
@@ -3178,6 +3234,74 @@ Spectator.describe InboxesController do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
             expect(response.status_code).to eq(400)
           end
+
+          context "and the object names the community in its audience" do
+            let_create(:object, attributed_to: actor, audience: [community.iri])
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(400)
+            end
+
+            context "and a local account follows the community" do
+              let_create!(:follow_relationship, actor: actor, object: community)
+
+              it "saves the inner Like activity" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .to change { ActivityPub::Activity::Like.count }.by(1)
+              end
+
+              context "and the inner activity's actor is local" do
+                let_build(:like, actor: actor, object: object)
+
+                context "but we never sent it (a forgery)" do
+                  pre_condition { expect(ActivityPub::Activity.find?(like.iri)).to be_nil }
+
+                  it "does not save the inner Like activity" do
+                    expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      .not_to change { ActivityPub::Activity::Like.count }
+                  end
+
+                  it "warns of the forgery" do
+                    entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown activity/)
+                  end
+
+                  it "is successful" do
+                    post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                    expect(response.status_code).to eq(200)
+                  end
+                end
+
+                context "and we sent it (an echo)" do
+                  before_each { like.save }
+
+                  it "logs the echo" do
+                    entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+                  end
+
+                  context "and we since undid it" do
+                    before_each { like.undo! }
+
+                    it "logs the echo" do
+                      entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+                    end
+                  end
+                end
+              end
+            end
+          end
+
+          context "and a local account follows the community" do
+            let_create!(:follow_relationship, actor: actor, object: community)
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(400)
+            end
+          end
         end
       end
 
@@ -3196,23 +3320,110 @@ Spectator.describe InboxesController do
           }.to_json
         end
 
-        before_each do
-          HTTP::Client.activities << dislike
+        let(headers) { Ktistec::Signature.sign(community, "https://test.test/actors/#{actor.username}/inbox", wrapped_json, "application/json") }
+
+        context "served at its origin" do
+          before_each { HTTP::Client.activities << dislike }
+
+          it "saves the inner Dislike activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .to change { ActivityPub::Activity::Dislike.count }.by(1)
+          end
+
+          it "does not save the Announce wrapper" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Announce.count }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(200)
+          end
         end
 
-        it "saves the inner Dislike activity" do
-          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-            .to change { ActivityPub::Activity::Dislike.count }.by(1)
-        end
+        context "not served at its origin" do
+          it "does not save the inner Dislike activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Dislike.count }
+          end
 
-        it "does not save the Announce wrapper" do
-          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-            .not_to change { ActivityPub::Activity::Announce.count }
-        end
+          it "does not save the Announce wrapper" do
+            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              .not_to change { ActivityPub::Activity::Announce.count }
+          end
 
-        it "is successful" do
-          post "/actors/#{actor.username}/inbox", headers, wrapped_json
-          expect(response.status_code).to eq(200)
+          it "returns 400" do
+            post "/actors/#{actor.username}/inbox", headers, wrapped_json
+            expect(response.status_code).to eq(400)
+          end
+
+          context "and the object names the community in its audience" do
+            let_create(:object, attributed_to: actor, audience: [community.iri])
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(400)
+            end
+
+            context "and a local account follows the community" do
+              let_create!(:follow_relationship, actor: actor, object: community)
+
+              it "saves the inner Dislike activity" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .to change { ActivityPub::Activity::Dislike.count }.by(1)
+              end
+
+              context "and the inner activity's actor is local" do
+                let_build(:dislike, actor: actor, object: object)
+
+                context "but we never sent it (a forgery)" do
+                  pre_condition { expect(ActivityPub::Activity.find?(dislike.iri)).to be_nil }
+
+                  it "does not save the inner Dislike activity" do
+                    expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      .not_to change { ActivityPub::Activity::Dislike.count }
+                  end
+
+                  it "warns of the forgery" do
+                    entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown activity/)
+                  end
+
+                  it "is successful" do
+                    post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                    expect(response.status_code).to eq(200)
+                  end
+                end
+
+                context "and we sent it (an echo)" do
+                  before_each { dislike.save }
+
+                  it "logs the echo" do
+                    entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+                  end
+
+                  context "and we since undid it" do
+                    before_each { dislike.undo! }
+
+                    it "logs the echo" do
+                      entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+                    end
+                  end
+                end
+              end
+            end
+          end
+
+          context "and a local account follows the community" do
+            let_create!(:follow_relationship, actor: actor, object: community)
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(400)
+            end
+          end
         end
       end
 
@@ -3248,9 +3459,9 @@ Spectator.describe InboxesController do
       end
 
       context "wrapped Undo activity" do
-        let_create(:like, actor: lemmy_user)
-        let_build(:undo, actor: lemmy_user, object: like)
+        let_create(:object, attributed_to: actor)
         let_build(:announce, actor: community, object_iri: undo.iri)
+        let_build(:undo, actor: lemmy_user, object: activity)
 
         let(wrapped_json) do
           {
@@ -3262,18 +3473,130 @@ Spectator.describe InboxesController do
           }.to_json
         end
 
-        before_each do
-          HTTP::Client.activities << undo
+        let(headers) { Ktistec::Signature.sign(community, "https://test.test/actors/#{actor.username}/inbox", wrapped_json, "application/json") }
+
+        context "of a Like" do
+          let_create(:like, named: :activity, actor: lemmy_user, object: object)
+
+          context "served at its origin" do
+            before_each { HTTP::Client.activities << undo }
+
+            it "saves the inner Undo activity" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { ActivityPub::Activity::Undo.count }.by(1)
+            end
+
+            it "undoes the like" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { activity.reload!.undone_at }
+            end
+
+            it "is successful" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(200)
+            end
+          end
+
+          context "not served at its origin" do
+            it "does not save the inner Undo activity" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .not_to change { ActivityPub::Activity::Undo.count }
+            end
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(400)
+            end
+
+            context "and the liked object names the community in its audience" do
+              let_create(:object, attributed_to: actor, audience: [community.iri])
+
+              it "returns 400" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(400)
+              end
+
+              context "and a local account follows the community" do
+                let_create!(:follow_relationship, actor: actor, object: community)
+
+                it "undoes the like" do
+                  expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    .to change { activity.reload!.undone_at }
+                end
+              end
+            end
+
+            context "and a local account follows the community" do
+              let_create!(:follow_relationship, actor: actor, object: community)
+
+              it "returns 400" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(400)
+              end
+            end
+          end
         end
 
-        it "saves the inner Undo activity" do
-          expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-            .to change { ActivityPub::Activity::Undo.count }.by(1)
-        end
+        context "of a Dislike" do
+          let_create(:dislike, named: :activity, actor: lemmy_user, object: object)
 
-        it "is successful" do
-          post "/actors/#{actor.username}/inbox", headers, wrapped_json
-          expect(response.status_code).to eq(200)
+          context "served at its origin" do
+            before_each { HTTP::Client.activities << undo }
+
+            it "saves the inner Undo activity" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { ActivityPub::Activity::Undo.count }.by(1)
+            end
+
+            it "undoes the dislike" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { activity.reload!.undone_at }
+            end
+
+            it "is successful" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(200)
+            end
+          end
+
+          context "not served at its origin" do
+            it "does not save the inner Undo activity" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .not_to change { ActivityPub::Activity::Undo.count }
+            end
+
+            it "returns 400" do
+              post "/actors/#{actor.username}/inbox", headers, wrapped_json
+              expect(response.status_code).to eq(400)
+            end
+
+            context "and the disliked object names the community in its audience" do
+              let_create(:object, attributed_to: actor, audience: [community.iri])
+
+              it "returns 400" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(400)
+              end
+
+              context "and a local account follows the community" do
+                let_create!(:follow_relationship, actor: actor, object: community)
+
+                it "undoes the dislike" do
+                  expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    .to change { activity.reload!.undone_at }
+                end
+              end
+            end
+
+            context "and a local account follows the community" do
+              let_create!(:follow_relationship, actor: actor, object: community)
+
+              it "returns 400" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(400)
+              end
+            end
+          end
         end
       end
 
@@ -3330,6 +3653,43 @@ Spectator.describe InboxesController do
           it "is successful" do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
             expect(response.status_code).to eq(200)
+          end
+
+          context "when the inner activity's actor is local" do
+            let_build(:delete, actor: actor, object: object)
+
+            context "but we never sent it (a forgery)" do
+              pre_condition { expect(ActivityPub::Activity.find?(delete.iri)).to be_nil }
+
+              it "does not save the Delete activity" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { ActivityPub::Activity::Delete.count }
+              end
+
+              it "does not delete the object" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { object.reload!.deleted_at }
+              end
+
+              it "warns of the forgery" do
+                entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown activity/)
+              end
+
+              it "is successful" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
+              end
+            end
+
+            context "and we sent it (an echo)" do
+              before_each { delete.save }
+
+              it "logs the echo" do
+                entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+              end
+            end
           end
 
           context "when the inner activity's id is not on its actor's host" do

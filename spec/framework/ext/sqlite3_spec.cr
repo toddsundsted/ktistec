@@ -130,4 +130,34 @@ Spectator.describe "SQLite3 extensions" do
       expect(Ktistec.database.scalar(query)).to eq("line 1 line 2")
     end
   end
+
+  describe ".probe?" do
+    it "returns true" do
+      expect(Ktistec::SQLite3.probe?("SELECT 1")).to be_true
+    end
+
+    it "returns false" do
+      expect(Ktistec::SQLite3.probe?("SELECT 0")).to be_false
+    end
+
+    it "returns false if the query fails" do
+      expect(Ktistec::SQLite3.probe?("SELECT 1 FROM no_such_table")).to be_false
+    end
+
+    it "returns false if the query returns no rows" do
+      expect(Ktistec::SQLite3.probe?("SELECT 1 WHERE 0")).to be_false
+    end
+  end
+
+  describe ".probe_features" do
+    subject { Ktistec::SQLite3.probe_features }
+
+    it "returns the version" do
+      expect(subject.version).to eq(String.new(LibSQLite3.version))
+    end
+
+    it "sets features" do
+      expect(Ktistec::SQLite3.features).to eq(subject)
+    end
+  end
 end

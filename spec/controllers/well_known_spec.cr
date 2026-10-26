@@ -199,7 +199,7 @@ Spectator.describe WellKnownController do
 
     it "returns metadata" do
       get "/.well-known/nodeinfo/2.1"
-      message = {"nodeName" => "Test"}
+      message = {"nodeName" => "Test", "sqlite" => JSON.parse(Ktistec::SQLite3.features.to_json)}
       expect(JSON.parse(response.body)["metadata"].as_h).to eq(message)
     end
   end

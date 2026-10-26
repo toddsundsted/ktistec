@@ -1,6 +1,6 @@
 # require `public_timeline` first so that `PublicTimeline` registers
 # before `PublicTagged`. `PublicTagged.membership` reads
-# `PublicTimeline` rows, so within one `reconcile_object` pass
+# `PublicTimeline` rows, so within one `reconcile_objects` pass
 # `PublicTimeline` must reconcile first.
 require "./public_timeline"
 

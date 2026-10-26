@@ -25,7 +25,7 @@ Spectator.describe "timeline views" do
     let_create!(:inbox_relationship, named: nil, owner: owner, activity: announce_activity)
 
     it "materializes at most one timeline row per object" do
-      Rules::Maintainer.reconcile_object(object.iri)
+      Rules::Maintainer.reconcile_objects([object.iri])
       types = Ktistec.database.query_all(
         "SELECT type FROM relationships WHERE from_iri = ? AND to_iri = ? AND type IN (#{Relationship::Content::Timeline.type_in_list})",
         owner.iri, object.iri, as: String)

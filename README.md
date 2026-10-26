@@ -15,7 +15,7 @@
     - [Content Discovery](#content-discovery)
     - [Content Filtering](#content-filtering)
     - [Blocking](#blocking)
-    - [Custom Hashtag, Mention, and Keyword Feeds](#custom-hashtag-mention-and-keyword-feeds)
+    - [Custom Feeds](#custom-feeds)
     - [Feed Deck](#feed-deck)
     - [Bookmarks](#bookmarks)
     - [Pinned Posts](#pinned-posts)
@@ -247,13 +247,19 @@ been deleted or blocked.
 
 <img src="https://raw.githubusercontent.com/toddsundsted/ktistec/main/images/epdb39.png" width=460>
 
-### Custom Hashtag, Mention, and Keyword Feeds
+### Custom Feeds
 
-Build your own feeds from the posts your server holds. A feed matches
-on keywords, hashtags, and mentions, each grouped as terms you want
-*any* of, *all* of, or *none* of, so a feed can be as broad or as
-narrow as you like. Preview the matches while you tune the criteria,
-then publish.
+Build your own feeds from the posts your server holds.
+
+A feed can match on keywords, hashtags, and mentions, each grouped as
+terms you want *any* of, *all* of, or *none* of, so a feed can be as
+broad or as narrow as you like. Preview the matches, which fill in as
+posts are judged, while you tune the criteria, then publish.
+
+Or, a feed can be judged by a program you write. Each executable in
+`etc/judges` is a judge you can choose when you create a feed, and a
+judge can declare params the feed sets. See [Judges](etc/judges/README.md)
+for how to write one, and the examples there.
 
 Your feeds are listed under *Feeds* in the menu on your home page.
 
@@ -262,8 +268,8 @@ back to it later, and editing a published feed leaves the new version
 a draft until you publish your changes.
 
 A feed reaches back 30 days from the moment you create it, and
-publishing it backfills it with matching posts from that window, so it
-isn't empty when you start reading.
+publishing it backfills it, in the background, with matching posts
+from that window.
 
 ### Feed Deck
 
@@ -927,6 +933,8 @@ a keyword.
 | any         | Optional. Terms, at least one of which must match. |
 | all         | Optional. Terms, all of which must match. |
 | none        | Optional. Terms, none of which may match. |
+| backend     | Optional. The feed's judge: `criteria` (the default) or the name of an executable in `etc/judges`. |
+| params      | Optional. The judge's params, for judges other than `criteria`. |
 
 Example:
 
@@ -941,8 +949,19 @@ curl -s \
 
 The `Location` header of the response holds the feed's path.
 
-A published feed is never modified. Updating a feed's criteria
-replaces it: a new feed is created and the original is destroyed.
+Any other judge takes the params it declares:
+
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Long Reads","backend":"long_reads","params":{"length":2000}}' \
+  "$KTISTEC_HOST/actors/$USERNAME/feeds"
+```
+
+A published feed is never modified. Updating a feed's criteria or
+params replaces it: a new feed is created and the original is destroyed.
 
 ```bash
 curl -s \
@@ -1283,7 +1302,7 @@ configure your settings.
 - **Default Editor**: Choose between the rich text editor or Markdown editor for composing posts
 - **Background Image**: Your profile banner/background image
 - **Profile Image**: Your profile avatar icon
-- **Metadata**: Up to four custom profile metadata fields with name/value pairs
+- **Metadata**: Up to six custom profile metadata fields with name/value pairs
 
 These settings can also be configured via the API (see [Account Settings](#account-settings)
 in the API documentation).

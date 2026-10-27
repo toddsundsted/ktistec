@@ -41,6 +41,6 @@
     - partial "partials/object/label"
     - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, scope)
 - else
-  turbo-frame.event id=_anchor
+  turbo-frame.event id=_anchor class=presentation_states(object, author, actor).join(" ")
     - partial "partials/object/label"
     - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, scope)

@@ -54,10 +54,118 @@ Spectator.describe "helpers" do
     end
   end
 
+  describe ".presentation_states" do
+    let_build(:note)
+
+    subject { self.class.presentation_states(note) }
+
+    it "returns empty array" do
+      expect(subject).to be_empty
+    end
+
+    context "when object is deleted" do
+      before_each { note.delete! }
+
+      it "includes is-deleted" do
+        expect(subject).to contain("is-deleted")
+      end
+    end
+
+    context "when object is blocked" do
+      before_each { note.block! }
+
+      it "includes is-blocked" do
+        expect(subject).to contain("is-blocked")
+      end
+    end
+
+    context "when author is passed" do
+      let_build(:actor, named: :author)
+
+      it "does not include has-deleted-author or has-blocked-author" do
+        expect(self.class.presentation_states(note, author)).not_to contain("has-deleted-author", "has-blocked-author")
+      end
+
+      context "and the author is deleted" do
+        before_each { author.delete! }
+
+        it "includes has-deleted-author" do
+          expect(self.class.presentation_states(note, author)).to contain("has-deleted-author")
+        end
+      end
+
+      context "and the author is blocked" do
+        before_each { author.block! }
+
+        it "includes has-blocked-author" do
+          expect(self.class.presentation_states(note, author)).to contain("has-blocked-author")
+        end
+      end
+
+      context "and actor is passed" do
+        let_build(:actor)
+
+        it "does not include has-deleted-actor or has-blocked-actor" do
+          expect(self.class.presentation_states(note, author, actor)).not_to contain("has-deleted-actor", "has-blocked-actor")
+        end
+
+        context "and the actor is deleted" do
+          before_each { actor.delete! }
+
+          it "includes has-deleted-actor" do
+            expect(self.class.presentation_states(note, author, actor)).to contain("has-deleted-actor")
+          end
+
+          context "but the actor is the same as the author" do
+            let(:actor) { author }
+
+            it "does not include has-deleted-actor" do
+              expect(self.class.presentation_states(note, author, actor)).not_to contain("has-deleted-actor")
+            end
+          end
+        end
+
+        context "and the actor is blocked" do
+          before_each { actor.block! }
+
+          it "includes has-blocked-actor" do
+            expect(self.class.presentation_states(note, author, actor)).to contain("has-blocked-actor")
+          end
+
+          context "but the actor is the same as the author" do
+            let(:actor) { author }
+
+            it "does not include has-blocked-actor" do
+              expect(self.class.presentation_states(note, author, actor)).not_to contain("has-blocked-actor")
+            end
+          end
+        end
+      end
+    end
+
+    context "when object has a quote" do
+      before_each { note.assign(quote_iri: "https://remote/quote") }
+
+      it "includes has-quote" do
+        expect(subject).to contain("has-quote")
+      end
+    end
+  end
+
   describe ".object_states" do
     let_build(:note)
 
     subject { self.class.object_states(note) }
+
+    # checks that object states include presentation states
+
+    context "when object has a quote" do
+      before_each { note.assign(quote_iri: "https://remote/quote") }
+
+      it "includes has-quote" do
+        expect(subject).to contain("has-quote")
+      end
+    end
 
     it "only includes visibility-public" do
       expect(subject).to contain_exactly("visibility-public")
@@ -87,99 +195,11 @@ Spectator.describe "helpers" do
       end
     end
 
-    context "when object is deleted" do
-      before_each { note.delete! }
-
-      it "includes is-deleted" do
-        expect(subject).to contain("is-deleted")
-      end
-    end
-
-    context "when object is blocked" do
-      before_each { note.block! }
-
-      it "includes is-blocked" do
-        expect(subject).to contain("is-blocked")
-      end
-    end
-
-    context "when author is passed" do
-      let_build(:actor, named: :author)
-
-      it "does not include has-deleted-author or has-blocked-author" do
-        expect(self.class.object_states(note, author)).not_to contain("has-deleted-author", "has-blocked-author")
-      end
-
-      context "and the author is deleted" do
-        before_each { author.delete! }
-
-        it "includes has-deleted-author" do
-          expect(self.class.object_states(note, author)).to contain("has-deleted-author")
-        end
-      end
-
-      context "and the author is blocked" do
-        before_each { author.block! }
-
-        it "includes has-blocked-author" do
-          expect(self.class.object_states(note, author)).to contain("has-blocked-author")
-        end
-      end
-
-      context "and actor is passed" do
-        let_build(:actor)
-
-        it "does not include has-deleted-actor or has-blocked-actor" do
-          expect(self.class.object_states(note, author, actor)).not_to contain("has-deleted-actor", "has-blocked-actor")
-        end
-
-        context "and the actor is deleted" do
-          before_each { actor.delete! }
-
-          it "includes has-deleted-actor" do
-            expect(self.class.object_states(note, author, actor)).to contain("has-deleted-actor")
-          end
-
-          context "but the actor is the same as the author" do
-            let(:actor) { author }
-
-            it "does not include has-deleted-actor" do
-              expect(self.class.object_states(note, author, actor)).not_to contain("has-deleted-actor")
-            end
-          end
-        end
-
-        context "and the actor is blocked" do
-          before_each { actor.block! }
-
-          it "includes has-blocked-actor" do
-            expect(self.class.object_states(note, author, actor)).to contain("has-blocked-actor")
-          end
-
-          context "but the actor is the same as the author" do
-            let(:actor) { author }
-
-            it "does not include has-blocked-actor" do
-              expect(self.class.object_states(note, author, actor)).not_to contain("has-blocked-actor")
-            end
-          end
-        end
-      end
-    end
-
     context "when object has replies" do
       before_each { note.assign(replies_count: 5_i64) }
 
       it "includes has-replies" do
         expect(subject).to contain("has-replies")
-      end
-    end
-
-    context "when object has a quote" do
-      before_each { note.assign(quote_iri: "https://remote/quote") }
-
-      it "includes has-quote" do
-        expect(subject).to contain("has-quote")
       end
     end
 

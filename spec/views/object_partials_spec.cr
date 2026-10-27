@@ -1295,6 +1295,15 @@ Spectator.describe "object partials" do
       it "renders the object content" do
         expect(subject.xpath_nodes("//turbo-frame[contains(@class,'event')]")).not_to be_empty
       end
+
+      context "and the object has a quote" do
+        before_each { object.assign(quote_iri: "https://remote/objects/quoted").save }
+
+        it "emits the presentation states" do
+          class_attr = subject.xpath_nodes("//*[contains(@class,'event')]/@class").first.content
+          expect(class_attr.split(/\s+/)).to contain("has-quote")
+        end
+      end
     end
   end
 

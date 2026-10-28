@@ -335,17 +335,23 @@ class InboxesController
 
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
-    if (activity_actor_iri = activity.actor_iri) && Ktistec::Model::Linked.local?(activity_actor_iri)
+    # an activity whose id or actor is on our origin can only have
+    # come from us. an inbound copy is either a replay or a forgery.
+
+    activity_iri = activity.iri
+    activity_actor_iri = activity.actor_iri
+    if (activity_iri && Ktistec::Model::Linked.local?(activity_iri)) ||
+       (activity_actor_iri && Ktistec::Model::Linked.local?(activity_actor_iri))
       if ActivityPub::Activity.find?(activity.iri, include_undone: true)
         if inner_ld
-          Log.trace { "[#{request_id}] relayed known activity attributed to local actor=#{activity_actor_iri}" }
+          Log.trace { "[#{request_id}] relayed known local activity iri=#{activity.iri} actor=#{activity_actor_iri}" }
         else
-          Log.trace { "[#{request_id}] known activity attributed to local actor=#{activity_actor_iri}" }
+          Log.trace { "[#{request_id}] known local activity iri=#{activity.iri} actor=#{activity_actor_iri}" }
         end
       elsif inner_ld
-        Log.warn { "[#{request_id}] relayed unknown activity attributed to local actor=#{activity_actor_iri} iri=#{activity.iri} relayer=#{outer_actor_iri}" }
+        Log.warn { "[#{request_id}] relayed unknown local activity iri=#{activity.iri} actor=#{activity_actor_iri} relayer=#{outer_actor_iri}" }
       else
-        Log.warn { "[#{request_id}] unknown activity attributed to local actor=#{activity_actor_iri} iri=#{activity.iri}" }
+        Log.warn { "[#{request_id}] unknown local activity iri=#{activity.iri} actor=#{activity_actor_iri}" }
       end
       ok
     end

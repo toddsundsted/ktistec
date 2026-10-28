@@ -242,6 +242,13 @@ Spectator.describe InboxesController do
       expect(response.status_code).to eq(502)
     end
 
+    it "does not retrieve the actor if activity can't be verified" do
+      activity.actor_iri = "https://remote/actors/#{random_string}"
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(HTTP::Client.requests).not_to have("GET #{activity.actor_iri}")
+      expect(response.status_code).to eq(400)
+    end
+
     context "when the time budget is exhausted" do
       around_each do |proc|
         previous = InboxesController.max_inbox_fetch_time
@@ -338,6 +345,7 @@ Spectator.describe InboxesController do
 
     it "returns 502 if the fetch of the actor fails transiently" do
       activity.actor_iri = "https://remote/actors/timeout-error"
+      HTTP::Client.activities << activity
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(JSON.parse(response.body)["msg"]).to eq("actor not present")
       expect(response.status_code).to eq(502)
@@ -1183,7 +1191,7 @@ Spectator.describe InboxesController do
       context "and the request is unsigned" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 
-        context "and is an activity we never sent, with an id on our origin, is attributed to that actor" do
+        context "and is an activity we never sent, with an id on our origin, attributed to that actor" do
           let_build(:activity, named: :forged, actor: other, iri: "https://test.test/activities/#{random_string}")
 
           it "does not save the activity" do
@@ -1215,6 +1223,28 @@ Spectator.describe InboxesController do
           it "is successful" do
             post "/actors/#{actor.username}/inbox", headers, replayed
             expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the activity names that actor but the source at its origin names another" do
+          let_create(:actor, named: :author)
+          let_build(:activity, named: :fetched, actor: author)
+
+          let(misattributed) { JSON.parse(fetched.to_json_ld).as_h.merge({"actor" => JSON::Any.new(other.iri)}).to_json }
+
+          before_each do
+            author.down!
+            HTTP::Client.activities << fetched
+          end
+
+          it "marks the actor its origin names as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, misattributed }
+              .to change { author.reload!.up? }.to(true)
+          end
+
+          it "does not mark the actor as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, misattributed }
+              .not_to change { other.reload!.up? }
           end
         end
       end

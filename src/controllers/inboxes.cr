@@ -459,13 +459,10 @@ class InboxesController
         via_community = signer
         verified = true
       end
-      actor, _ = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
     elsif !inner_ld && signer && outer_actor_iri && signer.iri == outer_actor_iri
       actor = signer
       verified = true
     else
-      actor, _ = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
-
       # 3c
 
       if inner_ld && (community = relaying_community(signer, outer_actor_iri)) &&
@@ -526,16 +523,22 @@ class InboxesController
       end
     end
 
+    unless activity && verified
+      bad_request_or_bad_gateway("Can't Be Verified")
+    end
+
+    # resolve the actor from the verified activity, which step 4 may
+    # have replaced, never from the payload.
+    unless actor
+      actor, _ = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
+    end
+
     # the relayed-Delete path tolerates an unreachable inner actor
     # (the community's signature is the authentication). every other
     # path -- including the other relayed activities -- requires the
     # actor be present.
     unless actor || (via_community && activity.is_a?(ActivityPub::Activity::Delete))
       bad_request_or_bad_gateway("Actor Not Present")
-    end
-
-    unless activity && verified
-      bad_request_or_bad_gateway("Can't Be Verified")
     end
 
     # an activity's own identifier must have the same origin as its

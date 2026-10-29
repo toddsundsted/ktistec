@@ -16,18 +16,25 @@ module Ktistec::ViewHelper
       states
     end
 
-    def object_states(object, author = nil, actor = nil)
+    # Returns the states the base stylesheet depends on.
+    #
+    def presentation_states(object, author = nil, actor = nil)
       states = [] of String
-      states << "is-sensitive" if object.sensitive
-      states << "is-draft" if object.draft?
       states << "is-deleted" if object.deleted?
       states << "is-blocked" if object.blocked?
       states << "has-deleted-author" if author && author.deleted?
       states << "has-deleted-actor" if actor && actor != author && actor.deleted?
       states << "has-blocked-author" if author && author.blocked?
       states << "has-blocked-actor" if actor && actor != author && actor.blocked?
-      states << "has-replies" if object.replies_count > 0
       states << "has-quote" if object.quote_iri
+      states
+    end
+
+    def object_states(object, author = nil, actor = nil)
+      states = presentation_states(object, author, actor)
+      states << "is-sensitive" if object.sensitive
+      states << "is-draft" if object.draft?
+      states << "has-replies" if object.replies_count > 0
       states << "has-media" unless object.display_attachments.empty?
       if (attributed_to = object.attributed_to?)
         states << "visibility-#{visibility(attributed_to, object)}"

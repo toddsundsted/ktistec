@@ -242,6 +242,13 @@ Spectator.describe InboxesController do
       expect(response.status_code).to eq(502)
     end
 
+    it "does not retrieve the actor if activity can't be verified" do
+      activity.actor_iri = "https://remote/actors/#{random_string}"
+      post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
+      expect(HTTP::Client.requests).not_to have("GET #{activity.actor_iri}")
+      expect(response.status_code).to eq(400)
+    end
+
     context "when the time budget is exhausted" do
       around_each do |proc|
         previous = InboxesController.max_inbox_fetch_time
@@ -338,6 +345,7 @@ Spectator.describe InboxesController do
 
     it "returns 502 if the fetch of the actor fails transiently" do
       activity.actor_iri = "https://remote/actors/timeout-error"
+      HTTP::Client.activities << activity
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(JSON.parse(response.body)["msg"]).to eq("actor not present")
       expect(response.status_code).to eq(502)
@@ -1126,7 +1134,7 @@ Spectator.describe InboxesController do
 
         it "logs a warning" do
           entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
-          expect(entries.select(&.severity.warn?).map(&.message)).to have(/\] unknown activity attributed/)
+          expect(entries.select(&.severity.warn?).map(&.message)).to have(/\] unknown local activity/)
         end
       end
 
@@ -1145,7 +1153,7 @@ Spectator.describe InboxesController do
 
         it "logs a warning" do
           entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
-          expect(entries.select(&.severity.warn?).map(&.message)).to have(/\] unknown activity attributed/)
+          expect(entries.select(&.severity.warn?).map(&.message)).to have(/\] unknown local activity/)
         end
       end
 
@@ -1154,7 +1162,7 @@ Spectator.describe InboxesController do
 
         it "logs a trace" do
           entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
-          expect(entries.select(&.severity.trace?).map(&.message)).to have(/\] known activity attributed/)
+          expect(entries.select(&.severity.trace?).map(&.message)).to have(/\] known local activity/)
         end
       end
 
@@ -1163,7 +1171,7 @@ Spectator.describe InboxesController do
 
         it "logs a trace" do
           entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
-          expect(entries.select(&.severity.trace?).map(&.message)).to have(/\] known activity attributed/)
+          expect(entries.select(&.severity.trace?).map(&.message)).to have(/\] known local activity/)
         end
       end
     end
@@ -1178,6 +1186,112 @@ Spectator.describe InboxesController do
       it "marks the actor as up" do
         expect { post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld(true) }
           .to change { other.reload!.up? }.to(true)
+      end
+
+      context "and the request is signed by that actor but the activity is by another" do
+        let_create(:actor, named: :author)
+        let_build(:activity, named: :forwarded, actor: author)
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", forwarded.to_json_ld(true), "application/json") }
+
+        it "marks the actor as up" do
+          expect { post "/actors/#{actor.username}/inbox", headers, forwarded.to_json_ld(true) }
+            .to change { other.reload!.up? }.to(true)
+        end
+      end
+
+      context "and the request is unsigned" do
+        let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
+
+        context "and is an activity we never sent, with an id on our origin, attributed to that actor" do
+          let_build(:activity, named: :forged, actor: other, iri: "https://test.test/activities/#{random_string}")
+
+          it "does not save the activity" do
+            expect { post "/actors/#{actor.username}/inbox", headers, forged.to_json_ld(true) }
+              .not_to change { ActivityPub::Activity.count }
+          end
+
+          it "does not mark the actor as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, forged.to_json_ld(true) }
+              .not_to change { other.reload!.up? }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, forged.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and is an activity we sent but is re-attributed to that actor" do
+          let_create(:activity, named: :sent, actor: actor)
+
+          let(replayed) { JSON.parse(sent.to_json_ld).as_h.merge({"actor" => JSON::Any.new(other.iri)}).to_json }
+
+          it "does not mark the actor as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, replayed }
+              .not_to change { other.reload!.up? }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, replayed
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the activity names another actor but the source at its origin names that actor" do
+          let_build(:activity, named: :fetched, actor: other)
+          let_create(:actor, named: :another)
+
+          let(misattributed) { JSON.parse(fetched.to_json_ld).as_h.merge({"actor" => JSON::Any.new(another.iri)}).to_json }
+
+          before_each do
+            another.down!
+            HTTP::Client.activities << fetched
+          end
+
+          it "marks the that actor as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, misattributed }
+              .to change { other.reload!.up? }.to(true)
+          end
+
+          it "does not mark the actor the activity names as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, misattributed }
+              .not_to change { another.reload!.up? }
+          end
+        end
+
+        context "and the activity names that actor but it cannot be verified at its origin" do
+          let_create(:actor, named: :author, iri: "https://elsewhere/actors/author")
+          let_build(:note, attributed_to: author, iri: "https://elsewhere/objects/note")
+
+          let_build(:create, actor: other, object: note, iri: "https://remote/activities/returns-404")
+
+          before_each { HTTP::Client.objects << note }
+
+          it "rejects the activity" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld
+            expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
+          end
+
+          it "does not mark the actor as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld }
+              .not_to change { other.reload!.up? }
+          end
+        end
+
+        context "and is an activity by that actor we already hold" do
+          let_create(:activity, named: :held, actor: other)
+
+          it "does not mark the actor as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, held.to_json_ld(true) }
+              .not_to change { other.reload!.up? }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, held.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
       end
     end
 
@@ -3255,8 +3369,6 @@ Spectator.describe InboxesController do
                 let_build(:like, actor: actor, object: object)
 
                 context "but we never sent it (a forgery)" do
-                  pre_condition { expect(ActivityPub::Activity.find?(like.iri)).to be_nil }
-
                   it "does not save the inner Like activity" do
                     expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                       .not_to change { ActivityPub::Activity::Like.count }
@@ -3264,7 +3376,7 @@ Spectator.describe InboxesController do
 
                   it "warns of the forgery" do
                     entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown activity/)
+                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown local activity/)
                   end
 
                   it "is successful" do
@@ -3278,7 +3390,7 @@ Spectator.describe InboxesController do
 
                   it "logs the echo" do
                     entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known local activity/)
                   end
 
                   context "and we since undid it" do
@@ -3286,7 +3398,7 @@ Spectator.describe InboxesController do
 
                     it "logs the echo" do
                       entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known local activity/)
                     end
                   end
                 end
@@ -3377,8 +3489,6 @@ Spectator.describe InboxesController do
                 let_build(:dislike, actor: actor, object: object)
 
                 context "but we never sent it (a forgery)" do
-                  pre_condition { expect(ActivityPub::Activity.find?(dislike.iri)).to be_nil }
-
                   it "does not save the inner Dislike activity" do
                     expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                       .not_to change { ActivityPub::Activity::Dislike.count }
@@ -3386,7 +3496,7 @@ Spectator.describe InboxesController do
 
                   it "warns of the forgery" do
                     entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown activity/)
+                    expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown local activity/)
                   end
 
                   it "is successful" do
@@ -3400,7 +3510,7 @@ Spectator.describe InboxesController do
 
                   it "logs the echo" do
                     entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+                    expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known local activity/)
                   end
 
                   context "and we since undid it" do
@@ -3408,7 +3518,7 @@ Spectator.describe InboxesController do
 
                     it "logs the echo" do
                       entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+                      expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known local activity/)
                     end
                   end
                 end
@@ -3659,8 +3769,6 @@ Spectator.describe InboxesController do
             let_build(:delete, actor: actor, object: object)
 
             context "but we never sent it (a forgery)" do
-              pre_condition { expect(ActivityPub::Activity.find?(delete.iri)).to be_nil }
-
               it "does not save the Delete activity" do
                 expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                   .not_to change { ActivityPub::Activity::Delete.count }
@@ -3673,7 +3781,7 @@ Spectator.describe InboxesController do
 
               it "warns of the forgery" do
                 entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown activity/)
+                expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed unknown local activity/)
               end
 
               it "is successful" do
@@ -3687,13 +3795,13 @@ Spectator.describe InboxesController do
 
               it "logs the echo" do
                 entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known activity/)
+                expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known local activity/)
               end
             end
           end
 
           context "when the inner activity's id is not on its actor's host" do
-            let_build(:delete, actor: moderator, object: object, iri: "https://test.test/activities/#{random_string}")
+            let_build(:delete, actor: moderator, object: object, iri: "https://third.test/activities/#{random_string}")
 
             it "does not save the Delete activity" do
               expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }

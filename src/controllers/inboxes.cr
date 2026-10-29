@@ -15,6 +15,25 @@ class InboxesController
 
   MAX_INBOX_REQUEST_BYTES = 1_048_576
 
+  # How an inbound activity was verified.
+  #
+  enum Verification
+    # Signed by its actor.
+    Signature
+    # Signed by a relaying community.
+    Community
+    # Fetched from its origin.
+    Origin
+    # Checked by its object.
+    Object
+
+    # Whether the actor's origin took part in the request.
+    #
+    def liveness?
+      signature? || origin?
+    end
+  end
+
   # Maximum time to spend fetching resources.
   #
   # Verification and dispatch make several sequential fetches --
@@ -335,17 +354,23 @@ class InboxesController
 
     Log.debug { "[#{request_id}] activity iri=#{activity.iri}" }
 
-    if (activity_actor_iri = activity.actor_iri) && Ktistec::Model::Linked.local?(activity_actor_iri)
+    # an activity whose id or actor is on our origin can only have
+    # come from us. an inbound copy is either a replay or a forgery.
+
+    activity_iri = activity.iri
+    activity_actor_iri = activity.actor_iri
+    if (activity_iri && Ktistec::Model::Linked.local?(activity_iri)) ||
+       (activity_actor_iri && Ktistec::Model::Linked.local?(activity_actor_iri))
       if ActivityPub::Activity.find?(activity.iri, include_undone: true)
         if inner_ld
-          Log.trace { "[#{request_id}] relayed known activity attributed to local actor=#{activity_actor_iri}" }
+          Log.trace { "[#{request_id}] relayed known local activity iri=#{activity.iri} actor=#{activity_actor_iri}" }
         else
-          Log.trace { "[#{request_id}] known activity attributed to local actor=#{activity_actor_iri}" }
+          Log.trace { "[#{request_id}] known local activity iri=#{activity.iri} actor=#{activity_actor_iri}" }
         end
       elsif inner_ld
-        Log.warn { "[#{request_id}] relayed unknown activity attributed to local actor=#{activity_actor_iri} iri=#{activity.iri} relayer=#{outer_actor_iri}" }
+        Log.warn { "[#{request_id}] relayed unknown local activity iri=#{activity.iri} actor=#{activity_actor_iri} relayer=#{outer_actor_iri}" }
       else
-        Log.warn { "[#{request_id}] unknown activity attributed to local actor=#{activity_actor_iri} iri=#{activity.iri}" }
+        Log.warn { "[#{request_id}] unknown local activity iri=#{activity.iri} actor=#{activity_actor_iri}" }
       end
       ok
     end
@@ -438,7 +463,9 @@ class InboxesController
       end
     end
 
-    verified = false
+    signer.up! if signer && signer.down?
+
+    verification : Verification? = nil
 
     actor = nil
 
@@ -451,27 +478,31 @@ class InboxesController
     if inner_ld && activity.is_a?(ActivityPub::Activity::Delete)
       if signer && signer.iri == outer_actor_iri && signer.type == "ActivityPub::Actor::Group"
         via_community = signer
-        verified = true
+        verification = Verification::Community
       end
-      actor, _ = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
     elsif !inner_ld && signer && outer_actor_iri && signer.iri == outer_actor_iri
       actor = signer
-      verified = true
+      verification = Verification::Signature
     else
-      actor, _ = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
-
-      # 3c
-
       if inner_ld && (community = relaying_community(signer, outer_actor_iri)) &&
          relayable_by?(community, activity)
         via_community = community
-        verified = true
+        verification = Verification::Community
       end
 
       # 4
 
+      # finding an unauthenticated activity in our database proves only
+      # that we already have it, not who sent it. don't treat it as
+      # verified.
+
+      if verification.nil? && (activity_iri = activity.iri.presence) && ActivityPub::Activity.find?(activity_iri, include_undone: true)
+        Log.trace { "[#{request_id}] unauthenticated copy of held activity iri=#{activity_iri}" }
+        ok
+      end
+
       temporary =
-        if !verified && activity.iri.presence
+        if verification.nil? && activity.iri.presence
           try_dereference(transient, request_id) do
             ActivityPub::Activity.dereference(fetch_identity, activity.iri, deadline: deadline)
           end
@@ -479,8 +510,8 @@ class InboxesController
 
       if temporary
         activity = temporary
-        verified = true
-      elsif !verified
+        verification = Verification::Origin
+      elsif verification.nil?
         Log.trace { "[#{request_id}] fetch from origin failed" }
       end
 
@@ -492,7 +523,7 @@ class InboxesController
       # object exists, or the activity is a delete, but the object or
       # actor does not exist, consider the activity verified.
 
-      unless verified
+      if verification.nil?
         if (object_iri = activity.object_iri)
           if activity.is_a?(ActivityPub::Activity::Create)
             Log.trace { "[#{request_id}] checking object of create iri=#{object_iri}" }
@@ -501,7 +532,7 @@ class InboxesController
             end
             if temporary
               activity.object = temporary
-              verified = true
+              verification = Verification::Object
             end
           elsif activity.is_a?(ActivityPub::Activity::Update)
             Log.trace { "[#{request_id}] checking object of update iri=#{object_iri}" }
@@ -510,14 +541,24 @@ class InboxesController
             end
             if temporary
               activity.object = temporary
-              verified = true
+              verification = Verification::Object
             end
           elsif activity.is_a?(ActivityPub::Activity::Delete)
             Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
-            verified = true if object_gone_at_origin?(fetch_identity, object_iri, transient, deadline)
+            verification = Verification::Object if object_gone_at_origin?(fetch_identity, object_iri, transient, deadline)
           end
         end
       end
+    end
+
+    unless activity && verification
+      bad_request_or_bad_gateway("Can't Be Verified")
+    end
+
+    # resolve the actor from the verified activity, which step 4 may
+    # have replaced, never from the payload.
+    unless actor
+      actor, _ = find_or_dereference_actor(fetch_identity, activity.actor_iri, request_id, transient, deadline, require_key: false)
     end
 
     # the relayed-Delete path tolerates an unreachable inner actor
@@ -526,10 +567,6 @@ class InboxesController
     # actor be present.
     unless actor || (via_community && activity.is_a?(ActivityPub::Activity::Delete))
       bad_request_or_bad_gateway("Actor Not Present")
-    end
-
-    unless activity && verified
-      bad_request_or_bad_gateway("Can't Be Verified")
     end
 
     # an activity's own identifier must have the same origin as its
@@ -547,7 +584,7 @@ class InboxesController
 
     if actor
       Log.trace { "[#{request_id}] actor iri=#{actor.iri}" }
-      actor.up!
+      actor.up! if actor.down? && verification.liveness?
       activity.actor = actor
     end
 

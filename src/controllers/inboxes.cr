@@ -479,6 +479,17 @@ class InboxesController
       if signer && signer.iri == outer_actor_iri && signer.type == "ActivityPub::Actor::Group"
         via_community = signer
         verification = Verification::Community
+        # the community's signature authorizes the deletion, but only
+        # the activity's origin can vouch for the activity itself.
+        if (activity_iri = activity.iri.presence)
+          temporary = try_dereference(transient, request_id) do
+            ActivityPub::Activity.dereference(fetch_identity, activity_iri, ignore_cached: true, deadline: deadline)
+          end
+          if temporary.is_a?(ActivityPub::Activity::Delete) && temporary.object_iri == activity.object_iri
+            activity = temporary
+            verification = Verification::Origin
+          end
+        end
       end
     elsif !inner_ld && signer && outer_actor_iri && signer.iri == outer_actor_iri
       actor = signer
@@ -756,25 +767,35 @@ class InboxesController
       end
     end
 
-    # check to see if the activity already exists. if not, save it
+    # a relayed Delete its origin didn't serve deletes the object on
+    # the community's authority, but isn't stored. the log is the only
+    # record of the deletion.
 
-    if (temporary = ActivityPub::Activity.find?(activity.iri))
-      activity = temporary
+    if activity.is_a?(ActivityPub::Activity::Delete) && verification.community?
+      Log.info { "[#{request_id}] relayed delete with no matching delete retrievable from its origin iri=#{activity.iri} actor=#{activity.actor_iri} object=#{activity.object_iri} relayer=#{via_community.try(&.iri)}" }
+
+      InboxActivityProcessor.maintain(activity)
     else
-      begin
-        activity.save
-      rescue ex : Ktistec::Model::Invalid
-        # a concurrent duplicate delivery can save this activity (or its
-        # cascade-saved object) between the check above and this save,
-        # tripping a uniqueness validation.
-        raise ex unless ActivityPub::Activity.find?(activity.iri)
-        ok
+      # check to see if the activity already exists. if not, save it
+
+      if (temporary = ActivityPub::Activity.find?(activity.iri))
+        activity = temporary
+      else
+        begin
+          activity.save
+        rescue ex : Ktistec::Model::Invalid
+          # a concurrent duplicate delivery can save this activity (or its
+          # cascade-saved object) between the check above and this save,
+          # tripping a uniqueness validation.
+          raise ex unless ActivityPub::Activity.find?(activity.iri)
+          ok
+        end
       end
+
+      Log.trace { "[#{request_id}] saved id=#{activity.id}" }
+
+      InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients, deadline: deadline)
     end
-
-    Log.trace { "[#{request_id}] saved id=#{activity.id}" }
-
-    InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients, deadline: deadline)
 
     Log.trace { "[#{request_id}] complete" }
 

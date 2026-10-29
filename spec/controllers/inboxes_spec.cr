@@ -3750,9 +3750,9 @@ Spectator.describe InboxesController do
         context "when community is in the audience and is followed" do
           let_create!(:follow_relationship, actor: actor, object: community)
 
-          it "saves the Delete activity" do
+          it "does not save the Delete activity" do
             expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-              .to change { ActivityPub::Activity::Delete.count }.by(1)
+              .not_to change { ActivityPub::Activity::Delete.count }
           end
 
           it "deletes the object" do
@@ -3763,6 +3763,66 @@ Spectator.describe InboxesController do
           it "is successful" do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
             expect(response.status_code).to eq(200)
+          end
+
+          it "logs that no matching activity is retrievable from its origin" do
+            entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            expect(entries.select(&.severity.info?).map(&.message)).to have(/relayed delete with no matching delete retrievable from its origin/)
+          end
+
+          context "and the Delete is served at its origin" do
+            before_each { HTTP::Client.activities << delete }
+
+            it "saves the Delete activity" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { ActivityPub::Activity::Delete.count }.by(1)
+            end
+
+            it "deletes the object" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { object.reload!.deleted_at }
+            end
+
+            it "does not log that no matching activity is retrievable from its origin" do
+              entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              expect(entries.map(&.message)).not_to have(/relayed delete with no matching delete retrievable from its origin/)
+            end
+
+            context "but the served Delete deletes another object" do
+              let_create(:object, named: :another, attributed_to: lemmy_user)
+              let_build(:delete, named: :served, iri: delete.iri, actor: moderator, object: another)
+
+              before_each { HTTP::Client.activities << served }
+
+              it "does not delete the other object" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(another.reload!.deleted_at).to be_nil
+              end
+            end
+
+            context "but the served activity is not a Delete" do
+              let_build(:like, named: :served, iri: delete.iri, actor: moderator, object: object)
+
+              before_each { HTTP::Client.activities << served }
+
+              it "does not save the served activity" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { ActivityPub::Activity::Like.count }
+              end
+            end
+          end
+
+          context "and the moderator is down" do
+            before_each { moderator.down! }
+
+            context "and we already cache the Delete" do
+              before_each { delete.save }
+
+              it "does not mark the moderator as up" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { moderator.reload!.up? }
+              end
+            end
           end
 
           context "when the inner activity's actor is local" do
@@ -3844,11 +3904,6 @@ Spectator.describe InboxesController do
 
           pre_condition { expect(Relationship::Social::Follow.find?(actor: actor, object: community)).to be_nil }
 
-          it "saves the Delete activity" do
-            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-              .to change { ActivityPub::Activity::Delete.count }.by(1)
-          end
-
           it "deletes the object" do
             expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
               .to change { object.reload!.deleted_at }
@@ -3873,11 +3928,6 @@ Spectator.describe InboxesController do
         context "when the object is gone at its origin" do
           before_each { HTTP::Client.objects.delete(object.iri) }
 
-          it "saves the Delete activity" do
-            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-              .to change { ActivityPub::Activity::Delete.count }.by(1)
-          end
-
           it "deletes the object" do
             expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
               .to change { object.reload!.deleted_at }
@@ -3893,11 +3943,6 @@ Spectator.describe InboxesController do
             # fetchable. the community's signature is the authentication.
             # resolving the inner actor must not gate the removal.
             before_each { moderator.destroy }
-
-            it "saves the Delete activity" do
-              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                .to change { ActivityPub::Activity::Delete.count }.by(1)
-            end
 
             it "deletes the object" do
               expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
@@ -4023,11 +4068,6 @@ Spectator.describe InboxesController do
           it "retrieves the key document" do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
             expect(HTTP::Client.requests).to have("GET #{key_id}")
-          end
-
-          it "saves the Delete activity" do
-            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-              .to change { ActivityPub::Activity::Delete.count }.by(1)
           end
 
           it "deletes the object" do

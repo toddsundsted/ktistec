@@ -15,6 +15,19 @@ class InboxesController
 
   MAX_INBOX_REQUEST_BYTES = 1_048_576
 
+  # How an inbound activity was verified.
+  #
+  enum Verification
+    # Signed by its actor.
+    Signature
+    # Signed by a relaying community.
+    Community
+    # Fetched from its origin.
+    Origin
+    # Checked by its object.
+    Object
+  end
+
   # Maximum time to spend fetching resources.
   #
   # Verification and dispatch make several sequential fetches --
@@ -444,7 +457,7 @@ class InboxesController
       end
     end
 
-    verified = false
+    verification : Verification? = nil
 
     actor = nil
 
@@ -457,18 +470,16 @@ class InboxesController
     if inner_ld && activity.is_a?(ActivityPub::Activity::Delete)
       if signer && signer.iri == outer_actor_iri && signer.type == "ActivityPub::Actor::Group"
         via_community = signer
-        verified = true
+        verification = Verification::Community
       end
     elsif !inner_ld && signer && outer_actor_iri && signer.iri == outer_actor_iri
       actor = signer
-      verified = true
+      verification = Verification::Signature
     else
-      # 3c
-
       if inner_ld && (community = relaying_community(signer, outer_actor_iri)) &&
          relayable_by?(community, activity)
         via_community = community
-        verified = true
+        verification = Verification::Community
       end
 
       # 4
@@ -477,13 +488,13 @@ class InboxesController
       # that we already have it, not who sent it. don't treat it as
       # verified.
 
-      if !verified && (activity_iri = activity.iri.presence) && ActivityPub::Activity.find?(activity_iri, include_undone: true)
+      if verification.nil? && (activity_iri = activity.iri.presence) && ActivityPub::Activity.find?(activity_iri, include_undone: true)
         Log.trace { "[#{request_id}] unauthenticated copy of held activity iri=#{activity_iri}" }
         ok
       end
 
       temporary =
-        if !verified && activity.iri.presence
+        if verification.nil? && activity.iri.presence
           try_dereference(transient, request_id) do
             ActivityPub::Activity.dereference(fetch_identity, activity.iri, deadline: deadline)
           end
@@ -491,8 +502,8 @@ class InboxesController
 
       if temporary
         activity = temporary
-        verified = true
-      elsif !verified
+        verification = Verification::Origin
+      elsif verification.nil?
         Log.trace { "[#{request_id}] fetch from origin failed" }
       end
 
@@ -504,7 +515,7 @@ class InboxesController
       # object exists, or the activity is a delete, but the object or
       # actor does not exist, consider the activity verified.
 
-      unless verified
+      if verification.nil?
         if (object_iri = activity.object_iri)
           if activity.is_a?(ActivityPub::Activity::Create)
             Log.trace { "[#{request_id}] checking object of create iri=#{object_iri}" }
@@ -513,7 +524,7 @@ class InboxesController
             end
             if temporary
               activity.object = temporary
-              verified = true
+              verification = Verification::Object
             end
           elsif activity.is_a?(ActivityPub::Activity::Update)
             Log.trace { "[#{request_id}] checking object of update iri=#{object_iri}" }
@@ -522,17 +533,17 @@ class InboxesController
             end
             if temporary
               activity.object = temporary
-              verified = true
+              verification = Verification::Object
             end
           elsif activity.is_a?(ActivityPub::Activity::Delete)
             Log.trace { "[#{request_id}] checking object of delete iri=#{object_iri}" }
-            verified = true if object_gone_at_origin?(fetch_identity, object_iri, transient, deadline)
+            verification = Verification::Object if object_gone_at_origin?(fetch_identity, object_iri, transient, deadline)
           end
         end
       end
     end
 
-    unless activity && verified
+    unless activity && verification
       bad_request_or_bad_gateway("Can't Be Verified")
     end
 

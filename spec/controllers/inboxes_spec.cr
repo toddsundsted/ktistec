@@ -1188,6 +1188,18 @@ Spectator.describe InboxesController do
           .to change { other.reload!.up? }.to(true)
       end
 
+      context "and the request is signed by that actor but the activity is by another" do
+        let_create(:actor, named: :author)
+        let_build(:activity, named: :forwarded, actor: author)
+
+        let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", forwarded.to_json_ld(true), "application/json") }
+
+        it "marks the actor as up" do
+          expect { post "/actors/#{actor.username}/inbox", headers, forwarded.to_json_ld(true) }
+            .to change { other.reload!.up? }.to(true)
+        end
+      end
+
       context "and the request is unsigned" do
         let(headers) { HTTP::Headers{"Content-Type" => "application/json"} }
 

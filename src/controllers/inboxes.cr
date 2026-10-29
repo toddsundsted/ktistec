@@ -463,6 +463,8 @@ class InboxesController
       end
     end
 
+    signer.up! if signer && signer.down?
+
     verification : Verification? = nil
 
     actor = nil

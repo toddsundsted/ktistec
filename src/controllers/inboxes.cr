@@ -375,6 +375,20 @@ class InboxesController
       ok
     end
 
+    # a community may relay a delete of an object on our origin, but
+    # only we can delete it. an inbound delete of a local object is
+    # either a replay or a forgery.
+
+    if inner_ld && activity.is_a?(ActivityPub::Activity::Delete) &&
+       (object_iri = activity.object_iri) && Ktistec::Model::Linked.local?(object_iri)
+      if ActivityPub::Object.find?(object_iri, include_deleted: true).try(&.deleted?)
+        Log.trace { "[#{request_id}] relayed delete of already deleted local object iri=#{activity.iri} actor=#{activity_actor_iri} object=#{object_iri} relayer=#{outer_actor_iri}" }
+      else
+        Log.warn { "[#{request_id}] relayed delete of local object iri=#{activity.iri} actor=#{activity_actor_iri} object=#{object_iri} relayer=#{outer_actor_iri}" }
+      end
+      ok
+    end
+
     # this is, strictly speaking, not required because this method
     # should be idempotent, but it avoids a lot of unnecessary work.
 

@@ -3860,6 +3860,36 @@ Spectator.describe InboxesController do
             end
           end
 
+          context "when the object is local" do
+            let_create(:object, attributed_to: actor, audience: [community.iri])
+
+            context "but we never deleted it (a forgery)" do
+              it "does not delete the object" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { object.reload!.deleted_at }
+              end
+
+              it "warns of the forgery" do
+                entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed delete of local object/)
+              end
+
+              it "is successful" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
+              end
+            end
+
+            context "and we already deleted it" do
+              before_each { object.delete! }
+
+              it "notes that the object is already deleted" do
+                entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed delete of already deleted local object/)
+              end
+            end
+          end
+
           context "when the inner activity's id is not on its actor's host" do
             let_build(:delete, actor: moderator, object: object, iri: "https://third.test/activities/#{random_string}")
 

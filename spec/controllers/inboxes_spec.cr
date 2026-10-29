@@ -1247,6 +1247,20 @@ Spectator.describe InboxesController do
               .not_to change { other.reload!.up? }
           end
         end
+
+        context "and is an activity by that actor we already hold" do
+          let_create(:activity, named: :held, actor: other)
+
+          it "does not mark the actor as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, held.to_json_ld(true) }
+              .not_to change { other.reload!.up? }
+          end
+
+          it "is successful" do
+            post "/actors/#{actor.username}/inbox", headers, held.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
       end
     end
 

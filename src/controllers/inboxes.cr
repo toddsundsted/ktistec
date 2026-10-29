@@ -473,6 +473,15 @@ class InboxesController
 
       # 4
 
+      # finding an unauthenticated activity in our database proves only
+      # that we already have it, not who sent it. don't treat it as
+      # verified.
+
+      if !verified && (activity_iri = activity.iri.presence) && ActivityPub::Activity.find?(activity_iri, include_undone: true)
+        Log.trace { "[#{request_id}] unauthenticated copy of held activity iri=#{activity_iri}" }
+        ok
+      end
+
       temporary =
         if !verified && activity.iri.presence
           try_dereference(transient, request_id) do

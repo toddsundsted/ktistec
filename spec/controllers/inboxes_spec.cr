@@ -3367,6 +3367,11 @@ Spectator.describe InboxesController do
                   .not_to change { ActivityPub::Activity::Like.count }
               end
 
+              it "is successful" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
+              end
+
               context "and the voter is on the community's origin" do
                 let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
                 let_build(:like, actor: voter, object: object)
@@ -3497,6 +3502,11 @@ Spectator.describe InboxesController do
               it "does not save the inner Dislike activity" do
                 expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                   .not_to change { ActivityPub::Activity::Dislike.count }
+              end
+
+              it "is successful" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
               end
 
               context "and the voter is on the community's origin" do
@@ -3660,6 +3670,11 @@ Spectator.describe InboxesController do
                     .not_to change { activity.reload!.undone_at }
                 end
 
+                it "is successful" do
+                  post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                  expect(response.status_code).to eq(200)
+                end
+
                 context "and the voter is on the community's origin" do
                   let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
                   let_create(:like, named: :activity, actor: voter, object: object)
@@ -3733,6 +3748,11 @@ Spectator.describe InboxesController do
                 it "does not undo the dislike" do
                   expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                     .not_to change { activity.reload!.undone_at }
+                end
+
+                it "is successful" do
+                  post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                  expect(response.status_code).to eq(200)
                 end
 
                 context "and the voter is on the community's origin" do

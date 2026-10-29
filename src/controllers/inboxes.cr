@@ -254,15 +254,13 @@ class InboxesController
   # relayable by the community.
   #
   private def self.relayable_by?(community, activity : ActivityPub::Activity)
-    if Ktistec::Util.same_origin?(activity.actor_iri, community.iri)
-      case activity
-      when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
-        (object = ActivityPub::Object.find?(activity.object_iri)) &&
-          relayable_by?(community, object)
-      when ActivityPub::Activity::Undo
-        (undone = ActivityPub::Activity.find?(activity.object_iri, include_undone: true)) &&
-          relayable_by?(community, undone)
-      end
+    case activity
+    when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
+      (object = ActivityPub::Object.find?(activity.object_iri)) &&
+        relayable_by?(community, object)
+    when ActivityPub::Activity::Undo
+      (undone = ActivityPub::Activity.find?(activity.object_iri, include_undone: true)) &&
+        relayable_by?(community, undone)
     end
   end
 
@@ -512,6 +510,7 @@ class InboxesController
       verification = Verification::Signature
     else
       if inner_ld && (community = relaying_community(signer, outer_actor_iri)) &&
+         Ktistec::Util.same_origin?(activity.actor_iri, community.iri) &&
          relayable_by?(community, activity)
         via_community = community
         verification = Verification::Community
@@ -579,7 +578,12 @@ class InboxesController
     end
 
     unless activity && verification
-      bad_request_or_bad_gateway("Can't Be Verified")
+      if !transient.failure? && inner_ld && (community = relaying_community(signer, outer_actor_iri)) && relayable_by?(community, activity)
+        Log.debug { "[#{request_id}] relayed vote not retrievable from its origin iri=#{activity.iri} actor=#{activity.actor_iri} relayer=#{community.iri}" }
+        ok
+      else
+        bad_request_or_bad_gateway("Can't Be Verified")
+      end
     end
 
     # resolve the actor from the verified activity, which step 4 may

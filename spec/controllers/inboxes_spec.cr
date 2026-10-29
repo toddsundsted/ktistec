@@ -1248,6 +1248,25 @@ Spectator.describe InboxesController do
           end
         end
 
+        context "and the activity names that actor but it cannot be verified at its origin" do
+          let_create(:actor, named: :author, iri: "https://elsewhere/actors/author")
+          let_build(:note, attributed_to: author, iri: "https://elsewhere/objects/note")
+
+          let_build(:create, actor: other, object: note, iri: "https://remote/activities/returns-404")
+
+          before_each { HTTP::Client.objects << note }
+
+          it "rejects the activity" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld
+            expect(JSON.parse(response.body)["msg"]).to eq("object not attributed to actor")
+          end
+
+          it "does not mark the actor as up" do
+            expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld }
+              .not_to change { other.reload!.up? }
+          end
+        end
+
         context "and is an activity by that actor we already hold" do
           let_create(:activity, named: :held, actor: other)
 

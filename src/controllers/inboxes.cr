@@ -26,6 +26,12 @@ class InboxesController
     Origin
     # Checked by its object.
     Object
+
+    # Whether the actor's origin took part in the request.
+    #
+    def liveness?
+      signature? || origin?
+    end
   end
 
   # Maximum time to spend fetching resources.
@@ -576,7 +582,7 @@ class InboxesController
 
     if actor
       Log.trace { "[#{request_id}] actor iri=#{actor.iri}" }
-      actor.up!
+      actor.up! if actor.down? && verification.liveness?
       activity.actor = actor
     end
 

@@ -3360,9 +3360,21 @@ Spectator.describe InboxesController do
             context "and a local account follows the community" do
               let_create!(:follow_relationship, actor: actor, object: community)
 
-              it "saves the inner Like activity" do
+              pre_condition { expect(Ktistec::Util.same_origin?(lemmy_user.iri, community.iri)).to be_false }
+
+              it "does not save the inner Like activity" do
                 expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                  .to change { ActivityPub::Activity::Like.count }.by(1)
+                  .not_to change { ActivityPub::Activity::Like.count }
+              end
+
+              context "and the voter is on the community's origin" do
+                let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
+                let_build(:like, actor: voter, object: object)
+
+                it "saves the inner Like activity" do
+                  expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    .to change { ActivityPub::Activity::Like.count }.by(1)
+                end
               end
 
               context "and the inner activity's actor is local" do
@@ -3480,9 +3492,21 @@ Spectator.describe InboxesController do
             context "and a local account follows the community" do
               let_create!(:follow_relationship, actor: actor, object: community)
 
-              it "saves the inner Dislike activity" do
+              pre_condition { expect(Ktistec::Util.same_origin?(lemmy_user.iri, community.iri)).to be_false }
+
+              it "does not save the inner Dislike activity" do
                 expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                  .to change { ActivityPub::Activity::Dislike.count }.by(1)
+                  .not_to change { ActivityPub::Activity::Dislike.count }
+              end
+
+              context "and the voter is on the community's origin" do
+                let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
+                let_build(:dislike, actor: voter, object: object)
+
+                it "saves the inner Dislike activity" do
+                  expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    .to change { ActivityPub::Activity::Dislike.count }.by(1)
+                end
               end
 
               context "and the inner activity's actor is local" do
@@ -3629,9 +3653,22 @@ Spectator.describe InboxesController do
               context "and a local account follows the community" do
                 let_create!(:follow_relationship, actor: actor, object: community)
 
-                it "undoes the like" do
+                pre_condition { expect(Ktistec::Util.same_origin?(lemmy_user.iri, community.iri)).to be_false }
+
+                it "does not undo the like" do
                   expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    .to change { activity.reload!.undone_at }
+                    .not_to change { activity.reload!.undone_at }
+                end
+
+                context "and the voter is on the community's origin" do
+                  let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
+                  let_create(:like, named: :activity, actor: voter, object: object)
+                  let_build(:undo, actor: voter, object: activity)
+
+                  it "undoes the like" do
+                    expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      .to change { activity.reload!.undone_at }
+                  end
                 end
               end
             end
@@ -3691,9 +3728,22 @@ Spectator.describe InboxesController do
               context "and a local account follows the community" do
                 let_create!(:follow_relationship, actor: actor, object: community)
 
-                it "undoes the dislike" do
+                pre_condition { expect(Ktistec::Util.same_origin?(lemmy_user.iri, community.iri)).to be_false }
+
+                it "does not undo the dislike" do
                   expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    .to change { activity.reload!.undone_at }
+                    .not_to change { activity.reload!.undone_at }
+                end
+
+                context "and the voter is on the community's origin" do
+                  let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
+                  let_create(:dislike, named: :activity, actor: voter, object: object)
+                  let_build(:undo, actor: voter, object: activity)
+
+                  it "undoes the dislike" do
+                    expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      .to change { activity.reload!.undone_at }
+                  end
                 end
               end
             end

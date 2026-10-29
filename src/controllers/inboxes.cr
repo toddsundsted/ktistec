@@ -254,13 +254,15 @@ class InboxesController
   # relayable by the community.
   #
   private def self.relayable_by?(community, activity : ActivityPub::Activity)
-    case activity
-    when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
-      (object = ActivityPub::Object.find?(activity.object_iri)) &&
-        relayable_by?(community, object)
-    when ActivityPub::Activity::Undo
-      (undone = ActivityPub::Activity.find?(activity.object_iri, include_undone: true)) &&
-        relayable_by?(community, undone)
+    if Ktistec::Util.same_origin?(activity.actor_iri, community.iri)
+      case activity
+      when ActivityPub::Activity::Like, ActivityPub::Activity::Dislike
+        (object = ActivityPub::Object.find?(activity.object_iri)) &&
+          relayable_by?(community, object)
+      when ActivityPub::Activity::Undo
+        (undone = ActivityPub::Activity.find?(activity.object_iri, include_undone: true)) &&
+          relayable_by?(community, undone)
+      end
     end
   end
 

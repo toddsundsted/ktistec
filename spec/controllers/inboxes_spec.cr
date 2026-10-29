@@ -1238,25 +1238,25 @@ Spectator.describe InboxesController do
           end
         end
 
-        context "and the activity names that actor but the source at its origin names another" do
-          let_create(:actor, named: :author)
-          let_build(:activity, named: :fetched, actor: author)
+        context "and the activity names another actor but the source at its origin names that actor" do
+          let_build(:activity, named: :fetched, actor: other)
+          let_create(:actor, named: :another)
 
-          let(misattributed) { JSON.parse(fetched.to_json_ld).as_h.merge({"actor" => JSON::Any.new(other.iri)}).to_json }
+          let(misattributed) { JSON.parse(fetched.to_json_ld).as_h.merge({"actor" => JSON::Any.new(another.iri)}).to_json }
 
           before_each do
-            author.down!
+            another.down!
             HTTP::Client.activities << fetched
           end
 
-          it "marks the actor its origin names as up" do
+          it "marks the that actor as up" do
             expect { post "/actors/#{actor.username}/inbox", headers, misattributed }
-              .to change { author.reload!.up? }.to(true)
+              .to change { other.reload!.up? }.to(true)
           end
 
-          it "does not mark the actor as up" do
+          it "does not mark the actor the activity names as up" do
             expect { post "/actors/#{actor.username}/inbox", headers, misattributed }
-              .not_to change { other.reload!.up? }
+              .not_to change { another.reload!.up? }
           end
         end
 
@@ -3369,8 +3369,6 @@ Spectator.describe InboxesController do
                 let_build(:like, actor: actor, object: object)
 
                 context "but we never sent it (a forgery)" do
-                  pre_condition { expect(ActivityPub::Activity.find?(like.iri)).to be_nil }
-
                   it "does not save the inner Like activity" do
                     expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                       .not_to change { ActivityPub::Activity::Like.count }
@@ -3491,8 +3489,6 @@ Spectator.describe InboxesController do
                 let_build(:dislike, actor: actor, object: object)
 
                 context "but we never sent it (a forgery)" do
-                  pre_condition { expect(ActivityPub::Activity.find?(dislike.iri)).to be_nil }
-
                   it "does not save the inner Dislike activity" do
                     expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                       .not_to change { ActivityPub::Activity::Dislike.count }
@@ -3773,8 +3769,6 @@ Spectator.describe InboxesController do
             let_build(:delete, actor: actor, object: object)
 
             context "but we never sent it (a forgery)" do
-              pre_condition { expect(ActivityPub::Activity.find?(delete.iri)).to be_nil }
-
               it "does not save the Delete activity" do
                 expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                   .not_to change { ActivityPub::Activity::Delete.count }

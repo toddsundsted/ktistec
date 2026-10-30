@@ -1,9 +1,9 @@
-require "../../src/framework/signature"
+require "../../../src/framework/signature/cavage"
 
-require "../spec_helper/key_pair"
-require "../spec_helper/base"
+require "../../spec_helper/key_pair"
+require "../../spec_helper/base"
 
-Spectator.describe Ktistec::Signature do
+Spectator.describe Ktistec::Signature::Cavage do
   let(key_pair) { KeyPair.new("https://key_pair") }
 
   describe ".sign" do

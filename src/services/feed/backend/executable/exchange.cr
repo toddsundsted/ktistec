@@ -26,6 +26,8 @@ class Feed
             iri TEXT PRIMARY KEY,
             type TEXT,
             handle TEXT,
+            deleted INTEGER,
+            blocked INTEGER,
             followed INTEGER,
             rate_7 REAL,
             rate_30 REAL,
@@ -49,7 +51,9 @@ class Feed
             sensitive INTEGER,
             hashtags TEXT,
             mentions TEXT,
-            author TEXT REFERENCES authors(iri)
+            author TEXT REFERENCES authors(iri),
+            deleted INTEGER,
+            blocked INTEGER
           )
           SQL
           <<-SQL,
@@ -117,10 +121,12 @@ class Feed
             objects.compact_map(&.attributed_to?(include_deleted: true)).uniq!(&.iri).each do |actor|
               serialized_author = Serializers::Author.from(actor, feed.owner_iri, now)
               db.exec(
-                "INSERT INTO authors (iri, type, handle, followed, rate_7, rate_30, rate_90) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO authors (iri, type, handle, deleted, blocked, followed, rate_7, rate_30, rate_90) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 serialized_author.iri,
                 serialized_author.type,
                 serialized_author.handle,
+                serialized_author.deleted,
+                serialized_author.blocked,
                 serialized_author.followed,
                 serialized_author.rate_7,
                 serialized_author.rate_30,
@@ -130,7 +136,7 @@ class Feed
             objects.each do |object|
               serialized_post = Serializers::Post.from(object)
               db.exec(
-                "INSERT INTO posts (iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO posts (iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 serialized_post.iri,
                 serialized_post.type,
                 serialized_post.name,
@@ -147,6 +153,8 @@ class Feed
                 serialized_post.hashtags.to_json,
                 serialized_post.mentions.to_json,
                 serialized_post.author,
+                serialized_post.deleted,
+                serialized_post.blocked,
               )
             end
           end

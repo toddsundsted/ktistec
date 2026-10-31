@@ -55,8 +55,8 @@ Spectator.describe Feed::Backend::Executable::Exchange do
     it "writes the posts" do
       described_class.write(path, feed, [object], now)
       expect(query(
-        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author FROM posts",
-        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String},
+        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked FROM posts",
+        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String, Int64, Int64},
       )).to eq({
         object.iri,
         "Object",
@@ -74,6 +74,8 @@ Spectator.describe Feed::Backend::Executable::Exchange do
         %([{"name":"cats","href":"https://remote/tags/cats"}]),
         %([{"name":"alice@remote","href":"https://remote/actors/alice"}]),
         object.attributed_to_iri,
+        0_i64,
+        0_i64,
       })
     end
 
@@ -81,12 +83,14 @@ Spectator.describe Feed::Backend::Executable::Exchange do
       described_class.write(path, feed, [object], now)
       author = Serializers::Author.from(object.attributed_to, feed.owner_iri, now)
       expect(query(
-        "SELECT iri, type, handle, followed, rate_7, rate_30, rate_90 FROM authors",
-        as: {String, String, String, Bool, Float64, Float64, Float64},
+        "SELECT iri, type, handle, deleted, blocked, followed, rate_7, rate_30, rate_90 FROM authors",
+        as: {String, String, String, Bool, Bool, Bool, Float64, Float64, Float64},
       )).to eq({
         author.iri,
         author.type,
         author.handle,
+        author.deleted,
+        author.blocked,
         author.followed,
         author.rate_7,
         author.rate_30,

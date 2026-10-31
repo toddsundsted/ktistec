@@ -100,6 +100,34 @@ Spectator.describe Serializers::Post do
     it "carries the post's author's IRI" do
       expect(subject.author).to eq(object.attributed_to_iri)
     end
+
+    describe "#deleted" do
+      it "is false for a post that has not been deleted" do
+        expect(subject.deleted).to be_false
+      end
+
+      context "given the post is deleted" do
+        before_each { object.delete! }
+
+        it "is true" do
+          expect(subject.deleted).to be_true
+        end
+      end
+    end
+
+    describe "#blocked" do
+      it "is false for a post that has not been blocked" do
+        expect(subject.blocked).to be_false
+      end
+
+      context "given the post is blocked" do
+        before_each { object.block! }
+
+        it "is true" do
+          expect(subject.blocked).to be_true
+        end
+      end
+    end
   end
 
   describe Serializers::Post::Attachment do

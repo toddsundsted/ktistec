@@ -52,6 +52,10 @@ module Serializers
 
     getter author : String?
 
+    getter deleted : Bool
+
+    getter blocked : Bool
+
     def initialize(
       @iri : String,
       @type : String,
@@ -69,6 +73,8 @@ module Serializers
       @hashtags : Array(Tag),
       @mentions : Array(Tag),
       @author : String?,
+      @deleted : Bool,
+      @blocked : Bool,
     )
     end
 
@@ -93,6 +99,8 @@ module Serializers
         hashtags: object.hashtags.map { |hashtag| Tag.new(hashtag.name, hashtag.href) },
         mentions: object.mentions.map { |mention| Tag.new(mention.name, mention.href) },
         author: object.attributed_to_iri,
+        deleted: object.deleted?,
+        blocked: object.blocked?,
       )
     end
   end

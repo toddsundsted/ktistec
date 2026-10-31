@@ -27,6 +27,34 @@ Spectator.describe Serializers::Author do
       expect(subject.handle).to eq("alice@remote")
     end
 
+    describe "#deleted" do
+      it "is false for an author that has not been deleted" do
+        expect(subject.deleted).to be_false
+      end
+
+      context "given the author is deleted" do
+        before_each { author.delete! }
+
+        it "is true" do
+          expect(subject.deleted).to be_true
+        end
+      end
+    end
+
+    describe "#blocked" do
+      it "is false for an author that has not been blocked" do
+        expect(subject.blocked).to be_false
+      end
+
+      context "given the author is blocked" do
+        before_each { author.block! }
+
+        it "is true" do
+          expect(subject.blocked).to be_true
+        end
+      end
+    end
+
     describe "#followed" do
       context "given the owner follows the author" do
         let_create!(:follow_relationship, actor: owner, object: author, confirmed: true)

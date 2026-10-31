@@ -51,114 +51,128 @@ module Ktistec
       headers
     end
 
-    def verify(key_pair, url, headers, body = nil, method = :post)
-      unless (signature = headers["Signature"]?)
-        raise Error.new("missing signature")
+    # A parsed `Signature` header.
+    #
+    struct Parsed
+      def initialize(@parameters : Hash(String, String))
       end
-      parameters = signature.split(",", remove_empty: true).reduce({} of String => String) do |a, h|
-        k, separator, v = h.partition("=")
-        a[k] = v.delete('"') unless separator.empty?
-        a
+
+      def key_id
+        @parameters["keyId"]?
       end
-      unless (parameters.keys.sort! & ["signature", "headers"]).size == 2
-        raise Error.new("malformed signature")
-      end
-      url = URI.parse(url).normalize
-      split_headers_string = parameters["headers"].split
-      # it's bad to infer the algorithm from an untrusted input, but
-      # we need to know how to process the headers (for verification,
-      # the algorithm is always assumed to be rsa-sha256).
-      algorithm = parameters["algorithm"]? || begin
-        "date".in?(split_headers_string) ? "rsa-sha256" : "hs2019"
-      end
-      unless "(request-target)".in?(split_headers_string)
-        raise Error.new("(request-target) header must be signed")
-      end
-      if "(created)".in?(split_headers_string) && algorithm.starts_with?(/rsa|hmac|ecdsa/)
-        raise Error.new("(created) header must not be used with #{algorithm}")
-      end
-      if "(expires)".in?(split_headers_string) && algorithm.starts_with?(/rsa|hmac|ecdsa/)
-        raise Error.new("(expires) header must not be used with #{algorithm}")
-      end
-      unless "(created)".in?(split_headers_string) || "date".in?(split_headers_string)
-        raise Error.new("(created) header or date header must be signed")
-      end
-      unless "host".in?(split_headers_string)
-        raise Error.new("host header must be signed")
-      end
-      unless method != :post || "digest".in?(split_headers_string)
-        raise Error.new("body digest must be signed")
-      end
-      signature_string =
-        split_headers_string.map do |header|
-          case header
-          when "(request-target)"
-            "#{header}: #{method} #{url.path}"
-          when "(created)"
-            unless (created = parameters["created"]?)
-              raise Error.new("created parameter must be specified")
-            end
-            "#{header}: #{created}"
-          when "(expires)"
-            unless (expires = parameters["expires"]?)
-              raise Error.new("expires parameter must be specified")
-            end
-            "#{header}: #{expires}"
-          when "host"
-            # the host comes from the URL, not the request
-            "#{header}: #{url.authority}"
-          else
-            unless (values = headers.get?(header))
-              raise Error.new("signed header is missing: #{header}")
-            end
-            "#{header}: #{values.map(&.strip).join(", ")}"
-          end
-        end.join("\n")
-      decoded =
-        begin
-          Base64.decode(parameters["signature"])
-        rescue Base64::Error
+
+      def verify(key_pair, url, headers, body = nil, method = :post)
+        unless (@parameters.keys.sort! & ["signature", "headers"]).size == 2
           raise Error.new("malformed signature")
         end
-      key = key_pair.public_key
-      unless key.try(&.verify(OpenSSL::Digest.new("SHA256"), decoded, signature_string))
-        raise Error.new("invalid signature: signed by keyId=#{parameters["keyId"]}")
-      end
-      # five minutes of leeway for clock skew
-      if "(created)".in?(split_headers_string)
-        unless (seconds = parameters["created"].to_i64?)
-          raise Error.new("created parameter must be an integer")
+        url = URI.parse(url).normalize
+        split_headers_string = @parameters["headers"].split
+        # it's bad to infer the algorithm from an untrusted input, but
+        # we need to know how to process the headers (for verification,
+        # the algorithm is always assumed to be rsa-sha256).
+        algorithm = @parameters["algorithm"]? || begin
+          "date".in?(split_headers_string) ? "rsa-sha256" : "hs2019"
         end
-        unless seconds < 5.minutes.from_now.to_unix
-          raise Error.new("received before creation date")
+        unless "(request-target)".in?(split_headers_string)
+          raise Error.new("(request-target) header must be signed")
         end
-      end
-      if "(expires)".in?(split_headers_string)
-        unless (seconds = parameters["expires"].to_i64?)
-          raise Error.new("expires parameter must be an integer")
+        if "(created)".in?(split_headers_string) && algorithm.starts_with?(/rsa|hmac|ecdsa/)
+          raise Error.new("(created) header must not be used with #{algorithm}")
         end
-        unless seconds > 5.minutes.ago.to_unix
-          raise Error.new("received after expiration date")
+        if "(expires)".in?(split_headers_string) && algorithm.starts_with?(/rsa|hmac|ecdsa/)
+          raise Error.new("(expires) header must not be used with #{algorithm}")
         end
-      end
-      if "date".in?(split_headers_string)
-        date =
+        unless "(created)".in?(split_headers_string) || "date".in?(split_headers_string)
+          raise Error.new("(created) header or date header must be signed")
+        end
+        unless "host".in?(split_headers_string)
+          raise Error.new("host header must be signed")
+        end
+        unless method != :post || "digest".in?(split_headers_string)
+          raise Error.new("body digest must be signed")
+        end
+        signature_string =
+          split_headers_string.map do |header|
+            case header
+            when "(request-target)"
+              "#{header}: #{method} #{url.path}"
+            when "(created)"
+              unless (created = @parameters["created"]?)
+                raise Error.new("created parameter must be specified")
+              end
+              "#{header}: #{created}"
+            when "(expires)"
+              unless (expires = @parameters["expires"]?)
+                raise Error.new("expires parameter must be specified")
+              end
+              "#{header}: #{expires}"
+            when "host"
+              # the host comes from the URL, not the request
+              "#{header}: #{url.authority}"
+            else
+              unless (values = headers.get?(header))
+                raise Error.new("signed header is missing: #{header}")
+              end
+              "#{header}: #{values.map(&.strip).join(", ")}"
+            end
+          end.join("\n")
+        decoded =
           begin
-            Time::Format::HTTP_DATE.parse(headers["Date"])
-          rescue Time::Format::Error
-            raise Error.new("date header is malformed")
+            Base64.decode(@parameters["signature"])
+          rescue Base64::Error
+            raise Error.new("malformed signature")
           end
-        unless date > 5.minutes.ago && date < 5.minutes.from_now
-          raise Error.new("date out of range")
+        key = key_pair.public_key
+        unless key.try(&.verify(OpenSSL::Digest.new("SHA256"), decoded, signature_string))
+          raise Error.new("invalid signature: signed by keyId=#{@parameters["keyId"]}")
         end
-      end
-      if "digest".in?(split_headers_string)
-        digest = "SHA-256=" + Base64.strict_encode(OpenSSL::Digest.new("SHA256").update(body.not_nil!).final)
-        unless headers["Digest"]? == digest
-          raise Error.new("body doesn't match")
+        # five minutes of leeway for clock skew
+        if "(created)".in?(split_headers_string)
+          unless (seconds = @parameters["created"].to_i64?)
+            raise Error.new("created parameter must be an integer")
+          end
+          unless seconds < 5.minutes.from_now.to_unix
+            raise Error.new("received before creation date")
+          end
         end
+        if "(expires)".in?(split_headers_string)
+          unless (seconds = @parameters["expires"].to_i64?)
+            raise Error.new("expires parameter must be an integer")
+          end
+          unless seconds > 5.minutes.ago.to_unix
+            raise Error.new("received after expiration date")
+          end
+        end
+        if "date".in?(split_headers_string)
+          date =
+            begin
+              Time::Format::HTTP_DATE.parse(headers["Date"])
+            rescue Time::Format::Error
+              raise Error.new("date header is malformed")
+            end
+          unless date > 5.minutes.ago && date < 5.minutes.from_now
+            raise Error.new("date out of range")
+          end
+        end
+        if "digest".in?(split_headers_string)
+          digest = "SHA-256=" + Base64.strict_encode(OpenSSL::Digest.new("SHA256").update(body.not_nil!).final)
+          unless headers["Digest"]? == digest
+            raise Error.new("body doesn't match")
+          end
+        end
+        true
       end
-      true
+    end
+
+    def parse(headers)
+      if (signature = headers["Signature"]?)
+        parameters = signature.split(",", remove_empty: true).reduce({} of String => String) do |a, h|
+          k, separator, v = h.partition("=")
+          a[k] = v.delete('"') unless separator.empty?
+          a
+        end
+        Parsed.new(parameters)
+      end
     end
   end
 end

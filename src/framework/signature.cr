@@ -15,8 +15,8 @@ module Ktistec
       Cavage.sign(key_pair, url, body, content_type, content_length, accept, method, time, algorithm)
     end
 
-    def verify(key_pair, url, headers, body = nil, method = :post)
-      Cavage.verify(key_pair, url, headers, body, method)
+    def parse(headers)
+      Cavage.parse(headers)
     end
   end
 end

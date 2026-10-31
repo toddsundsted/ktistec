@@ -154,6 +154,24 @@ Spectator.describe Feed::Judging do
           expect(verdict_for(other)).to be_nil
         end
       end
+
+      context "whose post is deleted" do
+        before_each { other.delete! }
+
+        it "asks the judge about it" do
+          Feed::Judging.answer([question, second])
+          expect(RecordingBackend.calls).to eq([[hit.iri, other.iri]])
+        end
+      end
+
+      context "whose post is blocked" do
+        before_each { other.block! }
+
+        it "asks the judge about it" do
+          Feed::Judging.answer([question, second])
+          expect(RecordingBackend.calls).to eq([[hit.iri, other.iri]])
+        end
+      end
     end
 
     context "when the feed is deleted while the judge answers" do

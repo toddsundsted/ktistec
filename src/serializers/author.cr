@@ -90,7 +90,7 @@ module Serializers
       new(
         iri: actor.iri,
         type: actor.type.split("::").last,
-        handle: actor.handle,
+        handle: actor.unmasked_handle,
         deleted: actor.deleted?,
         blocked: actor.blocked?,
         followed: followed,

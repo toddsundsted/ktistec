@@ -245,7 +245,11 @@ module ActivityPub
     end
 
     def handle
-      blocked? ? "[blocked]" : (verified_handle.presence || %Q|#{username}@#{URI.parse(iri).host}|)
+      blocked? ? "[blocked]" : unmasked_handle
+    end
+
+    def unmasked_handle
+      verified_handle.presence || %Q|#{username}@#{URI.parse(iri).host}|
     end
 
     VALID_HANDLE = /\A[a-zA-Z0-9_.~-]+@[a-zA-Z0-9.-]+\z/

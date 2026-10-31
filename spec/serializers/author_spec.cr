@@ -27,6 +27,14 @@ Spectator.describe Serializers::Author do
       expect(subject.handle).to eq("alice@remote")
     end
 
+    context "when the author is blocked" do
+      before_each { author.block! }
+
+      it "carries the author's handle" do
+        expect(subject.handle).to eq("alice@remote")
+      end
+    end
+
     describe "#deleted" do
       it "is false for an author that has not been deleted" do
         expect(subject.deleted).to be_false

@@ -55,8 +55,8 @@ Spectator.describe Feed::Backend::Executable::Exchange do
     it "writes the posts" do
       described_class.write(path, feed, [object], now)
       expect(query(
-        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked FROM posts",
-        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String, Int64, Int64},
+        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked, timeline FROM posts",
+        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String, Int64, Int64, String?},
       )).to eq({
         object.iri,
         "Object",
@@ -76,7 +76,17 @@ Spectator.describe Feed::Backend::Executable::Exchange do
         object.attributed_to_iri,
         0_i64,
         0_i64,
+        nil,
       })
+    end
+
+    context "given a post in the feed's owner's timeline" do
+      before_each { put_in_timeline_announce(feed.owner, object.save) }
+
+      it "writes how the post reached the timeline" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT timeline FROM posts", as: String)).to eq("announce")
+      end
     end
 
     it "writes the posts' authors" do

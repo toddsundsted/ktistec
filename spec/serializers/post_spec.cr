@@ -27,7 +27,9 @@ Spectator.describe Serializers::Post do
       mentions: [mention],
     )
 
-    subject { described_class.from(object) }
+    let_create(:actor, named: :owner)
+
+    subject { described_class.from(object, owner.iri) }
 
     it "carries the post's IRI" do
       expect(subject.iri).to eq(object.iri)
@@ -125,6 +127,34 @@ Spectator.describe Serializers::Post do
 
         it "is true" do
           expect(subject.blocked).to be_true
+        end
+      end
+    end
+
+    describe "#timeline" do
+      context "given the post arrived in the owner's timeline in a create" do
+        before_each { put_in_timeline_create(owner, object.save) }
+
+        it "is create" do
+          expect(subject.timeline).to eq("create")
+        end
+      end
+
+      context "given the post arrived in the owner's timeline in an announce" do
+        before_each { put_in_timeline_announce(owner, object.save) }
+
+        it "is announce" do
+          expect(subject.timeline).to eq("announce")
+        end
+      end
+
+      context "given the post arrived only in another actor's timeline" do
+        let_create(:actor, named: :other)
+
+        before_each { put_in_timeline_announce(other, object.save) }
+
+        it "is nil" do
+          expect(subject.timeline).to be_nil
         end
       end
     end

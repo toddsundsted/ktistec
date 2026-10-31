@@ -1,6 +1,9 @@
 require "json"
 
 require "../models/activity_pub/object"
+require "../models/relationship/content/timeline"
+require "../models/relationship/content/timeline/announce"
+require "../models/relationship/content/timeline/create"
 
 module Serializers
   # A post view-object.
@@ -56,6 +59,11 @@ module Serializers
 
     getter blocked : Bool
 
+    # How the post reached the feed's owner's timeline: `"create"`,
+    # `"announce"`, or `nil` if it is not in their timeline.
+    #
+    getter timeline : String?
+
     def initialize(
       @iri : String,
       @type : String,
@@ -75,10 +83,16 @@ module Serializers
       @author : String?,
       @deleted : Bool,
       @blocked : Bool,
+      @timeline : String?,
     )
     end
 
-    def self.from(object : ActivityPub::Object) : Post
+    # Returns a `Post` view-object.
+    #
+    # Facts about the post are as seen by `owner_iri`.
+    #
+    def self.from(object : ActivityPub::Object, owner_iri : String?) : Post
+      timeline = Relationship::Content::Timeline.find?(from_iri: owner_iri, to_iri: object.iri)
       content = object.content
       content = Markd.to_html(content) if content && object.media_type == "text/markdown"
       attachments = object.attachments.try(&.map { |attachment| Attachment.new(attachment.url, attachment.media_type, attachment.caption) })
@@ -101,6 +115,7 @@ module Serializers
         author: object.attributed_to_iri,
         deleted: object.deleted?,
         blocked: object.blocked?,
+        timeline: timeline.try(&.type.split("::").last.downcase),
       )
     end
   end

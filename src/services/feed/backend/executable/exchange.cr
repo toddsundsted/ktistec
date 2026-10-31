@@ -53,7 +53,8 @@ class Feed
             mentions TEXT,
             author TEXT REFERENCES authors(iri),
             deleted INTEGER,
-            blocked INTEGER
+            blocked INTEGER,
+            timeline TEXT
           )
           SQL
           <<-SQL,
@@ -134,9 +135,9 @@ class Feed
               )
             end
             objects.each do |object|
-              serialized_post = Serializers::Post.from(object)
+              serialized_post = Serializers::Post.from(object, feed.owner_iri)
               db.exec(
-                "INSERT INTO posts (iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO posts (iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked, timeline) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 serialized_post.iri,
                 serialized_post.type,
                 serialized_post.name,
@@ -155,6 +156,7 @@ class Feed
                 serialized_post.author,
                 serialized_post.deleted,
                 serialized_post.blocked,
+                serialized_post.timeline,
               )
             end
           end

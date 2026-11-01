@@ -55,8 +55,8 @@ Spectator.describe Feed::Backend::Executable::Exchange do
     it "writes the posts" do
       described_class.write(path, feed, [object], now)
       expect(query(
-        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked, timeline FROM posts",
-        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String, Int64, Int64, String?},
+        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked, timeline, poll FROM posts",
+        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String, Int64, Int64, String?, String?},
       )).to eq({
         object.iri,
         "Object",
@@ -76,6 +76,7 @@ Spectator.describe Feed::Backend::Executable::Exchange do
         object.attributed_to_iri,
         0_i64,
         0_i64,
+        nil,
         nil,
       })
     end

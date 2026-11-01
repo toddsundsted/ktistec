@@ -1,6 +1,8 @@
 require "json"
+require "sqlite3"
 
 require "../models/activity_pub/object"
+require "../models/activity_pub/object/question"
 require "../models/relationship/content/timeline"
 require "../models/relationship/content/timeline/announce"
 require "../models/relationship/content/timeline/create"
@@ -21,6 +23,34 @@ module Serializers
     @[JSON::Serializable::Options(emit_nulls: true)]
     record Tag, name : String, href : String? do
       include JSON::Serializable
+    end
+
+    # A poll: its options, whether more than one may be chosen, and
+    # when it closes (or closed).
+    #
+    @[JSON::Serializable::Options(emit_nulls: true)]
+    struct Poll
+      include JSON::Serializable
+
+      getter options : Array(String)
+
+      getter multiple_choice : Bool
+
+      module SQLite3Time
+        def self.to_json(value : Time, json : JSON::Builder) : Nil
+          json.string(value.in(SQLite3::TIME_ZONE).to_s(SQLite3::DATE_FORMAT_SUBSECOND))
+        end
+
+        def self.from_json(pull : JSON::PullParser) : Time
+          Time.parse(pull.read_string, SQLite3::DATE_FORMAT_SUBSECOND, SQLite3::TIME_ZONE)
+        end
+      end
+
+      @[JSON::Field(converter: Serializers::Post::Poll::SQLite3Time)]
+      getter closed_at : Time?
+
+      def initialize(@options : Array(String), @multiple_choice : Bool, @closed_at : Time?)
+      end
     end
 
     getter iri : String
@@ -64,6 +94,8 @@ module Serializers
     #
     getter timeline : String?
 
+    getter poll : Poll?
+
     def initialize(
       @iri : String,
       @type : String,
@@ -84,6 +116,7 @@ module Serializers
       @deleted : Bool,
       @blocked : Bool,
       @timeline : String?,
+      @poll : Poll?,
     )
     end
 
@@ -96,6 +129,7 @@ module Serializers
       content = object.content
       content = Markd.to_html(content) if content && object.media_type == "text/markdown"
       attachments = object.attachments.try(&.map { |attachment| Attachment.new(attachment.url, attachment.media_type, attachment.caption) })
+      poll = object.as?(ActivityPub::Object::Question).try(&.poll?).try { |model| Poll.new(model.options.map(&.name), model.multiple_choice, model.closed_at) }
       new(
         iri: object.iri,
         type: object.type.split("::").last,
@@ -116,6 +150,7 @@ module Serializers
         deleted: object.deleted?,
         blocked: object.blocked?,
         timeline: timeline.try(&.type.split("::").last.downcase),
+        poll: poll,
       )
     end
   end

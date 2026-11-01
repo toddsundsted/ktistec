@@ -158,6 +158,43 @@ Spectator.describe Serializers::Post do
         end
       end
     end
+
+    describe "#poll" do
+      context "given a poll" do
+        let_create(:question)
+        let_create!(
+          :poll,
+          question: question,
+          options: [Poll::Option.new("yes"), Poll::Option.new("no")],
+          multiple_choice: true,
+          closed_at: Time.utc(2026, 11, 1),
+        )
+
+        subject { described_class.from(question, owner.iri) }
+
+        it "carries its options" do
+          expect(subject.poll.try(&.options)).to eq(["yes", "no"])
+        end
+
+        it "carries whether it is multiple choice" do
+          expect(subject.poll.try(&.multiple_choice)).to be_true
+        end
+
+        it "carries when it closes" do
+          expect(subject.poll.try(&.closed_at)).to eq(Time.utc(2026, 11, 1))
+        end
+      end
+    end
+  end
+
+  describe Serializers::Post::Poll do
+    it "writes a closing time in SQLite's format" do
+      expect(described_class.new(["yes", "no"], false, Time.utc(2026, 11, 1)).to_json).to eq(%({"options":["yes","no"],"multiple_choice":false,"closed_at":"2026-11-01 00:00:00.000"}))
+    end
+
+    it "writes a missing closing time as null" do
+      expect(described_class.new(["yes", "no"], false, nil).to_json).to eq(%({"options":["yes","no"],"multiple_choice":false,"closed_at":null}))
+    end
   end
 
   describe Serializers::Post::Attachment do

@@ -11,7 +11,7 @@ Spectator.describe Serializers::Author do
     let(now) { Time.utc(2026, 10, 22) }
 
     let_create(:actor, named: :owner)
-    let_create(:person, named: :author, iri: "https://remote/actors/alice", username: "alice")
+    let_create(:person, named: :author, iri: "https://remote/actors/alice", username: "alice", followers: "https://remote/actors/alice/followers")
 
     subject { described_class.from(author, owner.iri, now) }
 
@@ -33,6 +33,10 @@ Spectator.describe Serializers::Author do
       it "carries the author's handle" do
         expect(subject.handle).to eq("alice@remote")
       end
+    end
+
+    it "carries the author's followers collection" do
+      expect(subject.followers).to eq("https://remote/actors/alice/followers")
     end
 
     describe "#deleted" do

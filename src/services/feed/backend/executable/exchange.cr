@@ -26,6 +26,7 @@ class Feed
             iri TEXT PRIMARY KEY,
             type TEXT,
             handle TEXT,
+            followers TEXT,
             deleted INTEGER,
             blocked INTEGER,
             followed INTEGER,
@@ -41,6 +42,8 @@ class Feed
             name TEXT,
             summary TEXT,
             content TEXT,
+            "to" TEXT,
+            "cc" TEXT,
             audience TEXT,
             attachments TEXT,
             published TEXT,
@@ -123,10 +126,11 @@ class Feed
             objects.compact_map(&.attributed_to?(include_deleted: true)).uniq!(&.iri).each do |actor|
               serialized_author = Serializers::Author.from(actor, feed.owner_iri, now)
               db.exec(
-                "INSERT INTO authors (iri, type, handle, deleted, blocked, followed, rate_7, rate_30, rate_90) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO authors (iri, type, handle, followers, deleted, blocked, followed, rate_7, rate_30, rate_90) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 serialized_author.iri,
                 serialized_author.type,
                 serialized_author.handle,
+                serialized_author.followers,
                 serialized_author.deleted,
                 serialized_author.blocked,
                 serialized_author.followed,
@@ -138,12 +142,14 @@ class Feed
             objects.each do |object|
               serialized_post = Serializers::Post.from(object, feed.owner_iri)
               db.exec(
-                "INSERT INTO posts (iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked, timeline, poll) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                %(INSERT INTO posts (iri, type, name, summary, content, "to", "cc", audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked, timeline, poll) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
                 serialized_post.iri,
                 serialized_post.type,
                 serialized_post.name,
                 serialized_post.summary,
                 serialized_post.content,
+                serialized_post.to.to_json,
+                serialized_post.cc.to_json,
                 serialized_post.audience.to_json,
                 serialized_post.attachments.to_json,
                 serialized_post.published,

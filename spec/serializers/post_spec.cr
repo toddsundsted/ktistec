@@ -15,6 +15,8 @@ Spectator.describe Serializers::Post do
       name: "Cats",
       summary: "<p>About a cat</p>",
       content: "<p>A cat</p>",
+      to: ["https://www.w3.org/ns/activitystreams#Public"],
+      cc: ["https://remote/actors/alice/followers"],
       audience: ["https://remote/c/cats"],
       attachments: [attachment],
       published: Time.utc(2026, 10, 22, 12, 0, 0),
@@ -57,6 +59,14 @@ Spectator.describe Serializers::Post do
       it "converts the Markdown content to HTML" do
         expect(subject.content).to eq("<p><em>A cat</em></p>\n")
       end
+    end
+
+    it "carries the post's to" do
+      expect(subject.to).to eq(["https://www.w3.org/ns/activitystreams#Public"])
+    end
+
+    it "carries the post's cc" do
+      expect(subject.cc).to eq(["https://remote/actors/alice/followers"])
     end
 
     it "carries the post's audience" do

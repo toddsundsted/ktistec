@@ -11,6 +11,8 @@ module Serializers
 
     getter handle : String
 
+    getter followers : String?
+
     getter deleted : Bool
 
     getter blocked : Bool
@@ -35,6 +37,7 @@ module Serializers
       @iri : String,
       @type : String,
       @handle : String,
+      @followers : String?,
       @deleted : Bool,
       @blocked : Bool,
       @followed : Bool,
@@ -91,6 +94,7 @@ module Serializers
         iri: actor.iri,
         type: actor.type.split("::").last,
         handle: actor.unmasked_handle,
+        followers: actor.followers,
         deleted: actor.deleted?,
         blocked: actor.blocked?,
         followed: followed,

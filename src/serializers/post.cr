@@ -63,6 +63,10 @@ module Serializers
 
     getter content : String?
 
+    getter to : Array(String)
+
+    getter cc : Array(String)
+
     getter audience : Array(String)
 
     getter attachments : Array(Attachment)
@@ -102,6 +106,8 @@ module Serializers
       @name : String?,
       @summary : String?,
       @content : String?,
+      @to : Array(String),
+      @cc : Array(String),
       @audience : Array(String),
       @attachments : Array(Attachment),
       @published : Time?,
@@ -136,6 +142,8 @@ module Serializers
         name: object.name,
         summary: object.summary,
         content: content,
+        to: object.to || [] of String,
+        cc: object.cc || [] of String,
         audience: object.audience || [] of String,
         attachments: attachments || [] of Attachment,
         published: object.published,

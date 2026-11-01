@@ -40,8 +40,8 @@ Spectator.describe Feed::Backend::Executable::Exchange do
     let_create!(:follow_relationship, actor: feed.owner, object: object.attributed_to, confirmed: true)
     let_create!(:object, named: nil, attributed_to: object.attributed_to, published: now - 1.day)
 
-    def query(sql, as types)
-      DB.open("sqlite3://#{path}", &.query_one(sql, as: types))
+    def query(sql, *args, as types)
+      DB.open("sqlite3://#{path}", &.query_one(sql, *args, as: types))
     end
 
     it "records the format's version" do
@@ -91,6 +91,70 @@ Spectator.describe Feed::Backend::Executable::Exchange do
       it "writes how the post reached the timeline" do
         described_class.write(path, feed, [object], now)
         expect(query("SELECT timeline FROM posts", as: String)).to eq("announce")
+      end
+    end
+
+    context "given a post that replies to a post on the server" do
+      let_create!(:object, named: :parent, iri: object.in_reply_to_iri)
+
+      it "writes the replied-to post as a referenced post" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT iri FROM referenced", as: String)).to eq(parent.iri)
+      end
+
+      it "writes the replied-to post's author" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT count(*) FROM authors WHERE iri = ?", parent.attributed_to_iri, as: Int64)).to eq(1)
+      end
+
+      context "and the replied-to post is deleted" do
+        before_each { parent.delete! }
+
+        it "writes the replied-to post as a referenced post" do
+          described_class.write(path, feed, [object], now)
+          expect(query("SELECT iri FROM referenced", as: String)).to eq(parent.iri)
+        end
+      end
+
+      context "and another post being judged replies to the same post" do
+        let_build(:object, named: :another, in_reply_to_iri: parent.iri)
+
+        it "writes the replied-to post once" do
+          described_class.write(path, feed, [object, another], now)
+          expect(query("SELECT count(*) FROM referenced", as: Int64)).to eq(1)
+        end
+      end
+    end
+
+    context "given a post that quotes a post on the server" do
+      let_create!(:object, named: :quoted, iri: object.quote_iri)
+
+      it "writes the quoted post as a referenced post" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT iri FROM referenced", as: String)).to eq(quoted.iri)
+      end
+
+      it "writes the quoted post's author" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT count(*) FROM authors WHERE iri = ?", quoted.attributed_to_iri, as: Int64)).to eq(1)
+      end
+
+      context "and the quoted post is deleted" do
+        before_each { quoted.delete! }
+
+        it "writes the quoted post as a referenced post" do
+          described_class.write(path, feed, [object], now)
+          expect(query("SELECT iri FROM referenced", as: String)).to eq(quoted.iri)
+        end
+      end
+
+      context "and another post being judged quotes the same post" do
+        let_build(:object, named: :another, quote_iri: quoted.iri)
+
+        it "writes the quoted post once" do
+          described_class.write(path, feed, [object, another], now)
+          expect(query("SELECT count(*) FROM referenced", as: Int64)).to eq(1)
+        end
       end
     end
 

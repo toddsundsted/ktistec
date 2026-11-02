@@ -14,6 +14,10 @@ class InboxesController
   def self.object_gone_at_origin?(key_pair, iri, deadline)
     object_gone_at_origin?(key_pair, iri, Transient.new, deadline)
   end
+
+  def self.cache_referenced_object(key_pair, iri, deadline)
+    cache_referenced_object(key_pair, iri, "spec", Transient.new, deadline)
+  end
 end
 
 Spectator.describe InboxesController do
@@ -59,6 +63,21 @@ Spectator.describe InboxesController do
 
       it "does not report the object gone" do
         expect(described_class.object_gone_at_origin?(other, iri, expired)).to be_false
+      end
+    end
+  end
+
+  describe ".cache_referenced_object" do
+    let_create(:actor, named: :other, with_keys: true)
+
+    let(expired) { Time.instant - 1.second }
+
+    let(iri) { "https://remote/objects/object" }
+
+    context "when the time budget is exhausted" do
+      it "makes no request" do
+        expect { described_class.cache_referenced_object(other, iri, expired) }
+          .not_to change { HTTP::Client.requests.size }
       end
     end
   end
@@ -4342,6 +4361,147 @@ Spectator.describe InboxesController do
         it "returns 400" do
           post "/actors/#{actor.username}/inbox", headers, json_ld
           expect(response.status_code).to eq(400)
+        end
+      end
+    end
+
+    context "given a post that references another post" do
+      let_build(:actor, named: :author)
+      let_build(:note, named: :referenced, attributed_to: author)
+
+      let_build(:note, attributed_to: other)
+      let_build(:create, actor: other, object: note, to: [actor.iri])
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(true), "application/json") }
+
+      before_each do
+        HTTP::Client.actors << author
+        HTTP::Client.objects << referenced
+      end
+
+      context "as a quote" do
+        before_each { HTTP::Client.objects << note.assign(quote_iri: referenced.iri) }
+
+        around_each do |proc|
+          previous = Task::Receive.schedule_but_dont_perform
+          Task::Receive.schedule_but_dont_perform = true
+          begin
+            proc.call
+          ensure
+            Task::Receive.schedule_but_dont_perform = previous
+          end
+        end
+
+        it "saves the quoted post" do
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+        end
+
+        context "and the quoted post was deleted" do
+          before_each { referenced.save.delete! }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not fetch the quoted post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(HTTP::Client.requests).not_to have("GET #{referenced.iri}")
+          end
+        end
+
+        context "and the quoted post's author can't be fetched" do
+          before_each { HTTP::Client.actors.delete(author.iri) }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not save the quoted post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(ActivityPub::Object.count(iri: referenced.iri)).to eq(0)
+          end
+
+          context "but the author was deleted" do
+            before_each { author.save.delete! }
+
+            it "saves the quoted post" do
+              expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+                .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+            end
+          end
+        end
+
+        context "and the quoted post's origin times out" do
+          let_build(:note, named: :referenced, attributed_to: author, iri: "https://remote/objects/timeout-error")
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the post quotes itself" do
+          before_each { HTTP::Client.objects << note.assign(quote_iri: note.iri) }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the quoted post is invalid" do
+          let_build(:poll, options: [] of Poll::Option, multiple_choice: false)
+          let_build(:question, named: :referenced, attributed_to: author, poll: poll)
+
+          pre_condition { expect(referenced.valid?).to be_false }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the post is announced" do
+          let_build(:announce, actor: other, object: note, to: [actor.iri])
+
+          let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", announce.to_json_ld(true), "application/json") }
+
+          it "saves the quoted post" do
+            expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+              .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+          end
+        end
+
+        context "and the post arrives in an Update" do
+          let_build(:update, actor: other, object: note, to: [actor.iri])
+
+          let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(true), "application/json") }
+
+          it "saves the quoted post" do
+            expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+              .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+          end
+        end
+      end
+
+      context "as a reply" do
+        before_each { HTTP::Client.objects << note.assign(in_reply_to_iri: referenced.iri) }
+
+        it "saves the parent" do
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+        end
+
+        context "and the post replies to itself" do
+          before_each { HTTP::Client.objects << note.assign(in_reply_to_iri: note.iri) }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
         end
       end
     end

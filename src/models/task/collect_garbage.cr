@@ -32,6 +32,8 @@ class Task
   # - Objects with hashtags, mentions, or that are part of threads
   #   that local users follow
   #
+  # - Objects that local users have labeled
+  #
   # - Objects in relationships with local users (timelines,
   # - notifications, the outbox)
   #
@@ -227,6 +229,10 @@ class Task
       SELECT DISTINCT t.subject_iri AS iri FROM tags t
       JOIN followed_mentions fm ON t.href = fm.mention_href
       WHERE t.type = 'Tag::Mention'
+      UNION
+      SELECT DISTINCT t.subject_iri AS iri FROM tags t
+      JOIN accounts ua ON t.href = ua.iri
+      WHERE t.type = 'Tag::Label'
       UNION
       SELECT DISTINCT o.iri FROM objects o
       JOIN followed_threads ft ON o.thread = ft.thread_iri

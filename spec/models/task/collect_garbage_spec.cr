@@ -2,6 +2,7 @@ require "../../../src/models/task/collect_garbage"
 require "../../../src/models/relationship/content/follow/hashtag"
 require "../../../src/models/relationship/content/follow/mention"
 require "../../../src/models/relationship/content/follow/thread"
+require "../../../src/models/tag/label"
 
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
@@ -243,6 +244,22 @@ Spectator.describe Task::CollectGarbage do
 
         it "returns the object" do
           expect(results).to have(object.iri)
+        end
+      end
+    end
+
+    context "given object labeled by the user" do
+      let_create!(label, name: "test", owner: actor, subject: object)
+
+      it "returns the object" do
+        expect(results).to have(object.iri)
+      end
+
+      context "and the user's account is terminated" do
+        before_each { Account.find(iri: actor.iri).destroy }
+
+        it "does not return the object" do
+          expect(results).not_to have(object.iri)
         end
       end
     end
@@ -728,6 +745,24 @@ Spectator.describe Task::CollectGarbage do
           it "preserves the object" do
             subject.perform
             expect(object.reload!).to eq(object)
+          end
+        end
+      end
+
+      context "given object labeled by the user" do
+        let_create!(label, name: "test", owner: actor, subject: object)
+
+        it "preserves the object" do
+          subject.perform
+          expect(object.reload!).to eq(object)
+        end
+
+        context "and the user's account is terminated" do
+          before_each { Account.find(iri: actor.iri).destroy }
+
+          it "destroys the object" do
+            subject.perform
+            expect { object.reload! }.to raise_error(Ktistec::Model::NotFound)
           end
         end
       end

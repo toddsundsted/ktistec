@@ -146,6 +146,22 @@ trix-toolbar {
         .bg-label-hover();
     }
 }
+.ui.labels a.label:hover {
+    .bg-label-hover();
+    color: var(--text-secondary);
+}
+.ui.labels .ui.primary.label {
+    .bg-label-primary();
+    color: var(--text-secondary);
+
+    &:hover {
+        .bg-label-primary-hover();
+    }
+}
+.ui.labels a.ui.primary.label:hover {
+    .bg-label-primary-hover();
+    color: var(--text-secondary);
+}
 
 /* Navigation Bars */
 

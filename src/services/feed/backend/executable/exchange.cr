@@ -38,6 +38,7 @@ class Feed
           sensitive INTEGER,
           hashtags TEXT,
           mentions TEXT,
+          labels TEXT,
           author TEXT REFERENCES authors(iri),
           deleted INTEGER,
           blocked INTEGER,
@@ -151,7 +152,7 @@ class Feed
         private def insert_post(db, table, object, owner_iri)
           serialized_post = Serializers::Post.from(object, owner_iri)
           db.exec(
-            %(INSERT INTO #{table} (iri, type, name, summary, content, "to", "cc", audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author, deleted, blocked, timeline, poll) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
+            %(INSERT INTO #{table} (iri, type, name, summary, content, "to", "cc", audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, labels, author, deleted, blocked, timeline, poll) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
             serialized_post.iri,
             serialized_post.type,
             serialized_post.name,
@@ -169,6 +170,7 @@ class Feed
             serialized_post.sensitive,
             serialized_post.hashtags.to_json,
             serialized_post.mentions.to_json,
+            serialized_post.labels.to_json,
             serialized_post.author,
             serialized_post.deleted,
             serialized_post.blocked,

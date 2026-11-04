@@ -458,6 +458,7 @@ Data attributes allow targeting specific identities and content identifiers.
 - `data-followed-mentions` - Space-separated mentions you follow that appear in this post
 - `data-hashtags` - Up to 10 space-separated hashtags that appear in the post
 - `data-mentions` - Up to 10 space-separated mentions that appear in the post
+- `data-labels` - Up to 10 space-separated private labels
 
 ##### Metadata
 - `data-object-id` - Database ID of the object

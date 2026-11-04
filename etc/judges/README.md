@@ -33,7 +33,7 @@ belong in a feed. The four judges here are working examples.
    | `feed` | the feed's `name`, `description`, and `params` |
    | `stats` | the owner's followed authors' posting rates: `posting_rate_q1`, `posting_rate_median`, `posting_rate_q3` |
    | `authors` | the authors of the posts in `posts` and `referenced`: `iri`, `type`, `handle`, `followers`, `deleted`, `blocked`, `followed`, `rate_7`, `rate_30`, `rate_90` |
-   | `posts` | the posts to judge: `iri`, `type`, `name`, `summary`, `content`, `to`, `cc`, `audience`, `attachments`, `published`, `in_reply_to`, `thread`, `quote`, `language`, `sensitive`, `hashtags`, `mentions`, `author`, `deleted`, `blocked`, `timeline`, `poll` |
+   | `posts` | the posts to judge: `iri`, `type`, `name`, `summary`, `content`, `to`, `cc`, `audience`, `attachments`, `published`, `in_reply_to`, `thread`, `quote`, `language`, `sensitive`, `hashtags`, `mentions`, `labels`, `author`, `deleted`, `blocked`, `timeline`, `poll` |
    | `referenced` | the posts that posts in `posts` reply to or quote, with the same columns as `posts` |
 
    What the values mean:
@@ -63,6 +63,8 @@ belong in a feed. The four judges here are working examples.
      - `thread` is the IRI of its thread's first post.
      - `quote` is the IRI of the post it quotes.
      - `hashtags` and `mentions` are JSON arrays of `name` and `href`.
+     - `labels` is a JSON array of the names of the owner's private
+       labels.
      - `author` is the post's author's `iri` in `authors`.
      - `deleted` and `blocked` are 1 if the post is deleted or blocked
        on the owner's server.

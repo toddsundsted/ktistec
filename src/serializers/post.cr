@@ -6,6 +6,7 @@ require "../models/activity_pub/object/question"
 require "../models/relationship/content/timeline"
 require "../models/relationship/content/timeline/announce"
 require "../models/relationship/content/timeline/create"
+require "../models/tag/label"
 
 module Serializers
   # A post view-object.
@@ -87,6 +88,8 @@ module Serializers
 
     getter mentions : Array(Tag)
 
+    getter labels : Array(String)
+
     getter author : String?
 
     getter deleted : Bool
@@ -118,6 +121,7 @@ module Serializers
       @sensitive : Bool,
       @hashtags : Array(Tag),
       @mentions : Array(Tag),
+      @labels : Array(String),
       @author : String?,
       @deleted : Bool,
       @blocked : Bool,
@@ -154,6 +158,7 @@ module Serializers
         sensitive: object.sensitive,
         hashtags: object.hashtags.map { |hashtag| Tag.new(hashtag.name, hashtag.href) },
         mentions: object.mentions.map { |mention| Tag.new(mention.name, mention.href) },
+        labels: ::Tag::Label.where(href: owner_iri, subject_iri: object.iri).map(&.name),
         author: object.attributed_to_iri,
         deleted: object.deleted?,
         blocked: object.blocked?,

@@ -60,7 +60,7 @@ module Ktistec::ViewHelper
       states
     end
 
-    def object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
+    def object_data_attributes(object, author, actor, followed_hashtags, followed_mentions, viewing_actor)
       attrs = {} of String => String
       if (id = object.id)
         attrs["data-object-id"] = id.to_s
@@ -92,6 +92,12 @@ module Ktistec::ViewHelper
         matched = object_mentions.select { |mention| (href = mention.href) && followed_mentions.includes?(href) }.map(&.name.downcase)
         if matched.presence
           attrs["data-followed-mentions"] = matched.join(" ")
+        end
+      end
+      if viewing_actor
+        label_names = ::Tag::Label.where(owner: viewing_actor, subject: object).map(&.name.downcase)
+        if label_names.presence
+          attrs["data-labels"] = label_names.first(10).join(" ")
         end
       end
       attrs

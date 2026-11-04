@@ -36,7 +36,7 @@
       object_states(object, author, actor),
       actor_states(object, author, actor, followed_actors),
     ].compact.flatten.join(" ")
-    attrs = object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
+    attrs = object_data_attributes(object, author, actor, followed_hashtags, followed_mentions, viewing_actor)
   turbo-frame.event id=_anchor class=classes *attrs
     - partial "partials/object/label"
     - partial object_content_partial(env, object, author, actor, with_detail, as_context, show_quote, for_thread, for_actor, scope)

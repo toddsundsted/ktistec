@@ -6,7 +6,6 @@ require "../models/activity_pub/object/question"
 require "../models/relationship/content/timeline"
 require "../models/relationship/content/timeline/announce"
 require "../models/relationship/content/timeline/create"
-require "../models/tag/label"
 
 module Serializers
   # A post view-object.

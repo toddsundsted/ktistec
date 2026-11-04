@@ -521,6 +521,18 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
             min-height: var(--touch-target-height);
         }
     }
+
+    /* The whole item, not just the toggle's label, is the touch target. */
+    .feed-controls.ui.secondary.menu > .item {
+        padding-top: 0;
+        padding-bottom: 0;
+
+        .ui.mini.toggle.checkbox {
+            @inset: calc((var(--touch-target-height) - 1rem) / 2);
+            input, label::before, label::after { top: @inset; }
+            label { box-sizing: border-box; min-height: var(--touch-target-height); padding-top: calc(@inset + .15em); }
+        }
+    }
 }
 
 /** thread page **/
@@ -760,7 +772,7 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
         }
     }
     label {
-        font-size: 80%; font-weight: bold; color: var(--text-secondary); padding-left: 2.5rem; min-height: 1.0rem; cursor: pointer;
+        font-weight: bold; color: var(--text-secondary); padding-left: 2.5rem; min-height: 1.0rem; cursor: pointer;
         &:hover { color: var(--text-primary) !important; }
         &::before { width: 2.0rem; height: 1.0rem; }
         &::after { width: 1.0rem; height: 1.0rem; }

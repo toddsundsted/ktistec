@@ -101,6 +101,14 @@ a {
 .ui.form .inline.fields label {
     color: var(--text-primary) !important;
 }
+
+.ui.toggle.checkbox label::before {
+    background-color: var(--bg-label);
+}
+.ui.toggle.checkbox label:hover::before,
+.ui.toggle.checkbox input:focus ~ label::before {
+    .bg-label-hover();
+}
 .ui.toggle.checkbox input:checked ~ label,
 .ui.toggle.checkbox input:checked:focus ~ label {
     color: var(--semantic-primary);

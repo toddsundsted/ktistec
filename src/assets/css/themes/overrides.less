@@ -98,12 +98,7 @@ a {
 }
 
 .ui.form .field label,
-.ui.form .inline.fields label,
-.ui.slider.checkbox label {
-    color: var(--text-primary) !important;
-}
-.ui.slider.checkbox input:checked ~ label,
-.ui.slider.checkbox input:checked:focus ~ label {
+.ui.form .inline.fields label {
     color: var(--text-primary) !important;
 }
 .ui.toggle.checkbox input:checked ~ label,
@@ -180,10 +175,12 @@ nav.ui.inverted.menu {
     .item {
         color: var(--text-primary);
     }
-    a.item:hover,
-    .dropdown.item:hover {
+    a.item:hover {
         .bg-hover();
         color: var(--text-primary);
+    }
+    &.pointing {
+        border-color: var(--border-color);
     }
 }
 
@@ -293,21 +290,4 @@ nav.ui.inverted.menu {
     &:hover {
         color: var(--text-primary) !important;
     }
-}
-
-/* Dropdowns */
-
-.ui.menu .ui.dropdown .menu {
-    background-color: var(--bg-primary);
-    border-color: var(--border-color);
-}
-
-.ui.menu .ui.dropdown .menu .item {
-    background-color: var(--bg-primary) !important;
-    color: var(--text-primary) !important;
-}
-
-.ui.menu .ui.dropdown .menu .item:hover {
-    .bg-hover() !important;
-    color: var(--text-primary) !important;
 }

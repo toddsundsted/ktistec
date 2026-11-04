@@ -6,7 +6,7 @@ crystal:
   .mobile-menu-toggle
     label for="menu-toggle"
       i.bars.icon
-      span.title Collections and Filters
+      span.title Collections
       - if count > 0
         span.ui.mini.transitional.horizontal.circular.label class=color title=tooltip = count
       - else
@@ -22,21 +22,18 @@ crystal:
     a.item href=actor_deck_path(actor) Deck
     - env.account.pinned_collections.each do |label, path|
       a.item href=Utils::Paths.pinned_collection_path(path) = label
-    a.ui.right.dropdown.item data-controller="dropdown" data-action="click->dropdown#click"
-      i.horizontal.sliders.icon
-      .menu
-        form data-controller="submit-on-change" data-turbo-frame="main-timeline" data-turbo-action="replace"
-          = params_to_inputs(env.params.query, exclude: ["filters"])
-          input type="hidden" name="filters" value=""
-          .item
-            .ui.slider.checkbox
-              input#timeline-no-shares type="checkbox" name="filters" value="no-shares" data-action="change->submit-on-change#change" checked=filters.includes?("no-shares")
-              label for="timeline-no-shares" Don't include shared posts
-          .item
-            .ui.slider.checkbox
-              input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->submit-on-change#change" checked=filters.includes?("no-replies")
-              label for="timeline-no-replies" Don't include replies
 - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
 - partial "partials/editor"
+form#timeline-controls.feed-controls.ui.secondary.pointing.menu data-controller="submit-on-change" data-turbo-frame="main-timeline" data-turbo-action="replace"
+  = params_to_inputs(env.params.query, exclude: ["filters"])
+  input type="hidden" name="filters" value=""
+  .item
+    .ui.mini.toggle.checkbox
+      input#timeline-no-shares type="checkbox" name="filters" value="no-shares" data-action="change->submit-on-change#change" checked=filters.includes?("no-shares")
+      label for="timeline-no-shares" Hide shares
+  .item
+    .ui.mini.toggle.checkbox
+      input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->submit-on-change#change" checked=filters.includes?("no-replies")
+      label for="timeline-no-replies" Hide replies
 turbo-frame#main-timeline
   - partial "actors/timeline"

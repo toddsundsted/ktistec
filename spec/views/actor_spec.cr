@@ -62,6 +62,54 @@ Spectator.describe "actor" do
       expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
     end
 
+    describe "timeline controls" do
+      it "targets the main timeline" do
+        expect(subject.xpath_nodes("//form[@id='timeline-controls']/@data-turbo-frame").map(&.text)).to eq(["main-timeline"])
+      end
+
+      it "renders the controls outside the main timeline" do
+        expect(subject.xpath_nodes("//form[@id='timeline-controls'][following-sibling::turbo-frame[@id='main-timeline']]")).not_to be_empty
+      end
+
+      it "renders an empty filter" do
+        expect(subject.xpath_nodes("//form[@id='timeline-controls']//input[@type='hidden'][@name='filters'][@value='']")).not_to be_empty
+      end
+
+      context "given a query parameter" do
+        let(env) { make_env("GET", "/actor/username?foo=bar") }
+
+        it "renders the parameter as a hidden field" do
+          expect(subject.xpath_nodes("//form[@id='timeline-controls']//input[@type='hidden'][@name='foo']/@value").map(&.text)).to eq(["bar"])
+        end
+      end
+
+      context "given a filter" do
+        let(env) { make_env("GET", "/actor/username?filters=no-shares") }
+
+        pre_condition { expect(subject.xpath_nodes("//form[@id='timeline-controls']")).not_to be_empty }
+
+        it "does not render the filter as a hidden field" do
+          expect(subject.xpath_nodes("//form[@id='timeline-controls']//input[@type='hidden'][@name='filters'][@value='no-shares']")).to be_empty
+        end
+      end
+
+      {% for filter in ["no-shares", "no-replies"] %}
+        describe "the {{filter.id}} toggle" do
+          it "renders unchecked" do
+            expect(subject.xpath_nodes("//form[@id='timeline-controls']//input[@type='checkbox'][@value='{{filter.id}}'][not(@checked)]")).not_to be_empty
+          end
+
+          context "given the {{filter.id}} filter" do
+            let(env) { make_env("GET", "/actor/username?filters={{filter.id}}") }
+
+            it "renders checked" do
+              expect(subject.xpath_nodes("//form[@id='timeline-controls']//input[@type='checkbox'][@value='{{filter.id}}'][@checked]")).not_to be_empty
+            end
+          end
+        end
+      {% end %}
+    end
+
     before_each do
       env.account.assign(last_notifications_checked_at: 1.hour.ago).save
     end

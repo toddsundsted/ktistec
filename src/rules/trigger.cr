@@ -52,10 +52,15 @@ module Rules
           activity.object_iri
         end
       if object_iri
-        if (object = ActivityPub::Object.find?(iri: object_iri))
-          Feed::Queue.enqueue_arrival(object)
+        # a feed judge may be told about the other views (a timeline,
+        # for example), so ask about the object once they reflect the
+        # change.
+        changed = Rules::Maintainer.reconcile_objects([object_iri]) do
+          if (object = ActivityPub::Object.find?(iri: object_iri))
+            Feed::Queue.enqueue_arrival(object)
+          end
         end
-        notify(Rules::Maintainer.reconcile_objects([object_iri]))
+        notify(changed)
       end
     end
 

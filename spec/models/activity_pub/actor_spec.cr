@@ -2575,6 +2575,12 @@ Spectator.describe ActivityPub::Actor do
     end
   end
 
+  describe "#unmasked_handle" do
+    it "returns a blocked actor's handle" do
+      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar", blocked_at: Time.utc).unmasked_handle).to eq("foobar@remote")
+    end
+  end
+
   describe "#verify_handle!" do
     context "when the claimed handle resolves to the actor" do
       let(claimed) { "alice@example.com" }

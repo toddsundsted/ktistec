@@ -11,7 +11,7 @@ Spectator.describe Serializers::Author do
     let(now) { Time.utc(2026, 10, 22) }
 
     let_create(:actor, named: :owner)
-    let_create(:person, named: :author, iri: "https://remote/actors/alice", username: "alice")
+    let_create(:person, named: :author, iri: "https://remote/actors/alice", username: "alice", followers: "https://remote/actors/alice/followers")
 
     subject { described_class.from(author, owner.iri, now) }
 
@@ -25,6 +25,46 @@ Spectator.describe Serializers::Author do
 
     it "carries the author's handle" do
       expect(subject.handle).to eq("alice@remote")
+    end
+
+    context "when the author is blocked" do
+      before_each { author.block! }
+
+      it "carries the author's handle" do
+        expect(subject.handle).to eq("alice@remote")
+      end
+    end
+
+    it "carries the author's followers collection" do
+      expect(subject.followers).to eq("https://remote/actors/alice/followers")
+    end
+
+    describe "#deleted" do
+      it "is false for an author that has not been deleted" do
+        expect(subject.deleted).to be_false
+      end
+
+      context "given the author is deleted" do
+        before_each { author.delete! }
+
+        it "is true" do
+          expect(subject.deleted).to be_true
+        end
+      end
+    end
+
+    describe "#blocked" do
+      it "is false for an author that has not been blocked" do
+        expect(subject.blocked).to be_false
+      end
+
+      context "given the author is blocked" do
+        before_each { author.block! }
+
+        it "is true" do
+          expect(subject.blocked).to be_true
+        end
+      end
     end
 
     describe "#followed" do

@@ -407,6 +407,20 @@ Spectator.describe Rules::Maintainer do
         expect(view.reconciles).to eq(1)
       end
     end
+
+    context "given a block" do
+      let(view) { SyntheticIdentityKeyedView.new }
+
+      let_create!(:object)
+
+      before_each { Rules::View.register(view) }
+
+      it "yields once the views reflect the change" do
+        seen = nil
+        Rules::Maintainer.reconcile_objects([object.iri]) { seen = materialized(view) }
+        expect(seen).to eq(Set{object.iri})
+      end
+    end
   end
 
   describe ".reconcile_object_for" do

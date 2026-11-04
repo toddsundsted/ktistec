@@ -108,6 +108,14 @@ module Rules
       changed
     end
 
+    # :ditto:
+    #
+    # Yields once every view reflects the change.
+    #
+    def reconcile_objects(object_iris : Array(String), & : -> Nil) : Array({View, String})
+      reconcile_objects(object_iris).tap { yield }
+    end
+
     # Re-evaluates a single view for a changed object, projecting the
     # object to that view's affected key(s).
     #

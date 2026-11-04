@@ -81,6 +81,8 @@
  /* --bg-accent-pre ➞ --bg-input + --semantic-primary */
     --bg-label: color-mix(in srgb, var(--mix-lighter) 91%, var(--mix-darker));
  /* --bg-label-hover ➞ --bg-label */
+ /* --bg-label-primary ➞ --bg-label + --semantic-primary */
+ /* --bg-label-primary-hover ➞ --bg-label-primary */
  /* --bg-semantic-active ➞ --semantic-affirmative */
  /* --bg-semantic-active-hover ➞ --semantic-active */
 
@@ -150,6 +152,8 @@
      /* --bg-accent-pre ➞ --bg-input + --semantic-primary */
         --bg-label: color-mix(in srgb, var(--mix-lighter) 72%, var(--mix-darker));
      /* --bg-label-hover ➞ --bg-label */
+     /* --bg-label-primary ➞ --bg-label + --semantic-primary */
+     /* --bg-label-primary-hover ➞ --bg-label-primary */
      /* --bg-semantic-active ➞ --semantic-affirmative */
      /* --bg-semantic-active-hover ➞ --semantic-active */
 
@@ -279,6 +283,14 @@
 
 .bg-label-hover() {
     background-color: var(--bg-label-hover, color-mix(in srgb, var(--bg-label) 90%, var(--mix-darker)));
+}
+
+.bg-label-primary() {
+    background-color: var(--bg-label-primary, color-mix(in srgb, var(--semantic-primary) 25%, var(--bg-label)));
+}
+
+.bg-label-primary-hover() {
+    background-color: var(--bg-label-primary-hover, color-mix(in srgb, var(--bg-label-primary, color-mix(in srgb, var(--semantic-primary) 25%, var(--bg-label))) 90%, var(--mix-darker)));
 }
 
 .bg-accent-code() {

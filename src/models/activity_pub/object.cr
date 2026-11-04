@@ -1359,19 +1359,19 @@ module ActivityPub
           "media_type" => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#mediaType"),
           "hashtags"   => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
             next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Hashtag"
-            name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").presence
+            name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").try(&.lstrip('#')).presence
             href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
             Tag::Hashtag.new(name: name, href: href) if name
           end,
           "mentions" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
             next unless tag.dig?("@type") == "https://www.w3.org/ns/activitystreams#Mention"
-            name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").presence
+            name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").try(&.lstrip('@')).presence
             href = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#href").presence
             Tag::Mention.new(name: name, href: href) if name
           end,
           "emojis" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
             next unless tag.dig?("@type") == "http://joinmastodon.org/ns#Emoji"
-            name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").presence
+            name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").try(&.delete(':')).presence
             icon_url = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url")
             Tag::Emoji.new(name: name, href: icon_url) if name && icon_url
           end,

@@ -244,6 +244,36 @@ class InboxesController
     end
   end
 
+  # Caches the posts the activity's object quotes and replies to.
+  #
+  # Opportunistic -- a failure, including an exhausted time budget, is
+  # not a failure of the delivery.
+  #
+  private def self.cache_referenced_objects(key_pair, activity, request_id, deadline)
+    if activity.is_a?(ActivityPub::Activity::Create | ActivityPub::Activity::Announce | ActivityPub::Activity::Update)
+      if (object = activity.object?).is_a?(ActivityPub::Object)
+        transient = Transient.new
+        [object.quote_iri, object.in_reply_to_iri].each do |iri|
+          # a post that references itself is saved with the activity
+          next if iri.nil? || object.iri_matches?(iri)
+          cache_referenced_object(key_pair, iri, request_id, transient, deadline)
+        end
+      end
+    end
+  end
+
+  # Caches the post and its author.
+  #
+  private def self.cache_referenced_object(key_pair, iri, request_id, transient, deadline)
+    if iri && (object = try_dereference(transient, request_id) { ActivityPub::Object.dereference(key_pair, iri, include_deleted: true, deadline: deadline) })
+      if (author_iri = object.attributed_to_iri) && (ActivityPub::Actor.find?(author_iri, include_deleted: true) || dereference_actor(key_pair, author_iri, request_id, transient, deadline))
+        object.save unless ActivityPub::Object.find?(iri, include_deleted: true)
+      end
+    end
+  rescue ex : Ktistec::Model::Invalid
+    Log.debug { "[#{request_id}] referenced post not cached iri=#{iri}: #{ex.message}" }
+  end
+
   # Returns the relaying community.
   #
   private def self.relaying_community(signer, outer_actor_iri)
@@ -786,6 +816,8 @@ class InboxesController
         reject("Quote Authorization Not Allowed")
       end
     end
+
+    cache_referenced_objects(fetch_identity, activity, request_id, deadline)
 
     # a relayed Delete its origin didn't serve deletes the object on
     # the community's authority, but isn't stored. the log is the only

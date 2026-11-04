@@ -701,6 +701,15 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "when hashtag name is only the sigil" do
+      let(json) { super.gsub(%q|"name":"#hashtag"|, %q|"name":"#"|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.hashtags).to be_empty
+      end
+    end
+
     context "when mention name is null" do
       let(json) { super.gsub(%q|"name":"@mention"|, %q|"name":null|) }
 
@@ -719,6 +728,15 @@ Spectator.describe ActivityPub::Object do
       end
     end
 
+    context "when mention name is only the sigil" do
+      let(json) { super.gsub(%q|"name":"@mention"|, %q|"name":"@"|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.mentions).to be_empty
+      end
+    end
+
     context "when emoji name is null" do
       let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":null|) }
 
@@ -730,6 +748,15 @@ Spectator.describe ActivityPub::Object do
 
     context "when emoji name is blank" do
       let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":""|) }
+
+      it "is ignored" do
+        object = described_class.from_json_ld(json).save
+        expect(object.emojis).to be_empty
+      end
+    end
+
+    context "when emoji name is only colons" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":"::"|) }
 
       it "is ignored" do
         object = described_class.from_json_ld(json).save

@@ -6,6 +6,7 @@ require "../../src/models/activity_pub/activity/dislike"
 require "../../src/models/translation"
 require "../../src/models/task/deliver_delayed_object"
 require "../../src/models/activity_pub/activity/quote_request"
+require "../../src/models/tag/label"
 require "../../src/framework/controller"
 require "../../src/utils/translator"
 
@@ -656,6 +657,25 @@ Spectator.describe "object partials" do
         it "renders two mentions" do
           expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
             .to contain_exactly("@foo", "@bar")
+        end
+      end
+
+      context "given a label" do
+        let_create!(:label, owner: actor, subject: object, name: "foo")
+
+        let(with_detail) { true }
+
+        it "renders the label" do
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/span[contains(@class,'label')]/text()"))
+            .to contain_exactly("§foo")
+        end
+
+        context "owned by another actor" do
+          let_create(:actor, local: true)
+
+          it "does not render the label" do
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/span[contains(@class,'label')]/text()")).to be_empty
+          end
         end
       end
     end

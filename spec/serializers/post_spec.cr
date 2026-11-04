@@ -1,4 +1,5 @@
 require "../../src/serializers/post"
+require "../../src/models/tag/label"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
@@ -107,6 +108,23 @@ Spectator.describe Serializers::Post do
 
     it "carries the post's mentions" do
       expect(subject.mentions).to eq([Serializers::Post::Tag.new("alice@remote", "https://remote/actors/alice")])
+    end
+
+    describe "#labels" do
+      let_create!(:label, name: "cats", owner: owner, subject: object)
+
+      it "carries the owner's labels" do
+        expect(subject.labels).to eq(["cats"])
+      end
+
+      context "given another actor labeled the post" do
+        let_create(:actor, named: :other)
+        let_create!(:label, name: "cats", owner: other, subject: object)
+
+        it "is empty" do
+          expect(subject.labels).to be_empty
+        end
+      end
     end
 
     it "carries the post's author's IRI" do

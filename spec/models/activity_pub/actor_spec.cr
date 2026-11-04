@@ -429,6 +429,15 @@ Spectator.describe ActivityPub::Actor do
       expect(attachments.last.value).to eq("http://site.example.com")
     end
 
+    context "when emoji name is only colons" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":"::"|) }
+
+      it "is ignored" do
+        actor = described_class.from_json_ld(json).save
+        expect(actor.emojis).to be_empty
+      end
+    end
+
     context "given a webfinger property" do
       let(json) do
         super

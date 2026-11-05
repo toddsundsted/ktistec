@@ -533,6 +533,22 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
             label { box-sizing: border-box; min-height: var(--touch-target-height); padding-top: calc(@inset + .15em); }
         }
     }
+
+    /* The action button row is too dense for 44px targets. Meet the 24px minimum. */
+    .ui.feed .event .content .meta {
+        .mini.iconic.button {
+            padding-top: 6px;
+            padding-bottom: 6px;
+            margin-top: 1px;
+            margin-bottom: 1px;
+        }
+        .ui.mini.toggle.checkbox {
+            margin-top: 1px;
+            margin-bottom: 1px;
+            input, label::before, label::after { top: 4px; }
+            label { box-sizing: border-box; min-height: 24px; padding-top: calc(4px + .15em); }
+        }
+    }
 }
 
 /** thread page **/

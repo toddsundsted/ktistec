@@ -50,7 +50,7 @@
         input type="text" disabled=true value=poll_closed_at_formatted
       - else
         label Poll Duration
-        select.ui.dropdown name="poll-duration"
+        select.ui.selection.dropdown name="poll-duration"
           option value="" No expiration
           option value="86400" selected=is_86400 1 day
           option value="259200" selected=is_259200 3 days

@@ -72,9 +72,12 @@ crystal:
         hashtags = object.hashtags.map(&.name.downcase).uniq!
         mentions = object.mentions.map(&.name.downcase).uniq!
         no_duplicate_handles = (mentions.map(&.split("@").first).uniq!.size == mentions.size)
-      - unless labels.empty? && hashtags.empty? && mentions.empty?
+        labelable = !object.draft? && !object.deleted?
+      - unless !labelable && labels.empty? && hashtags.empty? && mentions.empty?
         .extra.detail
           .ui.labels
+            - if labelable
+              a.ui.small.primary.label data-turbo-frame="_top" href=labels_path(object) §+
             - labels.each do |label|
               span.ui.small.primary.label §#{label}
             - hashtags.each do |hashtag|

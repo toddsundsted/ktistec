@@ -1209,16 +1209,18 @@ a > img.emoji {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
+        gap: 0.5em;
 
         input[type="text"], input[type="text"]:focus {
             flex: 1 1 12em;
             width: auto;
-            padding: 0 0 0.5em 0;
+            padding: 0;
             border: 0;
             background: transparent;
         }
 
         .ui.label {
+            margin: 0;
             cursor: grab;
             touch-action: none;
             transition: transform 150ms ease, box-shadow 150ms ease, scale 100ms ease;

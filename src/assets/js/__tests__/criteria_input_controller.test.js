@@ -61,6 +61,20 @@ describe("CriteriaInputController", () => {
       expect([labelAt(0).dataset.index, labelAt(1).dataset.index]).toEqual(["0", "1"])
     })
 
+    it("focuses the entry if the textarea has autofocus", () => {
+      textarea.autofocus = true
+
+      connect("")
+
+      expect(document.activeElement).toBe(controller.entry)
+    })
+
+    it("does not focus the entry if the textarea does not have autofocus", () => {
+      connect("")
+
+      expect(document.activeElement).not.toBe(controller.entry)
+    })
+
     it("adds the enhanced class to the element", () => {
       connect("")
 

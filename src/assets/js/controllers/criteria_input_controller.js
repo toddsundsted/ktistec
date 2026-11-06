@@ -71,6 +71,10 @@ export default class extends Controller {
     this.element.classList.add("enhanced")
 
     this._render()
+
+    if (this.textareaTarget.autofocus) {
+      this.entry.focus()
+    }
   }
 
   disconnect() {

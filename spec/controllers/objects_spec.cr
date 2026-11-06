@@ -2606,6 +2606,11 @@ Spectator.describe ObjectsController do
         expect(JSON.parse(response.body)["object"]).to eq(visible.iri)
       end
 
+      it "focuses the form" do
+        get "/remote/objects/#{visible.id}/labels", ACCEPT_HTML
+        expect(textarea["autofocus"]?).not_to be_nil
+      end
+
       context "given labels" do
         let_create!(:label, named: :one, owner: actor, subject: visible, name: "foo")
         let_create!(:label, named: :two, owner: actor, subject: visible, name: "bar")

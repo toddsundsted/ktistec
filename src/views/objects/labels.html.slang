@@ -9,6 +9,6 @@ section.ui.feed data-controller="icon-load-error"
   .ui.field.criteria-builder
     - placeholder = "Add a label, then press Enter"
     .ui.segment.feed-bucket data-controller="criteria-input" data-criteria-input-placeholder-value=placeholder
-      textarea name="labels" rows="4" data-criteria-input-target="textarea" = labels.join("\n")
+      textarea name="labels" rows="4" autofocus=true data-criteria-input-target="textarea" = labels.join("\n")
   button.ui.primary.button type="submit" Save
   a.ui.right.floated.teal.button href=remote_object_path(object) Back

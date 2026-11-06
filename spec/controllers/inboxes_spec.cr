@@ -14,6 +14,10 @@ class InboxesController
   def self.object_gone_at_origin?(key_pair, iri, deadline)
     object_gone_at_origin?(key_pair, iri, Transient.new, deadline)
   end
+
+  def self.cache_referenced_object(key_pair, iri, deadline)
+    cache_referenced_object(key_pair, iri, "spec", Transient.new, deadline)
+  end
 end
 
 Spectator.describe InboxesController do
@@ -59,6 +63,21 @@ Spectator.describe InboxesController do
 
       it "does not report the object gone" do
         expect(described_class.object_gone_at_origin?(other, iri, expired)).to be_false
+      end
+    end
+  end
+
+  describe ".cache_referenced_object" do
+    let_create(:actor, named: :other, with_keys: true)
+
+    let(expired) { Time.instant - 1.second }
+
+    let(iri) { "https://remote/objects/object" }
+
+    context "when the time budget is exhausted" do
+      it "makes no request" do
+        expect { described_class.cache_referenced_object(other, iri, expired) }
+          .not_to change { HTTP::Client.requests.size }
       end
     end
   end
@@ -3360,9 +3379,26 @@ Spectator.describe InboxesController do
             context "and a local account follows the community" do
               let_create!(:follow_relationship, actor: actor, object: community)
 
-              it "saves the inner Like activity" do
+              pre_condition { expect(Ktistec::Util.same_origin?(lemmy_user.iri, community.iri)).to be_false }
+
+              it "does not save the inner Like activity" do
                 expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                  .to change { ActivityPub::Activity::Like.count }.by(1)
+                  .not_to change { ActivityPub::Activity::Like.count }
+              end
+
+              it "is successful" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
+              end
+
+              context "and the voter is on the community's origin" do
+                let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
+                let_build(:like, actor: voter, object: object)
+
+                it "saves the inner Like activity" do
+                  expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    .to change { ActivityPub::Activity::Like.count }.by(1)
+                end
               end
 
               context "and the inner activity's actor is local" do
@@ -3480,9 +3516,26 @@ Spectator.describe InboxesController do
             context "and a local account follows the community" do
               let_create!(:follow_relationship, actor: actor, object: community)
 
-              it "saves the inner Dislike activity" do
+              pre_condition { expect(Ktistec::Util.same_origin?(lemmy_user.iri, community.iri)).to be_false }
+
+              it "does not save the inner Dislike activity" do
                 expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                  .to change { ActivityPub::Activity::Dislike.count }.by(1)
+                  .not_to change { ActivityPub::Activity::Dislike.count }
+              end
+
+              it "is successful" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
+              end
+
+              context "and the voter is on the community's origin" do
+                let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
+                let_build(:dislike, actor: voter, object: object)
+
+                it "saves the inner Dislike activity" do
+                  expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                    .to change { ActivityPub::Activity::Dislike.count }.by(1)
+                end
               end
 
               context "and the inner activity's actor is local" do
@@ -3629,9 +3682,27 @@ Spectator.describe InboxesController do
               context "and a local account follows the community" do
                 let_create!(:follow_relationship, actor: actor, object: community)
 
-                it "undoes the like" do
+                pre_condition { expect(Ktistec::Util.same_origin?(lemmy_user.iri, community.iri)).to be_false }
+
+                it "does not undo the like" do
                   expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    .to change { activity.reload!.undone_at }
+                    .not_to change { activity.reload!.undone_at }
+                end
+
+                it "is successful" do
+                  post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                  expect(response.status_code).to eq(200)
+                end
+
+                context "and the voter is on the community's origin" do
+                  let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
+                  let_create(:like, named: :activity, actor: voter, object: object)
+                  let_build(:undo, actor: voter, object: activity)
+
+                  it "undoes the like" do
+                    expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      .to change { activity.reload!.undone_at }
+                  end
                 end
               end
             end
@@ -3691,9 +3762,27 @@ Spectator.describe InboxesController do
               context "and a local account follows the community" do
                 let_create!(:follow_relationship, actor: actor, object: community)
 
-                it "undoes the dislike" do
+                pre_condition { expect(Ktistec::Util.same_origin?(lemmy_user.iri, community.iri)).to be_false }
+
+                it "does not undo the dislike" do
                   expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                    .to change { activity.reload!.undone_at }
+                    .not_to change { activity.reload!.undone_at }
+                end
+
+                it "is successful" do
+                  post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                  expect(response.status_code).to eq(200)
+                end
+
+                context "and the voter is on the community's origin" do
+                  let_create(:actor, named: :voter, iri: "https://lemmy.ml/u/voter")
+                  let_create(:dislike, named: :activity, actor: voter, object: object)
+                  let_build(:undo, actor: voter, object: activity)
+
+                  it "undoes the dislike" do
+                    expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                      .to change { activity.reload!.undone_at }
+                  end
                 end
               end
             end
@@ -3750,9 +3839,9 @@ Spectator.describe InboxesController do
         context "when community is in the audience and is followed" do
           let_create!(:follow_relationship, actor: actor, object: community)
 
-          it "saves the Delete activity" do
+          it "does not save the Delete activity" do
             expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-              .to change { ActivityPub::Activity::Delete.count }.by(1)
+              .not_to change { ActivityPub::Activity::Delete.count }
           end
 
           it "deletes the object" do
@@ -3763,6 +3852,66 @@ Spectator.describe InboxesController do
           it "is successful" do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
             expect(response.status_code).to eq(200)
+          end
+
+          it "logs that no matching activity is retrievable from its origin" do
+            entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+            expect(entries.select(&.severity.info?).map(&.message)).to have(/relayed delete with no matching delete retrievable from its origin/)
+          end
+
+          context "and the Delete is served at its origin" do
+            before_each { HTTP::Client.activities << delete }
+
+            it "saves the Delete activity" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { ActivityPub::Activity::Delete.count }.by(1)
+            end
+
+            it "deletes the object" do
+              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                .to change { object.reload!.deleted_at }
+            end
+
+            it "does not log that no matching activity is retrievable from its origin" do
+              entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+              expect(entries.map(&.message)).not_to have(/relayed delete with no matching delete retrievable from its origin/)
+            end
+
+            context "but the served Delete deletes another object" do
+              let_create(:object, named: :another, attributed_to: lemmy_user)
+              let_build(:delete, named: :served, iri: delete.iri, actor: moderator, object: another)
+
+              before_each { HTTP::Client.activities << served }
+
+              it "does not delete the other object" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(another.reload!.deleted_at).to be_nil
+              end
+            end
+
+            context "but the served activity is not a Delete" do
+              let_build(:like, named: :served, iri: delete.iri, actor: moderator, object: object)
+
+              before_each { HTTP::Client.activities << served }
+
+              it "does not save the served activity" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { ActivityPub::Activity::Like.count }
+              end
+            end
+          end
+
+          context "and the moderator is down" do
+            before_each { moderator.down! }
+
+            context "and we already cache the Delete" do
+              before_each { delete.save }
+
+              it "does not mark the moderator as up" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { moderator.reload!.up? }
+              end
+            end
           end
 
           context "when the inner activity's actor is local" do
@@ -3796,6 +3945,36 @@ Spectator.describe InboxesController do
               it "logs the echo" do
                 entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
                 expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed known local activity/)
+              end
+            end
+          end
+
+          context "when the object is local" do
+            let_create(:object, attributed_to: actor, audience: [community.iri])
+
+            context "but we never deleted it (a forgery)" do
+              it "does not delete the object" do
+                expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                  .not_to change { object.reload!.deleted_at }
+              end
+
+              it "warns of the forgery" do
+                entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                expect(entries.select(&.severity.warn?).map(&.message)).to have(/relayed delete of local object/)
+              end
+
+              it "is successful" do
+                post "/actors/#{actor.username}/inbox", headers, wrapped_json
+                expect(response.status_code).to eq(200)
+              end
+            end
+
+            context "and we already deleted it" do
+              before_each { object.delete! }
+
+              it "notes that the object is already deleted" do
+                entries = capture_log("inbox") { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
+                expect(entries.select(&.severity.trace?).map(&.message)).to have(/relayed delete of already deleted local object/)
               end
             end
           end
@@ -3844,11 +4023,6 @@ Spectator.describe InboxesController do
 
           pre_condition { expect(Relationship::Social::Follow.find?(actor: actor, object: community)).to be_nil }
 
-          it "saves the Delete activity" do
-            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-              .to change { ActivityPub::Activity::Delete.count }.by(1)
-          end
-
           it "deletes the object" do
             expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
               .to change { object.reload!.deleted_at }
@@ -3873,11 +4047,6 @@ Spectator.describe InboxesController do
         context "when the object is gone at its origin" do
           before_each { HTTP::Client.objects.delete(object.iri) }
 
-          it "saves the Delete activity" do
-            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-              .to change { ActivityPub::Activity::Delete.count }.by(1)
-          end
-
           it "deletes the object" do
             expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
               .to change { object.reload!.deleted_at }
@@ -3893,11 +4062,6 @@ Spectator.describe InboxesController do
             # fetchable. the community's signature is the authentication.
             # resolving the inner actor must not gate the removal.
             before_each { moderator.destroy }
-
-            it "saves the Delete activity" do
-              expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-                .to change { ActivityPub::Activity::Delete.count }.by(1)
-            end
 
             it "deletes the object" do
               expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
@@ -4023,11 +4187,6 @@ Spectator.describe InboxesController do
           it "retrieves the key document" do
             post "/actors/#{actor.username}/inbox", headers, wrapped_json
             expect(HTTP::Client.requests).to have("GET #{key_id}")
-          end
-
-          it "saves the Delete activity" do
-            expect { post "/actors/#{actor.username}/inbox", headers, wrapped_json }
-              .to change { ActivityPub::Activity::Delete.count }.by(1)
           end
 
           it "deletes the object" do
@@ -4202,6 +4361,147 @@ Spectator.describe InboxesController do
         it "returns 400" do
           post "/actors/#{actor.username}/inbox", headers, json_ld
           expect(response.status_code).to eq(400)
+        end
+      end
+    end
+
+    context "given a post that references another post" do
+      let_build(:actor, named: :author)
+      let_build(:note, named: :referenced, attributed_to: author)
+
+      let_build(:note, attributed_to: other)
+      let_build(:create, actor: other, object: note, to: [actor.iri])
+
+      let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", create.to_json_ld(true), "application/json") }
+
+      before_each do
+        HTTP::Client.actors << author
+        HTTP::Client.objects << referenced
+      end
+
+      context "as a quote" do
+        before_each { HTTP::Client.objects << note.assign(quote_iri: referenced.iri) }
+
+        around_each do |proc|
+          previous = Task::Receive.schedule_but_dont_perform
+          Task::Receive.schedule_but_dont_perform = true
+          begin
+            proc.call
+          ensure
+            Task::Receive.schedule_but_dont_perform = previous
+          end
+        end
+
+        it "saves the quoted post" do
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+        end
+
+        context "and the quoted post was deleted" do
+          before_each { referenced.save.delete! }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not fetch the quoted post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(HTTP::Client.requests).not_to have("GET #{referenced.iri}")
+          end
+        end
+
+        context "and the quoted post's author can't be fetched" do
+          before_each { HTTP::Client.actors.delete(author.iri) }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+
+          it "does not save the quoted post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(ActivityPub::Object.count(iri: referenced.iri)).to eq(0)
+          end
+
+          context "but the author was deleted" do
+            before_each { author.save.delete! }
+
+            it "saves the quoted post" do
+              expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+                .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+            end
+          end
+        end
+
+        context "and the quoted post's origin times out" do
+          let_build(:note, named: :referenced, attributed_to: author, iri: "https://remote/objects/timeout-error")
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the post quotes itself" do
+          before_each { HTTP::Client.objects << note.assign(quote_iri: note.iri) }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the quoted post is invalid" do
+          let_build(:poll, options: [] of Poll::Option, multiple_choice: false)
+          let_build(:question, named: :referenced, attributed_to: author, poll: poll)
+
+          pre_condition { expect(referenced.valid?).to be_false }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and the post is announced" do
+          let_build(:announce, actor: other, object: note, to: [actor.iri])
+
+          let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", announce.to_json_ld(true), "application/json") }
+
+          it "saves the quoted post" do
+            expect { post "/actors/#{actor.username}/inbox", headers, announce.to_json_ld(true) }
+              .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+          end
+        end
+
+        context "and the post arrives in an Update" do
+          let_build(:update, actor: other, object: note, to: [actor.iri])
+
+          let(headers) { Ktistec::Signature.sign(other, "https://test.test/actors/#{actor.username}/inbox", update.to_json_ld(true), "application/json") }
+
+          it "saves the quoted post" do
+            expect { post "/actors/#{actor.username}/inbox", headers, update.to_json_ld(true) }
+              .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+          end
+        end
+      end
+
+      context "as a reply" do
+        before_each { HTTP::Client.objects << note.assign(in_reply_to_iri: referenced.iri) }
+
+        it "saves the parent" do
+          expect { post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true) }
+            .to change { ActivityPub::Object.count(iri: referenced.iri) }.by(1)
+        end
+
+        context "and the post replies to itself" do
+          before_each { HTTP::Client.objects << note.assign(in_reply_to_iri: note.iri) }
+
+          it "accepts the post" do
+            post "/actors/#{actor.username}/inbox", headers, create.to_json_ld(true)
+            expect(response.status_code).to eq(200)
+          end
         end
       end
     end

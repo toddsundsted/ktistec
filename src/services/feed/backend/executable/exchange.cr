@@ -18,6 +18,34 @@ class Feed
 
         VERSION = 1
 
+        # The columns of `posts` and of `referenced`.
+        #
+        private POST_COLUMNS = <<-SQL
+          iri TEXT PRIMARY KEY,
+          type TEXT,
+          name TEXT,
+          summary TEXT,
+          content TEXT,
+          "to" TEXT,
+          "cc" TEXT,
+          audience TEXT,
+          attachments TEXT,
+          published TEXT,
+          in_reply_to TEXT,
+          thread TEXT,
+          quote TEXT,
+          language TEXT,
+          sensitive INTEGER,
+          hashtags TEXT,
+          mentions TEXT,
+          labels TEXT,
+          author TEXT REFERENCES authors(iri),
+          deleted INTEGER,
+          blocked INTEGER,
+          timeline TEXT,
+          poll TEXT
+          SQL
+
         SCHEMA = [
           "CREATE TABLE feed (name TEXT, description TEXT, params TEXT)",
           "CREATE TABLE stats (posting_rate_q1 REAL, posting_rate_median REAL, posting_rate_q3 REAL)",
@@ -26,32 +54,17 @@ class Feed
             iri TEXT PRIMARY KEY,
             type TEXT,
             handle TEXT,
+            followers TEXT,
+            deleted INTEGER,
+            blocked INTEGER,
             followed INTEGER,
             rate_7 REAL,
             rate_30 REAL,
             rate_90 REAL
           )
           SQL
-          <<-SQL,
-          CREATE TABLE posts (
-            iri TEXT PRIMARY KEY,
-            type TEXT,
-            name TEXT,
-            summary TEXT,
-            content TEXT,
-            audience TEXT,
-            attachments TEXT,
-            published TEXT,
-            in_reply_to TEXT,
-            thread TEXT,
-            quote TEXT,
-            language TEXT,
-            sensitive INTEGER,
-            hashtags TEXT,
-            mentions TEXT,
-            author TEXT REFERENCES authors(iri)
-          )
-          SQL
+          "CREATE TABLE posts (#{POST_COLUMNS})",
+          "CREATE TABLE referenced (#{POST_COLUMNS})",
           <<-SQL,
           CREATE TABLE answers (
             iri TEXT PRIMARY KEY REFERENCES posts(iri),
@@ -114,42 +127,56 @@ class Feed
               serialized_stats.posting_rate.median,
               serialized_stats.posting_rate.q3,
             )
-            objects.compact_map(&.attributed_to?(include_deleted: true)).uniq!(&.iri).each do |actor|
+            referenced = objects.flat_map { |object| [object.in_reply_to?(include_deleted: true), object.quote?(include_deleted: true)] }.compact.uniq!(&.iri)
+            (objects + referenced).compact_map(&.attributed_to?(include_deleted: true)).uniq!(&.iri).each do |actor|
               serialized_author = Serializers::Author.from(actor, feed.owner_iri, now)
               db.exec(
-                "INSERT INTO authors (iri, type, handle, followed, rate_7, rate_30, rate_90) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO authors (iri, type, handle, followers, deleted, blocked, followed, rate_7, rate_30, rate_90) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 serialized_author.iri,
                 serialized_author.type,
                 serialized_author.handle,
+                serialized_author.followers,
+                serialized_author.deleted,
+                serialized_author.blocked,
                 serialized_author.followed,
                 serialized_author.rate_7,
                 serialized_author.rate_30,
                 serialized_author.rate_90,
               )
             end
-            objects.each do |object|
-              serialized_post = Serializers::Post.from(object)
-              db.exec(
-                "INSERT INTO posts (iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                serialized_post.iri,
-                serialized_post.type,
-                serialized_post.name,
-                serialized_post.summary,
-                serialized_post.content,
-                serialized_post.audience.to_json,
-                serialized_post.attachments.to_json,
-                serialized_post.published,
-                serialized_post.in_reply_to,
-                serialized_post.thread,
-                serialized_post.quote,
-                serialized_post.language,
-                serialized_post.sensitive,
-                serialized_post.hashtags.to_json,
-                serialized_post.mentions.to_json,
-                serialized_post.author,
-              )
-            end
+            objects.each { |object| insert_post(db, "posts", object, feed.owner_iri) }
+            referenced.each { |object| insert_post(db, "referenced", object, feed.owner_iri) }
           end
+        end
+
+        private def insert_post(db, table, object, owner_iri)
+          serialized_post = Serializers::Post.from(object, owner_iri)
+          db.exec(
+            %(INSERT INTO #{table} (iri, type, name, summary, content, "to", "cc", audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, labels, author, deleted, blocked, timeline, poll) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
+            serialized_post.iri,
+            serialized_post.type,
+            serialized_post.name,
+            serialized_post.summary,
+            serialized_post.content,
+            serialized_post.to.to_json,
+            serialized_post.cc.to_json,
+            serialized_post.audience.to_json,
+            serialized_post.attachments.to_json,
+            serialized_post.published,
+            serialized_post.in_reply_to,
+            serialized_post.thread,
+            serialized_post.quote,
+            serialized_post.language,
+            serialized_post.sensitive,
+            serialized_post.hashtags.to_json,
+            serialized_post.mentions.to_json,
+            serialized_post.labels.to_json,
+            serialized_post.author,
+            serialized_post.deleted,
+            serialized_post.blocked,
+            serialized_post.timeline,
+            serialized_post.poll.try(&.to_json),
+          )
         end
 
         # Reads the answers, by IRI.

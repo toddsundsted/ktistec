@@ -1,5 +1,6 @@
 require "../../../src/models/activity_pub/actor/person"
 require "../../../src/models/activity_pub/object/note"
+require "../../../src/models/tag/label"
 
 require "./support_spec"
 
@@ -336,12 +337,14 @@ Spectator.describe "helpers" do
     let_create!(:mention, named: nil, name: "bob", href: "https://remote/actors/bob", subject: note)
     let(followed_hashtags) { nil }
     let(followed_mentions) { nil }
+    let(viewing_actor) { nil }
 
     subject do
       self.class.object_data_attributes(
         note, author, sharer,
         followed_hashtags,
         followed_mentions,
+        viewing_actor,
       )
     end
 
@@ -395,6 +398,79 @@ Spectator.describe "helpers" do
 
     it "includes data-mentions" do
       expect(subject["data-mentions"]).to eq("alice@remote bob@remote")
+    end
+
+    context "given a hashtag with a space" do
+      let_create!(:hashtag, named: nil, name: "zx spectrum", subject: note)
+
+      it "hyphenates the hashtag in data-hashtags" do
+        expect(subject["data-hashtags"]).to eq("ruby crystal zx-spectrum")
+      end
+
+      context "that is followed" do
+        let(followed_hashtags) { Set{"zx spectrum"} }
+
+        it "hyphenates the hashtag in data-followed-hashtags" do
+          expect(subject["data-followed-hashtags"]).to eq("zx-spectrum")
+        end
+      end
+    end
+
+    context "given a mention with a space" do
+      let_create!(:mention, named: nil, name: "alice smith", href: "https://remote/actors/smith", subject: note)
+
+      it "hyphenates the mention in data-mentions" do
+        expect(subject["data-mentions"]).to eq("alice@remote bob@remote alice-smith@remote")
+      end
+
+      context "that is followed" do
+        let(followed_mentions) { Set{"https://remote/actors/smith"} }
+
+        it "hyphenates the mention in data-followed-mentions" do
+          expect(subject["data-followed-mentions"]).to eq("alice-smith@remote")
+        end
+      end
+    end
+
+    it "does not include data-labels" do
+      expect(subject.has_key?("data-labels")).to be_false
+    end
+
+    context "given a viewing actor" do
+      let_create(:actor, named: :viewing_actor)
+
+      context "and a label" do
+        let_create!(:label, named: nil, name: "reading", owner: viewing_actor, subject: note)
+
+        it "includes data-labels" do
+          expect(subject["data-labels"]).to eq("reading")
+        end
+
+        context "and a label with uppercase letters" do
+          let_create!(:label, named: nil, name: "Cats", owner: viewing_actor, subject: note)
+
+          it "lowercases the label" do
+            expect(subject["data-labels"]).to eq("reading cats")
+          end
+        end
+
+        context "and a label with a space" do
+          let_create!(:label, named: nil, name: "to read", owner: viewing_actor, subject: note)
+
+          it "hyphenates the label" do
+            expect(subject["data-labels"]).to eq("reading to-read")
+          end
+        end
+
+        context "and a label by another actor" do
+          let_create(:actor, named: :other)
+          let_create!(:label, named: nil, name: "junk", owner: other, subject: note)
+
+          it "does not include the other actor's label" do
+            expect(subject["data-labels"]).to eq("reading")
+          end
+        end
+      end
     end
   end
 

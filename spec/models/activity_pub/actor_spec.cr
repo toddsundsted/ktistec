@@ -429,6 +429,15 @@ Spectator.describe ActivityPub::Actor do
       expect(attachments.last.value).to eq("http://site.example.com")
     end
 
+    context "when emoji name is only colons" do
+      let(json) { super.gsub(%q|"name":":batman:"|, %q|"name":"::"|) }
+
+      it "is ignored" do
+        actor = described_class.from_json_ld(json).save
+        expect(actor.emojis).to be_empty
+      end
+    end
+
     context "given a webfinger property" do
       let(json) do
         super
@@ -2572,6 +2581,12 @@ Spectator.describe ActivityPub::Actor do
     it "returns '[blocked]' even when a verified handle is present" do
       expect(described_class.new(iri: "https://test.test/actors/foo_bar", username: "foobar", verified_handle: "xyzzy@example.com", blocked_at: Time.utc).handle).to eq("[blocked]")
       expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar", verified_handle: "xyzzy@example.com", blocked_at: Time.utc).handle).to eq("[blocked]")
+    end
+  end
+
+  describe "#unmasked_handle" do
+    it "returns a blocked actor's handle" do
+      expect(described_class.new(iri: "https://remote/foo_bar", username: "foobar", blocked_at: Time.utc).unmasked_handle).to eq("foobar@remote")
     end
   end
 

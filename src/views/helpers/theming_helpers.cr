@@ -60,7 +60,11 @@ module Ktistec::ViewHelper
       states
     end
 
-    def object_data_attributes(object, author, actor, followed_hashtags, followed_mentions)
+    private def data_tokens(names)
+      names.join(" ", &.split.join("-"))
+    end
+
+    def object_data_attributes(object, author, actor, followed_hashtags, followed_mentions, viewing_actor)
       attrs = {} of String => String
       if (id = object.id)
         attrs["data-object-id"] = id.to_s
@@ -75,23 +79,29 @@ module Ktistec::ViewHelper
       end
       object_hashtags = object.hashtags.map(&.name.downcase)
       if object_hashtags.presence
-        attrs["data-hashtags"] = object_hashtags.first(10).join(" ")
+        attrs["data-hashtags"] = data_tokens(object_hashtags.first(10))
       end
       if followed_hashtags
         matched = object_hashtags.select { |hashtag| followed_hashtags.includes?(hashtag) }
         if matched.presence
-          attrs["data-followed-hashtags"] = matched.join(" ")
+          attrs["data-followed-hashtags"] = data_tokens(matched)
         end
       end
       object_mentions = object.mentions
       mention_names = object_mentions.map(&.name.downcase)
       if mention_names.presence
-        attrs["data-mentions"] = mention_names.first(10).join(" ")
+        attrs["data-mentions"] = data_tokens(mention_names.first(10))
       end
       if followed_mentions
         matched = object_mentions.select { |mention| (href = mention.href) && followed_mentions.includes?(href) }.map(&.name.downcase)
         if matched.presence
-          attrs["data-followed-mentions"] = matched.join(" ")
+          attrs["data-followed-mentions"] = data_tokens(matched)
+        end
+      end
+      if viewing_actor
+        label_names = ::Tag::Label.where(owner: viewing_actor, subject: object).map(&.name.downcase)
+        if label_names.presence
+          attrs["data-labels"] = data_tokens(label_names.first(10))
         end
       end
       attrs

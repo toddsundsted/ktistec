@@ -491,6 +491,10 @@ def emoji_factory(**options)
   tag_factory(Tag::Emoji, **options)
 end
 
+def label_factory(**options)
+  tag_factory(Tag::Label, **options)
+end
+
 # point factory
 
 def point_factory(clazz = Point, **options)

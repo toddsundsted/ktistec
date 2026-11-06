@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest"
 
-import CriteriaInputController from "../controllers/criteria_input_controller"
+import TermInputController from "../controllers/term_input_controller"
 
-describe("CriteriaInputController", () => {
+describe("TermInputController", () => {
   let controller
   let element
   let textarea
@@ -14,7 +14,7 @@ describe("CriteriaInputController", () => {
 
   const connect = (value) => {
     textarea.value = value
-    controller = Object.create(CriteriaInputController.prototype)
+    controller = Object.create(TermInputController.prototype)
     Object.defineProperty(controller, "element", { value: element, writable: true })
     Object.defineProperty(controller, "textareaTarget", { value: textarea, writable: true })
     Object.defineProperty(controller, "placeholderValue", { value: "Add a term…", writable: true })
@@ -61,6 +61,20 @@ describe("CriteriaInputController", () => {
       expect([labelAt(0).dataset.index, labelAt(1).dataset.index]).toEqual(["0", "1"])
     })
 
+    it("focuses the entry if the textarea has autofocus", () => {
+      textarea.autofocus = true
+
+      connect("")
+
+      expect(document.activeElement).toBe(controller.entry)
+    })
+
+    it("does not focus the entry if the textarea does not have autofocus", () => {
+      connect("")
+
+      expect(document.activeElement).not.toBe(controller.entry)
+    })
+
     it("adds the enhanced class to the element", () => {
       connect("")
 
@@ -91,7 +105,7 @@ describe("CriteriaInputController", () => {
     const restore = (source) => {
       const snapshot = source.cloneNode(true)
       document.body.appendChild(snapshot)
-      const restored = Object.create(CriteriaInputController.prototype)
+      const restored = Object.create(TermInputController.prototype)
       Object.defineProperty(restored, "element", { value: snapshot, writable: true })
       Object.defineProperty(restored, "textareaTarget", {
         value: snapshot.querySelector("textarea"),

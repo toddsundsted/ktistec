@@ -68,12 +68,18 @@ crystal:
       - partial body_partial(env, object, with_detail, show_quote, timezone, scope)
     - if with_detail && !as_context && account
       crystal:
+        labels = Tag::Label.where(owner: account.actor, subject: object).map(&.name)
         hashtags = object.hashtags.map(&.name.downcase).uniq!
         mentions = object.mentions.map(&.name.downcase).uniq!
         no_duplicate_handles = (mentions.map(&.split("@").first).uniq!.size == mentions.size)
-      - unless hashtags.empty? && mentions.empty?
+        labelable = !object.draft? && !object.deleted?
+      - unless !labelable && labels.empty? && hashtags.empty? && mentions.empty?
         .extra.detail
           .ui.labels
+            - if labelable
+              a.ui.small.primary.label data-turbo-frame="_top" href=labels_path(object) §+
+            - labels.each do |label|
+              span.ui.small.primary.label §#{label}
             - hashtags.each do |hashtag|
               a.ui.small.label data-turbo-frame="_top" href=hashtag_path(hashtag) ##{hashtag}
             - mentions.each do |mention|

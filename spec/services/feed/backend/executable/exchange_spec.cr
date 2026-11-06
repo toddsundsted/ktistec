@@ -1,4 +1,5 @@
 require "../../../../../src/services/feed/backend/executable/exchange"
+require "../../../../../src/models/tag/label"
 
 require "../../../../spec_helper/base"
 require "../../../../spec_helper/factory"
@@ -20,6 +21,8 @@ Spectator.describe Feed::Backend::Executable::Exchange do
     name: "Cats",
     summary: "<p>About a cat</p>",
     content: "<p>A cat</p>",
+    to: ["https://www.w3.org/ns/activitystreams#Public"],
+    cc: ["https://remote/actors/alice/followers"],
     audience: ["https://remote/c/cats"],
     attachments: [attachment],
     published: Time.utc(2026, 10, 22, 12, 0, 0),
@@ -38,8 +41,8 @@ Spectator.describe Feed::Backend::Executable::Exchange do
     let_create!(:follow_relationship, actor: feed.owner, object: object.attributed_to, confirmed: true)
     let_create!(:object, named: nil, attributed_to: object.attributed_to, published: now - 1.day)
 
-    def query(sql, as types)
-      DB.open("sqlite3://#{path}", &.query_one(sql, as: types))
+    def query(sql, *args, as types)
+      DB.open("sqlite3://#{path}", &.query_one(sql, *args, as: types))
     end
 
     it "records the format's version" do
@@ -55,14 +58,16 @@ Spectator.describe Feed::Backend::Executable::Exchange do
     it "writes the posts" do
       described_class.write(path, feed, [object], now)
       expect(query(
-        "SELECT iri, type, name, summary, content, audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, author FROM posts",
-        as: {String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String},
+        %(SELECT iri, type, name, summary, content, "to", "cc", audience, attachments, published, in_reply_to, thread, quote, language, sensitive, hashtags, mentions, labels, author, deleted, blocked, timeline, poll FROM posts),
+        as: {String, String, String, String, String, String, String, String, String, String, String, String, String, String, Int64, String, String, String, String, Int64, Int64, String?, String?},
       )).to eq({
         object.iri,
         "Object",
         "Cats",
         "<p>About a cat</p>",
         "<p>A cat</p>",
+        %(["https://www.w3.org/ns/activitystreams#Public"]),
+        %(["https://remote/actors/alice/followers"]),
         %(["https://remote/c/cats"]),
         %([{"url":"https://remote/cat.jpg","media_type":"image/jpeg","caption":"A cat"}]),
         "2026-10-22 12:00:00.000",
@@ -73,20 +78,110 @@ Spectator.describe Feed::Backend::Executable::Exchange do
         1_i64,
         %([{"name":"cats","href":"https://remote/tags/cats"}]),
         %([{"name":"alice@remote","href":"https://remote/actors/alice"}]),
+        %([]),
         object.attributed_to_iri,
+        0_i64,
+        0_i64,
+        nil,
+        nil,
       })
+    end
+
+    context "given a post in the feed's owner's timeline" do
+      before_each { put_in_timeline_announce(feed.owner, object.save) }
+
+      it "writes how the post reached the timeline" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT timeline FROM posts", as: String)).to eq("announce")
+      end
+    end
+
+    context "given a post that replies to a post on the server" do
+      let_create!(:object, named: :parent, iri: object.in_reply_to_iri)
+
+      it "writes the replied-to post as a referenced post" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT iri FROM referenced", as: String)).to eq(parent.iri)
+      end
+
+      it "writes the replied-to post's author" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT count(*) FROM authors WHERE iri = ?", parent.attributed_to_iri, as: Int64)).to eq(1)
+      end
+
+      context "and the replied-to post is deleted" do
+        before_each { parent.delete! }
+
+        it "writes the replied-to post as a referenced post" do
+          described_class.write(path, feed, [object], now)
+          expect(query("SELECT iri FROM referenced", as: String)).to eq(parent.iri)
+        end
+      end
+
+      context "and another post being judged replies to the same post" do
+        let_build(:object, named: :another, in_reply_to_iri: parent.iri)
+
+        it "writes the replied-to post once" do
+          described_class.write(path, feed, [object, another], now)
+          expect(query("SELECT count(*) FROM referenced", as: Int64)).to eq(1)
+        end
+      end
+    end
+
+    context "given a post that quotes a post on the server" do
+      let_create!(:object, named: :quoted, iri: object.quote_iri)
+
+      it "writes the quoted post as a referenced post" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT iri FROM referenced", as: String)).to eq(quoted.iri)
+      end
+
+      it "writes the quoted post's author" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT count(*) FROM authors WHERE iri = ?", quoted.attributed_to_iri, as: Int64)).to eq(1)
+      end
+
+      context "and the quoted post is deleted" do
+        before_each { quoted.delete! }
+
+        it "writes the quoted post as a referenced post" do
+          described_class.write(path, feed, [object], now)
+          expect(query("SELECT iri FROM referenced", as: String)).to eq(quoted.iri)
+        end
+      end
+
+      context "and another post being judged quotes the same post" do
+        let_build(:object, named: :another, quote_iri: quoted.iri)
+
+        it "writes the quoted post once" do
+          described_class.write(path, feed, [object, another], now)
+          expect(query("SELECT count(*) FROM referenced", as: Int64)).to eq(1)
+        end
+      end
+    end
+
+    context "given a post the feed's owner labeled" do
+      let_create!(:label, name: "cats", owner: feed.owner, subject: object)
+
+      it "writes the owner's labels" do
+        described_class.write(path, feed, [object], now)
+        expect(query("SELECT labels FROM posts", as: String)).to eq(%(["cats"]))
+      end
     end
 
     it "writes the posts' authors" do
       described_class.write(path, feed, [object], now)
       author = Serializers::Author.from(object.attributed_to, feed.owner_iri, now)
       expect(query(
-        "SELECT iri, type, handle, followed, rate_7, rate_30, rate_90 FROM authors",
-        as: {String, String, String, Bool, Float64, Float64, Float64},
+        "SELECT iri, type, handle, followers, deleted, blocked, followed, rate_7, rate_30, rate_90 FROM authors",
+        as: {String, String, String, String?, Bool, Bool, Bool, Float64, Float64, Float64},
       )).to eq({
         author.iri,
         author.type,
         author.handle,
+        author.followers,
+        author.deleted,
+        author.blocked,
         author.followed,
         author.rate_7,
         author.rate_30,

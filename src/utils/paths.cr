@@ -257,6 +257,10 @@ module Utils::Paths
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/pin")
   end
 
+  macro labels_path(object = nil)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/labels")
+  end
+
   macro approve_path(object = nil)
     ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.remote_object_path({{object}})}/approve")
   end

@@ -7,7 +7,7 @@ import {
   segmentTerm,
   serialize,
   splitTerms,
-} from "../lib/criteria_terms"
+} from "../lib/terms"
 
 describe("splitTerms", () => {
   it("returns no terms for empty text", () => {

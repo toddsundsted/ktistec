@@ -245,7 +245,11 @@ module ActivityPub
     end
 
     def handle
-      blocked? ? "[blocked]" : (verified_handle.presence || %Q|#{username}@#{URI.parse(iri).host}|)
+      blocked? ? "[blocked]" : unmasked_handle
+    end
+
+    def unmasked_handle
+      verified_handle.presence || %Q|#{username}@#{URI.parse(iri).host}|
     end
 
     VALID_HANDLE = /\A[a-zA-Z0-9_.~-]+@[a-zA-Z0-9.-]+\z/
@@ -1473,7 +1477,7 @@ private module ActorModelHelper
       end,
       "emojis" => Ktistec::JSON_LD.dig_values?(json, "https://www.w3.org/ns/activitystreams#tag") do |tag|
         next unless tag.dig?("@type") == "http://joinmastodon.org/ns#Emoji"
-        name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").presence
+        name = ActivityPub.dig_text?(tag, "https://www.w3.org/ns/activitystreams#name").try(&.delete(':')).presence
         icon_url = Ktistec::JSON_LD.dig?(tag, "https://www.w3.org/ns/activitystreams#icon", "https://www.w3.org/ns/activitystreams#url")
         Tag::Emoji.new(name: name, href: icon_url) if name && icon_url
       end,

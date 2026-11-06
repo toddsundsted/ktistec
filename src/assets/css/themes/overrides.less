@@ -98,13 +98,16 @@ a {
 }
 
 .ui.form .field label,
-.ui.form .inline.fields label,
-.ui.slider.checkbox label {
+.ui.form .inline.fields label {
     color: var(--text-primary) !important;
 }
-.ui.slider.checkbox input:checked ~ label,
-.ui.slider.checkbox input:checked:focus ~ label {
-    color: var(--text-primary) !important;
+
+.ui.toggle.checkbox label::before {
+    background-color: var(--bg-label);
+}
+.ui.toggle.checkbox label:hover::before,
+.ui.toggle.checkbox input:focus ~ label::before {
+    .bg-label-hover();
 }
 .ui.toggle.checkbox input:checked ~ label,
 .ui.toggle.checkbox input:checked:focus ~ label {
@@ -146,6 +149,22 @@ trix-toolbar {
         .bg-label-hover();
     }
 }
+.ui.labels a.label:hover {
+    .bg-label-hover();
+    color: var(--text-secondary);
+}
+.ui.labels .ui.primary.label {
+    .bg-label-primary();
+    color: var(--text-secondary);
+
+    &:hover {
+        .bg-label-primary-hover();
+    }
+}
+.ui.labels a.ui.primary.label:hover {
+    .bg-label-primary-hover();
+    color: var(--text-secondary);
+}
 
 /* Navigation Bars */
 
@@ -164,10 +183,12 @@ nav.ui.inverted.menu {
     .item {
         color: var(--text-primary);
     }
-    a.item:hover,
-    .dropdown.item:hover {
+    a.item:hover {
         .bg-hover();
         color: var(--text-primary);
+    }
+    &.pointing {
+        border-color: var(--border-color);
     }
 }
 
@@ -277,21 +298,4 @@ nav.ui.inverted.menu {
     &:hover {
         color: var(--text-primary) !important;
     }
-}
-
-/* Dropdowns */
-
-.ui.menu .ui.dropdown .menu {
-    background-color: var(--bg-primary);
-    border-color: var(--border-color);
-}
-
-.ui.menu .ui.dropdown .menu .item {
-    background-color: var(--bg-primary) !important;
-    color: var(--text-primary) !important;
-}
-
-.ui.menu .ui.dropdown .menu .item:hover {
-    .bg-hover() !important;
-    color: var(--text-primary) !important;
 }

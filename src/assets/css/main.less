@@ -183,6 +183,15 @@ nav.ui.top.navigation.menu {
     }
 }
 
+/** feed controls **/
+.feed-controls.ui.secondary.pointing.menu {
+    margin-bottom: 1rem;
+    > .item {
+        &:first-of-type { padding-left: 0; }
+        &:hover { background: none; }
+    }
+}
+
 /** radio checkboxes **/
 .ui.radio.checkbox {
     label::after {
@@ -512,6 +521,34 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
             min-height: var(--touch-target-height);
         }
     }
+
+    /* The whole item, not just the toggle's label, is the touch target. */
+    .feed-controls.ui.secondary.menu > .item {
+        padding-top: 0;
+        padding-bottom: 0;
+
+        .ui.mini.toggle.checkbox {
+            @inset: calc((var(--touch-target-height) - 1rem) / 2);
+            input, label::before, label::after { top: @inset; }
+            label { box-sizing: border-box; min-height: var(--touch-target-height); padding-top: calc(@inset + .15em); }
+        }
+    }
+
+    /* The action button row is too dense for 44px targets. Meet the 24px minimum. */
+    .ui.feed .event .content .meta {
+        .mini.iconic.button {
+            padding-top: 6px;
+            padding-bottom: 6px;
+            margin-top: 1px;
+            margin-bottom: 1px;
+        }
+        .ui.mini.toggle.checkbox {
+            margin-top: 1px;
+            margin-bottom: 1px;
+            input, label::before, label::after { top: 4px; }
+            label { box-sizing: border-box; min-height: 24px; padding-top: calc(4px + .15em); }
+        }
+    }
 }
 
 /** thread page **/
@@ -751,7 +788,7 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
         }
     }
     label {
-        font-size: 80%; font-weight: bold; color: var(--text-secondary); padding-left: 2.5rem; min-height: 1.0rem; cursor: pointer;
+        font-weight: bold; color: var(--text-secondary); padding-left: 2.5rem; min-height: 1.0rem; cursor: pointer;
         &:hover { color: var(--text-primary) !important; }
         &::before { width: 2.0rem; height: 1.0rem; }
         &::after { width: 1.0rem; height: 1.0rem; }
@@ -1146,18 +1183,18 @@ a > img.emoji {
     .ui.sub.header:first-child { margin-left: 0; }
 }
 
-/** feeds builder **/
-.criteria-hint.enhanced { display: none; }
+/** term builder **/
+.term-hint.enhanced { display: none; }
 
-.ui.form:has(.feed-bucket.enhanced) {
-    .criteria-hint.plain { display: none; }
-    .criteria-hint.enhanced { display: block; }
+.ui.form:has(.term-input.enhanced) {
+    .term-hint.plain { display: none; }
+    .term-hint.enhanced { display: block; }
 }
 
-.criteria-builder {
-    .feed-bucket.any  { border-left: 3px solid var(--semantic-affirmative); }
-    .feed-bucket.all  { border-left: 3px solid var(--semantic-primary); }
-    .feed-bucket.none { border-left: 3px solid var(--semantic-negative); }
+.term-builder {
+    .term-input.any  { border-left: 3px solid var(--semantic-affirmative); }
+    .term-input.all  { border-left: 3px solid var(--semantic-primary); }
+    .term-input.none { border-left: 3px solid var(--semantic-negative); }
     .ui.horizontal.divider.stop { color: var(--semantic-dangerous); }
 
     /* every whitespace character in a term renders as a dot */
@@ -1172,16 +1209,18 @@ a > img.emoji {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
+        gap: 0.5em;
 
         input[type="text"], input[type="text"]:focus {
             flex: 1 1 12em;
             width: auto;
-            padding: 0 0 0.5em 0;
+            padding: 0;
             border: 0;
             background: transparent;
         }
 
         .ui.label {
+            margin: 0;
             cursor: grab;
             touch-action: none;
             transition: transform 150ms ease, box-shadow 150ms ease, scale 100ms ease;
@@ -1219,7 +1258,7 @@ a > img.emoji {
         }
     }
 
-    .criteria-status {
+    .term-status {
         position: absolute;
         width: 1px;
         height: 1px;

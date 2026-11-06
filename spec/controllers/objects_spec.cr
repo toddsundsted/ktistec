@@ -2570,6 +2570,357 @@ Spectator.describe ObjectsController do
     end
   end
 
+  describe "GET /remote/objects/:id/labels" do
+    it "returns 401 if not authorized" do
+      get "/remote/objects/0/labels", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/remote/objects/0/labels", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      let(textarea) { XML.parse_html(response.body).xpath_nodes("//form//textarea[@name='labels']").first }
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/labels", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/remote/objects/#{visible.id}/labels", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the object" do
+        get "/remote/objects/#{visible.id}/labels", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id").first).to eq("object-#{visible.id}")
+      end
+
+      it "renders the object" do
+        get "/remote/objects/#{visible.id}/labels", ACCEPT_JSON
+        expect(JSON.parse(response.body)["object"]).to eq(visible.iri)
+      end
+
+      it "focuses the form" do
+        get "/remote/objects/#{visible.id}/labels", ACCEPT_HTML
+        expect(textarea["autofocus"]?).not_to be_nil
+      end
+
+      context "given labels" do
+        let_create!(:label, named: :one, owner: actor, subject: visible, name: "foo")
+        let_create!(:label, named: :two, owner: actor, subject: visible, name: "bar")
+
+        it "populates the form with the labels" do
+          get "/remote/objects/#{visible.id}/labels", ACCEPT_HTML
+          expect(textarea.text).to eq("foo\nbar")
+        end
+
+        it "returns the labels" do
+          get "/remote/objects/#{visible.id}/labels", ACCEPT_JSON
+          expect(JSON.parse(response.body)["labels"]).to eq("foo\nbar")
+        end
+
+        context "and a label owned by another actor" do
+          let_create(:actor, named: :other)
+          let_create!(:label, named: :three, owner: other, subject: visible, name: "baz")
+
+          it "does not populate the form with that label" do
+            get "/remote/objects/#{visible.id}/labels", ACCEPT_HTML
+            expect(textarea.text).to eq("foo\nbar")
+          end
+
+          it "does not return that label" do
+            get "/remote/objects/#{visible.id}/labels", ACCEPT_JSON
+            expect(JSON.parse(response.body)["labels"]).to eq("foo\nbar")
+          end
+        end
+
+        context "and a label on another object" do
+          let_create!(:label, named: :three, owner: actor, subject: remote, name: "baz")
+
+          it "does not populate the form with that label" do
+            get "/remote/objects/#{visible.id}/labels", ACCEPT_HTML
+            expect(textarea.text).to eq("foo\nbar")
+          end
+
+          it "does not return that label" do
+            get "/remote/objects/#{visible.id}/labels", ACCEPT_JSON
+            expect(JSON.parse(response.body)["labels"]).to eq("foo\nbar")
+          end
+        end
+      end
+
+      it "returns 404 if the user can't view the object" do
+        get "/remote/objects/#{notvisible.id}/labels", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if the user can't view the object" do
+        get "/remote/objects/#{notvisible.id}/labels", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is draft" do
+        get "/remote/objects/#{draft.id}/labels", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is draft" do
+        get "/remote/objects/#{draft.id}/labels", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        get "/remote/objects/999999/labels", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        get "/remote/objects/999999/labels", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
+  describe "POST /remote/objects/:id/labels" do
+    it "returns 401 if not authorized" do
+      post "/remote/objects/0/labels", FORM_DATA, "labels=foo"
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      post "/remote/objects/0/labels", JSON_DATA, %({"labels":"foo"})
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      def label_names
+        Tag::Label.where(owner: actor, subject: visible).map(&.name)
+      end
+
+      def post_form(text)
+        post "/remote/objects/#{visible.id}/labels", FORM_DATA, URI::Params.encode({"labels" => text})
+      end
+
+      def post_json(text)
+        post "/remote/objects/#{visible.id}/labels", JSON_DATA, {"labels" => text}.to_json
+      end
+
+      it "succeeds" do
+        post_form("foo")
+        expect(response.status_code).to eq(302)
+      end
+
+      it "succeeds" do
+        post_json("foo")
+        expect(response.status_code).to eq(200)
+      end
+
+      it "redirects to the object" do
+        post_form("foo")
+        expect(response.headers["Location"]).to eq("/remote/objects/#{visible.id}")
+      end
+
+      it "returns the saved labels" do
+        post_json("foo\nbar")
+        expect(JSON.parse(response.body)["labels"]).to eq("foo\nbar")
+      end
+
+      it "saves the labels in the order submitted" do
+        post_form("foo\nbar")
+        expect(label_names).to eq(["foo", "bar"])
+      end
+
+      it "saves the labels in the order submitted" do
+        post_json("foo\nbar")
+        expect(label_names).to eq(["foo", "bar"])
+      end
+
+      it "saves a label with spaces as one label" do
+        post_form("to read")
+        expect(label_names).to eq(["to read"])
+      end
+
+      it "saves a label with spaces as one label" do
+        post_json("to read")
+        expect(label_names).to eq(["to read"])
+      end
+
+      it "ignores a leading § and surrounding whitespace" do
+        post_form("  § foo  ")
+        expect(label_names).to eq(["foo"])
+      end
+
+      it "ignores a leading § and surrounding whitespace" do
+        post_json("  § foo  ")
+        expect(label_names).to eq(["foo"])
+      end
+
+      it "ignores blank lines" do
+        post_form("foo\n\n  \nbar")
+        expect(label_names).to eq(["foo", "bar"])
+      end
+
+      it "ignores blank lines" do
+        post_json("foo\n\n  \nbar")
+        expect(label_names).to eq(["foo", "bar"])
+      end
+
+      it "ignores a label that differs only in case" do
+        post_form("foo\nFOO\nbar")
+        expect(label_names).to eq(["foo", "bar"])
+      end
+
+      it "ignores a label that differs only in case" do
+        post_json("foo\nFOO\nbar")
+        expect(label_names).to eq(["foo", "bar"])
+      end
+
+      context "given labels" do
+        let_create!(:label, named: :one, owner: actor, subject: visible, name: "foo")
+        let_create!(:label, named: :two, owner: actor, subject: visible, name: "bar")
+
+        it "replaces them with the labels submitted" do
+          post_form("qux\nfoo")
+          expect(label_names).to eq(["qux", "foo"])
+        end
+
+        it "replaces them with the labels submitted" do
+          post_json("qux\nfoo")
+          expect(label_names).to eq(["qux", "foo"])
+        end
+
+        it "removes them if no labels are submitted" do
+          post_form("")
+          expect(label_names).to be_empty
+        end
+
+        it "removes them if no labels are submitted" do
+          post_json("")
+          expect(label_names).to be_empty
+        end
+
+        it "does not remove them if the labels are missing" do
+          post "/remote/objects/#{visible.id}/labels", FORM_DATA, "other=foo"
+          expect(label_names).to eq(["foo", "bar"])
+        end
+
+        it "does not remove them if the labels are missing" do
+          post "/remote/objects/#{visible.id}/labels", JSON_DATA, %({"other":"foo"})
+          expect(label_names).to eq(["foo", "bar"])
+        end
+
+        context "and a label owned by another actor" do
+          let_create(:actor, named: :other)
+          let_create!(:label, named: :three, owner: other, subject: visible, name: "baz")
+
+          it "does not remove that label" do
+            post_form("")
+            expect(Tag::Label.where(owner: other, subject: visible).map(&.name)).to eq(["baz"])
+          end
+
+          it "does not remove that label" do
+            post_json("")
+            expect(Tag::Label.where(owner: other, subject: visible).map(&.name)).to eq(["baz"])
+          end
+        end
+
+        context "and a label on another object" do
+          let_create!(:label, named: :three, owner: actor, subject: remote, name: "baz")
+
+          it "does not remove that label" do
+            post_form("")
+            expect(Tag::Label.where(owner: actor, subject: remote).map(&.name)).to eq(["baz"])
+          end
+
+          it "does not remove that label" do
+            post_json("")
+            expect(Tag::Label.where(owner: actor, subject: remote).map(&.name)).to eq(["baz"])
+          end
+        end
+      end
+
+      it "returns 400 if the labels are missing" do
+        post "/remote/objects/#{visible.id}/labels", FORM_DATA, "other=foo"
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the labels are missing" do
+        post "/remote/objects/#{visible.id}/labels", JSON_DATA, %({"other":"foo"})
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the labels are not a string" do
+        [%(["foo","bar"]), %({"foo":"bar"}), "1", "true", "null"].each do |value|
+          post "/remote/objects/#{visible.id}/labels", JSON_DATA, %({"labels":#{value}})
+          expect(response.status_code).to eq(400), "expected #{value} to be rejected"
+        end
+      end
+
+      it "returns 400 if the labels are not valid UTF-8" do
+        post "/remote/objects/#{visible.id}/labels", FORM_DATA, "labels=%FF"
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the labels are not valid UTF-8" do
+        post "/remote/objects/#{visible.id}/labels", JSON_DATA, %({"labels":"\xFF"})
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the JSON is invalid" do
+        post "/remote/objects/#{visible.id}/labels", JSON_DATA, %({"labels":)
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 413 if the body is too large" do
+        post_form("x" * ObjectsController::MAX_REQUEST_BYTES)
+        expect(response.status_code).to eq(413)
+      end
+
+      it "returns 413 if the body is too large" do
+        post_json("x" * ObjectsController::MAX_REQUEST_BYTES)
+        expect(response.status_code).to eq(413)
+      end
+
+      it "returns 404 if the user can't view the object" do
+        post "/remote/objects/#{notvisible.id}/labels", FORM_DATA, "labels=foo"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if the user can't view the object" do
+        post "/remote/objects/#{notvisible.id}/labels", JSON_DATA, %({"labels":"foo"})
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is draft" do
+        post "/remote/objects/#{draft.id}/labels", FORM_DATA, "labels=foo"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object is draft" do
+        post "/remote/objects/#{draft.id}/labels", JSON_DATA, %({"labels":"foo"})
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/labels", FORM_DATA, "labels=foo"
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if object does not exist" do
+        post "/remote/objects/999999/labels", JSON_DATA, %({"labels":"foo"})
+        expect(response.status_code).to eq(404)
+      end
+    end
+  end
+
   describe "POST /remote/objects/:id/bookmark" do
     it "returns 401" do
       post "/remote/objects/0/bookmark"

@@ -26,7 +26,7 @@ class Feed
       return unless (feed = feeds.first?)
       return unless (backend = Backend.find?(feed.backend))
       asked = batch.compact_map do |question|
-        next unless (object = ActivityPub::Object.find?(iri: question.object_iri))
+        next unless (object = ActivityPub::Object.find?(iri: question.object_iri, include_deleted: true))
         next unless feeds.any? { |each| Candidates.arrival_for(each, object) }
         {question, object}
       end

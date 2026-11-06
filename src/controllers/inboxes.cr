@@ -244,6 +244,36 @@ class InboxesController
     end
   end
 
+  # Caches the posts the activity's object quotes and replies to.
+  #
+  # Opportunistic -- a failure, including an exhausted time budget, is
+  # not a failure of the delivery.
+  #
+  private def self.cache_referenced_objects(key_pair, activity, request_id, deadline)
+    if activity.is_a?(ActivityPub::Activity::Create | ActivityPub::Activity::Announce | ActivityPub::Activity::Update)
+      if (object = activity.object?).is_a?(ActivityPub::Object)
+        transient = Transient.new
+        [object.quote_iri, object.in_reply_to_iri].each do |iri|
+          # a post that references itself is saved with the activity
+          next if iri.nil? || object.iri_matches?(iri)
+          cache_referenced_object(key_pair, iri, request_id, transient, deadline)
+        end
+      end
+    end
+  end
+
+  # Caches the post and its author.
+  #
+  private def self.cache_referenced_object(key_pair, iri, request_id, transient, deadline)
+    if iri && (object = try_dereference(transient, request_id) { ActivityPub::Object.dereference(key_pair, iri, include_deleted: true, deadline: deadline) })
+      if (author_iri = object.attributed_to_iri) && (ActivityPub::Actor.find?(author_iri, include_deleted: true) || dereference_actor(key_pair, author_iri, request_id, transient, deadline))
+        object.save unless ActivityPub::Object.find?(iri, include_deleted: true)
+      end
+    end
+  rescue ex : Ktistec::Model::Invalid
+    Log.debug { "[#{request_id}] referenced post not cached iri=#{iri}: #{ex.message}" }
+  end
+
   # Returns the relaying community.
   #
   private def self.relaying_community(signer, outer_actor_iri)
@@ -375,6 +405,20 @@ class InboxesController
       ok
     end
 
+    # a community may relay a delete of an object on our origin, but
+    # only we can delete it. an inbound delete of a local object is
+    # either a replay or a forgery.
+
+    if inner_ld && activity.is_a?(ActivityPub::Activity::Delete) &&
+       (object_iri = activity.object_iri) && Ktistec::Model::Linked.local?(object_iri)
+      if ActivityPub::Object.find?(object_iri, include_deleted: true).try(&.deleted?)
+        Log.trace { "[#{request_id}] relayed delete of already deleted local object iri=#{activity.iri} actor=#{activity_actor_iri} object=#{object_iri} relayer=#{outer_actor_iri}" }
+      else
+        Log.warn { "[#{request_id}] relayed delete of local object iri=#{activity.iri} actor=#{activity_actor_iri} object=#{object_iri} relayer=#{outer_actor_iri}" }
+      end
+      ok
+    end
+
     # this is, strictly speaking, not required because this method
     # should be idempotent, but it avoids a lot of unnecessary work.
 
@@ -479,12 +523,24 @@ class InboxesController
       if signer && signer.iri == outer_actor_iri && signer.type == "ActivityPub::Actor::Group"
         via_community = signer
         verification = Verification::Community
+        # the community's signature authorizes the deletion, but only
+        # the activity's origin can vouch for the activity itself.
+        if (activity_iri = activity.iri.presence)
+          temporary = try_dereference(transient, request_id) do
+            ActivityPub::Activity.dereference(fetch_identity, activity_iri, ignore_cached: true, deadline: deadline)
+          end
+          if temporary.is_a?(ActivityPub::Activity::Delete) && temporary.object_iri == activity.object_iri
+            activity = temporary
+            verification = Verification::Origin
+          end
+        end
       end
     elsif !inner_ld && signer && outer_actor_iri && signer.iri == outer_actor_iri
       actor = signer
       verification = Verification::Signature
     else
       if inner_ld && (community = relaying_community(signer, outer_actor_iri)) &&
+         Ktistec::Util.same_origin?(activity.actor_iri, community.iri) &&
          relayable_by?(community, activity)
         via_community = community
         verification = Verification::Community
@@ -552,7 +608,12 @@ class InboxesController
     end
 
     unless activity && verification
-      bad_request_or_bad_gateway("Can't Be Verified")
+      if !transient.failure? && inner_ld && (community = relaying_community(signer, outer_actor_iri)) && relayable_by?(community, activity)
+        Log.debug { "[#{request_id}] relayed vote not retrievable from its origin iri=#{activity.iri} actor=#{activity.actor_iri} relayer=#{community.iri}" }
+        ok
+      else
+        bad_request_or_bad_gateway("Can't Be Verified")
+      end
     end
 
     # resolve the actor from the verified activity, which step 4 may
@@ -756,25 +817,37 @@ class InboxesController
       end
     end
 
-    # check to see if the activity already exists. if not, save it
+    cache_referenced_objects(fetch_identity, activity, request_id, deadline)
 
-    if (temporary = ActivityPub::Activity.find?(activity.iri))
-      activity = temporary
+    # a relayed Delete its origin didn't serve deletes the object on
+    # the community's authority, but isn't stored. the log is the only
+    # record of the deletion.
+
+    if activity.is_a?(ActivityPub::Activity::Delete) && verification.community?
+      Log.info { "[#{request_id}] relayed delete with no matching delete retrievable from its origin iri=#{activity.iri} actor=#{activity.actor_iri} object=#{activity.object_iri} relayer=#{via_community.try(&.iri)}" }
+
+      InboxActivityProcessor.maintain(activity)
     else
-      begin
-        activity.save
-      rescue ex : Ktistec::Model::Invalid
-        # a concurrent duplicate delivery can save this activity (or its
-        # cascade-saved object) between the check above and this save,
-        # tripping a uniqueness validation.
-        raise ex unless ActivityPub::Activity.find?(activity.iri)
-        ok
+      # check to see if the activity already exists. if not, save it
+
+      if (temporary = ActivityPub::Activity.find?(activity.iri))
+        activity = temporary
+      else
+        begin
+          activity.save
+        rescue ex : Ktistec::Model::Invalid
+          # a concurrent duplicate delivery can save this activity (or its
+          # cascade-saved object) between the check above and this save,
+          # tripping a uniqueness validation.
+          raise ex unless ActivityPub::Activity.find?(activity.iri)
+          ok
+        end
       end
+
+      Log.trace { "[#{request_id}] saved id=#{activity.id}" }
+
+      InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients, deadline: deadline)
     end
-
-    Log.trace { "[#{request_id}] saved id=#{activity.id}" }
-
-    InboxActivityProcessor.process(account, activity, deliver_to, recipients: recipients, deadline: deadline)
 
     Log.trace { "[#{request_id}] complete" }
 

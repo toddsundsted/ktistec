@@ -30,14 +30,60 @@ belong in a feed. The four judges here are working examples.
 
    | table | columns |
    |---|---|
-   | `feed` | the feed's `name`, `description`, and `params` (JSON) |
-   | `stats` | the owner's followed authors' posting rates: `posting_rate_q1`, `posting_rate_median`, `posting_rate_q3` (posts per day) |
-   | `authors` | each author's `iri`, `type`, `handle`, `followed`, and `rate_7`, `rate_30`, `rate_90` (posts per day over the last 7, 30, and 90 days) |
-   | `posts` | each post's `iri`, `type`, `name`, `summary`, `content`, `audience`, `attachments`, `published`, `in_reply_to`, `thread`, `quote`, `language`, `sensitive`, `hashtags`, `mentions`, and `author` |
+   | `feed` | the feed's `name`, `description`, and `params` |
+   | `stats` | the owner's followed authors' posting rates: `posting_rate_q1`, `posting_rate_median`, `posting_rate_q3` |
+   | `authors` | the authors of the posts in `posts` and `referenced`: `iri`, `type`, `handle`, `followers`, `deleted`, `blocked`, `followed`, `rate_7`, `rate_30`, `rate_90` |
+   | `posts` | the posts to judge: `iri`, `type`, `name`, `summary`, `content`, `to`, `cc`, `audience`, `attachments`, `published`, `in_reply_to`, `thread`, `quote`, `language`, `sensitive`, `hashtags`, `mentions`, `labels`, `author`, `deleted`, `blocked`, `timeline`, `poll` |
+   | `referenced` | the posts that posts in `posts` reply to or quote, with the same columns as `posts` |
 
-   `audience`, `attachments`, `hashtags`, and `mentions` are JSON.
+   What the values mean:
 
-   Write one row to `answers` for each post: its `iri`, and either
+   - `feed`
+     - `params` is the feed's params, as JSON.
+   - `stats`
+     - `posting_rate_q1`, `posting_rate_median`, and `posting_rate_q3`
+       are the quartiles of the posting rates, in posts per day over
+       the last 90 days, of the authors the owner follows who posted in
+       that time, or null if none did.
+   - `authors`
+     - `followers` is the IRI of the author's followers collection.
+     - `deleted` and `blocked` are 1 if the author is deleted or
+       blocked on the owner's server.
+     - `followed` is 1 if the owner follows the author.
+     - `rate_7`, `rate_30`, and `rate_90` are the author's posts per
+       day over the last 7, 30, and 90 days.
+   - `posts` and `referenced`
+     - `to`, `cc`, and `audience` are JSON arrays of IRIs. A post
+       addressed to `https://www.w3.org/ns/activitystreams#Public` is
+       public; one addressed to its author's `followers` is for their
+       followers.
+     - `attachments` is a JSON array of `url`, `media_type`, and
+       `caption`.
+     - `in_reply_to` is the IRI of the post it replies to.
+     - `thread` is the IRI of its thread's first post.
+     - `quote` is the IRI of the post it quotes.
+     - `hashtags` and `mentions` are JSON arrays of `name` and `href`.
+     - `labels` is a JSON array of the names of the owner's private
+       labels.
+     - `author` is the post's author's `iri` in `authors`.
+     - `deleted` and `blocked` are 1 if the post is deleted or blocked
+       on the owner's server.
+     - `timeline` is how the post reached the owner's timeline
+       (`create` or `announce`), or null if it isn't in the timeline. A
+       post that was both created and announced into the timeline is
+       `create`.
+     - `poll` is a JSON object of `options`, `multiple_choice`, and
+       `closed_at`, or null if the post isn't a poll.
+
+   Reading the file:
+
+   - `to` is an SQL keyword, so quote it: `"to"`.
+   - Times are UTC text, like `2026-11-01 00:00:00.000`.
+   - A post that isn't on the owner's server has no row in
+     `referenced`. A post in `posts` that another post in `posts`
+     replies to or quotes is in `referenced` too.
+
+   Write one row to `answers` for each post in `posts`: its `iri`, and either
    `included` (1 or 0) or `failure` (`transient` or `permanent`), and
    an optional `reason`:
 

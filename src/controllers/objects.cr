@@ -15,6 +15,8 @@ class ObjectsController
 
   skip_auth ["/objects/:id", "/objects/:id/replies", "/objects/:id/thread"], GET
 
+  MAX_REQUEST_BYTES = 4_096
+
   # Authorizes object access.
   #
   # Returns the object if the user is authorized to view it, `nil`
@@ -513,6 +515,42 @@ class ObjectsController
       turbo_stream_refresh
     else
       redirect back_path
+    end
+  end
+
+  private def self.label_names(env)
+    params = accepts?("text/html") ? env.params.body : env.params.json
+    text = params["labels"].as(String)
+    if text.valid_encoding?
+      names = text.lines.map(&.lstrip { |char| char == '§' || char.whitespace? }.rstrip)
+      names.reject(&.empty?).uniq!(&.downcase)
+    end
+  rescue KeyError | TypeCastError | JSON::ParseException
+  end
+
+  get "/remote/objects/:id/labels" do |env|
+    not_found unless (object = get_object(env, id_param(env))) && !object.draft?
+
+    labels = Tag::Label.where(owner: env.account.actor, subject: object).map(&.name)
+
+    ok "objects/labels", env: env, object: object, labels: labels
+  end
+
+  post "/remote/objects/:id/labels" do |env|
+    not_found unless (object = get_object(env, id_param(env))) && !object.draft?
+
+    cap_request_body env, MAX_REQUEST_BYTES
+
+    bad_request unless (names = label_names(env))
+
+    Tag::Label.where(owner: env.account.actor, subject: object).each(&.destroy)
+
+    names.each { |name| Tag::Label.new(owner: env.account.actor, subject: object, name: name).save }
+
+    if accepts_json?
+      ok "objects/labels", env: env, object: object, labels: names
+    else
+      redirect remote_object_path(object)
     end
   end
 

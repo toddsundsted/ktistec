@@ -6,6 +6,7 @@ require "../../src/models/activity_pub/activity/dislike"
 require "../../src/models/translation"
 require "../../src/models/task/deliver_delayed_object"
 require "../../src/models/activity_pub/activity/quote_request"
+require "../../src/models/tag/label"
 require "../../src/framework/controller"
 require "../../src/utils/translator"
 
@@ -584,7 +585,7 @@ Spectator.describe "object partials" do
         end
 
         it "renders one hashtag" do
-          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@href,'/tags/')]/text()"))
             .to contain_exactly("#bar")
         end
 
@@ -610,7 +611,7 @@ Spectator.describe "object partials" do
         end
 
         it "renders one mention" do
-          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@href,'/mentions/')]/text()"))
             .to contain_exactly("@bar")
         end
 
@@ -636,7 +637,7 @@ Spectator.describe "object partials" do
         end
 
         it "renders two mentions" do
-          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@href,'/mentions/')]/text()"))
             .to contain_exactly("@bar@one.com", "@bar@two.com")
         end
       end
@@ -654,8 +655,39 @@ Spectator.describe "object partials" do
         end
 
         it "renders two mentions" do
-          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'label')]/text()"))
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@href,'/mentions/')]/text()"))
             .to contain_exactly("@foo", "@bar")
+        end
+      end
+
+      context "with detail" do
+        let(with_detail) { true }
+
+        it "renders a link to the labels page" do
+          expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'primary')]/@href").map(&.text))
+            .to contain_exactly("/remote/objects/#{object.id}/labels")
+        end
+
+        context "and a label" do
+          let_create!(:label, owner: actor, subject: object, name: "foo")
+
+          it "renders the label" do
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/span[contains(@class,'label')]/text()"))
+              .to contain_exactly("§foo")
+          end
+
+          it "renders the link first" do
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/*[1]/@href").map(&.text))
+              .to contain_exactly("/remote/objects/#{object.id}/labels")
+          end
+        end
+
+        context "owned by another actor" do
+          let_create(:actor, local: true)
+
+          it "does not render the label" do
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/span[contains(@class,'label')]/text()")).to be_empty
+          end
         end
       end
     end
@@ -689,6 +721,14 @@ Spectator.describe "object partials" do
 
       context "when authenticated" do
         sign_in(as: account.username)
+
+        context "with detail" do
+          let(with_detail) { true }
+
+          it "does not render a link to the labels page" do
+            expect(subject.xpath_nodes("//a[contains(@href,'/labels')]")).to be_empty
+          end
+        end
 
         it "does not render a button to reply" do
           expect(subject.xpath_nodes("//button/text()")).not_to have("Reply")
@@ -786,6 +826,18 @@ Spectator.describe "object partials" do
 
       it "indicates the object is deleted" do
         expect(subject.xpath_nodes("//div[contains(@class,'extra text')]/em/text()")).to have(/This content is deleted/)
+      end
+
+      context "when authenticated" do
+        sign_in(as: account.username)
+
+        context "with detail" do
+          let(with_detail) { true }
+
+          it "does not render a link to the labels page" do
+            expect(subject.xpath_nodes("//a[contains(@href,'/labels')]")).to be_empty
+          end
+        end
       end
     end
 

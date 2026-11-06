@@ -71,6 +71,7 @@ class Feed
             included INTEGER,
             failure TEXT CHECK (failure IN ('transient', 'permanent')),
             reason TEXT,
+            keep INTEGER,
             CHECK ((included IS NULL) <> (failure IS NULL))
           )
           SQL
@@ -89,11 +90,12 @@ class Feed
           getter included : Bool?
           getter failure : String?
           getter reason : String?
+          getter keep : Bool?
 
           def to_answer : Judgment | Failure
             included, failure = @included, @failure
             if !included.nil? && failure.nil?
-              Judgment.new(included: included, reason: reason)
+              Judgment.new(included: included, reason: reason, keep: keep || false)
             elsif failure && (kind = Failure::Kind.parse?(failure))
               Failure.new(kind, reason)
             else
@@ -183,7 +185,7 @@ class Feed
         #
         def read(path : String) : Hash(String, Judgment | Failure)
           DB.open("sqlite3://#{path}") do |db|
-            answers = Answer.from_rs(db.query("SELECT iri, included, failure, reason FROM answers"))
+            answers = Answer.from_rs(db.query("SELECT iri, included, failure, reason, keep FROM answers"))
             answers.to_h { |answer| {answer.iri, answer.to_answer} }
           end
         end

@@ -14,7 +14,9 @@ class Feed
   abstract class Backend
     # A verdict: in or out, and why.
     #
-    record Judgment, included : Bool, reason : String? = nil
+    # An exclusion isn't stored unless `keep` is true.
+    #
+    record Judgment, included : Bool, reason : String? = nil, keep : Bool = false
 
     # A failure, and why.
     #

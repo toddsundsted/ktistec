@@ -128,11 +128,11 @@ class Feed
           in .permanent? then Verdict::PERMANENT
           end
       in Backend::Judgment
-        unless answer.included
+        unless answer.included || answer.keep
           verdict.try(&.destroy)
           return
         end
-        included, failure = true, nil
+        included, failure = answer.included, nil
       end
       verdict ||= Verdict.new(version_id: version_id, object: object, included: included)
       verdict.assign(

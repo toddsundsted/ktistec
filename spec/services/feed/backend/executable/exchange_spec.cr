@@ -236,6 +236,22 @@ Spectator.describe Feed::Backend::Executable::Exchange do
       end
     end
 
+    context "given an answer that excludes the post" do
+      before_each { answer("INSERT INTO answers (iri, included, reason) VALUES (?, 0, 'no cats')") }
+
+      it "returns a judgment that isn't kept" do
+        expect(described_class.read(path)[object.iri]).to eq(Feed::Backend::Judgment.new(included: false, reason: "no cats", keep: false))
+      end
+    end
+
+    context "given an answer that excludes the post but keeps it" do
+      before_each { answer("INSERT INTO answers (iri, included, reason, keep) VALUES (?, 0, 'no cats', 1)") }
+
+      it "returns a judgment that is kept" do
+        expect(described_class.read(path)[object.iri]).to eq(Feed::Backend::Judgment.new(included: false, reason: "no cats", keep: true))
+      end
+    end
+
     context "given an answer that fails" do
       before_each { answer("INSERT INTO answers (iri, failure, reason) VALUES (?, 'permanent', 'syntax error')") }
 

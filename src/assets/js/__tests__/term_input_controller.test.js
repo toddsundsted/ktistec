@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest"
 
-import CriteriaInputController from "../controllers/criteria_input_controller"
+import TermInputController from "../controllers/term_input_controller"
 
-describe("CriteriaInputController", () => {
+describe("TermInputController", () => {
   let controller
   let element
   let textarea
@@ -14,7 +14,7 @@ describe("CriteriaInputController", () => {
 
   const connect = (value) => {
     textarea.value = value
-    controller = Object.create(CriteriaInputController.prototype)
+    controller = Object.create(TermInputController.prototype)
     Object.defineProperty(controller, "element", { value: element, writable: true })
     Object.defineProperty(controller, "textareaTarget", { value: textarea, writable: true })
     Object.defineProperty(controller, "placeholderValue", { value: "Add a term…", writable: true })
@@ -105,7 +105,7 @@ describe("CriteriaInputController", () => {
     const restore = (source) => {
       const snapshot = source.cloneNode(true)
       document.body.appendChild(snapshot)
-      const restored = Object.create(CriteriaInputController.prototype)
+      const restored = Object.create(TermInputController.prototype)
       Object.defineProperty(restored, "element", { value: snapshot, writable: true })
       Object.defineProperty(restored, "textareaTarget", {
         value: snapshot.querySelector("textarea"),

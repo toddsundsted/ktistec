@@ -1183,18 +1183,18 @@ a > img.emoji {
     .ui.sub.header:first-child { margin-left: 0; }
 }
 
-/** feeds builder **/
-.criteria-hint.enhanced { display: none; }
+/** term builder **/
+.term-hint.enhanced { display: none; }
 
-.ui.form:has(.feed-bucket.enhanced) {
-    .criteria-hint.plain { display: none; }
-    .criteria-hint.enhanced { display: block; }
+.ui.form:has(.term-input.enhanced) {
+    .term-hint.plain { display: none; }
+    .term-hint.enhanced { display: block; }
 }
 
-.criteria-builder {
-    .feed-bucket.any  { border-left: 3px solid var(--semantic-affirmative); }
-    .feed-bucket.all  { border-left: 3px solid var(--semantic-primary); }
-    .feed-bucket.none { border-left: 3px solid var(--semantic-negative); }
+.term-builder {
+    .term-input.any  { border-left: 3px solid var(--semantic-affirmative); }
+    .term-input.all  { border-left: 3px solid var(--semantic-primary); }
+    .term-input.none { border-left: 3px solid var(--semantic-negative); }
     .ui.horizontal.divider.stop { color: var(--semantic-dangerous); }
 
     /* every whitespace character in a term renders as a dot */
@@ -1258,7 +1258,7 @@ a > img.emoji {
         }
     }
 
-    .criteria-status {
+    .term-status {
         position: absolute;
         width: 1px;
         height: 1px;

@@ -23,31 +23,31 @@ crystal:
   turbo-frame#judge
     - if feed.backend == Feed::Backend::Criteria::NAME
       h3.ui.header Criteria
-      p.criteria-hint.plain
+      p.term-hint.plain
         | Start a term with <code>#</code> for a hashtag, <code>@</code>
           for a mention, or just type keywords. <em>One term per line.</em>
-      p.criteria-hint.enhanced
+      p.term-hint.enhanced
         | Start a term with <code>#</code> for a hashtag, <code>@</code>
           for a mention, or just type keywords. <em>Press Enter to add
           each.</em>
       / note the morphing protection (`data-turbo-permanent=true`)
-      .ui.field.criteria-builder
-        .ui.segment.feed-bucket.any data-turbo-permanent=true data-controller="criteria-input" data-criteria-input-placeholder-value=placeholder
+      .ui.field.term-builder
+        .ui.segment.term-input.any data-turbo-permanent=true data-controller="term-input" data-term-input-placeholder-value=placeholder
           .ui.small.header
             | Any of these
-          textarea name="any" rows="3" data-criteria-input-target="textarea" = criteria[:any]
+          textarea name="any" rows="3" data-term-input-target="textarea" = criteria[:any]
         .ui.horizontal.divider and
-        .ui.segment.feed-bucket.all data-turbo-permanent=true data-controller="criteria-input" data-criteria-input-placeholder-value=placeholder
+        .ui.segment.term-input.all data-turbo-permanent=true data-controller="term-input" data-term-input-placeholder-value=placeholder
           .ui.small.header
             | All of these
             span.ui.mini.basic.label< optional
-          textarea name="all" rows="2" data-criteria-input-target="textarea" = criteria[:all]
+          textarea name="all" rows="2" data-term-input-target="textarea" = criteria[:all]
         .ui.horizontal.divider.stop but
-        .ui.segment.feed-bucket.none data-turbo-permanent=true data-controller="criteria-input" data-criteria-input-placeholder-value=placeholder
+        .ui.segment.term-input.none data-turbo-permanent=true data-controller="term-input" data-term-input-placeholder-value=placeholder
           .ui.small.header
             | None of these
             span.ui.mini.basic.label< optional
-          textarea name="none" rows="2" data-criteria-input-target="textarea" = criteria[:none]
+          textarea name="none" rows="2" data-term-input-target="textarea" = criteria[:none]
     - Feed::Backend.find?(feed.backend).try(&.declared_params).try &.each do |param|
       - if (type = param.type)
         - input_type = type.integer? ? "number" : "text"

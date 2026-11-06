@@ -1,6 +1,6 @@
-// The DOM for a criteria term.
+// The DOM for a term.
 
-import { classifyTerm, hasBoundarySpace, segmentTerm } from "./criteria_terms"
+import { classifyTerm, hasBoundarySpace, segmentTerm } from "./terms"
 
 // Builds the label for a term.
 //

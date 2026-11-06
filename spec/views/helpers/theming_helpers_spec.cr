@@ -400,6 +400,38 @@ Spectator.describe "helpers" do
       expect(subject["data-mentions"]).to eq("alice@remote bob@remote")
     end
 
+    context "given a hashtag with a space" do
+      let_create!(:hashtag, named: nil, name: "zx spectrum", subject: note)
+
+      it "hyphenates the hashtag in data-hashtags" do
+        expect(subject["data-hashtags"]).to eq("ruby crystal zx-spectrum")
+      end
+
+      context "that is followed" do
+        let(followed_hashtags) { Set{"zx spectrum"} }
+
+        it "hyphenates the hashtag in data-followed-hashtags" do
+          expect(subject["data-followed-hashtags"]).to eq("zx-spectrum")
+        end
+      end
+    end
+
+    context "given a mention with a space" do
+      let_create!(:mention, named: nil, name: "alice smith", href: "https://remote/actors/smith", subject: note)
+
+      it "hyphenates the mention in data-mentions" do
+        expect(subject["data-mentions"]).to eq("alice@remote bob@remote alice-smith@remote")
+      end
+
+      context "that is followed" do
+        let(followed_mentions) { Set{"https://remote/actors/smith"} }
+
+        it "hyphenates the mention in data-followed-mentions" do
+          expect(subject["data-followed-mentions"]).to eq("alice-smith@remote")
+        end
+      end
+    end
+
     it "does not include data-labels" do
       expect(subject.has_key?("data-labels")).to be_false
     end
@@ -419,6 +451,14 @@ Spectator.describe "helpers" do
 
           it "lowercases the label" do
             expect(subject["data-labels"]).to eq("reading cats")
+          end
+        end
+
+        context "and a label with a space" do
+          let_create!(:label, named: nil, name: "to read", owner: viewing_actor, subject: note)
+
+          it "hyphenates the label" do
+            expect(subject["data-labels"]).to eq("reading to-read")
           end
         end
 

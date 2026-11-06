@@ -1,13 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
-import { moveTerm, serialize, splitTerms } from "../lib/criteria_terms"
+import { moveTerm, serialize, splitTerms } from "../lib/terms"
 import { indexLabels, renderLabel } from "../lib/term_label"
 import { insertionIndex, measureSlots } from "../lib/drag_geometry"
 import { flip } from "../lib/flip"
 import DragGesture from "../lib/drag_gesture"
 
-// Progressively enhances a feed's criteria textarea into a list of
-// removable term labels plus an entry for adding more labels.
+// Progressively enhances a textarea of terms into a list of removable
+// term labels plus an entry for adding more labels.
 //
 // Terms are kept verbatim.
 //
@@ -26,7 +26,7 @@ export default class extends Controller {
     this.pressedLabel = null
 
     this.textareaTarget.parentElement.querySelectorAll(".ui.labels").forEach((field) => field.remove())
-    this.textareaTarget.parentElement.querySelectorAll(".criteria-status").forEach((status) => status.remove())
+    this.textareaTarget.parentElement.querySelectorAll(".term-status").forEach((status) => status.remove())
 
     this.field = document.createElement("div")
     this.field.className = "ui labels"
@@ -37,7 +37,7 @@ export default class extends Controller {
     this.entry.setAttribute("aria-label", this.placeholderValue)
 
     this.status = document.createElement("div")
-    this.status.className = "criteria-status"
+    this.status.className = "term-status"
     this.status.setAttribute("role", "status")
     this.status.setAttribute("aria-live", "polite")
 
@@ -71,6 +71,10 @@ export default class extends Controller {
     this.element.classList.add("enhanced")
 
     this._render()
+
+    if (this.textareaTarget.autofocus) {
+      this.entry.focus()
+    }
   }
 
   disconnect() {

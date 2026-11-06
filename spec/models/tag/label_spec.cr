@@ -28,12 +28,6 @@ Spectator.describe Tag::Label do
       expect(new_tag.errors.keys).to contain("name")
     end
 
-    it "rejects a name with whitespace" do
-      new_tag = described_class.new(owner: owner, subject: object, name: "to read")
-      expect(new_tag.valid?).to be_false
-      expect(new_tag.errors.keys).to contain("name")
-    end
-
     context "given an existing label" do
       let_create!(:label, owner: owner, subject: object, name: "foo")
 

@@ -1,4 +1,4 @@
-// The criteria terms of a feed, as text and as a list.
+// Terms, as text and as a list.
 
 // Splits text into terms.
 //

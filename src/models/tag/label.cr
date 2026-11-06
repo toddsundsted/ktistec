@@ -15,8 +15,6 @@ class Tag
     validates(name) do
       if name.blank?
         "is blank"
-      elsif name.matches?(/\s/)
-        "must not contain whitespace"
       elsif (instance = self.class.find?(href: href, subject_iri: subject_iri, name: name)) && instance.id != self.id
         "already exists: #{name}"
       end

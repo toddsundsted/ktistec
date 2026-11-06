@@ -460,6 +460,8 @@ Data attributes allow targeting specific identities and content identifiers.
 - `data-mentions` - Up to 10 space-separated mentions that appear in the post
 - `data-labels` - Up to 10 space-separated private labels
 
+Spaces within a name become hyphens, so `foo bar` is `foo-bar`.
+
 ##### Metadata
 - `data-object-id` - Database ID of the object
 

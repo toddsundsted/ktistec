@@ -88,23 +88,7 @@ class InboxesController
     end
   end
 
-  # Parses the `keyId` parameter from the `Signature` header.
-  #
-  # Returns `nil` if the header is missing or malformed.
-  #
-  private def self.parse_key_id(headers : HTTP::Headers) : String?
-    if (signature = headers["Signature"]?)
-      signature.split(",", remove_empty: true).each do |part|
-        parts = part.split("=", 2)
-        next unless parts.size == 2
-        if parts[0].strip == "keyId"
-          return parts[1].strip.delete('"')
-        end
-      end
-    end
-  end
-
-  # Resolves a `keyId` from the `Signature` header to the signer and
+  # Resolves the key id of a request's signature to the signer and
   # its verification key.
   #
   # Returns a tuple of the signer's IRI and, when the key is carried
@@ -454,7 +438,7 @@ class InboxesController
       service_unavailable
     end
 
-    # 1) resolve the keyId from the Signature header to the signer and
+    # 1) resolve the key id of the request's signature to the signer and
     # its verification key. 2) verify the signature against the raw
     # body. 3a) a relayed Delete is authenticated by the relaying
     # community's (Group) Announce signature. 3b) a directly-delivered
@@ -477,16 +461,24 @@ class InboxesController
 
     deadline = Time.instant + max_inbox_fetch_time
 
-    if (key_id = parse_key_id(env.request.headers)) && (resolved = resolve_signer(fetch_identity, key_id, request_id, transient, deadline))
+    signature = Ktistec::Signature.parse(env.request.headers)
+
+    if signature.nil? && (input = env.request.headers["Signature-Input"]?)
+      Log.info { "[#{request_id}] signature could not be parsed signature-input=#{input}" }
+    elsif signature && signature.key_id.nil?
+      Log.info { "[#{request_id}] signature failed format=#{signature.class} reason=no key id" }
+    end
+
+    if signature && (key_id = signature.key_id) && (resolved = resolve_signer(fetch_identity, key_id, request_id, transient, deadline))
       signer_iri, resolved_key = resolved
       candidate, dereferenced = find_or_dereference_actor(fetch_identity, signer_iri, request_id, transient, deadline, require_key: resolved_key.nil?)
       key_pair = resolved_key || candidate
       if candidate && key_pair
         begin
-          Ktistec::Signature.verify(key_pair, "#{host}#{env.request.path}", env.request.headers, body)
+          signature.verify(key_pair, "#{host}#{env.request.resource}", env.request.headers, body)
           signer = candidate
         rescue ex : Ktistec::Signature::Error | OpenSSL::Error
-          Log.trace { "[#{request_id}] signature verification failed: #{ex.message}" }
+          reason = ex.message
           # a cached key that fails may simply be stale. fetch the
           # actor from its origin and try once more. only a key that
           # came from the database can be stale.
@@ -494,17 +486,24 @@ class InboxesController
             refreshed = dereference_actor(fetch_identity, signer_iri, request_id, transient, deadline)
             if refreshed && refreshed.pem_public_key != candidate.pem_public_key
               begin
-                Ktistec::Signature.verify(refreshed, "#{host}#{env.request.path}", env.request.headers, body)
+                signature.verify(refreshed, "#{host}#{env.request.resource}", env.request.headers, body)
                 signer = refreshed
               rescue ex : Ktistec::Signature::Error | OpenSSL::Error
-                Log.trace { "[#{request_id}] signature verification failed with refreshed key: #{ex.message}" }
+                reason = ex.message
               end
             end
           end
+          unless signer
+            Log.info { "[#{request_id}] signature failed format=#{signature.class} keyid=#{key_id} reason=#{reason}" }
+          end
         end
       else
-        Log.trace { "[#{request_id}] signature verification failed" }
+        Log.info { "[#{request_id}] signature failed format=#{signature.class} keyid=#{key_id} reason=signer not found" }
       end
+    end
+
+    if signer
+      Log.debug { "[#{request_id}] signature verified format=#{signature.class} signer=#{signer.iri}" }
     end
 
     signer.up! if signer && signer.down?

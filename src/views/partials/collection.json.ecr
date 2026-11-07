@@ -1,3 +1,3 @@
-<%- activity_pub_collection(collection) do |item, i| -%>
+<%- activity_pub_collection(collection, total_items) do |item, i| -%>
   <%= item.iri.to_json %><%= comma(collection, i) %>
 <%- end -%>

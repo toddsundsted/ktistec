@@ -682,6 +682,16 @@ Spectator.describe ActorsController do
         get "/actors/#{actor.username}/labels/foo", ACCEPT_JSON
         expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(note.iri)
       end
+
+      it "renders the count of labeled posts" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//span[contains(text(),'label')]/text()").map(&.text)).to contain_exactly("1 label")
+      end
+
+      it "renders the count of labeled posts" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_JSON
+        expect(JSON.parse(response.body)["totalItems"]).to eq(1)
+      end
     end
   end
 

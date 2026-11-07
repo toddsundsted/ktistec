@@ -663,7 +663,7 @@ Spectator.describe "object partials" do
       context "with detail" do
         let(with_detail) { true }
 
-        it "renders a link to the labels page" do
+        it "renders a link to the label editor" do
           expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[contains(@class,'primary')]/@href").map(&.text))
             .to contain_exactly("/remote/objects/#{object.id}/labels")
         end
@@ -671,22 +671,23 @@ Spectator.describe "object partials" do
         context "and a label" do
           let_create!(:label, owner: actor, subject: object, name: "foo")
 
-          it "renders the label" do
-            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/span[contains(@class,'label')]/text()"))
+          it "renders a link to the label's page" do
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[@href='/actors/#{actor.username}/labels/foo']/text()").map(&.text))
               .to contain_exactly("§foo")
           end
 
-          it "renders the link first" do
+          it "renders the link to the label editor first" do
             expect(subject.xpath_nodes("//div[contains(@class,'labels')]/*[1]/@href").map(&.text))
               .to contain_exactly("/remote/objects/#{object.id}/labels")
           end
         end
 
-        context "owned by another actor" do
-          let_create(:actor, local: true)
+        context "and a label owned by another actor" do
+          let_create(:actor, named: :other, local: true)
+          let_create!(:label, named: nil, owner: other, subject: object, name: "bar")
 
           it "does not render the label" do
-            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/span[contains(@class,'label')]/text()")).to be_empty
+            expect(subject.xpath_nodes("//div[contains(@class,'labels')]/a[text()='§bar']")).to be_empty
           end
         end
       end
@@ -725,8 +726,8 @@ Spectator.describe "object partials" do
         context "with detail" do
           let(with_detail) { true }
 
-          it "does not render a link to the labels page" do
-            expect(subject.xpath_nodes("//a[contains(@href,'/labels')]")).to be_empty
+          it "does not render a link to the label editor" do
+            expect(subject.xpath_nodes("//a[@href='/remote/objects/#{object.id}/labels']")).to be_empty
           end
         end
 
@@ -834,8 +835,8 @@ Spectator.describe "object partials" do
         context "with detail" do
           let(with_detail) { true }
 
-          it "does not render a link to the labels page" do
-            expect(subject.xpath_nodes("//a[contains(@href,'/labels')]")).to be_empty
+          it "does not render a link to the label editor" do
+            expect(subject.xpath_nodes("//a[@href='/remote/objects/#{object.id}/labels']")).to be_empty
           end
         end
       end

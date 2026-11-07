@@ -36,6 +36,10 @@ belong in a feed. The four judges here are working examples.
    | `posts` | the posts to judge: `iri`, `type`, `name`, `summary`, `content`, `to`, `cc`, `audience`, `attachments`, `published`, `in_reply_to`, `thread`, `quote`, `language`, `sensitive`, `hashtags`, `mentions`, `labels`, `author`, `deleted`, `blocked`, `timeline`, `poll` |
    | `referenced` | the posts that posts in `posts` reply to or quote, with the same columns as `posts` |
 
+   It also has two empty tables for the judge to write to: `answers`
+   (`iri`, `included`, `failure`, `reason`, `keep`) and `unavailable`
+   (`reason`, `retry_after`).
+
    What the values mean:
 
    - `feed`
@@ -77,6 +81,12 @@ belong in a feed. The four judges here are working examples.
 
    Reading the file:
 
+   - Name every column you read and write. Don't read rows by
+     position (`SELECT *` with tuple indexes) or insert without a
+     column list (`INSERT INTO answers VALUES (...)`). The file's
+     `user_version` changes only when a change would break a judge
+     that names its columns, like a column that is removed, renamed,
+     or given a new meaning.
    - `to` is an SQL keyword, so quote it: `"to"`.
    - Times are UTC text, like `2026-11-01 00:00:00.000`.
    - A post that isn't on the owner's server has no row in
@@ -96,6 +106,18 @@ belong in a feed. The four judges here are working examples.
 
    A post with a transient failure is asked about again later. A post
    with a permanent failure is not.
+
+   An exclusion isn't stored, by default, unless the answer sets
+   `keep` to 1. Set it when an exclusion would be hard to reconstruct
+   later, like one that comes from a model, and leave it out when it's
+   trivial. `keep` has no effect on other answers:
+
+   ```python
+   db.execute(
+       "INSERT INTO answers (iri, included, reason, keep) VALUES (?, 0, ?, 1)",
+       (iri, reason),
+   )
+   ```
 
 4. Handle failure. A post without an answer, a judge that exits
    non-zero, and a judge that runs longer than 5 minutes (it is

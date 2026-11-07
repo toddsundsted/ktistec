@@ -450,6 +450,26 @@ Spectator.describe Utils::Paths do
     end
   end
 
+  describe "labels_path" do
+    let(env) do
+      make_env("GET", "/remote/objects/17/labels").tap do |env|
+        env.params.url["id"] = "17"
+      end
+    end
+
+    context "given an object" do
+      let(object) { double(:path_double) }
+
+      it "gets the labels path" do
+        expect((labels_path(object)).to_s).to eq("/remote/objects/42/labels")
+      end
+    end
+
+    it "gets the labels path" do
+      expect((labels_path).to_s).to eq("/remote/objects/17/labels")
+    end
+  end
+
   describe "approve_path" do
     let(env) do
       make_env("GET", "/remote/objects/17/approve").tap do |env|
@@ -830,6 +850,26 @@ Spectator.describe Utils::Paths do
 
     it "gets the actor relationships path" do
       expect((actor_relationships_path).to_s).to eq("/actors/abc/running")
+    end
+  end
+
+  describe "actor_labels_path" do
+    let(actor) { double(:path_double) }
+
+    it "gets the actor labels path" do
+      expect((actor_labels_path(actor)).to_s).to eq("/actors/xyz/labels")
+    end
+  end
+
+  describe "actor_label_path" do
+    let(actor) { double(:path_double) }
+
+    it "gets the actor label path" do
+      expect((actor_label_path(actor, "reading")).to_s).to eq("/actors/xyz/labels/reading")
+    end
+
+    it "encodes path-unsafe characters" do
+      expect((actor_label_path(actor, "a/b?c#d")).to_s).to eq("/actors/xyz/labels/a%2Fb%3Fc%23d")
     end
   end
 

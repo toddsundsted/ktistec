@@ -51,6 +51,16 @@ private class RecordingBackend < TestBackend
   end
 end
 
+private class KeepingBackend < TestBackend
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
+    objects.map { Judgment.new(included: false, reason: "z -0.42", keep: true).as(Judgment | Failure) }
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
+
 # Deletes the feeds it judges for, as if their owner deleted them
 # while it was answering.
 #
@@ -109,6 +119,31 @@ Spectator.describe Feed::Judging do
         it "deletes the verdict" do
           Feed::Judging.answer([question])
           expect(verdict_for(hit)).to be_nil
+        end
+      end
+    end
+
+    context "given a judge that keeps an exclusion" do
+      register_backend("keeping", KeepingBackend.new)
+
+      let_create!(:feed, owner: actor, backend: "keeping")
+
+      it "writes an excluded verdict" do
+        Feed::Judging.answer([question])
+        expect(verdict_for(hit).try(&.excluded?)).to be_true
+      end
+
+      it "records the judge's reason" do
+        Feed::Judging.answer([question])
+        expect(verdict_for(hit).try(&.reason)).to eq("z -0.42")
+      end
+
+      context "and an existing verdict" do
+        let_create!(:feed_verdict, named: nil, feed: feed, object: hit, included: true)
+
+        it "excludes the post" do
+          Feed::Judging.answer([question])
+          expect(verdict_for(hit).try(&.excluded?)).to be_true
         end
       end
     end

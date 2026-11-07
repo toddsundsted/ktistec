@@ -1,6 +1,27 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.15.0]
+### Added
+- Verify inbound RFC 9421 HTTP Message Signatures (`rsa-v1_5-sha256`).
+- Private labels, visible only to you, for organizing and finding posts.
+- Cache the posts on inbound post quotes or replies.
+- Include `totalItems` in label, hashtag, and mention collections.
+
+### Fixed
+- Ignore inbound activities whose identifier is local.
+- Mark an actor up only when its origin took part in the request.
+- Store a community-relayed `Delete` only when its origin serves it.
+- Don't accept a community's signature as verification of a relayed vote by an actor on another origin.
+- Ignore federated hashtags, mentions, and emoji whose name is only their sigil.
+- Hide inline quote links and dim deleted or blocked posts on unthemed pages.
+- Fix action button spacing on mobile.
+
+### Changed
+- Move the timeline's share and reply filters into a control bar.
+- Hyphenate multi-word names in the theme data attributes.
+- Record how an inbound activity was verified.
+
 ## [v3.14.0]
 ### Added
 - Algorithmic feeds, judged by executables in `etc/judges`.
@@ -984,6 +1005,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.15.0]: https://github.com/toddsundsted/ktistec/compare/0aedeb42...3db34af4
 [v3.14.0]: https://github.com/toddsundsted/ktistec/compare/f175932e...35c3ef5c
 [v3.13.0]: https://github.com/toddsundsted/ktistec/compare/02c9f7d8...4f3c2f40
 [v3.12.1]: https://github.com/toddsundsted/ktistec/compare/874107ab...d26efc2c

@@ -86,6 +86,16 @@ Spectator.describe MentionsController do
           .to contain_exactly(object5.iri, object4.iri, object3.iri, object2.iri, object1.iri)
       end
 
+      it "renders the mention count" do
+        get "/mentions/bar%40remote", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='mention_page_mention_banner']//span/text()").map(&.text)).to contain_exactly("2 mentions")
+      end
+
+      it "renders the mention count" do
+        get "/mentions/bar%40remote", ACCEPT_JSON
+        expect(JSON.parse(response.body)["totalItems"]).to eq(2)
+      end
+
       it "returns 404 if no such mention exists" do
         get "/mentions/remote"
         expect(response.status_code).to eq(404)

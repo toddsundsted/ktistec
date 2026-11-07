@@ -4,7 +4,8 @@
 
 - [ActivityPub](https://www.w3.org/TR/activitypub/) (Server-to-Server)
 - [WebFinger](https://webfinger.net/)
-- [HTTP Signatures](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures)
+- [Signing HTTP Messages (draft-cavage-http-signatures-12)](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12)
+- [HTTP Message Signatures (RFC 9421)](https://www.rfc-editor.org/rfc/rfc9421) (inbound only)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
 
 ## Supported FEPs
@@ -72,24 +73,38 @@ NodeInfo schema 2.1 is available via `/.well-known/nodeinfo`, conforming to FEP-
 
 ### HTTP request signing
 
-Ktistec uses [HTTP Signatures](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures) for request authentication.
+Ktistec signs outgoing requests with [Signing HTTP Messages (draft-cavage-http-signatures-12)](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12). It accepts both draft-cavage signatures and [HTTP Message Signatures (RFC 9421)](https://www.rfc-editor.org/rfc/rfc9421) on inbound inbox deliveries.
 
 **Requirements:**
 - Signatures are **required** for all POST requests to the inbox
 - Signatures are **used** for GET requests when fetching actor data
 - Keys may be rotated; Ktistec refetches the actor's key when a signature fails to verify
 
+**Timestamp tolerance:** 5 minutes
+
+#### draft-cavage
+
 **Supported algorithms:**
 - `rsa-sha256`
 - `hs2019`
-
-**Timestamp tolerance:** 5 minutes
 
 **Signed headers typically include:**
 - `(request-target)`
 - `host`
 - `date`
 - `digest` (for POST requests with body)
+
+#### RFC 9421
+
+A request carrying a `Signature-Input` header is verified as RFC 9421.
+
+**Supported algorithm:** `rsa-v1_5-sha256`
+
+**Requirements:**
+- One signature, with `keyid` and `created` parameters
+- `@method` and `@target-uri` must be signed
+- `content-digest` (`sha-256`) must be signed for POST requests
+- Supported derived components are `@method`, `@target-uri`, and `@authority`; any header field may be signed
 
 ### Content types and representations
 

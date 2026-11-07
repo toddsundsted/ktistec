@@ -89,8 +89,12 @@ Spectator.describe TagsController do
 
     it "renders the hashtag count" do
       get "/tags/foo", ACCEPT_HTML
-      expect(XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='tag_page_tag_controls']//span[contains(text(),'hashtag')]"))
-        .not_to be_empty
+      expect(XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='tag_page_tag_controls']//span/text()").map(&.text)).to contain_exactly("3 hashtags")
+    end
+
+    it "renders the hashtag count" do
+      get "/tags/foo", ACCEPT_JSON
+      expect(JSON.parse(response.body)["totalItems"]).to eq(3)
     end
 
     context "if authenticated" do
@@ -110,8 +114,12 @@ Spectator.describe TagsController do
 
       it "renders the hashtag count" do
         get "/tags/foo", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='tag_page_tag_controls']//span[contains(text(),'hashtag')]"))
-          .not_to be_empty
+        expect(XML.parse_html(response.body).xpath_nodes("//turbo-frame[@id='tag_page_tag_controls']//span/text()").map(&.text)).to contain_exactly("5 hashtags")
+      end
+
+      it "renders the hashtag count" do
+        get "/tags/foo", ACCEPT_JSON
+        expect(JSON.parse(response.body)["totalItems"]).to eq(5)
       end
 
       describe "turbo-stream-source pagination" do

@@ -18,6 +18,7 @@
     - [Custom Feeds](#custom-feeds)
     - [Feed Deck](#feed-deck)
     - [Bookmarks](#bookmarks)
+    - [Private Labels](#private-labels)
     - [Pinned Posts](#pinned-posts)
     - [Quote Posts](#quote-posts)
     - [RSS Feeds](#rss-feeds)
@@ -286,6 +287,15 @@ when new posts have arrived.
 
 Save posts for later with bookmarks. Bookmark any post to add it to
 your personal bookmarks collection for easy access.
+
+### Private Labels
+
+Organize posts with labels only you can see. Click `§+` on any post's
+details page to add or edit its labels. A label can be any word or
+phrase.
+
+Click a label to see every post you've given that label. You can pin
+a label page to the secondary menu of your home page in *Settings*.
 
 ### Pinned Posts
 

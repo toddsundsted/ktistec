@@ -585,6 +585,15 @@ Spectator.describe InboxesController do
         expect(HTTP::Client.requests).not_to have("GET #{other.iri}")
       end
 
+      context "and the signature is RFC 9421" do
+        let(headers) { Ktistec::Signature::RFC9421.sign(other, actor.inbox.not_nil!, json_ld, "application/json") }
+
+        it "does not retrieve the activity from the origin" do
+          post "/actors/#{actor.username}/inbox", headers, json_ld
+          expect(HTTP::Client.requests).not_to have("GET #{activity.iri}")
+        end
+      end
+
       it "saves the activity" do
         expect { post "/actors/#{actor.username}/inbox", headers, json_ld }
           .to change { ActivityPub::Activity.count }.by(1)

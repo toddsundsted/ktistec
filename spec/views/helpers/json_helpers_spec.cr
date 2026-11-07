@@ -10,6 +10,8 @@ Spectator.describe "helpers" do
   describe "activity_pub_collection" do
     let(query) { "" }
 
+    let(count) { nil }
+
     let(env) { make_env("GET", "/#{query}") }
 
     let(host) { Ktistec.settings.host }
@@ -22,7 +24,7 @@ Spectator.describe "helpers" do
     end
 
     subject do
-      JSON.parse(String.build { |content_io| activity_pub_collection(collection) }) # ameba:disable Lint/UnusedArgument
+      JSON.parse(String.build { |content_io| activity_pub_collection(collection, count) }) # ameba:disable Lint/UnusedArgument
     end
 
     it "generates a JSON-LD document" do
@@ -35,6 +37,26 @@ Spectator.describe "helpers" do
 
     it "nests the first page of items" do
       expect(subject["first"]["id"]).to eq("https://test.test/")
+    end
+
+    it "does not include the total number of items" do
+      expect(subject["totalItems"]?).to be_nil
+    end
+
+    context "given the total number of items" do
+      let(count) { 5_i64 }
+
+      it "includes the total number of items" do
+        expect(subject["totalItems"]).to eq(5)
+      end
+
+      context "on a page of items" do
+        let(query) { "?max_id=100" }
+
+        it "does not include the total number of items" do
+          expect(subject["totalItems"]?).to be_nil
+        end
+      end
     end
 
     context "the first page of items" do

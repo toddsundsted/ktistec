@@ -1,7 +1,7 @@
 module Ktistec::ViewHelper
   # Renders an ActivityPub collection as JSON-LD.
   #
-  macro activity_pub_collection(collection, &block)
+  macro activity_pub_collection(collection, total_items = nil, &block)
     %path = env.request.path
     %query = env.params.query
     content_io << %Q({)
@@ -10,6 +10,9 @@ module Ktistec::ViewHelper
     if %unpaged
       content_io << %Q("type":"OrderedCollection",)
       content_io << %Q("id":"#{host}#{%path}",)
+      if (%total_items = {{total_items}})
+        content_io << %Q("totalItems":#{%total_items},)
+      end
       content_io << %Q("first":{)
       content_io << %Q("type":"OrderedCollectionPage",)
       %qs = %query.to_s.presence

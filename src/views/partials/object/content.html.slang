@@ -79,7 +79,7 @@ crystal:
             - if labelable
               a.ui.small.primary.label data-turbo-frame="_top" href=labels_path(object) §+
             - labels.each do |label|
-              span.ui.small.primary.label §#{label}
+              a.ui.small.primary.label data-turbo-frame="_top" href=actor_label_path(account.actor, label) §#{label}
             - hashtags.each do |hashtag|
               a.ui.small.label data-turbo-frame="_top" href=hashtag_path(hashtag) ##{hashtag}
             - mentions.each do |mention|

@@ -79,7 +79,7 @@ p
       a href=actor_relationships_path(actor, "likes") likes
       ' ,
       a href=actor_relationships_path(actor, "shares") shares
-      | , as well as threads and hashtags.
+      | , as well as threads, hashtags, and labels.
   .two.fields
     .field
       label Label

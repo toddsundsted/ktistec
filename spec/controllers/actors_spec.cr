@@ -611,6 +611,164 @@ Spectator.describe ActorsController do
     end
   end
 
+  describe "GET /actors/:username/labels" do
+    it "returns 401 if not authorized" do
+      get "/actors/missing/labels", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/missing/labels", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      it "returns 404 if the account does not exist" do
+        get "/actors/missing/labels", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if the account does not exist" do
+        get "/actors/missing/labels", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 for another account" do
+        get "/actors/#{register.actor.username}/labels", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 for another account" do
+        get "/actors/#{register.actor.username}/labels", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/labels", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/labels", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the empty state" do
+        get "/actors/#{actor.username}/labels", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'header')]/text()").map(&.text.strip)).to contain("There is nothing here yet.")
+      end
+
+      it "renders an empty array" do
+        get "/actors/#{actor.username}/labels", ACCEPT_JSON
+        expect(JSON.parse(response.body)["labels"].as_a).to be_empty
+      end
+
+      context "given labels" do
+        let_create(:object, named: :note, published: Time.utc)
+        let_create!(:label, named: nil, owner: actor, subject: note, name: "foo")
+        let_create!(:label, named: nil, owner: actor, subject: note, name: "bar")
+
+        it "renders a link to each label's page" do
+          get "/actors/#{actor.username}/labels", ACCEPT_HTML
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'labels')]/a/@href").map(&.text))
+            .to contain_exactly("/actors/#{actor.username}/labels/bar", "/actors/#{actor.username}/labels/foo")
+        end
+
+        it "includes a link to each label's page" do
+          get "/actors/#{actor.username}/labels", ACCEPT_JSON
+          expect(JSON.parse(response.body)["labels"].as_a.map(&.["href"]))
+            .to contain_exactly("/actors/#{actor.username}/labels/bar", "/actors/#{actor.username}/labels/foo")
+        end
+      end
+    end
+  end
+
+  describe "GET /actors/:username/labels/:name" do
+    it "returns 401 if not authorized" do
+      get "/actors/missing/labels/foo", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/missing/labels/foo", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      let_create(:object, named: :note, published: Time.utc)
+      let_create!(:label, owner: actor, subject: note, name: "foo")
+
+      it "returns 404 if the account does not exist" do
+        get "/actors/missing/labels/foo", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if the account does not exist" do
+        get "/actors/missing/labels/foo", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      context "given another account" do
+        let(other) { register.actor }
+        let_create!(:label, named: nil, owner: other, subject: note, name: "foo")
+
+        it "returns 404 for that account" do
+          get "/actors/#{other.username}/labels/foo", ACCEPT_HTML
+          expect(response.status_code).to eq(404)
+        end
+
+        it "returns 404 for that account" do
+          get "/actors/#{other.username}/labels/foo", ACCEPT_JSON
+          expect(response.status_code).to eq(404)
+        end
+      end
+
+      it "returns 404 if no posts have the label" do
+        get "/actors/#{actor.username}/labels/bar", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if no posts have the label" do
+        get "/actors/#{actor.username}/labels/bar", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the labeled posts" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id").map(&.text)).to contain_exactly("object-#{note.id}")
+      end
+
+      it "renders the labeled posts" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(note.iri)
+      end
+
+      it "renders the count of labeled posts" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//span[contains(text(),'label')]/text()").map(&.text)).to contain_exactly("1 label")
+      end
+
+      it "renders the count of labeled posts" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_JSON
+        expect(JSON.parse(response.body)["totalItems"]).to eq(1)
+      end
+    end
+  end
+
   describe "GET /actors/:username/featured" do
     it "returns 404 if not found" do
       get "/actors/missing/featured", ACCEPT_HTML

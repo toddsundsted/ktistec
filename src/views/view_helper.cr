@@ -127,7 +127,7 @@ module Ktistec::ViewHelper
       partial "partials/actor-panel"
     end
 
-    def collection_json_partial(env, collection)
+    def collection_json_partial(env, collection, total_items = nil)
       render "src/views/partials/collection.json.ecr"
     end
   end

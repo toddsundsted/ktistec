@@ -16,9 +16,14 @@ module Ktistec
     end
 
     def parse(headers)
-      Cavage.parse(headers)
+      if headers.has_key?("Signature-Input")
+        RFC9421.parse(headers)
+      else
+        Cavage.parse(headers)
+      end
     end
   end
 end
 
 require "./signature/cavage"
+require "./signature/rfc9421"

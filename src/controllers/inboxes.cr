@@ -461,7 +461,15 @@ class InboxesController
 
     deadline = Time.instant + max_inbox_fetch_time
 
-    if (signature = Ktistec::Signature.parse(env.request.headers)) && (key_id = signature.key_id) && (resolved = resolve_signer(fetch_identity, key_id, request_id, transient, deadline))
+    signature = Ktistec::Signature.parse(env.request.headers)
+
+    if signature.nil? && (input = env.request.headers["Signature-Input"]?)
+      Log.info { "[#{request_id}] signature could not be parsed signature-input=#{input}" }
+    elsif signature && signature.key_id.nil?
+      Log.info { "[#{request_id}] signature failed format=#{signature.class} reason=no key id" }
+    end
+
+    if signature && (key_id = signature.key_id) && (resolved = resolve_signer(fetch_identity, key_id, request_id, transient, deadline))
       signer_iri, resolved_key = resolved
       candidate, dereferenced = find_or_dereference_actor(fetch_identity, signer_iri, request_id, transient, deadline, require_key: resolved_key.nil?)
       key_pair = resolved_key || candidate
@@ -470,7 +478,7 @@ class InboxesController
           signature.verify(key_pair, "#{host}#{env.request.resource}", env.request.headers, body)
           signer = candidate
         rescue ex : Ktistec::Signature::Error | OpenSSL::Error
-          Log.trace { "[#{request_id}] signature verification failed: #{ex.message}" }
+          reason = ex.message
           # a cached key that fails may simply be stale. fetch the
           # actor from its origin and try once more. only a key that
           # came from the database can be stale.
@@ -481,14 +489,21 @@ class InboxesController
                 signature.verify(refreshed, "#{host}#{env.request.resource}", env.request.headers, body)
                 signer = refreshed
               rescue ex : Ktistec::Signature::Error | OpenSSL::Error
-                Log.trace { "[#{request_id}] signature verification failed with refreshed key: #{ex.message}" }
+                reason = ex.message
               end
             end
           end
+          unless signer
+            Log.info { "[#{request_id}] signature failed format=#{signature.class} keyid=#{key_id} reason=#{reason}" }
+          end
         end
       else
-        Log.trace { "[#{request_id}] signature verification failed" }
+        Log.info { "[#{request_id}] signature failed format=#{signature.class} keyid=#{key_id} reason=signer not found" }
       end
+    end
+
+    if signer
+      Log.debug { "[#{request_id}] signature verified format=#{signature.class} signer=#{signer.iri}" }
     end
 
     signer.up! if signer && signer.down?

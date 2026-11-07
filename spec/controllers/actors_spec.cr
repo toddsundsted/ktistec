@@ -611,6 +611,80 @@ Spectator.describe ActorsController do
     end
   end
 
+  describe "GET /actors/:username/labels/:name" do
+    it "returns 401 if not authorized" do
+      get "/actors/missing/labels/foo", ACCEPT_HTML
+      expect(response.status_code).to eq(401)
+    end
+
+    it "returns 401 if not authorized" do
+      get "/actors/missing/labels/foo", ACCEPT_JSON
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in(as: actor.username)
+
+      let_create(:object, named: :note, published: Time.utc)
+      let_create!(:label, owner: actor, subject: note, name: "foo")
+
+      it "returns 404 if the account does not exist" do
+        get "/actors/missing/labels/foo", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if the account does not exist" do
+        get "/actors/missing/labels/foo", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      context "given another account" do
+        let(other) { register.actor }
+        let_create!(:label, named: nil, owner: other, subject: note, name: "foo")
+
+        it "returns 404 for that account" do
+          get "/actors/#{other.username}/labels/foo", ACCEPT_HTML
+          expect(response.status_code).to eq(404)
+        end
+
+        it "returns 404 for that account" do
+          get "/actors/#{other.username}/labels/foo", ACCEPT_JSON
+          expect(response.status_code).to eq(404)
+        end
+      end
+
+      it "returns 404 if no posts have the label" do
+        get "/actors/#{actor.username}/labels/bar", ACCEPT_HTML
+        expect(response.status_code).to eq(404)
+      end
+
+      it "returns 404 if no posts have the label" do
+        get "/actors/#{actor.username}/labels/bar", ACCEPT_JSON
+        expect(response.status_code).to eq(404)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_HTML
+        expect(response.status_code).to eq(200)
+      end
+
+      it "succeeds" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_JSON
+        expect(response.status_code).to eq(200)
+      end
+
+      it "renders the labeled posts" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@id").map(&.text)).to contain_exactly("object-#{note.id}")
+      end
+
+      it "renders the labeled posts" do
+        get "/actors/#{actor.username}/labels/foo", ACCEPT_JSON
+        expect(JSON.parse(response.body).dig("first", "orderedItems").as_a).to contain_exactly(note.iri)
+      end
+    end
+  end
+
   describe "GET /actors/:username/featured" do
     it "returns 404 if not found" do
       get "/actors/missing/featured", ACCEPT_HTML

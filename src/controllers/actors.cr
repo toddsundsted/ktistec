@@ -160,6 +160,24 @@ class ActorsController
     ok "actors/bookmarks", env: env, actor: actor, objects: objects
   end
 
+  get "/actors/:username/labels/:name" do |env|
+    unless (account = get_account_with_ownership(env))
+      not_found
+    end
+
+    actor = account.actor
+
+    name = env.params.url["name"]
+
+    objects = Tag::Label.all_objects(actor, name, **cursor_pagination_params(env))
+
+    not_found if objects.empty?
+
+    count = Tag::Label.all_objects_count(actor, name)
+
+    ok "actors/label", env: env, actor: actor, name: name, objects: objects, count: count
+  end
+
   get "/actors/:username/featured" do |env|
     unless (account = get_account(env))
       not_found

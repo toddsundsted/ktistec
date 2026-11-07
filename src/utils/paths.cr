@@ -405,6 +405,10 @@ module Utils::Paths
     Utils::Paths.actor_relationships_path({{actor}}, "bookmarks")
   end
 
+  macro actor_label_path(actor, name)
+    ::Ktistec::SafeURI.assert_safe("#{Utils::Paths.actor_path({{actor}})}/labels/#{::URI.encode_path_segment({{name}})}")
+  end
+
   macro actor_followers_path(actor)
     Utils::Paths.actor_relationships_path({{actor}}, "followers")
   end

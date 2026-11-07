@@ -14,6 +14,8 @@ Spectator.describe "partials" do
   describe "collection.json.ecr" do
     let(env) { make_env("GET", "/collection#{query}") }
 
+    let(total_items) { nil }
+
     subject { JSON.parse(render "./src/views/partials/collection.json.ecr") }
 
     context "given an item iri that contains json-significant characters" do

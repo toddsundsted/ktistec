@@ -16,6 +16,14 @@ class Feed
       module Exchange
         extend self
 
+        # The exchange's version.
+        #
+        # Changes only when a change would break a judge that names
+        # its columns (a column removed, renamed, or given a new
+        # meaning). Judges must name columns.
+        #
+        # Written as the file's `user_version`.
+        #
         VERSION = 1
 
         # The columns of `posts` and of `referenced`.

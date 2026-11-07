@@ -81,6 +81,12 @@ belong in a feed. The four judges here are working examples.
 
    Reading the file:
 
+   - Name every column you read and write. Don't read rows by
+     position (`SELECT *` with tuple indexes) or insert without a
+     column list (`INSERT INTO answers VALUES (...)`). The file's
+     `user_version` changes only when a change would break a judge
+     that names its columns, like a column that is removed, renamed,
+     or given a new meaning.
    - `to` is an SQL keyword, so quote it: `"to"`.
    - Times are UTC text, like `2026-11-01 00:00:00.000`.
    - A post that isn't on the owner's server has no row in

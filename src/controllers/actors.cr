@@ -160,6 +160,18 @@ class ActorsController
     ok "actors/bookmarks", env: env, actor: actor, objects: objects
   end
 
+  get "/actors/:username/labels" do |env|
+    unless (account = get_account_with_ownership(env))
+      not_found
+    end
+
+    actor = account.actor
+
+    names = Tag::Label.names(actor)
+
+    ok "actors/labels", env: env, actor: actor, names: names
+  end
+
   get "/actors/:username/labels/:name" do |env|
     unless (account = get_account_with_ownership(env))
       not_found

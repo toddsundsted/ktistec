@@ -1,0 +1,8 @@
+<%= {
+  labels: names.map { |name|
+    {
+      name: name,
+      href: actor_label_path(actor, name).to_s,
+    }
+  },
+}.to_json %>

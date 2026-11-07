@@ -853,6 +853,14 @@ Spectator.describe Utils::Paths do
     end
   end
 
+  describe "actor_labels_path" do
+    let(actor) { double(:path_double) }
+
+    it "gets the actor labels path" do
+      expect((actor_labels_path(actor)).to_s).to eq("/actors/xyz/labels")
+    end
+  end
+
   describe "actor_label_path" do
     let(actor) { double(:path_double) }
 

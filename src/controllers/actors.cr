@@ -46,6 +46,10 @@ class ActorsController
     ActivityPub::Actor.find?(id)
   end
 
+  # Timeline filters recognized by the actor home page.
+  #
+  TIMELINE_FILTERS = ["no-shares", "no-replies"]
+
   # these actions render views about local actors for both anonymous
   # and authenticated users.
 
@@ -58,7 +62,7 @@ class ActorsController
 
     if env.account?
       if env.params.query.has_key?("filters")
-        filters = env.params.query.fetch_all("filters").reject(&.empty?)
+        filters = env.params.query.fetch_all("filters").select(&.in?(TIMELINE_FILTERS))
         if !filters.empty?
           env.session.string("timeline_filters", filters.join(","))
         else

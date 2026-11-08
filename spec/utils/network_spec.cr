@@ -212,6 +212,30 @@ Spectator.describe Ktistec::Network do
       end
     end
 
+    context "given an origin that rejects draft-cavage signatures" do
+      before_each do
+        HTTP::Client.cache.respond_with("https://external/object") do |request|
+          HTTP::Client::Response.new(request.headers.has_key?("Signature-Input") ? 200 : 401)
+        end
+      end
+
+      it "resends the request signed with RFC 9421" do
+        described_class.get(key_pair, "https://external/object")
+        first, second = HTTP::Client.requests
+        expect(first.headers.has_key?("Signature-Input")).to be_false
+        expect(second.headers.has_key?("Signature-Input")).to be_true
+      end
+    end
+
+    context "given an origin that fails the request for another reason" do
+      before_each { HTTP::Client.cache.respond_with("https://external/object") { HTTP::Client::Response.new(500) } }
+
+      it "does not resend the request" do
+        expect { described_class.get(key_pair, "https://external/object") }.to raise_error(Ktistec::Network::Error)
+        expect(HTTP::Client.requests.size).to eq(1)
+      end
+    end
+
     context "given a remote object" do
       class MockObject
         property iri : String
@@ -388,6 +412,30 @@ Spectator.describe Ktistec::Network do
       headers = HTTP::Client.requests.last.headers
       expect(headers["Signature"]?).to match(/keyId="https:\/\/key_pair#main-key"/)
       expect(headers["Digest"]?).to match(/^SHA-256=/)
+    end
+
+    context "given an origin that rejects draft-cavage signatures" do
+      before_each do
+        HTTP::Client.cache.respond_with("https://external/delivery") do |request|
+          HTTP::Client::Response.new(request.headers.has_key?("Signature-Input") ? 200 : 400)
+        end
+      end
+
+      it "resends the request signed with RFC 9421" do
+        described_class.post(key_pair, "https://external/delivery", body, content_type)
+        first, second = HTTP::Client.requests
+        expect(first.headers.has_key?("Signature-Input")).to be_false
+        expect(second.headers.has_key?("Signature-Input")).to be_true
+      end
+    end
+
+    context "given an origin that fails the request for another reason" do
+      before_each { HTTP::Client.cache.respond_with("https://external/delivery") { HTTP::Client::Response.new(404) } }
+
+      it "does not resend the request" do
+        described_class.post(key_pair, "https://external/delivery", body, content_type)
+        expect(HTTP::Client.requests.size).to eq(1)
+      end
     end
 
     it "fails on errors" do

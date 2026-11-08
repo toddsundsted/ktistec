@@ -11,6 +11,12 @@ module Ktistec
     class Error < Exception
     end
 
+    # The formats outbound requests are signed with, in order.
+    #
+    FORMATS = {Cavage, RFC9421}
+
+    RETRY_STATUSES = {400, 401}
+
     def sign(key_pair, url, body = nil, content_type = nil, content_length = nil, accept = nil, method = :post, time = Time.utc, algorithm = "rsa-sha256")
       Cavage.sign(key_pair, url, body, content_type, content_length, accept, method, time, algorithm)
     end

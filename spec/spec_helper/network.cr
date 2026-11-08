@@ -63,9 +63,25 @@ end
 #
 class HTTP::Client
   class Cache
-    @cache = Hash(String, String | HTTP::Client::Response).new
+    alias Responder = HTTP::Request -> HTTP::Client::Response
 
-    delegate :[], :[]?, :[]=, :clear, :delete, to: @cache
+    @cache = Hash(String, Responder).new
+
+    delegate :[]?, :clear, :delete, to: @cache
+
+    # responds to requests for `url` with the response the block returns
+
+    def respond_with(url : String | URI, &block : Responder)
+      @cache[url.to_s] = block
+    end
+
+    def []=(url : String, body : String)
+      respond_with(url) { HTTP::Client::Response.new(200, headers: HTTP::Headers.new, body: body) }
+    end
+
+    def []=(url : String, response : HTTP::Client::Response)
+      respond_with(url) { response }
+    end
 
     def <<(object)
       if object.responds_to?(:iri) && object.responds_to?(:to_json_ld)
@@ -145,7 +161,8 @@ class HTTP::Client
 
   def get(path : String, headers : HTTP::Headers? = nil)
     url = URI.new(scheme: "https", host: self.host, path: path)
-    @@requests << HTTP::Request.new("GET", url.to_s, headers)
+    request = HTTP::Request.new("GET", url.to_s, headers)
+    @@requests << request
     case self.host
     when /socket-addrinfo-error/
       raise Socket::Addrinfo::Error.from_os_error(nil, nil)
@@ -203,17 +220,8 @@ class HTTP::Client
           body: $1,
         )
       else
-        if (stub = @@cache[url.to_s]?)
-          case stub
-          in HTTP::Client::Response
-            stub
-          in String
-            HTTP::Client::Response.new(
-              200,
-              headers: HTTP::Headers.new,
-              body: stub,
-            )
-          end
+        if (responder = @@cache[url.to_s]?)
+          responder.call(request)
         else
           HTTP::Client::Response.new(404)
         end
@@ -250,7 +258,8 @@ class HTTP::Client
 
   def post(path : String, headers : HTTP::Headers, body : String)
     url = URI.new(scheme: "https", host: self.host, path: path)
-    @@requests << HTTP::Request.new("POST", url.to_s, headers, body)
+    request = HTTP::Request.new("POST", url.to_s, headers, body)
+    @@requests << request
     if url.scheme && url.authority && url.path
       case url.path
       when /socket-addrinfo-error/
@@ -272,17 +281,8 @@ class HTTP::Client
           body: "",
         )
       else
-        if (stub = @@cache[url.to_s]?)
-          case stub
-          in HTTP::Client::Response
-            stub
-          in String
-            HTTP::Client::Response.new(
-              200,
-              headers: HTTP::Headers.new,
-              body: stub,
-            )
-          end
+        if (responder = @@cache[url.to_s]?)
+          responder.call(request)
         else
           HTTP::Client::Response.new(404)
         end

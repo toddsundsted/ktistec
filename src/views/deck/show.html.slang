@@ -31,6 +31,5 @@
               | Move Right
               i.angle.right.icon
           .right.menu
-            a.item href=actor_feeds_path(actor) Manage Feeds
             a.item href=edit_actor_feed_path(actor, feed) Edit Feed
       - partial "deck/pane"

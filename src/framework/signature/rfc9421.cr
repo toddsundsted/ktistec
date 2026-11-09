@@ -72,6 +72,14 @@ module Ktistec
               %Q<"#{component}": #{url}>
             when "@authority"
               %Q<"#{component}": #{url.authority}>
+            when "@scheme"
+              %Q<"#{component}": #{url.scheme}>
+            when "@request-target"
+              %Q<"#{component}": #{url.request_target}>
+            when "@path"
+              %Q<"#{component}": #{url.path}>
+            when "@query"
+              %Q<"#{component}": ?#{url.query}>
             when .starts_with?("@")
               raise Error.new("unsupported component: #{component}")
             when "host"

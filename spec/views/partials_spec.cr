@@ -1886,4 +1886,41 @@ Spectator.describe "partials" do
       expect(subject.xpath_nodes("//*[contains(@class,'event')]/@id")).to have("object-#{quoted.id}")
     end
   end
+
+  describe "header.html.slang" do
+    let(account) { register }
+
+    sign_in(as: account.username)
+
+    let(path) { "/" }
+
+    let(env) { make_env("GET", path) }
+
+    subject do
+      begin
+        XML.parse_html(render "./src/views/partials/header.html.slang")
+      rescue XML::Error
+        XML.parse_html("<div/>").document
+      end
+    end
+
+    it "renders the default navigation items" do
+      expect(subject.xpath_nodes("//nav//a[contains(@class,'item')]//span[@class='text']/text()"))
+        .to contain_exactly("Home", "Search", "Everything", "Admin")
+    end
+
+    context "on the deck page" do
+      let(path) { actor_deck_path(account.actor).to_s }
+
+      it "renders the deck navigation items" do
+        expect(subject.xpath_nodes("//nav//a[contains(@class,'item')]//span[@class='text']/text()"))
+          .to contain_exactly("Home", "Feeds", "Admin")
+      end
+
+      it "links to the feeds page" do
+        expect(subject.xpath_nodes("//nav//a[contains(@class,'item')]/@href"))
+          .to have(actor_feeds_path(account.actor).to_s)
+      end
+    end
+  end
 end

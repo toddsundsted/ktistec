@@ -392,6 +392,8 @@ module Ktistec
       was = url
       error_class = TransientError # default error class
       message = "Failed"
+      first, second = Ktistec::Signature::FORMATS
+      format = first
       attempts.times do
         start = Time.instant
         client = nil
@@ -403,19 +405,7 @@ module Ktistec
             raise PermanentError.new("URL scheme not supported: #{url}")
           end
           client = make_client(uri, deadline)
-          request_headers =
-            if key_pair
-              Ktistec::Signature.sign(key_pair, url, method: :get).merge!(headers)
-            else
-              headers.dup
-            end
-          request_headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
-          # set Host explicitly to match what Signature.sign covered
-          # (`url.authority`). the IO-bound HTTP::Client constructor used
-          # by `make_client` does not carry TLS state, so its default
-          # Host header would append `:443` on HTTPS default-port URLs
-          # and break signature verification at the receiver.
-          request_headers["Host"] = uri.authority.not_nil!
+          request_headers = request_headers(format, key_pair, url, uri, headers, :get)
           status_code = 0
           response_headers = HTTP::Headers.new
           body_capped = ""
@@ -430,6 +420,14 @@ module Ktistec
                 body_capped = read_strict_capped(io, max_bytes, url, deadline)
               end
             end
+          end
+          if key_pair && format == first && status_code.in?(Ktistec::Signature::RETRY_STATUSES)
+            Log.info { "GET #{url} rejected #{format} signature [#{status_code}]; retrying with #{second}" }
+            format = second
+            next
+          elsif format == second
+            Log.info { "GET #{url} returned [#{status_code}] after retrying with #{second}" }
+            format = first
           end
           case status_code
           when 200
@@ -592,6 +590,17 @@ module Ktistec
     # Does not follow redirects.
     #
     def post(key_pair, url : String, body : String, content_type : String, headers = HTTP::Headers.new) : HTTP::Client::Response
+      first, second = Ktistec::Signature::FORMATS
+      response = post_signed(first, key_pair, url, body, content_type, headers)
+      if response.status_code.in?(Ktistec::Signature::RETRY_STATUSES)
+        Log.info { "POST #{url} rejected #{first} signature [#{response.status_code}]; retrying with #{second}" }
+        response = post_signed(second, key_pair, url, body, content_type, headers)
+        Log.info { "POST #{url} returned [#{response.status_code}] after retrying with #{second}" }
+      end
+      response
+    end
+
+    private def post_signed(format, key_pair, url : String, body : String, content_type : String, headers) : HTTP::Client::Response
       start = Time.instant
       client = nil
       begin
@@ -602,12 +611,8 @@ module Ktistec
           raise PermanentError.new("URL scheme not supported: #{url}")
         end
         client = make_client(uri)
-        request_headers = Ktistec::Signature.sign(key_pair, url, body, content_type).merge!(headers)
-        request_headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
-        # set Host explicitly to match what Signature.sign covered
-        # (`url.authority`). See `.get` above.
+        request_headers = request_headers(format, key_pair, url, uri, headers, :post, body, content_type)
         status_code = 0
-        request_headers["Host"] = uri.authority.not_nil!
         response_headers = HTTP::Headers.new
         snippet = ""
         client.post(uri.request_target, request_headers, body) do |response|
@@ -648,6 +653,26 @@ module Ktistec
       ensure
         client.try(&.close)
       end
+    end
+
+    # Returns the headers for a request, signed in `format` when
+    # `key_pair` is supplied.
+    #
+    private def request_headers(format, key_pair, url, uri, headers, method, body = nil, content_type = nil)
+      request_headers =
+        if key_pair
+          format.sign(key_pair, url, body, content_type, method: method).merge!(headers)
+        else
+          headers.dup
+        end
+      request_headers["User-Agent"] = "ktistec/#{Ktistec::VERSION} (+https://github.com/toddsundsted/ktistec)"
+      # set Host explicitly to match what the signature covered
+      # (`url.authority`). the IO-bound HTTP::Client constructor used
+      # by `make_client` does not carry TLS state, so its default
+      # Host header would append `:443` on HTTPS default-port URLs
+      # and break signature verification at the receiver.
+      request_headers["Host"] = uri.authority.not_nil!
+      request_headers
     end
 
     # Reads up to `max` bytes from `io` into a new String, leaving any

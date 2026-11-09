@@ -30,7 +30,7 @@
     </head>
     <%-
       path = env.request.path
-      if path.matches?(%r|^/actors/[^/]+/deck$|)
+      if deck_page?(env)
         _body_class = "dimmable deck-page"
         _content_class = "deck"
       elsif path == "/metrics"
@@ -48,7 +48,11 @@
         <%= render "src/views/partials/modals.html.slang" %>
         <%= render "src/views/partials/header.html.slang" %>
         <%= render "src/views/partials/banner.html.slang" %>
+        <%- if deck_page?(env) -%>
+        <div class="<%= _content_class %>" data-controller="deck-scroll">
+        <%- else -%>
         <div class="<%= _content_class %>">
+        <%- end -%>
             <%= content %>
         </div>
         <%= render "src/views/partials/footer.html.slang" %>

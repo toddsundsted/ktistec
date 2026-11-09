@@ -12,7 +12,7 @@ module Ktistec
       url = URI.parse(url).normalize
       date = Time::Format::HTTP_DATE.format(time)
       headers_string = "(request-target)"
-      signature_string = "(request-target): #{method} #{url.path}"
+      signature_string = "(request-target): #{method} #{url.request_target}"
       signature_params = %Q<keyId="#{key_pair.iri}#main-key">
       case algorithm
       when "hs2019"
@@ -95,7 +95,7 @@ module Ktistec
           split_headers_string.map do |header|
             case header
             when "(request-target)"
-              "#{header}: #{method} #{url.path}"
+              "#{header}: #{method} #{url.request_target}"
             when "(created)"
               unless (created = @parameters["created"]?)
                 raise Error.new("created parameter must be specified")

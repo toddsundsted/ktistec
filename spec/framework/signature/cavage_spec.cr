@@ -174,6 +174,14 @@ Spectator.describe Ktistec::Signature::Cavage::Parsed do
       end
     end
 
+    context "given a request target with a query" do
+      let(headers) { Ktistec::Signature::Cavage.sign(key_pair, "https://remote/inbox?page=2", body: "body") }
+
+      it "verifies signature" do
+        expect(verify(key_pair, "https://remote/inbox?page=2", headers, "body")).to be_true
+      end
+    end
+
     it "raises an error if the (request-target) header isn't signed" do
       headers["Signature"] = headers["Signature"].gsub("(request-target)", "")
       expect { verify(key_pair, "https://remote/inbox", headers) }
@@ -182,6 +190,11 @@ Spectator.describe Ktistec::Signature::Cavage::Parsed do
 
     it "raises an error if the request target path doesn't match" do
       expect { verify(key_pair, "https://remote/foo_bar", headers) }
+        .to raise_error(Ktistec::Signature::Error, /invalid signature/)
+    end
+
+    it "raises an error if the request target query doesn't match" do
+      expect { verify(key_pair, "https://remote/inbox?page=2", headers, "body") }
         .to raise_error(Ktistec::Signature::Error, /invalid signature/)
     end
 

@@ -241,6 +241,38 @@ Spectator.describe Ktistec::Signature::RFC9421::Parsed do
       end
     end
 
+    context "given a signature that covers @scheme" do
+      let(components) { [{"@method", "POST"}, {"@target-uri", "https://remote/inbox"}, {"@scheme", "https"}, {"content-digest", digest}] }
+
+      it "verifies the signature" do
+        expect(verify(key_pair, "https://remote/inbox", headers, "body")).to be_true
+      end
+    end
+
+    context "given a signature that covers @request-target" do
+      let(components) { [{"@method", "POST"}, {"@target-uri", "https://remote/inbox?page=2"}, {"@request-target", "/inbox?page=2"}, {"content-digest", digest}] }
+
+      it "verifies the signature over the path and query" do
+        expect(verify(key_pair, "https://remote/inbox?page=2", headers, "body")).to be_true
+      end
+    end
+
+    context "given a signature that covers @path" do
+      let(components) { [{"@method", "POST"}, {"@target-uri", "https://remote/inbox"}, {"@path", "/inbox"}, {"content-digest", digest}] }
+
+      it "verifies the signature" do
+        expect(verify(key_pair, "https://remote/inbox", headers, "body")).to be_true
+      end
+    end
+
+    context "given a signature that covers @query" do
+      let(components) { [{"@method", "POST"}, {"@target-uri", "https://remote/inbox?page=2"}, {"@query", "?page=2"}, {"content-digest", digest}] }
+
+      it "verifies the signature" do
+        expect(verify(key_pair, "https://remote/inbox?page=2", headers, "body")).to be_true
+      end
+    end
+
     context "given a signature that covers host" do
       let(components) { [{"@method", "POST"}, {"@target-uri", "https://remote/inbox"}, {"host", "remote"}, {"content-digest", digest}] }
 
@@ -270,11 +302,11 @@ Spectator.describe Ktistec::Signature::RFC9421::Parsed do
       end
     end
 
-    context "given a signature that covers a derived component other than @method, @target-uri, or @authority" do
-      let(components) { [{"@method", "POST"}, {"@target-uri", "https://remote/inbox"}, {"@scheme", "https"}, {"content-digest", digest}] }
+    context "given a signature that covers an unsupported derived component" do
+      let(components) { [{"@method", "POST"}, {"@target-uri", "https://remote/inbox"}, {"@status", "200"}, {"content-digest", digest}] }
 
       it "raises an error" do
-        expect { verify(key_pair, "https://remote/inbox", headers, "body") }.to raise_error(Ktistec::Signature::Error, "unsupported component: @scheme")
+        expect { verify(key_pair, "https://remote/inbox", headers, "body") }.to raise_error(Ktistec::Signature::Error, "unsupported component: @status")
       end
     end
 

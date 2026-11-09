@@ -9,6 +9,42 @@ Spectator.describe "helpers" do
     XML::HTMLParserOptions::NOIMPLIED |
       XML::HTMLParserOptions::NODEFDTD
 
+  describe ".deck_page?" do
+    let(account) { register }
+
+    let(path) { Utils::Paths.actor_deck_path(account).to_s }
+
+    let(env) { make_env("GET", path) }
+
+    it "is false" do
+      expect(self.class.deck_page?(env)).to be_false
+    end
+
+    context "when signed in" do
+      sign_in(as: account.username)
+
+      it "is true" do
+        expect(self.class.deck_page?(env)).to be_true
+      end
+
+      context "and on a deck pane" do
+        let(path) { "#{Utils::Paths.actor_deck_path(account)}/panes/1" }
+
+        it "is false" do
+          expect(self.class.deck_page?(env)).to be_false
+        end
+      end
+
+      context "and on another account's deck" do
+        let(path) { Utils::Paths.actor_deck_path(register).to_s }
+
+        it "is false" do
+          expect(self.class.deck_page?(env)).to be_false
+        end
+      end
+    end
+  end
+
   describe ".activity_status" do
     it "is :none" do
       expect(self.class.activity_status(nil)).to eq(:none)

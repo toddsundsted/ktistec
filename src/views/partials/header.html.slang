@@ -4,12 +4,17 @@ nav.ui.top.fixed.inverted.navigation.menu data-turbo-prefetch="false"
       a.item href=actor_path(_account)
         i.home.icon
         span.text Home
-      a.item href=search_path
-        i.search.icon
-        span.text Search
-      a.item href=everything_path
-        i.globe.icon
-        span.text Everything
+      - if deck_page?(env)
+        a.item href=actor_feeds_path(_account)
+          i.bars.icon
+          span.text Feeds
+      - else
+        a.item href=search_path
+          i.search.icon
+          span.text Search
+        a.item href=everything_path
+          i.globe.icon
+          span.text Everything
       a.item href=admin_path
         i.cog.icon
         span.text Admin

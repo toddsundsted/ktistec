@@ -30,7 +30,7 @@
     </head>
     <%-
       path = env.request.path
-      if path.matches?(%r|^/actors/[^/]+/deck$|)
+      if deck_page?(env)
         _body_class = "dimmable deck-page"
         _content_class = "deck"
       elsif path == "/metrics"

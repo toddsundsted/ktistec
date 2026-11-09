@@ -12,6 +12,13 @@ module Ktistec::ViewHelper
       scope ? "#{scope}-#{id}" : id
     end
 
+    # Returns `true` if the request is for the signed-in account's
+    # deck.
+    #
+    def deck_page?(env) : Bool
+      !!((account = env.account?) && env.request.path == Utils::Paths.actor_deck_path(account).to_s)
+    end
+
     # Classifies an activity time into a liveness signal.
     #
     def activity_status(activity_at : Time?) : Symbol

@@ -27,11 +27,11 @@ class Tag
     # label tags don't participate in tag statistics
 
     def after_create
-      # no-op
+      Tag::OBSERVERS.notify(:create, self)
     end
 
     def after_destroy
-      # no-op
+      Tag::OBSERVERS.notify(:destroy, self)
     end
 
     # The owner's labeled objects that are displayable.

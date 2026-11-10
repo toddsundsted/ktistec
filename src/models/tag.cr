@@ -352,14 +352,13 @@ class Tag
 
   OBSERVERS = Ktistec::Observable::Registry(Tag).new
 
-  OBSERVERS.observe(:create, &.increment_statistics)
-  OBSERVERS.observe(:destroy, &.decrement_statistics)
-
   def after_create
+    increment_statistics
     Tag::OBSERVERS.notify(:create, self)
   end
 
   def after_destroy
+    decrement_statistics
     Tag::OBSERVERS.notify(:destroy, self)
   end
 

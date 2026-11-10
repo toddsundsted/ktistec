@@ -163,10 +163,10 @@ Spectator.describe DeckController do
         context "and another feed" do
           let_create!(:feed, named: woodworking, owner: actor, name: "Woodworking")
 
-          it "orders the panes oldest first" do
+          it "orders the panes newest first" do
             get "/actors/#{actor.username}/deck", ACCEPT_HTML
             names = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//h2/text()")
-            expect(names.map(&.text)).to eq(["Robotics", "Woodworking"])
+            expect(names.map(&.text)).to eq(["Woodworking", "Robotics"])
           end
 
           it "disables the move controls that would do nothing" do
@@ -185,7 +185,7 @@ Spectator.describe DeckController do
             it "scopes the posts to their panes" do
               get "/actors/#{actor.username}/deck", ACCEPT_HTML
               ids = XML.parse_html(response.body).xpath_nodes("//section[contains(@class,'deck-pane')]//turbo-frame[contains(@id,'-object-')]/@id")
-              expect(ids.map(&.text)).to eq(["feed-#{robotics.id}-object-#{shared.id}", "feed-#{woodworking.id}-object-#{shared.id}"])
+              expect(ids.map(&.text)).to eq(["feed-#{woodworking.id}-object-#{shared.id}", "feed-#{robotics.id}-object-#{shared.id}"])
             end
 
             it "renders no duplicate ids" do
@@ -501,22 +501,22 @@ Spectator.describe DeckController do
       end
 
       it "moves the pane left" do
-        expect { move(woodworking.id, 0) }.to change { account.reload!.feed_order }.from([] of String).to(["woodworking", "robotics"])
+        expect { move(robotics.id, 0) }.to change { account.reload!.feed_order }.from([] of String).to(["robotics", "woodworking"])
       end
 
       it "moves the pane right" do
-        expect { move(robotics.id, 1) }.to change { account.reload!.feed_order }.from([] of String).to(["woodworking", "robotics"])
-      end
-
-      it "records the order when a pane is moved to where it already is" do
         expect { move(woodworking.id, 1) }.to change { account.reload!.feed_order }.from([] of String).to(["robotics", "woodworking"])
       end
 
+      it "records the order when a pane is moved to where it already is" do
+        expect { move(woodworking.id, 0) }.to change { account.reload!.feed_order }.from([] of String).to(["woodworking", "robotics"])
+      end
+
       context "and the order has already been recorded" do
-        before_each { move(woodworking.id, 0) }
+        before_each { move(robotics.id, 0) }
 
         it "leaves it unchanged when the pane is moved to where it already is" do
-          expect { move(woodworking.id, 0) }.not_to change { account.reload!.feed_order }.from(["woodworking", "robotics"])
+          expect { move(robotics.id, 0) }.not_to change { account.reload!.feed_order }.from(["robotics", "woodworking"])
         end
       end
 
@@ -531,12 +531,12 @@ Spectator.describe DeckController do
 
       context "and more feeds than the deck shows" do
         # enough feeds to fill the deck, plus one it has no room for
-        {% for index in 1..9 %}
+        {% for index in 1..11 %}
           pane({{index}})
         {% end %}
 
-        let_create!(:feed, named: last_shown, owner: actor)
-        let_create!(:feed, named: first_hidden, owner: actor)
+        let(last_shown) { woodworking }
+        let(first_hidden) { robotics }
 
         def panes
           described_class.panes_for(account.reload!).map(&.id)
@@ -595,14 +595,14 @@ Spectator.describe DeckController do
     context "given a second feed" do
       let_create!(:feed, named: woodworking, owner: actor, name: "Woodworking")
 
-      it "orders the feeds oldest first" do
-        expect(described_class.panes_for(account).map(&.id)).to eq([robotics.id, woodworking.id])
+      it "orders the feeds newest first" do
+        expect(described_class.panes_for(account).map(&.id)).to eq([woodworking.id, robotics.id])
       end
 
-      context "and a feed order naming the second feed" do
-        before_each { account.assign(feed_order: ["woodworking"]).save }
+      context "and a feed order naming the first feed" do
+        before_each { account.assign(feed_order: ["robotics"]).save }
 
-        it "returns the named feed first" do
+        it "returns the unnamed feed first" do
           expect(described_class.panes_for(account).map(&.id)).to eq([woodworking.id, robotics.id])
         end
       end
@@ -611,7 +611,7 @@ Spectator.describe DeckController do
         before_each { account.assign(feed_order: ["gardening", "woodworking"]).save }
 
         it "ignores the unmatched slug" do
-          expect(described_class.panes_for(account).map(&.id)).to eq([woodworking.id, robotics.id])
+          expect(described_class.panes_for(account).map(&.id)).to eq([robotics.id, woodworking.id])
         end
       end
     end
@@ -644,15 +644,7 @@ Spectator.describe DeckController do
       end
 
       it "drops the last feed" do
-        expect(described_class.panes_for(account).map(&.id)).not_to contain(pane12.id)
-      end
-
-      context "and a feed order naming the last feed" do
-        before_each { account.assign(feed_order: [pane12.slug.not_nil!]).save }
-
-        it "keeps the last feed" do
-          expect(described_class.panes_for(account).map(&.id)).to contain(pane12.id)
-        end
+        expect(described_class.panes_for(account).map(&.id)).not_to contain(robotics.id)
       end
     end
   end

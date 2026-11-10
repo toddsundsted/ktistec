@@ -41,10 +41,10 @@ class DeckController
   # Returns all of the account's published feeds, in pane order.
   #
   def self.ordered_feeds_for(account : Account) : Array(Feed)
-    feeds = Feed.for(account.actor).select(&.published?).reverse!
+    feeds = Feed.for(account.actor).select(&.published?)
     by_slug = feeds.index_by(&.slug)
     ordered = account.feed_order.compact_map { |slug| by_slug.delete(slug) }
-    ordered + (feeds - ordered)
+    (feeds - ordered) + ordered
   end
 
   # Returns the account's published feeds that are rendered as panes, in pane order.

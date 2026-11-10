@@ -2,6 +2,7 @@ require "../../../../src/services/feed/backend/criteria"
 require "../../../../src/models/feed"
 require "../../../../src/models/tag/hashtag"
 require "../../../../src/models/tag/mention"
+require "../../../../src/models/tag/label"
 
 require "../../../spec_helper/base"
 require "../../../spec_helper/factory"
@@ -395,6 +396,58 @@ Spectator.describe Feed::Backend::Criteria do
         expect(judgment.reason).to match(/alice@example.com/)
       end
     end
+
+    context "given a labels any group" do
+      let_build(:feed, params: JSON.parse(%({"labels": {"any": ["to read"]}})).as_h)
+      let_create!(:object, content: "<p>plain</p>")
+
+      it "does not include an unlabeled object" do
+        expect(judgment.included).to be_false
+      end
+
+      context "and the object carries the owner's label" do
+        let_create!(:label, owner: feed.owner, subject: object, name: "to read")
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the label in the reason" do
+          expect(judgment.reason).to eq("matched: to read [label]")
+        end
+      end
+
+      context "and the object carries the owner's label in mixed case" do
+        let_create!(:label, owner: feed.owner, subject: object, name: "To Read")
+
+        it "includes the object" do
+          expect(judgment.included).to be_true
+        end
+
+        it "names the label in the reason" do
+          expect(judgment.reason).to eq("matched: to read [label]")
+        end
+      end
+
+      context "and the object carries a different user's label" do
+        let_create(:actor, named: other)
+        let_create!(:label, owner: other, subject: object, name: "to read")
+
+        it "does not include the object" do
+          expect(judgment.included).to be_false
+        end
+      end
+    end
+
+    context "given a labels term with a leading sigil" do
+      let_build(:feed, params: JSON.parse(%({"labels": {"any": ["§to read"]}})).as_h)
+      let_create!(:object, content: "<p>plain</p>")
+      let_create!(:label, owner: feed.owner, subject: object, name: "to read")
+
+      it "includes the object" do
+        expect(judgment.included).to be_true
+      end
+    end
   end
 
   describe "#validate_params" do
@@ -549,6 +602,12 @@ Spectator.describe Feed::Backend::Criteria do
 
       it "accepts terms that can match an href" do
         expect(subject.validate_params(one("mentions", "any", "https://example.com/actors/bob"))).to be_empty
+      end
+    end
+
+    context "given a label" do
+      it "quotes an empty label and names the fix" do
+        expect(subject.validate_params(one("labels", "any", ""))).to contain(%(Remove the stray "§". It can't be used as a keyword.))
       end
     end
 

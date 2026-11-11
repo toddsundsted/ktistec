@@ -3,15 +3,6 @@ require "../../../src/models/tag/mention"
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
-class Tag
-  class_property mention_recount_count : Int64 = 0
-
-  private def recount
-    Tag.mention_recount_count += 1
-    previous_def
-  end
-end
-
 Spectator.describe Tag::Mention do
   setup_spec
 
@@ -50,9 +41,9 @@ Spectator.describe Tag::Mention do
     context "when the subject is a draft" do
       let_build(:object, local: true, published: nil)
 
-      it "does not change the count" do
+      it "does not count the mention" do
         new_tag = described_class.new(subject: object, name: "@foo@remote")
-        expect { new_tag.save }.not_to change { Tag.mention_recount_count }
+        expect { new_tag.save }.not_to change { described_class.match("foo@remote") }
       end
     end
   end
@@ -60,10 +51,10 @@ Spectator.describe Tag::Mention do
   describe "#destroy" do
     context "when the subject is a draft" do
       let_create(:object, local: true, published: nil)
+      let!(new_tag) { described_class.new(subject: object, name: "@foo@remote").save }
 
-      it "does not change the count" do
-        new_tag = described_class.new(subject: object, name: "@foo@remote")
-        expect { new_tag.destroy }.not_to change { Tag.mention_recount_count }
+      it "does not count the mention" do
+        expect { new_tag.destroy }.not_to change { described_class.match("foo@remote") }
       end
     end
   end

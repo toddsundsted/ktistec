@@ -96,7 +96,7 @@ class Feed
             positive_terms += array.count { |element| !group.normalize(element.as_s).blank? } if selector.in?(POSITIVE)
           end
         end
-        errors << "Add at least one keyword, #hashtag, or @mention." if positive_terms.zero?
+        errors << "Add at least one keyword, #hashtag, @mention, or §label." if positive_terms.zero?
         errors
       end
 

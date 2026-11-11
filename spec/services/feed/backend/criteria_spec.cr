@@ -493,12 +493,12 @@ Spectator.describe Feed::Backend::Criteria do
 
     it "rejects a group with no positive terms" do
       params = JSON.parse(%({"keywords": {"none": ["gamma"]}})).as_h
-      expect(subject.validate_params(params)).to contain("Add at least one keyword, #hashtag, or @mention.")
+      expect(subject.validate_params(params)).to contain("Add at least one keyword, #hashtag, @mention, or §label.")
     end
 
     it "rejects a group with only empty positive lists" do
       params = JSON.parse(%({"keywords": {"any": []}})).as_h
-      expect(subject.validate_params(params)).to contain("Add at least one keyword, #hashtag, or @mention.")
+      expect(subject.validate_params(params)).to contain("Add at least one keyword, #hashtag, @mention, or §label.")
     end
 
     it "accepts a hashtags group" do
@@ -523,7 +523,7 @@ Spectator.describe Feed::Backend::Criteria do
 
     it "rejects params with no positive terms across groups" do
       params = JSON.parse(%({"hashtags": {"none": ["spoiler"]}})).as_h
-      expect(subject.validate_params(params)).to contain("Add at least one keyword, #hashtag, or @mention.")
+      expect(subject.validate_params(params)).to contain("Add at least one keyword, #hashtag, @mention, or §label.")
     end
 
     it "accepts a mentions group" do

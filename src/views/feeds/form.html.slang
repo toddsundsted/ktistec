@@ -10,7 +10,7 @@ crystal:
     cancel_label = "Back"
   end
   submit_label = (feed.new_record? || feed.draft) ? "Create Feed" : "Update Feed"
-  placeholder = "Add a keyword, #hashtag, or @mention, then press Enter"
+  placeholder = "Add a keyword, #hashtag, @mention, or §label, then press Enter"
   judges = feed.new_record? ? Feed::Backend.names.to_h { |name| {name, name} } : {} of String => String
 - if judges.size > 1
   form.ui.form method="GET" action=new_actor_feed_path(owner) data-controller="submit-on-change" data-turbo-frame="judge"
@@ -25,11 +25,12 @@ crystal:
       h3.ui.header Criteria
       p.term-hint.plain
         | Start a term with <code>#</code> for a hashtag, <code>@</code>
-          for a mention, or just type keywords. <em>One term per line.</em>
+          for a mention, <code>§</code> for one of your private labels,
+          or just type keywords. <em>One term per line.</em>
       p.term-hint.enhanced
         | Start a term with <code>#</code> for a hashtag, <code>@</code>
-          for a mention, or just type keywords. <em>Press Enter to add
-          each.</em>
+          for a mention, <code>§</code> for one of your private labels,
+          or just type keywords. <em>Press Enter to add each.</em>
       / note the morphing protection (`data-turbo-permanent=true`)
       .ui.field.term-builder
         .ui.segment.term-input.any data-turbo-permanent=true data-controller="term-input" data-term-input-placeholder-value=placeholder

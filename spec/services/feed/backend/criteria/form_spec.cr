@@ -40,12 +40,20 @@ Spectator.describe Feed::Backend::Criteria::Form do
       expect(parse_groups(any: "HTTPS://x/bob", all: "", none: "")).to eq(params(%({"mentions":{"any":["HTTPS://x/bob"]}})))
     end
 
+    it "infers a label and strips one leading '§'" do
+      expect(parse_groups(any: "§to read", all: "", none: "")).to eq(params(%({"labels":{"any":["to read"]}})))
+    end
+
     it "strips only one leading '#'" do
       expect(parse_groups(any: "##tag", all: "", none: "")).to eq(params(%({"hashtags":{"any":["#tag"]}})))
     end
 
     it "strips only one leading '@'" do
       expect(parse_groups(any: "@@bob@host", all: "", none: "")).to eq(params(%({"mentions":{"any":["@bob@host"]}})))
+    end
+
+    it "strips only one leading '§'" do
+      expect(parse_groups(any: "§§to read", all: "", none: "")).to eq(params(%({"labels":{"any":["§to read"]}})))
     end
 
     it "routes each to its selector" do
@@ -112,6 +120,10 @@ Spectator.describe Feed::Backend::Criteria::Form do
 
     it "leaves a mention IRI bare" do
       expect(described_class.format(params(%({"mentions":{"any":["https://x/bob"]}})))).to eq({any: "https://x/bob", all: "", none: ""})
+    end
+
+    it "prefixes a label with '§'" do
+      expect(described_class.format(params(%({"labels":{"any":["to read"]}})))).to eq({any: "§to read", all: "", none: ""})
     end
 
     it "preserves a leading-space keyword" do

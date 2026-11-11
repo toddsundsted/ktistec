@@ -8,10 +8,14 @@ class Task
   class Feed::DiscoverJudges < Task
     include Singleton
 
+    # Interval between scans.
+    #
+    SCAN_INTERVAL = 10.minutes
+
     def perform
       ::Feed::Judges.scan
     ensure
-      self.next_attempt_at = 1.minute.from_now
+      self.next_attempt_at = randomized_next_attempt_at(SCAN_INTERVAL)
     end
   end
 end

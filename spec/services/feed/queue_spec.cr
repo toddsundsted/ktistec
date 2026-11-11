@@ -432,6 +432,28 @@ Spectator.describe Feed::Queue do
     end
   end
 
+  describe ".next_due_at" do
+    it "returns nil" do
+      expect(Feed::Queue.next_due_at(now)).to be_nil
+    end
+
+    context "given a question" do
+      let_create!(:feed_question, version: version, due_at: now - 1.minute)
+
+      it "returns when it is due" do
+        expect(Feed::Queue.next_due_at(now)).to be_close(now - 1.minute, delta: 1.second)
+      end
+
+      context "whose judge is paused" do
+        before_each { Feed::Queue.pause(version.backend, now + 1.hour) }
+
+        it "returns when the pause ends" do
+          expect(Feed::Queue.next_due_at(now)).to eq(now + 1.hour)
+        end
+      end
+    end
+  end
+
   describe ".pull" do
     it "pulls nothing" do
       expect(Feed::Queue.pull).to be_empty

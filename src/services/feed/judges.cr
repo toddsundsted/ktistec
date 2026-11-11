@@ -45,6 +45,7 @@ class Feed
         @@registered[name] = modified_at
         # a changed judge resumes and gets a fresh start
         Queue.resume(name)
+        ::Task::Feed::AnswerQuestions.run_now
         Judging.forget(name)
         Log.info { "judge #{name} is registered" }
       end

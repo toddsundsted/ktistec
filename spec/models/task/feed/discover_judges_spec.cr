@@ -39,7 +39,7 @@ Spectator.describe Task::Feed::DiscoverJudges do
 
     it "reschedules itself" do
       subject.perform
-      expect(subject.next_attempt_at).not_to be_nil
+      expect(subject.next_attempt_at).to be_close(Task::Feed::DiscoverJudges::SCAN_INTERVAL.from_now, delta: 30.seconds)
     end
   end
 end

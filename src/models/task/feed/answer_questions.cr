@@ -13,9 +13,13 @@ class Task
 
     Log = ::Log.for(self)
 
-    # Interval between attempts.
+    # Minimum interval between attempts.
     #
-    INTERVAL = 5.seconds
+    MIN_INTERVAL = 5.seconds
+
+    # Maximum interval between attempts.
+    #
+    MAX_INTERVAL = 1.hour
 
     def perform
       loop do
@@ -25,7 +29,17 @@ class Task
         Fiber.yield
       end
     ensure
-      self.next_attempt_at = INTERVAL.from_now
+      self.next_attempt_at = next_attempt
+    end
+
+    # Returns when a question may next be pulled, bounded by the
+    # minimum and maximum intervals.
+    #
+    private def next_attempt : Time
+      due_at = ::Feed::Queue.next_due_at
+      latest = randomized_next_attempt_at(MAX_INTERVAL)
+      next_attempt = due_at && due_at < latest ? due_at : latest
+      Math.max(next_attempt, MIN_INTERVAL.from_now)
     end
 
     private def answer(batch)

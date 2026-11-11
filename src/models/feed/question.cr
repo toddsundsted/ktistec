@@ -54,6 +54,22 @@ class Feed
         SQL
     end
 
+    # Returns when the next waiting question is due, or `nil` if no
+    # question is waiting.
+    #
+    def self.next_due_at(excluding : Array(String) = [] of String) : Time?
+      backends = Array.new(excluding.size, "?").join(", ")
+      args = excluding.map(&.as(DB::Any))
+      query_all(<<-SQL, args: args).first?.try(&.due_at)
+        SELECT #{columns}
+          FROM #{table}
+         WHERE batched = 0
+           AND version_id NOT IN (SELECT id FROM feed_versions WHERE backend IN (#{backends}))
+         ORDER BY due_at ASC
+         LIMIT 1
+        SQL
+    end
+
     private PULL = <<-SQL
       UPDATE feed_questions
          SET batched = 1, updated_at = ?

@@ -34,16 +34,43 @@ Spectator.describe Task::Feed::AnswerQuestions do
   subject { AnswerQuestionsSpy.new }
 
   describe "#perform" do
-    it "sets the next attempt at" do
+    it "reschedules itself" do
       subject.perform
-      expect(subject.next_attempt_at).to be_close(Task::Feed::AnswerQuestions::INTERVAL.from_now, delta: 1.second)
+      expect(subject.next_attempt_at).to be_close(Task::Feed::AnswerQuestions::MAX_INTERVAL.from_now, delta: 2.minutes)
     end
 
-    context "given questions" do
+    context "given a question that is not yet due" do
+      let_create!(:feed_question, named: question, feed: feed, due_at: 2.minutes.from_now)
+
+      it "reschedules itself for when the question is due" do
+        subject.perform
+        expect(subject.next_attempt_at).to be_close(2.minutes.from_now, delta: 1.second)
+      end
+
+      context "that is due within the minimum interval" do
+        before_each { question.assign(due_at: 1.second.from_now).save }
+
+        it "reschedules itself after the minimum interval" do
+          subject.perform
+          expect(subject.next_attempt_at).to be_close(Task::Feed::AnswerQuestions::MIN_INTERVAL.from_now, delta: 1.second)
+        end
+      end
+
+      context "that is due after the maximum interval" do
+        before_each { question.assign(due_at: 1.day.from_now).save }
+
+        it "reschedules itself after the maximum interval" do
+          subject.perform
+          expect(subject.next_attempt_at).to be_close(Task::Feed::AnswerQuestions::MAX_INTERVAL.from_now, delta: 2.minutes)
+        end
+      end
+    end
+
+    context "given questions that are due" do
       let_create!(:object, named: hit, content: "<p>alpha</p>")
       let_create!(:object, named: miss, content: "<p>gamma</p>")
-      let_create!(:feed_question, named: hit_question, feed: feed, object: hit)
-      let_create!(:feed_question, named: miss_question, feed: feed, object: miss)
+      let_create!(:feed_question, named: hit_question, feed: feed, object: hit, due_at: 1.minute.ago)
+      let_create!(:feed_question, named: miss_question, feed: feed, object: miss, due_at: 1.minute.ago)
 
       it "answers them" do
         subject.perform

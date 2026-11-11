@@ -106,6 +106,15 @@ Spectator.describe Feed::Judges do
               described_class.scan
               expect(Feed::Queue.paused_until("summarize")).to be_nil
             end
+
+            context "but the task that answers questions is not due" do
+              let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: 1.hour.from_now).save }
+
+              it "makes the task due now" do
+                described_class.scan
+                expect(drain.reload!.next_attempt_at.not_nil!).to be_close(Time.utc, delta: 1.second)
+              end
+            end
           end
         end
 

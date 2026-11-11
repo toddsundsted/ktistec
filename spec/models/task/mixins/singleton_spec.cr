@@ -189,4 +189,29 @@ Spectator.describe Task::Singleton do
       end
     end
   end
+
+  describe "#schedule_successor" do
+    let(at) { 1.day.from_now }
+
+    context "given a failed instance" do
+      let!(task) { SingletonTask.new.assign(backtrace: ["error"]).save }
+
+      it "schedules a replacement" do
+        expect { task.schedule_successor(at) }.to change { SingletonTask.count }.by(1)
+      end
+
+      it "schedules it at the given time" do
+        task.schedule_successor(at)
+        expect(SingletonTask.find_active.not_nil!.next_attempt_at).to eq(at)
+      end
+
+      context "and an active instance" do
+        let!(active) { SingletonTask.new.save }
+
+        it "does not schedule a replacement" do
+          expect { task.schedule_successor(at) }.not_to change { SingletonTask.count }
+        end
+      end
+    end
+  end
 end

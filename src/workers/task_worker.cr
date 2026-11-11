@@ -1,6 +1,12 @@
 require "../models/task"
+require "../models/task/mixins/singleton"
 
 class TaskWorker
+  # Every singleton task should set the time of its next run. If a
+  # bug prevents that, its successor runs after this interval.
+  #
+  SINGLETON_RETRY_INTERVAL = 1.hour
+
   # Raised by tasks to signal to the task worker that they are
   # voluntarily terminating execution and should be rescheduled after
   # the server restarts.
@@ -121,6 +127,12 @@ class TaskWorker
       task.save(skip_validation: true, skip_associated: true)
     else
       Log.debug { "TaskWorker#perform task #{task.id} is gone" }
+    end
+    # a singleton task never stops.
+    if task.is_a?(Task::Singleton)
+      at = task.next_attempt_at
+      at = SINGLETON_RETRY_INTERVAL.from_now if at.nil? || at == next_attempt_at
+      task.schedule_successor(at)
     end
   end
 end

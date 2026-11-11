@@ -1077,7 +1077,7 @@ export default class extends Controller {
   /**
    * Extracts caption text from an image.
    *
-   * Prefers figcaption over alt text. Returns null if no caption is
+   * Prefers alt text over figcaption. Returns null if no caption is
    * found.
    *
    * Note: figcaption HTML is trusted and used directly because all
@@ -1088,16 +1088,16 @@ export default class extends Controller {
    * contains user-provided content that hasn't been sanitized.
    */
   extractCaption(clickedImage) {
+    if (clickedImage.alt && clickedImage.alt.trim()) {
+      return this.escapeHtml(clickedImage.alt.trim())
+    }
+
     const figure = clickedImage.closest('figure')
     if (figure) {
       const figcaption = figure.querySelector('figcaption')
       if (figcaption && figcaption.textContent.trim()) {
         return figcaption.innerHTML.trim()
       }
-    }
-
-    if (clickedImage.alt && clickedImage.alt.trim()) {
-      return this.escapeHtml(clickedImage.alt.trim())
     }
 
     return null

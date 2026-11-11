@@ -14,7 +14,7 @@ class Feed
       # Note: the order is presentation only.
       #
       module Form
-        TYPES = {"keywords" => "keyword", "hashtags" => "hashtag", "mentions" => "mention"}
+        TYPES = {"keywords" => "keyword", "hashtags" => "hashtag", "mentions" => "mention", "labels" => "label"}
 
         # Parses the three form buckets into the backend's `params`.
         #
@@ -101,6 +101,8 @@ class Feed
             {"hashtags", line[1..]}
           when '@'
             {"mentions", line[1..]}
+          when '§'
+            {"labels", line[1..]}
           else
             Criteria.iri_term?(line) ? {"mentions", line} : {"keywords", line}
           end

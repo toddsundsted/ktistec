@@ -21,6 +21,7 @@ require "../models/relationship/content/follow/hashtag"
 require "../models/relationship/content/follow/mention"
 require "../models/tag/hashtag"
 require "../models/tag/mention"
+require "../models/tag/label"
 require "../models/account"
 require "../framework/topic"
 
@@ -129,6 +130,14 @@ module Rules
       notify(Rules::Maintainer.reconcile_object_for(Rules::View::PublicTagged.instance, tag.subject_iri))
     end
 
+    # Re-evaluates the feeds a labeled object may belong to.
+    #
+    def reconcile_for_label(label : Tag::Label) : Nil
+      if (object = label.subject?)
+        Feed::Queue.enqueue_arrival(object)
+      end
+    end
+
     # Re-evaluates the thread-follow notification for an `(owner, thread)`
     # key.
     #
@@ -234,3 +243,7 @@ Feed::OBSERVERS.observe(:version) { |feed| Rules::Trigger.reconcile_for_feed(fee
 # re-evaluate the public hashtag feed when a hashtag is added or removed.
 Tag::OBSERVERS.observe(:create) { |tag| Rules::Trigger.reconcile_for_tag(tag) if tag.is_a?(Tag::Hashtag) }
 Tag::OBSERVERS.observe(:destroy) { |tag| Rules::Trigger.reconcile_for_tag(tag) if tag.is_a?(Tag::Hashtag) }
+
+# re-judge a labeled object when a label is added or removed.
+Tag::OBSERVERS.observe(:create) { |tag| Rules::Trigger.reconcile_for_label(tag) if tag.is_a?(Tag::Label) }
+Tag::OBSERVERS.observe(:destroy) { |tag| Rules::Trigger.reconcile_for_label(tag) if tag.is_a?(Tag::Label) }

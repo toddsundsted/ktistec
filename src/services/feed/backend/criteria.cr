@@ -2,6 +2,7 @@ require "uri"
 
 require "../backend"
 require "../../../framework/util"
+require "../../../models/tag/label"
 
 class Feed
   abstract class Backend
@@ -13,11 +14,12 @@ class Feed
     # content and summary and its plain-text name) and `hashtags`
     # (matched by exact, case-insensitive equality against the
     # object's hashtag names) and `mentions` (matched by qualified,
-    # case-insensitive handle or by actor IRI). Each group carries
-    # `any`/`all`/`none` term lists. Terms are evaluated together: an
-    # object is in when at least one positive term matches (and every
-    # `all` term matches) and no `none` term matches. Exclusion always
-    # wins, across groups.
+    # case-insensitive handle or by actor IRI) and `labels` (matched
+    # against the names of the feed owner's private labels on the
+    # object). Each group carries `any`/`all`/`none` term lists. Terms
+    # are evaluated together: an object is in when at least one
+    # positive term matches (and every `all` term matches) and no
+    # `none` term matches. Exclusion always wins, across groups.
     #
     class Criteria < Backend
       NAME = "criteria"
@@ -47,7 +49,7 @@ class Feed
 
       def judge(feed : ::Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
         active = active_groups(feed.params)
-        objects.map { |object| judge_one(object, active).as(Judgment | Failure) }
+        objects.map { |object| judge_one(object, feed.owner, active).as(Judgment | Failure) }
       end
 
       # Sorts every group's selectors' term list.
@@ -94,7 +96,7 @@ class Feed
             positive_terms += array.count { |element| !group.normalize(element.as_s).blank? } if selector.in?(POSITIVE)
           end
         end
-        errors << "Add at least one keyword, #hashtag, or @mention." if positive_terms.zero?
+        errors << "Add at least one keyword, #hashtag, @mention, or §label." if positive_terms.zero?
         errors
       end
 
@@ -125,7 +127,7 @@ class Feed
       # then at least one positive term must match (with every `all`
       # term matching).
       #
-      private def judge_one(object : ActivityPub::Object, active : Array(Active)) : Judgment
+      private def judge_one(object : ActivityPub::Object, owner : ActivityPub::Actor, active : Array(Active)) : Judgment
         excluded = [] of String
         matched = [] of String
         required = [] of String
@@ -133,7 +135,7 @@ class Feed
         positive_present = false
         all_ok = true
         active.each do |entry|
-          matches = entry.group.matcher_for(object)
+          matches = entry.group.matcher_for(object, owner)
           any_present ||= !entry.any.empty?
           positive_present ||= !(entry.any.empty? && entry.all.empty?)
           entry.none.each { |term| excluded << entry.group.label_for(term) if matches.call(term) }
@@ -182,9 +184,10 @@ class Feed
         end
 
         # Returns a predicate matching a normalized term against the
-        # object, computing any per-object state once.
+        # object, as seen by the feed's owner, computing any
+        # per-object state once.
         #
-        abstract def matcher_for(object : ActivityPub::Object) : String -> Bool
+        abstract def matcher_for(object : ActivityPub::Object, owner : ActivityPub::Actor) : String -> Bool
 
         # Returns the group's non-blank, normalized terms for a
         # selector.
@@ -222,7 +225,7 @@ class Feed
           term.downcase
         end
 
-        def matcher_for(object : ActivityPub::Object) : String -> Bool
+        def matcher_for(object : ActivityPub::Object, owner : ActivityPub::Actor) : String -> Bool
           content = Ktistec::Util.render_as_text(object.content)
           summary = Ktistec::Util.render_as_text(object.summary)
           text = "#{content} #{summary} #{object.name}".downcase
@@ -259,7 +262,7 @@ class Feed
           end
         end
 
-        def matcher_for(object : ActivityPub::Object) : String -> Bool
+        def matcher_for(object : ActivityPub::Object, owner : ActivityPub::Actor) : String -> Bool
           names = object.hashtags.map { |hashtag| normalize(hashtag.name) }
           ->(term : String) { names.includes?(term) }
         end
@@ -324,7 +327,7 @@ class Feed
           end
         end
 
-        def matcher_for(object : ActivityPub::Object) : String -> Bool
+        def matcher_for(object : ActivityPub::Object, owner : ActivityPub::Actor) : String -> Bool
           identifiers = [] of String
           object.mentions.each do |mention|
             identifiers << normalize_handle(mention.name)
@@ -347,7 +350,40 @@ class Feed
         end
       end
 
-      GROUPS = [Keywords.new, Hashtags.new, Mentions.new] of Group
+      # Matches labels by exact, case-insensitive equality against the
+      # names of the feed owner's labels on the object, with a leading
+      # `§` normalized away.
+      #
+      private class Labels < Group
+        def key : String
+          "labels"
+        end
+
+        def label : String
+          "label"
+        end
+
+        def normalize(term : String) : String
+          term.lstrip('§').downcase
+        end
+
+        def present(term : String) : String
+          "§#{term}"
+        end
+
+        def validate_term(term : String) : String?
+          if normalize(term).blank?
+            %(Remove the stray "§". It can't be used as a keyword.)
+          end
+        end
+
+        def matcher_for(object : ActivityPub::Object, owner : ActivityPub::Actor) : String -> Bool
+          names = Tag::Label.where(owner: owner, subject: object).map { |label| normalize(label.name) }
+          ->(term : String) { names.includes?(term) }
+        end
+      end
+
+      GROUPS = [Keywords.new, Hashtags.new, Mentions.new, Labels.new] of Group
     end
 
     register Criteria::NAME, Criteria.new

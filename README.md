@@ -252,10 +252,11 @@ been deleted or blocked.
 
 Build your own feeds from the posts your server holds.
 
-A feed can match on keywords, hashtags, and mentions, each grouped as
-terms you want *any* of, *all* of, or *none* of, so a feed can be as
-broad or as narrow as you like. Preview the matches, which fill in as
-posts are judged, while you tune the criteria, then publish.
+A feed can match on keywords, hashtags, mentions, and your private
+labels, each grouped as terms you want *any* of, *all* of, or *none*
+of, so a feed can be as broad or as narrow as you like. Preview the
+matches, which fill in as posts are judged, while you tune the
+criteria, then publish.
 
 Or, a feed can be judged by a program you write. Each executable in
 `etc/judges` is a judge you can choose when you create a feed, and a
@@ -296,6 +297,8 @@ phrase.
 
 Click a label to see every post you've given that label. You can pin
 a label page to the secondary menu of your home page in *Settings*.
+
+A [custom feed](#custom-feeds) can match on your labels.
 
 ### Pinned Posts
 
@@ -936,8 +939,8 @@ curl -s \
 A feed collects posts that match its criteria. Criteria are grouped
 into three buckets -- `any`, `all`, and `none` -- each a
 newline-separated list of terms. A term beginning with `#` is a
-hashtag, a term beginning with `@` is a mention, and any other term is
-a keyword.
+hashtag, a term beginning with `@` is a mention, a term beginning with
+`§` is one of your private labels, and any other term is a keyword.
 
 | Name        | Notes |
 |-|-|

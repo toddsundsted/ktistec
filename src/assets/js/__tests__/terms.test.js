@@ -101,6 +101,10 @@ describe("classifyTerm", () => {
     expect(classifyTerm("HTTPS://example.com/actors/bob")).toEqual("mention")
   })
 
+  it("classifies a leading section sign as a label", () => {
+    expect(classifyTerm("§to read")).toEqual("label")
+  })
+
   it("classifies anything else as a keyword", () => {
     expect(classifyTerm("3d print")).toEqual("keyword")
   })

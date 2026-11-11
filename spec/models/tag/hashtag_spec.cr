@@ -4,15 +4,6 @@ require "../../../src/rules/maintainer"
 require "../../spec_helper/base"
 require "../../spec_helper/factory"
 
-class Tag
-  class_property hashtag_recount_count : Int64 = 0
-
-  private def recount
-    Tag.hashtag_recount_count += 1
-    previous_def
-  end
-end
-
 Spectator.describe Tag::Hashtag do
   setup_spec
 
@@ -41,9 +32,9 @@ Spectator.describe Tag::Hashtag do
     context "when the subject is a draft" do
       let_build(:object, local: true, published: nil)
 
-      it "does not change the count" do
+      it "does not count the hashtag" do
         new_tag = described_class.new(subject: object, name: "#foo")
-        expect { new_tag.save }.not_to change { Tag.hashtag_recount_count }
+        expect { new_tag.save }.not_to change { described_class.match("foo") }
       end
     end
   end
@@ -51,10 +42,10 @@ Spectator.describe Tag::Hashtag do
   describe "#destroy" do
     context "when the subject is a draft" do
       let_create(:object, local: true, published: nil)
+      let!(new_tag) { described_class.new(subject: object, name: "#foo").save }
 
-      it "does not change the count" do
-        new_tag = described_class.new(subject: object, name: "#foo")
-        expect { new_tag.destroy }.not_to change { Tag.hashtag_recount_count }
+      it "does not count the hashtag" do
+        expect { new_tag.destroy }.not_to change { described_class.match("foo") }
       end
     end
   end

@@ -145,6 +145,15 @@ Spectator.describe Tag do
     it "decrements the count" do
       expect { tag.destroy }.to change { described_class.count(name: "foobar") }.by(-1)
     end
+
+    context "given a tag with a cached count" do
+      let_create(:object, published: Time.local)
+      let!(counted) { described_class.new(subject_iri: object.iri, name: "quux").save }
+
+      it "decrements the cached count" do
+        expect { counted.destroy }.to change { described_class.match("quux") }.from([{"quux", 1_i64}]).to([{"quux", 0_i64}])
+      end
+    end
   end
 
   # the count is observable only through a read path, so `.match` is the oracle.

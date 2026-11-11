@@ -21,6 +21,9 @@ export function classifyTerm(term) {
   if (term.startsWith("@") || /^https?:\/\//i.test(term)) {
     return "mention"
   }
+  if (term.startsWith("§")) {
+    return "label"
+  }
   return "keyword"
 }
 

@@ -14,6 +14,39 @@ describe("ImageViewerController", () => {
     )
   })
 
+  describe("extractCaption", () => {
+    const figure = (alt, caption) => {
+      const element = document.createElement("figure")
+      const img = document.createElement("img")
+      if (alt !== null) img.alt = alt
+      element.appendChild(img)
+      const figcaption = document.createElement("figcaption")
+      figcaption.innerHTML = caption
+      element.appendChild(figcaption)
+      return img
+    }
+
+    it("prefers the alt text", () => {
+      expect(controller.extractCaption(figure("Alt text", "<em>Caption</em>"))).toBe("Alt text")
+    })
+
+    it("escapes the alt text", () => {
+      expect(controller.extractCaption(figure("<b>Alt</b>", ""))).toBe("&lt;b&gt;Alt&lt;/b&gt;")
+    })
+
+    it("falls back to the figcaption when there is no alt text", () => {
+      expect(controller.extractCaption(figure(null, "<em>Caption</em>"))).toBe("<em>Caption</em>")
+    })
+
+    it("falls back to the figcaption when the alt text is blank", () => {
+      expect(controller.extractCaption(figure("  ", "<em>Caption</em>"))).toBe("<em>Caption</em>")
+    })
+
+    it("returns null", () => {
+      expect(controller.extractCaption(figure(null, " "))).toBeNull()
+    })
+  })
+
   it("returns true for a viewer image in .extra.text", () => {
     const content = document.createElement("div")
     content.className = "content"

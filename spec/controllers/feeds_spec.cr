@@ -817,13 +817,13 @@ Spectator.describe FeedsController do
         it "returns errors" do
           post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&none=%23spam"
           message = XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first?
-          expect(message.try(&.text)).to contain("Add at least one keyword, #hashtag, or @mention.")
+          expect(message.try(&.text)).to contain("Add at least one keyword, #hashtag, @mention, or §label.")
         end
 
         it "returns errors" do
           post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","none":"#spam"})
           errors = JSON.parse(response.body)["errors"].as_h
-          expect(errors[""].as_a).to contain("Add at least one keyword, #hashtag, or @mention.")
+          expect(errors[""].as_a).to contain("Add at least one keyword, #hashtag, @mention, or §label.")
         end
       end
 

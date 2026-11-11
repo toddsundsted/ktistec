@@ -661,6 +661,50 @@ Spectator.describe Ktistec::JSON_LD do
     end
   end
 
+  context "given Security compatibility term definitions" do
+    context "in an actor" do
+      let(json) do
+        described_class.expand(JSON.parse(<<-JSON
+            {
+              "@context": "https://www.w3.org/ns/activitystreams",
+              "type": "Person",
+              "publicKey": {"id": "https://example.com/actors/alice#main-key"}
+            }
+          JSON
+        ))
+      end
+
+      it "expands the publicKey term" do
+        expect(described_class.dig_id?(json, "https://w3id.org/security#publicKey"))
+          .to eq("https://example.com/actors/alice#main-key")
+      end
+    end
+
+    context "in a key" do
+      let(json) do
+        described_class.expand(JSON.parse(<<-JSON
+            {
+              "@context": "https://www.w3.org/ns/activitystreams",
+              "id": "https://example.com/actors/alice#main-key",
+              "owner": "https://example.com/actors/alice",
+              "publicKeyPem": "-----BEGIN PUBLIC KEY-----"
+            }
+          JSON
+        ))
+      end
+
+      it "expands the owner term" do
+        expect(described_class.dig_id?(json, "https://w3id.org/security#owner"))
+          .to eq("https://example.com/actors/alice")
+      end
+
+      it "expands the publicKeyPem term" do
+        expect(described_class.dig?(json, "https://w3id.org/security#publicKeyPem"))
+          .to eq("-----BEGIN PUBLIC KEY-----")
+      end
+    end
+  end
+
   context "given a URL to a locally hosted litepub schema" do
     let(json) do
       described_class.expand(JSON.parse(<<-JSON

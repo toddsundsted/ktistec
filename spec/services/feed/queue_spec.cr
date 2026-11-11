@@ -60,11 +60,11 @@ Spectator.describe Feed::Queue do
     end
 
     context "given the task that answers questions is not yet due" do
-      let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
+      let_create!(:feed_answer_questions_task, next_attempt_at: now + 1.hour)
 
       it "makes the task due now" do
         Feed::Queue.enqueue(version.id!, object_iri, live: false)
-        expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
+        expect(feed_answer_questions_task.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
       end
     end
 
@@ -319,11 +319,11 @@ Spectator.describe Feed::Queue do
       end
 
       context "and the task that answers questions is not yet due" do
-        let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
+        let_create!(:feed_answer_questions_task, next_attempt_at: now + 1.hour)
 
         it "makes the task due now" do
           Feed::Queue.enqueue_backfill(feed)
-          expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
+          expect(feed_answer_questions_task.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
         end
       end
     end
@@ -375,11 +375,11 @@ Spectator.describe Feed::Queue do
       end
 
       context "and the task that answers questions is not yet due" do
-        let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
+        let_create!(:feed_answer_questions_task, next_attempt_at: now + 1.hour)
 
         it "makes the task due now" do
           Feed::Queue.enqueue_arrival(object)
-          expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
+          expect(feed_answer_questions_task.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
         end
       end
     end

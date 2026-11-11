@@ -568,6 +568,33 @@ Spectator.describe Rules::Trigger do
     end
   end
 
+  describe "given a registered feed" do
+    let_create!(:object, named: post, attributed_to: author)
+    let_create!(:feed, owner: actor)
+
+    context "when a label is added" do
+      let_build(:label, owner: actor, subject: post, name: "foo")
+
+      before_each { Rules::Feeds.register(feed) }
+
+      it "asks about the post" do
+        expect { label.save }
+          .to change { question_count(feed, post) }.from(0).to(1)
+      end
+    end
+
+    context "when a label is removed" do
+      let_create!(:label, owner: actor, subject: post, name: "foo")
+
+      before_each { Rules::Feeds.register(feed) }
+
+      it "asks about the post" do
+        expect { label.destroy }
+          .to change { question_count(feed, post) }.from(0).to(1)
+      end
+    end
+  end
+
   describe "given a public-timeline member" do
     let_create(:object, named: post, attributed_to: author)
     let_create!(:public_timeline, object: post)

@@ -286,19 +286,20 @@ class Tag
   # See "Tag statistics".
   #
   private def update_count(difference)
+    # finds the subject by the tag's `subject_iri`, not by the tag's
+    # row, which is already gone when a destroyed tag is decremented
     query = <<-QUERY
       UPDATE tag_statistics AS ts
          SET count = count + ?
-        FROM tags AS t, objects AS o, actors AS a
+        FROM objects AS o, actors AS a
        WHERE ts.type = ?
          AND ts.name = ?
-         AND t.id = ?
-         AND o.iri = t.subject_iri
+         AND o.iri = ?
          AND a.iri = o.attributed_to_iri
          AND o.published IS NOT NULL
          #{common_filters(objects: "o", actors: "a")}
     QUERY
-    args = {difference, short_type, name, id}
+    args = {difference, short_type, name, subject_iri}
     Internal.log_query(query, args) do
       Ktistec.database.exec(
         query, *args,
@@ -352,14 +353,13 @@ class Tag
 
   OBSERVERS = Ktistec::Observable::Registry(Tag).new
 
-  OBSERVERS.observe(:create, &.increment_statistics)
-  OBSERVERS.observe(:destroy, &.decrement_statistics)
-
   def after_create
+    increment_statistics
     Tag::OBSERVERS.notify(:create, self)
   end
 
   def after_destroy
+    decrement_statistics
     Tag::OBSERVERS.notify(:destroy, self)
   end
 

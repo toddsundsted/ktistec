@@ -123,9 +123,9 @@ Spectator.describe StreamingController do
     end
   end
 
-  describe "GET /stream/feeds/:id" do
+  describe "GET /stream/feeds/:id/preview" do
     it "returns 401 if not authorized" do
-      get "/stream/feeds/1"
+      get "/stream/feeds/1/preview"
       expect(response.status_code).to eq(401)
     end
 
@@ -133,12 +133,12 @@ Spectator.describe StreamingController do
       sign_in
 
       it "returns 404 if the feed does not exist" do
-        get "/stream/feeds/999999"
+        get "/stream/feeds/999999/preview"
         expect(response.status_code).to eq(404)
       end
 
       it "returns 400 if the id is not a number" do
-        get "/stream/feeds/foobar"
+        get "/stream/feeds/foobar/preview"
         expect(response.status_code).to eq(400)
       end
 
@@ -146,7 +146,7 @@ Spectator.describe StreamingController do
         let_create!(:feed, named: other)
 
         it "returns 404" do
-          get "/stream/feeds/#{other.id}"
+          get "/stream/feeds/#{other.id}/preview"
           expect(response.status_code).to eq(404)
         end
       end
@@ -461,7 +461,7 @@ Spectator.describe StreamingController do
 
     let_create!(:feed, owner: account.actor)
 
-    let(env) { make_env("GET", "/stream/feeds/#{feed.id}") }
+    let(env) { make_env("GET", "/stream/feeds/#{feed.id}/preview") }
 
     subject do
       String.build do |io|

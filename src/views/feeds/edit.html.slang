@@ -5,7 +5,7 @@ crystal:
 h1 = heading
 - partial "feeds/form"
 - if contents
-  turbo-stream-source src=stream_path("feeds", feed.id)
+  turbo-stream-source src=stream_path("feeds", feed.id, "preview")
   - partial "feeds/preview"
 .ui.basic.tiny.delete-feed.modal
   .header

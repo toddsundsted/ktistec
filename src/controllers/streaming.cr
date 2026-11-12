@@ -346,7 +346,7 @@ class StreamingController
     end
   end
 
-  get "/stream/feeds/:id" do |env|
+  get "/stream/feeds/:id/preview" do |env|
     id = id_param(env)
     unless (feed = Feed.find?(id)) && feed.owner_iri == env.account.actor.iri
       not_found

@@ -62,6 +62,18 @@ Spectator.describe "actor" do
       expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
     end
 
+    it "renders a stream source" do
+      expect(subject.xpath_nodes("//turbo-stream-source")).not_to be_empty
+    end
+
+    context "given a query string" do
+      let(env) { make_env("GET", "/actor/username?foo=bar") }
+
+      it "renders a stream source with the query string" do
+        expect(subject.xpath_nodes("//turbo-stream-source/@src").first).to eq("/stream/actor/homepage?foo=bar")
+      end
+    end
+
     describe "timeline controls" do
       it "targets the main timeline" do
         expect(subject.xpath_nodes("//form[@id='timeline-controls']/@data-turbo-frame").map(&.text)).to eq(["main-timeline"])

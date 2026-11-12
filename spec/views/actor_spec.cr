@@ -38,17 +38,19 @@ Spectator.describe "actor" do
   describe "self.html.slang" do
     let(env) { make_env("GET", "/actor/username") }
 
-    let(timeline) { Ktistec::Util::PaginatedArray(Relationship::Content::Timeline).new }
+    let(feed) { nil.as(Feed?) }
+
+    let(objects) { Ktistec::Util::PaginatedArray(ActivityPub::Object).new }
 
     module ::Ktistec::ViewHelper
-      def self.render_self_html_slang(env, actor, timeline)
+      def self.render_self_html_slang(env, actor, feed, objects)
         render "./src/views/actors/self.html.slang"
       end
     end
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper.render_self_html_slang(env, actor, timeline))
+        XML.parse_html(Ktistec::ViewHelper.render_self_html_slang(env, actor, feed, objects))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end

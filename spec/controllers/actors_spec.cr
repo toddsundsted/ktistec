@@ -1,4 +1,5 @@
 require "../../src/controllers/actors"
+require "../../src/services/feed/backend/criteria"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"
@@ -153,9 +154,47 @@ Spectator.describe ActorsController do
         put_in_outbox(owner: actor, activity: announce)
       end
 
-      it "with no filters it renders all posts" do
+      let(post_ids) { XML.parse_html(response.body).xpath_nodes("//turbo-frame[contains(@class,'event')]/@id").map(&.text) }
+
+      it "renders the timeline's posts" do
         get "/actors/#{actor.username}", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//*[contains(@class,'event')]/@class")).to contain_exactly(/event activity-create/, /event activity-announce/).in_any_order
+        expect(post_ids).to contain_exactly("object-#{create.object.id}", "object-#{announce.object.id}").in_any_order
+      end
+
+      context "given a published feed" do
+        let_create!(:feed, owner: actor, name: "Feed", draft: false)
+        let_create(:object, named: post)
+
+        before_each { put_in_feed(feed, post) }
+
+        context "that is the timeline feed" do
+          before_each { Global.account.not_nil!.assign(timeline_feed: feed.slug).save }
+
+          it "renders the feed's posts" do
+            get "/actors/#{actor.username}", ACCEPT_HTML
+            expect(post_ids).to eq(["object-#{post.id}"])
+          end
+
+          context "and another post in the feed" do
+            let_create(:object, named: another_post)
+
+            before_each { put_in_feed(feed, another_post) }
+
+            it "renders the page after the cursor" do
+              get "/actors/#{actor.username}?max-id=#{another_post.id}", ACCEPT_HTML
+              expect(post_ids).to eq(["object-#{post.id}"])
+            end
+          end
+
+          context "but has been deleted" do
+            before_each { feed.destroy }
+
+            it "renders the timeline's posts" do
+              get "/actors/#{actor.username}", ACCEPT_HTML
+              expect(post_ids).to contain_exactly("object-#{create.object.id}", "object-#{announce.object.id}").in_any_order
+            end
+          end
+        end
       end
 
       it "filters out shares from posts" do

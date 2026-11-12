@@ -1,4 +1,5 @@
 require "../../src/models/account"
+require "../../src/services/feed/backend/criteria"
 
 require "../spec_helper/base"
 require "../spec_helper/factory"
@@ -73,6 +74,12 @@ Spectator.describe Account do
     it "persists the slugs" do
       subject.assign(feed_order: ["robotics", "woodworking"]).save
       expect(subject.reload!.feed_order).to eq(["robotics", "woodworking"])
+    end
+  end
+
+  describe "#timeline_feed" do
+    it "defaults to nil" do
+      expect(subject.timeline_feed).to be_nil
     end
   end
 
@@ -220,6 +227,48 @@ Spectator.describe Account do
     it "accepts empty pinned_collections" do
       subject.pinned_collections = {} of String => String
       expect(subject.valid?).to be_true
+    end
+
+    context "given an actor" do
+      let_create(:actor)
+
+      before_each { subject.actor = actor }
+
+      it "rejects an unknown timeline feed" do
+        subject.assign(timeline_feed: "unknown")
+        expect(subject.validate["timeline_feed"]?).to eq(["is not a published feed"])
+      end
+
+      context "and a published feed" do
+        let_create(:feed, owner: actor, name: "Feed", draft: false)
+
+        it "accepts it as the timeline feed" do
+          subject.assign(timeline_feed: feed.slug)
+          expect(subject.validate["timeline_feed"]?).to be_nil
+        end
+
+        context "that is the timeline feed" do
+          before_each { subject.assign(timeline_feed: feed.slug).save }
+
+          context "and has been deleted" do
+            before_each { feed.destroy }
+
+            it "accepts it as the timeline feed" do
+              expect(subject.validate["timeline_feed"]?).to be_nil
+            end
+          end
+        end
+      end
+
+      context "and another actor's published feed" do
+        let_create(:actor, named: other)
+        let_create(:feed, owner: other, name: "Feed", draft: false)
+
+        it "rejects it" do
+          subject.assign(timeline_feed: feed.slug)
+          expect(subject.validate["timeline_feed"]?).to eq(["is not a published feed"])
+        end
+      end
     end
   end
 

@@ -3,6 +3,7 @@ require "../models/oauth2/provider/access_token"
 require "../models/session"
 require "../models/task/terminate"
 require "../services/actor_update_distributor"
+require "../services/feed/queue"
 require "../services/upload_service"
 
 class SettingsController
@@ -129,6 +130,11 @@ class SettingsController
       "pinned_collections" => reduce_pinned_collections(params),
     }.select do |k, v|
       v || k.in?("image", "icon", "auto_approve_followers", "auto_follow_back", "manually_approve_quotes")
+    end.tap do |result|
+      # blank or nil selects the timeline
+      if params.has_key?("timeline_feed")
+        result["timeline_feed"] = params["timeline_feed"].to_s.presence
+      end
     end
   end
 

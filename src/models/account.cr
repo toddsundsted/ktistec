@@ -6,6 +6,7 @@ require "../framework/model/common"
 require "../utils/paths"
 require "./oauth2/provider/access_token"
 require "./activity_pub/actor"
+require "./feed"
 require "./last_time"
 require "./session"
 
@@ -180,6 +181,14 @@ class Account
 
   @[Persistent]
   property feed_order : Array(String) { [] of String }
+
+  @[Persistent]
+  property timeline_feed : String?
+  validates(timeline_feed) do
+    if changed?(:timeline_feed) && (slug = timeline_feed)
+      "is not a published feed" unless (actor = actor?) && Feed.find?(actor, slug)
+    end
+  end
 
   @[Persistent]
   property iri : String { "" }

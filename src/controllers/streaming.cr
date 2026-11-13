@@ -16,7 +16,7 @@ require "../models/task/fetch/thread"
 
 Ktistec::Topic.configure_debounce(/\/actors\/[^\/]+\/notifications$/, 1.second)
 
-Ktistec::Topic.configure_debounce(/\/actors\/[^\/]+\/feeds\/\d+$/, 1.second)
+Ktistec::Topic.configure_debounce(/\/actors\/[^\/]+\/feeds\/[^\/]+$/, 1.second)
 
 class StreamingController
   include Ktistec::Controller

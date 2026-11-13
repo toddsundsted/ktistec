@@ -39,8 +39,9 @@ module Rules
 
       getter feed_id : Int64
       getter owner_iri : String
+      getter slug_or_id : String
 
-      def initialize(@feed_id : Int64, @owner_iri : String)
+      def initialize(@feed_id : Int64, @owner_iri : String, @slug_or_id : String)
       end
 
       def type : String
@@ -82,7 +83,7 @@ module Rules
       end
 
       def subjects(username : String) : Array(String)
-        ["/actors/#{username}/feeds/#{@feed_id}"]
+        ["/actors/#{username}/feeds/#{@slug_or_id}"]
       end
     end
   end

@@ -175,6 +175,15 @@ Spectator.describe ActorsController do
             expect(post_ids).to eq(["object-#{post.id}"])
           end
 
+          context "and there are stored filters" do
+            before_each { Global.session.not_nil!.string("timeline_filters", "no-shares") }
+
+            it "does not redirect" do
+              get "/actors/#{actor.username}", ACCEPT_HTML
+              expect(response.status_code).to eq(200)
+            end
+          end
+
           context "and another post in the feed" do
             let_create(:object, named: another_post)
 

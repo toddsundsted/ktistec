@@ -24,17 +24,18 @@ crystal:
       a.item href=Utils::Paths.pinned_collection_path(path) = label
 - object = ActivityPub::Object.new(iri: "#{host}/objects/new", attributed_to: actor)
 - partial "partials/editor"
-form#timeline-controls.feed-controls.ui.secondary.pointing.menu data-controller="submit-on-change" data-turbo-frame="main-timeline" data-turbo-action="replace"
-  = params_to_inputs(env.params.query, exclude: ["filters"])
-  input type="hidden" name="filters" value=""
-  .item
-    .ui.mini.toggle.checkbox
-      input#timeline-no-shares type="checkbox" name="filters" value="no-shares" data-action="change->submit-on-change#change" checked=filters.includes?("no-shares")
-      label for="timeline-no-shares" Hide shares
-  .item
-    .ui.mini.toggle.checkbox
-      input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->submit-on-change#change" checked=filters.includes?("no-replies")
-      label for="timeline-no-replies" Hide replies
+- unless feed
+  form#timeline-controls.feed-controls.ui.secondary.pointing.menu data-controller="submit-on-change" data-turbo-frame="main-timeline" data-turbo-action="replace"
+    = params_to_inputs(env.params.query, exclude: ["filters"])
+    input type="hidden" name="filters" value=""
+    .item
+      .ui.mini.toggle.checkbox
+        input#timeline-no-shares type="checkbox" name="filters" value="no-shares" data-action="change->submit-on-change#change" checked=filters.includes?("no-shares")
+        label for="timeline-no-shares" Hide shares
+    .item
+      .ui.mini.toggle.checkbox
+        input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->submit-on-change#change" checked=filters.includes?("no-replies")
+        label for="timeline-no-replies" Hide replies
 turbo-frame#main-timeline
   - unless Ktistec::ViewHelper.cursor_paginated?(env.params.query)
     - if (_slug = feed.try(&.slug))

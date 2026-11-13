@@ -60,7 +60,12 @@ class ActorsController
 
     actor = account.actor
 
-    if env.account?
+    feed =
+      if env.account? == account && (slug = account.timeline_feed)
+        Feed.find?(actor, slug)
+      end
+
+    if env.account? && !feed
       if env.params.query.has_key?("filters")
         filters = env.params.query.fetch_all("filters").select(&.in?(TIMELINE_FILTERS))
         if !filters.empty?
@@ -87,7 +92,7 @@ class ActorsController
 
     if accepts?("text/html")
       if env.account?.try(&.actor) == actor
-        if (slug = account.timeline_feed) && (feed = Feed.find?(actor, slug))
+        if feed
           contents = feed.contents(**cursor_params)
           ok "actors/self", env: env, actor: actor, feed: feed, objects: contents
         else

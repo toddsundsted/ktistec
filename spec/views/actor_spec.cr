@@ -98,6 +98,14 @@ Spectator.describe "actor" do
         expect(subject.xpath_nodes("//form[@id='timeline-controls']//input[@type='hidden'][@name='filters'][@value='']")).not_to be_empty
       end
 
+      context "given a feed" do
+        let_create(:feed, owner: actor, name: "Feed", draft: false)
+
+        it "are not rendered" do
+          expect(subject.xpath_nodes("//form[@id='timeline-controls']")).to be_empty
+        end
+      end
+
       context "given a query parameter" do
         let(env) { make_env("GET", "/actor/username?foo=bar") }
 

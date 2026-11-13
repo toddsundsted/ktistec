@@ -1,5 +1,6 @@
 require "../../src/models/activity_pub/activity/follow"
 require "../../src/models/relationship/content/notification/**" # ameba:disable Ktistec/NoRequireGlob
+require "../../src/services/feed/backend/criteria"
 require "../../src/views/view_helper"
 
 require "../spec_helper/factory"
@@ -66,6 +67,14 @@ Spectator.describe "actor" do
 
     it "renders a stream source" do
       expect(subject.xpath_nodes("//turbo-stream-source")).not_to be_empty
+    end
+
+    context "given a feed" do
+      let_create(:feed, owner: actor, name: "Feed", draft: false)
+
+      it "renders a stream source for the feed" do
+        expect(subject.xpath_nodes("//turbo-stream-source/@src").map(&.text)).to eq(["/stream/feeds/#{feed.slug}"])
+      end
     end
 
     context "given a query string" do

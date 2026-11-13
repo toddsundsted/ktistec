@@ -123,6 +123,31 @@ Spectator.describe StreamingController do
     end
   end
 
+  describe "GET /stream/feeds/:id" do
+    it "returns 401 if not authorized" do
+      get "/stream/feeds/robotics"
+      expect(response.status_code).to eq(401)
+    end
+
+    context "when authorized" do
+      sign_in
+
+      it "returns 404 if the feed does not exist" do
+        get "/stream/feeds/robotics"
+        expect(response.status_code).to eq(404)
+      end
+
+      context "given another actor's feed" do
+        let_create!(:feed, named: other, draft: false)
+
+        it "returns 404" do
+          get "/stream/feeds/#{other.slug}"
+          expect(response.status_code).to eq(404)
+        end
+      end
+    end
+  end
+
   describe "GET /stream/feeds/:id/preview" do
     it "returns 401 if not authorized" do
       get "/stream/feeds/1/preview"
@@ -305,6 +330,63 @@ Spectator.describe StreamingController do
         described_class.open_deck(io, actor, feeds, resume)
         targets = io.to_s.scan(/target="([^"]+)"/).map(&.[1])
         expect(targets).to eq(["feed-#{robotics.id}-refresh", "feed-#{woodworking.id}-refresh"])
+      end
+    end
+  end
+
+  describe ".open_feed" do
+    let_create!(:feed, named: robotics)
+
+    let(io) { IO::Memory.new }
+
+    it "seeds the baseline at zero" do
+      expect(described_class.open_feed(io, robotics, nil)).to eq(0_i64)
+    end
+
+    context "given a post in the feed" do
+      let(position) { Time.utc(2026, 1, 2) }
+
+      let_create(:object)
+
+      before_each { put_in_feed(robotics, object, at: position) }
+
+      context "on a fresh connection" do
+        it "seeds the baseline at the position" do
+          expect(described_class.open_feed(io, robotics, nil)).to eq(position.to_unix_ms)
+        end
+
+        it "emits the baseline as the event id" do
+          described_class.open_feed(io, robotics, nil)
+          expect(io.to_s).to contain("id: #{position.to_unix_ms}")
+        end
+
+        it "does not notify" do
+          described_class.open_feed(io, robotics, nil)
+          expect(io.to_s).not_to contain("refresh-posts-message")
+        end
+      end
+
+      context "on a reconnection at the position" do
+        let(resume) { position.to_unix_ms.to_s }
+
+        it "does not notify" do
+          described_class.open_feed(io, robotics, resume)
+          expect(io.to_s).to be_empty
+        end
+      end
+
+      context "on a reconnection before the position" do
+        let(resume) { (position.to_unix_ms - 1).to_s }
+
+        it "advances the baseline" do
+          expect(described_class.open_feed(io, robotics, resume)).to eq(position.to_unix_ms)
+        end
+
+        it "notifies" do
+          described_class.open_feed(io, robotics, resume)
+          targets = io.to_s.scan(/target="([^"]+)"/).map(&.[1])
+          expect(targets).to eq(["refresh-posts-message"])
+        end
       end
     end
   end

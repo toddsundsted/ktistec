@@ -346,27 +346,6 @@ class StreamingController
     end
   end
 
-  get "/stream/feeds/:id/preview" do |env|
-    id = id_param(env)
-    unless (feed = Feed.find?(id)) && feed.owner_iri == env.account.actor.iri
-      not_found
-    end
-    setup_response(env.response)
-    replace_feed_preview(env.response, env, feed)
-    subscribe "/actor/refresh", Rules::Feeds.view_for(feed).subjects(env.account.username).first do |subject, values|
-      values.each do |value|
-        case subject
-        when "/actor/refresh"
-          if (id = value.to_i64?)
-            replace_actor_icon(env.response, id)
-          end
-        else
-          replace_feed_preview(env.response, env, feed)
-        end
-      end
-    end
-  end
-
   def self.encode_baselines(baselines : Hash(Int64, Int64)) : String
     baselines.map { |feed_id, position| "#{feed_id}:#{position}" }.join(",")
   end
@@ -410,6 +389,75 @@ class StreamingController
       seed_baselines(feeds).tap do |seeded|
         Log.trace { "initial - baselines: #{seeded}" }
         stream_no_op(io, encode_baselines(seeded))
+      end
+    end
+  end
+
+  get "/stream/feeds/:id" do |env|
+    actor = env.account.actor
+    slug = env.params.url["id"]
+    unless (feed = Feed.find?(actor, slug))
+      not_found
+    end
+    setup_response(env.response)
+    baseline = open_feed(env.response, feed, env.request.headers["Last-Event-ID"]?)
+    subscribe "/actor/refresh", "#{actor_path(actor)}/notifications", Rules::Feeds.view_for(feed).subjects(env.account.username).first do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        when "#{actor_path(actor)}/notifications"
+          replace_notifications_label(env.response, env.account)
+        else
+          # an edit replaces the feed's row, so look it up again
+          if (current = Feed.find?(actor, slug))
+            baseline = advance_feed(env.response, current, baseline)
+          end
+        end
+      end
+    end
+  end
+
+  private def self.advance_feed(io, feed : Feed, baseline : Int64) : Int64
+    if (position = pane_advanced?(feed, baseline))
+      Log.trace { "advance - feed: #{feed.id} position: #{position}" }
+      replace_refresh_posts_message(io, position.to_s)
+      position
+    else
+      baseline
+    end
+  end
+
+  def self.open_feed(io, feed : Feed, resume : String?) : Int64
+    if resume && (baseline = resume.to_i64?)
+      advance_feed(io, feed, baseline)
+    else
+      (pane_advanced?(feed, nil) || 0_i64).tap do |seeded|
+        Log.trace { "initial - feed: #{feed.id} baseline: #{seeded}" }
+        stream_no_op(io, seeded.to_s)
+      end
+    end
+  end
+
+  get "/stream/feeds/:id/preview" do |env|
+    id = id_param(env)
+    unless (feed = Feed.find?(id)) && feed.owner_iri == env.account.actor.iri
+      not_found
+    end
+    setup_response(env.response)
+    replace_feed_preview(env.response, env, feed)
+    subscribe "/actor/refresh", Rules::Feeds.view_for(feed).subjects(env.account.username).first do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        else
+          replace_feed_preview(env.response, env, feed)
+        end
       end
     end
   end

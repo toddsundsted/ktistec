@@ -36,7 +36,10 @@ form#timeline-controls.feed-controls.ui.secondary.pointing.menu data-controller=
       input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->submit-on-change#change" checked=filters.includes?("no-replies")
       label for="timeline-no-replies" Hide replies
 turbo-frame#main-timeline
-  - unless feed || Ktistec::ViewHelper.cursor_paginated?(env.params.query)
-    turbo-stream-source src=stream_path("actor", "homepage", query: env.request.query)
+  - unless Ktistec::ViewHelper.cursor_paginated?(env.params.query)
+    - if (_slug = feed.try(&.slug))
+      turbo-stream-source src=stream_path("feeds", _slug)
+    - else
+      turbo-stream-source src=stream_path("actor", "homepage", query: env.request.query)
   - partial "partials/timeline/posts"
   - partial paginate(env, objects)

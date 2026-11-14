@@ -10,7 +10,7 @@ module Rules
     # Returns the view for a feed.
     #
     def view_for(feed : ::Feed) : View::Feed
-      View::Feed.new(feed_id: feed.id.not_nil!, owner_iri: feed.owner_iri.not_nil!)
+      View::Feed.new(feed_id: feed.id.not_nil!, owner_iri: feed.owner_iri.not_nil!, slug_or_id: feed.slug_or_id)
     end
 
     # Registers a view for every feed.

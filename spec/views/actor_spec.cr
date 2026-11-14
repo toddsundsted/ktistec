@@ -1,5 +1,6 @@
 require "../../src/models/activity_pub/activity/follow"
 require "../../src/models/relationship/content/notification/**" # ameba:disable Ktistec/NoRequireGlob
+require "../../src/services/feed/backend/criteria"
 require "../../src/views/view_helper"
 
 require "../spec_helper/factory"
@@ -38,17 +39,19 @@ Spectator.describe "actor" do
   describe "self.html.slang" do
     let(env) { make_env("GET", "/actor/username") }
 
-    let(timeline) { Ktistec::Util::PaginatedArray(Relationship::Content::Timeline).new }
+    let(feed) { nil.as(Feed?) }
+
+    let(objects) { Ktistec::Util::PaginatedArray(ActivityPub::Object).new }
 
     module ::Ktistec::ViewHelper
-      def self.render_self_html_slang(env, actor, timeline)
+      def self.render_self_html_slang(env, actor, feed, objects)
         render "./src/views/actors/self.html.slang"
       end
     end
 
     subject do
       begin
-        XML.parse_html(Ktistec::ViewHelper.render_self_html_slang(env, actor, timeline))
+        XML.parse_html(Ktistec::ViewHelper.render_self_html_slang(env, actor, feed, objects))
       rescue XML::Error
         XML.parse_html("<div/>").document
       end
@@ -62,6 +65,26 @@ Spectator.describe "actor" do
       expect(subject.xpath_nodes("//trix-editor")).not_to be_empty
     end
 
+    it "renders a stream source" do
+      expect(subject.xpath_nodes("//turbo-stream-source")).not_to be_empty
+    end
+
+    context "given a feed" do
+      let_create(:feed, owner: actor, name: "Feed", draft: false)
+
+      it "renders a stream source for the feed" do
+        expect(subject.xpath_nodes("//turbo-stream-source/@src").map(&.text)).to eq(["/stream/feeds/#{feed.slug}"])
+      end
+    end
+
+    context "given a query string" do
+      let(env) { make_env("GET", "/actor/username?foo=bar") }
+
+      it "renders a stream source with the query string" do
+        expect(subject.xpath_nodes("//turbo-stream-source/@src").first).to eq("/stream/actor/homepage?foo=bar")
+      end
+    end
+
     describe "timeline controls" do
       it "targets the main timeline" do
         expect(subject.xpath_nodes("//form[@id='timeline-controls']/@data-turbo-frame").map(&.text)).to eq(["main-timeline"])
@@ -73,6 +96,14 @@ Spectator.describe "actor" do
 
       it "renders an empty filter" do
         expect(subject.xpath_nodes("//form[@id='timeline-controls']//input[@type='hidden'][@name='filters'][@value='']")).not_to be_empty
+      end
+
+      context "given a feed" do
+        let_create(:feed, owner: actor, name: "Feed", draft: false)
+
+        it "are not rendered" do
+          expect(subject.xpath_nodes("//form[@id='timeline-controls']")).to be_empty
+        end
       end
 
       context "given a query parameter" do

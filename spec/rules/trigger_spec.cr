@@ -399,7 +399,7 @@ Spectator.describe Rules::Trigger do
 
           it "notifies the owner's feed subject" do
             Rules::Trigger.reconcile_for_object(post)
-            expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+            expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.slug}"])
           end
         end
       end
@@ -457,7 +457,7 @@ Spectator.describe Rules::Trigger do
 
       it "notifies the owner's feed subject" do
         Rules::Trigger.reconcile_for_feed(feed)
-        expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+        expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.slug}"])
       end
 
       context "when nothing changes" do
@@ -480,7 +480,7 @@ Spectator.describe Rules::Trigger do
 
       it "notifies the owner's feed subject" do
         Rules::Trigger.reconcile_for_answer([question])
-        expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+        expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.slug}"])
       end
 
       context "given another question in the batch" do
@@ -489,7 +489,7 @@ Spectator.describe Rules::Trigger do
 
         it "notifies the owner's feed subject once" do
           Rules::Trigger.reconcile_for_answer([question, second])
-          expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.id}"])
+          expect(notified).to eq(["/actors/#{actor.username}/feeds/#{feed.slug}"])
         end
       end
 

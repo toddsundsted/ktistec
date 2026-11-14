@@ -1128,7 +1128,7 @@ Spectator.describe FeedsController do
 
       it "updates the preview as posts are judged" do
         get "/actors/#{actor.username}/feeds/#{feed.id}/edit", ACCEPT_HTML
-        expect(XML.parse_html(response.body).xpath_nodes("//turbo-stream-source/@src").map(&.text)).to contain("/stream/feeds/#{feed.id}")
+        expect(XML.parse_html(response.body).xpath_nodes("//turbo-stream-source/@src").map(&.text)).to contain("/stream/feeds/#{feed.id}/preview")
       end
 
       context "that is published and has contents" do

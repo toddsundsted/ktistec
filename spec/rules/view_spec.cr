@@ -7,7 +7,7 @@ require "../spec_helper/rule/view"
 Spectator.describe Rules::View do
   preserve_view_registry
 
-  let(view) { Rules::View::Feed.new(feed_id: 1_i64, owner_iri: "https://test.test/actors/owner") }
+  let(view) { Rules::View::Feed.new(feed_id: 1_i64, owner_iri: "https://test.test/actors/owner", slug_or_id: "1") }
 
   describe ".register" do
     it "registers the view" do
@@ -18,10 +18,16 @@ Spectator.describe Rules::View do
     context "when a view of the same type is already registered" do
       before_each { Rules::View.register(view) }
 
+      let(other) { Rules::View::Feed.new(feed_id: 1_i64, owner_iri: "https://test.test/actors/owner", slug_or_id: "feed") }
+
       it "does not register a duplicate" do
-        other = Rules::View::Feed.new(feed_id: 1_i64, owner_iri: "https://test.test/actors/owner")
         expect { Rules::View.register(other) }
           .not_to change { Rules::View.registry.count(&.type.==(view.type)) }.from(1)
+      end
+
+      it "replaces the registered view" do
+        expect { Rules::View.register(other) }
+          .to change { Rules::View.registry.includes?(other) }.from(false).to(true)
       end
     end
   end
@@ -37,7 +43,7 @@ Spectator.describe Rules::View do
     end
 
     it "removes by type" do
-      other = Rules::View::Feed.new(feed_id: 1_i64, owner_iri: "https://test.test/actors/owner")
+      other = Rules::View::Feed.new(feed_id: 1_i64, owner_iri: "https://test.test/actors/owner", slug_or_id: "1")
       expect { Rules::View.unregister(other) }
         .to change { Rules::View.registry.includes?(view) }.from(true).to(false)
     end

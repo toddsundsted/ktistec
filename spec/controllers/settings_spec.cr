@@ -1,7 +1,9 @@
 require "../../src/controllers/settings"
+require "../../src/services/feed/backend/criteria"
 
 require "../spec_helper/controller"
 require "../spec_helper/factory"
+require "../spec_helper/feed/queue"
 
 Spectator.describe SettingsController do
   setup_spec
@@ -38,6 +40,85 @@ Spectator.describe SettingsController do
         it "renders radio buttons for default_editor" do
           get "/settings", headers
           expect(XML.parse_html(response.body).xpath_nodes("//form//input[@name='default_editor'][@type='radio']")).not_to be_empty
+        end
+
+        let(timeline_feed_options) { XML.parse_html(response.body).xpath_nodes("//form//select[@name='timeline_feed']/option") }
+        let(timeline_feed_selected) { XML.parse_html(response.body).xpath_nodes("//form//select[@name='timeline_feed']/option[@selected]") }
+        let(timeline_feed_labels) { XML.parse_html(response.body).xpath_nodes("//form//select[@name='timeline_feed']/following-sibling::*[contains(concat(' ',@class,' '),' label ')]") }
+
+        it "offers only the timeline" do
+          get "/settings", headers
+          expect(timeline_feed_options.map(&.["value"])).to eq([""])
+        end
+
+        context "given a published feed" do
+          let_create!(:feed, owner: actor, name: "Feed", draft: false)
+
+          it "offers the timeline and the feed" do
+            get "/settings", headers
+            expect(timeline_feed_options.map(&.["value"])).to eq(["", feed.slug])
+          end
+
+          it "selects the timeline" do
+            get "/settings", headers
+            expect(timeline_feed_selected.map(&.["value"])).to eq([""])
+          end
+
+          context "that is the timeline feed" do
+            before_each { Global.account.not_nil!.assign(timeline_feed: feed.slug).save }
+
+            it "selects the feed" do
+              get "/settings", headers
+              expect(timeline_feed_selected.map(&.["value"])).to eq([feed.slug])
+            end
+
+            it "succeeds" do
+              get "/settings", headers
+              expect(response.status_code).to eq(200)
+            end
+
+            it "does not warn about the feed" do
+              get "/settings", headers
+              expect(timeline_feed_labels).to be_empty
+            end
+
+            context "and has been deleted" do
+              before_each { feed.destroy }
+
+              it "keeps the feed selected but marked as deleted" do
+                get "/settings", headers
+                expect(timeline_feed_selected.map(&.text)).to eq(["#{feed.slug} (deleted)"])
+              end
+
+              it "warns that the feed has been deleted" do
+                get "/settings", headers
+                expect(timeline_feed_labels.map(&.text)).to have(/has been deleted/)
+              end
+            end
+
+            context "and its judge is paused" do
+              pause_judge(feed.backend, until: 1.hour.from_now)
+
+              it "keeps the feed selected but marked as paused" do
+                get "/settings", headers
+                expect(timeline_feed_selected.map(&.text)).to eq([feed.name])
+              end
+
+              it "warns that the feed's judge is paused" do
+                get "/settings", headers
+                expect(timeline_feed_labels.map(&.text)).to have(/is paused/)
+              end
+            end
+          end
+        end
+
+        context "given a draft feed" do
+          let_create!(:feed, owner: actor, name: "Feed", draft: true)
+
+          it "offers only the timeline" do
+            get "/settings", headers
+            expect(timeline_feed_options.map(&.["value"])).to eq([""])
+          end
         end
 
         before_each do
@@ -116,6 +197,22 @@ Spectator.describe SettingsController do
         it "renders an object with site, image, description, and footer" do
           get "/settings", headers
           expect(JSON.parse(response.body).dig("site").as_h.keys).to have("site", "image", "description", "footer")
+        end
+
+        it "renders the timeline feed as null" do
+          get "/settings", headers
+          expect(JSON.parse(response.body).dig("actor").as_h["timeline_feed"]).to eq(JSON::Any.new(nil))
+        end
+
+        context "given a timeline feed" do
+          let_create!(:feed, owner: actor, name: "Feed", draft: false)
+
+          before_each { Global.account.not_nil!.assign(timeline_feed: feed.slug).save }
+
+          it "renders the feed's slug as the timeline feed" do
+            get "/settings", headers
+            expect(JSON.parse(response.body).dig("actor", "timeline_feed")).to eq(feed.slug)
+          end
         end
       end
     end
@@ -263,6 +360,34 @@ Spectator.describe SettingsController do
           it "does not update the default_editor if not provided" do
             expect { post "/settings/actor", headers, "name=Test" }
               .not_to change { account.reload!.default_editor }
+          end
+        end
+
+        it "rejects an unknown timeline feed" do
+          post "/settings/actor", headers, "timeline_feed=unknown"
+          expect(response.status_code).to eq(422)
+        end
+
+        context "given a published feed" do
+          let_create!(:feed, owner: actor, name: "Feed", draft: false)
+
+          it "sets it as the timeline feed" do
+            post "/settings/actor", headers, "timeline_feed=#{feed.slug}"
+            expect(account.reload!.timeline_feed).to eq(feed.slug)
+          end
+
+          context "that is the timeline feed" do
+            before_each { account.assign(timeline_feed: feed.slug).save }
+
+            it "selects the timeline if blank" do
+              post "/settings/actor", headers, "timeline_feed="
+              expect(account.reload!.timeline_feed).to be_nil
+            end
+
+            it "leaves the timeline feed unchanged if not provided" do
+              expect { post "/settings/actor", headers, "name=Test" }
+                .not_to change { account.reload!.timeline_feed }
+            end
           end
         end
 
@@ -494,6 +619,39 @@ Spectator.describe SettingsController do
           it "does not update the default_editor if not provided" do
             expect { post "/settings/actor", headers, %q|{"name":"Test"}| }
               .not_to change { account.reload!.default_editor }
+          end
+        end
+
+        it "rejects an unknown timeline feed" do
+          post "/settings/actor", headers, %q|{"timeline_feed":"unknown"}|
+          expect(response.status_code).to eq(422)
+        end
+
+        context "given a published feed" do
+          let_create!(:feed, owner: actor, name: "Feed", draft: false)
+
+          it "sets it as the timeline feed" do
+            post "/settings/actor", headers, %Q|{"timeline_feed":"#{feed.slug}"}|
+            expect(account.reload!.timeline_feed).to eq(feed.slug)
+          end
+
+          context "that is the timeline feed" do
+            before_each { account.assign(timeline_feed: feed.slug).save }
+
+            it "selects the timeline if blank" do
+              post "/settings/actor", headers, %q|{"timeline_feed":""}|
+              expect(account.reload!.timeline_feed).to be_nil
+            end
+
+            it "selects the timeline if null" do
+              post "/settings/actor", headers, %q|{"timeline_feed":null}|
+              expect(account.reload!.timeline_feed).to be_nil
+            end
+
+            it "leaves the timeline feed unchanged if not provided" do
+              expect { post "/settings/actor", headers, %q|{"name":"Test"}| }
+                .not_to change { account.reload!.timeline_feed }
+            end
           end
         end
 

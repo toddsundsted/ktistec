@@ -257,6 +257,15 @@ Spectator.describe ActorsController do
           end
         end
 
+        context "given another account" do
+          let(other) { register }
+
+          it "does not store filter preferences from its page" do
+            get "/actors/#{other.username}?filters=no-shares", ACCEPT_HTML
+            expect(Global.session.not_nil!.string?("timeline_filters")).to be_nil
+          end
+        end
+
         it "handles empty filters gracefully" do
           Global.session.not_nil!.delete("timeline_filters")
           get "/actors/#{actor.username}", ACCEPT_HTML

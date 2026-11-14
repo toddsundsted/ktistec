@@ -65,7 +65,7 @@ class ActorsController
         Feed.find?(actor, slug)
       end
 
-    if env.account? && !feed
+    if env.account? == account && !feed
       if env.params.query.has_key?("filters")
         filters = env.params.query.fetch_all("filters").select(&.in?(TIMELINE_FILTERS))
         if !filters.empty?

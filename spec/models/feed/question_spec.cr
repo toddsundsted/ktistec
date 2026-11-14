@@ -65,6 +65,45 @@ Spectator.describe Feed::Question do
     end
   end
 
+  describe ".next_due_at" do
+    it "returns nil" do
+      expect(described_class.next_due_at).to be_nil
+    end
+
+    context "given a question" do
+      let_create!(:feed_question, version: version, due_at: now + 1.minute)
+
+      it "returns when it is due" do
+        expect(described_class.next_due_at).to be_close(now + 1.minute, delta: 1.second)
+      end
+
+      context "that is in a batch" do
+        before_each { feed_question.assign(batched: true).save }
+
+        it "returns nil" do
+          expect(described_class.next_due_at).to be_nil
+        end
+      end
+
+      context "and another question due earlier" do
+        let_create(:feed_version, named: other)
+        let_create!(:feed_question, named: earlier, version: other, due_at: now - 1.hour)
+
+        it "returns when the earlier question is due" do
+          expect(described_class.next_due_at).to be_close(now - 1.hour, delta: 1.second)
+        end
+
+        context "whose judge is excluded" do
+          let_create(:feed_version, named: other, backend: "other")
+
+          it "returns when the later question is due" do
+            expect(described_class.next_due_at(excluding: ["other"])).to be_close(now + 1.minute, delta: 1.second)
+          end
+        end
+      end
+    end
+  end
+
   describe ".pull" do
     it "pulls nothing, given no questions" do
       expect(described_class.pull(version.id!, 2)).to be_empty

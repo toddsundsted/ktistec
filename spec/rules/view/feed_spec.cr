@@ -1,4 +1,5 @@
 require "../../../src/rules/view/feed"
+require "../../../src/rules/feeds"
 require "../../../src/rules/maintainer"
 require "../../../src/models/feed"
 require "../../../src/models/feed/verdict"
@@ -15,9 +16,9 @@ Spectator.describe Rules::View::Feed do
 
   let(actor) { register.actor }
 
-  let_create!(:feed, owner: actor)
+  let_create!(:feed, owner: actor, draft: false)
 
-  subject { Rules::View::Feed.new(feed_id: feed.id.not_nil!, owner_iri: actor.iri) }
+  subject { Rules::Feeds.view_for(feed) }
 
   describe "registry" do
     it "is not registered" do
@@ -38,8 +39,16 @@ Spectator.describe Rules::View::Feed do
   end
 
   describe "#subjects" do
-    it "publishes to a feed's subject" do
-      expect(subject.subjects("alice")).to eq(["/actors/alice/feeds/#{feed.id}"])
+    it "publishes to the feed's subject" do
+      expect(subject.subjects("alice")).to eq(["/actors/alice/feeds/#{feed.slug}"])
+    end
+
+    context "given a draft" do
+      before_each { feed.assign(draft: true).save }
+
+      it "publishes to the feed's subject" do
+        expect(subject.subjects("alice")).to eq(["/actors/alice/feeds/#{feed.id}"])
+      end
     end
   end
 

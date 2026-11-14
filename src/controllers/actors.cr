@@ -60,7 +60,12 @@ class ActorsController
 
     actor = account.actor
 
-    if env.account?
+    feed =
+      if env.account? == account && (slug = account.timeline_feed)
+        Feed.find?(actor, slug)
+      end
+
+    if env.account? == account && !feed
       if env.params.query.has_key?("filters")
         filters = env.params.query.fetch_all("filters").select(&.in?(TIMELINE_FILTERS))
         if !filters.empty?
@@ -87,11 +92,16 @@ class ActorsController
 
     if accepts?("text/html")
       if env.account?.try(&.actor) == actor
-        filters = env.params.query.fetch_all("filters")
-        inclusion = filters.includes?("no-shares") ? [Relationship::Content::Timeline::Create] : nil
-        exclude_replies = filters.includes?("no-replies")
-        timeline = actor.timeline(**cursor_params, inclusion: inclusion, exclude_replies: exclude_replies)
-        ok "actors/self", env: env, actor: actor, timeline: timeline
+        if feed
+          contents = feed.contents(**cursor_params)
+          ok "actors/self", env: env, actor: actor, feed: feed, objects: contents
+        else
+          filters = env.params.query.fetch_all("filters")
+          inclusion = filters.includes?("no-shares") ? [Relationship::Content::Timeline::Create] : nil
+          exclude_replies = filters.includes?("no-replies")
+          timeline = actor.timeline(**cursor_params, inclusion: inclusion, exclude_replies: exclude_replies)
+          ok "actors/self", env: env, actor: actor, feed: nil, objects: timeline.map(&.object)
+        end
       else
         pinned, objects = cursor_paginate_with_pins(actor, cursor_params[:limit]) do
           actor.public_posts(**cursor_params, exclude_pinned: true)

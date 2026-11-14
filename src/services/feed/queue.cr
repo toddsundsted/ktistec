@@ -157,6 +157,15 @@ class Feed
       @@paused.keys
     end
 
+    # Returns when a question may next be pulled.
+    #
+    def next_due_at(now : Time = Time.utc) : Time?
+      paused = paused(now)
+      times = @@paused.values
+      Question.next_due_at(excluding: paused).try { |due_at| times << due_at }
+      times.min?
+    end
+
     # Pulls the next batch of questions that are due.
     #
     # The batch is the next question to pull and the questions after

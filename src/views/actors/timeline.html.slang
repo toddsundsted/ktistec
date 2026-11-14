@@ -1,15 +1,8 @@
+- content_for "title" do
+  | Timeline
+h1 Timeline
 - unless Ktistec::ViewHelper.cursor_paginated?(env.params.query)
   turbo-stream-source src=stream_path("actor", "homepage", query: env.request.query)
-section.ui.feed data-controller="icon-load-error"
-  #refresh-posts-message
-  - timeline.each do |entry|
-    crystal:
-      object = entry.object
-      activity = object.activities(inclusion: [ActivityPub::Activity::Announce, ActivityPub::Activity::Create]).find do |activity|
-        Relationship::Content::Outbox.find?(owner: actor, activity: activity) ||
-          Relationship::Content::Inbox.find?(owner: actor, activity: activity)
-      end
-      _actor = activity ? activity.actor : object.attributed_to
-      _author = object.attributed_to
-    - partial object_partial(env, object, activity: activity, actor: _actor, author: _author)
+- objects = timeline.map(&.object)
+- partial "partials/timeline/posts"
 - partial paginate(env, timeline)

@@ -91,10 +91,14 @@ module Rules
       @@registry
     end
 
-    # Registers a view.
+    # Registers a view, replacing a registered view of the same type.
     #
     def self.register(view : View) : Nil
-      @@registry << view unless @@registry.any? { |v| v.type == view.type }
+      if (index = @@registry.index { |v| v.type == view.type })
+        @@registry[index] = view
+      else
+        @@registry << view
+      end
     end
 
     # Unregisters a view.

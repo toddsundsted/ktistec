@@ -60,11 +60,11 @@ Spectator.describe Feed::Queue do
     end
 
     context "given the task that answers questions is not yet due" do
-      let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
+      let_create!(:feed_answer_questions_task, next_attempt_at: now + 1.hour)
 
       it "makes the task due now" do
         Feed::Queue.enqueue(version.id!, object_iri, live: false)
-        expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
+        expect(feed_answer_questions_task.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
       end
     end
 
@@ -319,11 +319,11 @@ Spectator.describe Feed::Queue do
       end
 
       context "and the task that answers questions is not yet due" do
-        let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
+        let_create!(:feed_answer_questions_task, next_attempt_at: now + 1.hour)
 
         it "makes the task due now" do
           Feed::Queue.enqueue_backfill(feed)
-          expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
+          expect(feed_answer_questions_task.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
         end
       end
     end
@@ -375,11 +375,11 @@ Spectator.describe Feed::Queue do
       end
 
       context "and the task that answers questions is not yet due" do
-        let!(drain) { Task::Feed::AnswerQuestions.new.assign(next_attempt_at: now + 1.hour).save }
+        let_create!(:feed_answer_questions_task, next_attempt_at: now + 1.hour)
 
         it "makes the task due now" do
           Feed::Queue.enqueue_arrival(object)
-          expect(drain.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
+          expect(feed_answer_questions_task.reload!.next_attempt_at.not_nil!).to be_close(now, delta: 1.second)
         end
       end
     end
@@ -428,6 +428,28 @@ Spectator.describe Feed::Queue do
 
       it "returns nothing" do
         expect(Feed::Queue.paused(now)).to be_empty
+      end
+    end
+  end
+
+  describe ".next_due_at" do
+    it "returns nil" do
+      expect(Feed::Queue.next_due_at(now)).to be_nil
+    end
+
+    context "given a question" do
+      let_create!(:feed_question, version: version, due_at: now - 1.minute)
+
+      it "returns when it is due" do
+        expect(Feed::Queue.next_due_at(now)).to be_close(now - 1.minute, delta: 1.second)
+      end
+
+      context "whose judge is paused" do
+        before_each { Feed::Queue.pause(version.backend, now + 1.hour) }
+
+        it "returns when the pause ends" do
+          expect(Feed::Queue.next_due_at(now)).to eq(now + 1.hour)
+        end
       end
     end
   end

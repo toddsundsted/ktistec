@@ -458,6 +458,10 @@ def distribute_poll_updates_task_factory(subject_iri = nil, question = false, **
   )
 end
 
+def feed_answer_questions_task_factory(**options)
+  task_factory(Task::Feed::AnswerQuestions, **options)
+end
+
 {% if @top_level.has_constant?("Task") %}
   class Factory::ConcurrentTask < Task
     include Task::ConcurrentTask

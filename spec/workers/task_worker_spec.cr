@@ -65,6 +65,39 @@ class RescheduleTask < BaseTask
   end
 end
 
+class SingletonExceptionTask < BaseTask
+  include Task::Singleton
+
+  # raise an exception, but reschedule the task.
+
+  def perform
+    nil.not_nil!
+  ensure
+    self.next_attempt_at = TaskWorker::NOW + 1.day
+  end
+end
+
+class SingletonDestroyTask < BaseTask
+  include Task::Singleton
+
+  # nothing should ever destroy a running singleton task.
+  # simulate a bug that does.
+
+  def perform
+    self.class.find(@id).destroy
+  end
+end
+
+class SingletonCompleteTask < BaseTask
+  include Task::Singleton
+
+  # succeed without rescheduling the task.
+
+  def perform
+    "no-op"
+  end
+end
+
 class SleepTask < BaseTask
   @@schedule_but_dont_perform = true
 
@@ -202,6 +235,50 @@ Spectator.describe TaskWorker do
     it "returns false if work was not done" do
       task5.destroy
       expect(described_class.new.work(now - 1.day)).to be_false
+    end
+
+    context "given a singleton task that fails" do
+      let!(task) { SingletonExceptionTask.new.save }
+
+      it "schedules it to run again" do
+        described_class.new.work(now)
+        expect(SingletonExceptionTask.find_active).not_to be_nil
+      end
+
+      it "schedules it at the time the task set for its next run" do
+        described_class.new.work(now)
+        expect(SingletonExceptionTask.find_active.not_nil!.next_attempt_at).to eq(now + 1.day)
+      end
+    end
+
+    context "given a singleton task that is destroyed while running" do
+      let!(task) { SingletonDestroyTask.new.save }
+
+      it "schedules it to run again" do
+        described_class.new.work(now)
+        expect(SingletonDestroyTask.find_active).not_to be_nil
+      end
+
+      it "schedules it after the retry interval" do
+        described_class.new.work(now)
+        expect(SingletonDestroyTask.find_active.not_nil!.next_attempt_at.not_nil!)
+          .to be_close(Time.utc + TaskWorker::SINGLETON_RETRY_INTERVAL, 10.seconds)
+      end
+    end
+
+    context "given a singleton task that succeeds without rescheduling" do
+      let!(task) { SingletonCompleteTask.new.save }
+
+      it "schedules it to run again" do
+        described_class.new.work(now)
+        expect(SingletonCompleteTask.find_active).not_to be_nil
+      end
+
+      it "schedules it after the retry interval" do
+        described_class.new.work(now)
+        expect(SingletonCompleteTask.find_active.not_nil!.next_attempt_at.not_nil!)
+          .to be_close(Time.utc + TaskWorker::SINGLETON_RETRY_INTERVAL, 10.seconds)
+      end
     end
   end
 end

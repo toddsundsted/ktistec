@@ -376,6 +376,16 @@ module Ktistec
           "@id"   => wrap("toot:featured"),
           "@type" => wrap("@id"),
         }),
+        "sec"       => wrap("https://w3id.org/security#"),
+        "publicKey" => wrap({
+          "@id"   => wrap("sec:publicKey"),
+          "@type" => wrap("@id"),
+        }),
+        "publicKeyPem" => wrap("sec:publicKeyPem"),
+        "owner"        => wrap({
+          "@id"   => wrap("sec:owner"),
+          "@type" => wrap("@id"),
+        }),
       }
 
       MAX_MEMO_ENTRIES = 100

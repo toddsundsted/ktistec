@@ -41,6 +41,24 @@ p
         input#markdown-editor type="radio" name="default_editor" value="text/markdown" checked=is_markdown
         label for="markdown-editor" Markdown
   crystal:
+    timeline_feed = account.timeline_feed
+    found_feed = timeline_feed.try { |slug| Feed.find?(actor, slug) }
+    timeline_feed_deleted = timeline_feed && !found_feed && !account.errors["timeline_feed"]?
+    timeline_feed_paused_until = found_feed.try { |feed| Feed::Queue.paused_until(feed.backend) }.try { |time| time if time > Time.utc }
+    feeds = Feed.for(actor).select(&.published?)
+  .field class=(account.errors["timeline_feed"]? ? "error" : nil)
+    label for="timeline_feed" Home Feed
+    select#timeline_feed.ui.selection.dropdown name="timeline_feed"
+      option value="" selected=timeline_feed.nil? Timeline
+      - if timeline_feed_deleted
+        option value=timeline_feed selected=true #{timeline_feed} (deleted)
+      - feeds.each do |feed|
+        option value=feed.slug selected=(feed.slug == timeline_feed) = feed.name
+    - if timeline_feed_deleted
+      .ui.basic.orange.pointing.label This feed has been deleted. Your home page shows the default timeline.
+    - elsif timeline_feed_paused_until
+      .ui.basic.pointing.label This feed's judge is paused for #{distance_of_time_in_words(timeline_feed_paused_until, Time.utc)}.
+  crystal:
     attachments = actor.attachments || [] of ActivityPub::Actor::Attachment
     if attachments.size < ActivityPub::Actor::ATTACHMENT_LIMIT
       attachments << ActivityPub::Actor::Attachment.new("", "", "")

@@ -268,8 +268,14 @@ AFTER_PROCS << -> do
 end
 
 macro setup_spec
-  before_each { BEFORE_PROCS.each(&.call) }
-  after_each { AFTER_PROCS.each(&.call) }
+  around_each do |proc|
+    BEFORE_PROCS.each(&.call)
+    begin
+      proc.call
+    ensure
+      AFTER_PROCS.each(&.call)
+    end
+  end
 end
 
 # Helpers for test instance creation

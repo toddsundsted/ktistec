@@ -65,6 +65,15 @@ class Task
         now = Time.utc
         TaskWorker.wake if {{@type}}.exec(query, now, {{@type}}.name, now) > 0
       end
+
+      # Schedules a new instance to replace this instance, unless an
+      # active instance exists.
+      #
+      def schedule_successor(at : Time) : Nil
+        unless {{@type}}.find_active
+          {{@type}}.new.assign(next_attempt_at: at).save
+        end
+      end
     end
   end
 end

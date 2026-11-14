@@ -197,6 +197,9 @@ module ActivityPub
       @[JSON::Field(key: "focalPoint")]
       property focal_point : Tuple(Float64, Float64)?
 
+      # "Document" is the fediverse convention for all media
+      getter type : String = "Document"
+
       def initialize(@url, @media_type, @caption = nil, @focal_point = nil)
       end
 

@@ -1499,6 +1499,16 @@ Spectator.describe "object partials" do
       end
     end
 
+    context "given an attachment" do
+      let(attachment) { ActivityPub::Object::Attachment.new("https://test.test/foo.jpg", "image/jpeg") }
+      let_build(:object, attachments: [attachment])
+      let(recursive) { false }
+
+      it "types the attachment" do
+        expect(subject.dig("attachment", 0, "type")).to eq("Document")
+      end
+    end
+
     describe "given a quote" do
       let_build(:actor, named: :author)
       let_build(

@@ -341,6 +341,10 @@ class InboxesController
       bad_request("Body Is Blank")
     end
 
+    unless body.valid_encoding?
+      bad_request("Invalid UTF-8")
+    end
+
     Log.trace { "[#{request_id}] new post" }
 
     json_ld = Ktistec::JSON_LD.expand(JSON.parse(body))

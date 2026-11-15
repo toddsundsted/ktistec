@@ -5,7 +5,7 @@
 - [ActivityPub](https://www.w3.org/TR/activitypub/) (Server-to-Server)
 - [WebFinger](https://webfinger.net/)
 - [Signing HTTP Messages (draft-cavage-http-signatures-12)](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12)
-- [HTTP Message Signatures (RFC 9421)](https://www.rfc-editor.org/rfc/rfc9421) (inbound only)
+- [HTTP Message Signatures (RFC 9421)](https://www.rfc-editor.org/rfc/rfc9421)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
 
 ## Supported FEPs
@@ -73,7 +73,7 @@ NodeInfo schema 2.1 is available via `/.well-known/nodeinfo`, conforming to FEP-
 
 ### HTTP request signing
 
-Ktistec signs outgoing requests with [Signing HTTP Messages (draft-cavage-http-signatures-12)](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12). It accepts both draft-cavage signatures and [HTTP Message Signatures (RFC 9421)](https://www.rfc-editor.org/rfc/rfc9421) on inbound inbox deliveries.
+Ktistec signs outgoing requests with [Signing HTTP Messages (draft-cavage-http-signatures-12)](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12). If the receiver rejects the request with `400 Bad Request` or `401 Unauthorized`, Ktistec retries it once signed with [HTTP Message Signatures (RFC 9421)](https://www.rfc-editor.org/rfc/rfc9421). Ktistec accepts both draft-cavage and RFC 9421 signatures on inbound inbox deliveries.
 
 **Requirements:**
 - Signatures are **required** for all POST requests to the inbox
@@ -104,7 +104,12 @@ A request carrying a `Signature-Input` header is verified as RFC 9421.
 - One signature, with `keyid` and `created` parameters
 - `@method` and `@target-uri` must be signed
 - `content-digest` (`sha-256`) must be signed for POST requests
-- Supported derived components are `@method`, `@target-uri`, and `@authority`; any header field may be signed
+- Supported derived components are `@method`, `@target-uri`, `@authority`, `@scheme`, `@request-target`, `@path`, and `@query`; any header field may be signed
+
+**Outbound signatures cover:**
+- `@method`
+- `@target-uri`
+- `content-digest` and `content-type` (for POST requests with body)
 
 ### Content types and representations
 

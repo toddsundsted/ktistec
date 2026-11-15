@@ -3,6 +3,7 @@ require "../../models/feed/question"
 require "../../models/feed/verdict"
 require "./backend"
 require "./candidates"
+require "./fingerprint"
 require "./queue"
 
 class Feed
@@ -32,11 +33,16 @@ class Feed
       end
       return if asked.empty?
       name = feed.backend
+      fingerprints = Fingerprint.for(feed, asked.map(&.last))
+      asked = asked.zip(fingerprints).compact_map do |(question, object), fingerprint|
+        {question, object, fingerprint} if changed?(name, version_id, object, fingerprint)
+      end
+      return if asked.empty?
       begin
-        answers = ask(backend, feed, asked.map(&.last))
+        answers = ask(backend, feed, asked.map(&.[1]))
       rescue err : Backend::UnavailableError
         pause(name, err.message, err.retry_after)
-        asked.each do |(question, _)|
+        asked.each do |(question, _, _)|
           Queue.requeue(question.version_id.not_nil!, question.object_iri.not_nil!, live: question.live, due_at: question.due_at)
         end
         return
@@ -50,8 +56,47 @@ class Feed
       else
         forget(name)
       end
-      asked.zip(answers) do |(question, object), answer|
+      asked.zip(answers) do |(question, object, fingerprint), answer|
         write_verdict(feed, object, answer, live: question.live)
+        # remember the fingerprint only when the judge answers. after a
+        # failure there is no answer to reuse, so the judge is asked
+        # next time even if nothing it sees has changed
+        if answer.is_a?(Backend::Judgment)
+          remember(version_id, object, fingerprint)
+        else
+          @@fingerprints.delete({version_id, object.iri})
+        end
+      end
+    end
+
+    class_property fingerprint_limit : Int32 = 10_000
+
+    # Fingerprints of the posts last answered, by version and IRI, in
+    # the order they were first remembered.
+    #
+    @@fingerprints = {} of {Int64, String} => Fingerprint
+
+    # Returns whether the judge could see anything different about
+    # `object` from when it last answered.
+    #
+    private def changed?(name, version_id, object, fingerprint) : Bool
+      unless (previous = @@fingerprints[{version_id, object.iri}]?)
+        Log.debug { "asking judge #{name} about #{object.iri} for version #{version_id} (new)" }
+        return true
+      end
+      if (changes = fingerprint.changes(previous)).empty?
+        Log.debug { "not asking judge #{name} about #{object.iri} for version #{version_id} again (unchanged)" }
+        false
+      else
+        Log.debug { "asking judge #{name} about #{object.iri} for version #{version_id} again (changed: #{changes.join(", ")})" }
+        true
+      end
+    end
+
+    private def remember(version_id, object, fingerprint) : Nil
+      @@fingerprints[{version_id, object.iri}] = fingerprint
+      while @@fingerprints.size > fingerprint_limit
+        @@fingerprints.shift
       end
     end
 

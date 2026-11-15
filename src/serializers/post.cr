@@ -165,5 +165,11 @@ module Serializers
         poll: poll,
       )
     end
+
+    # Returns the posts that `object` replies to or quotes.
+    #
+    def self.referenced(object : ActivityPub::Object) : Array(ActivityPub::Object)
+      [object.in_reply_to?(include_deleted: true), object.quote?(include_deleted: true)].compact
+    end
   end
 end

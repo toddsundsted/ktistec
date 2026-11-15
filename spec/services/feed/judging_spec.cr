@@ -5,6 +5,14 @@ require "../../spec_helper/base"
 require "../../spec_helper/factory"
 require "../../spec_helper/feed/backend"
 
+class Feed
+  module Judging
+    def answered!(feed : ::Feed, object : ActivityPub::Object) : Nil
+      remember(feed.version_id.not_nil!, object, Fingerprint.for(feed, [object]).first)
+    end
+  end
+end
+
 private class FailingBackend < TestBackend
   class_property error : Exception = Feed::Backend::TransientError.new("judge unavailable")
 
@@ -44,6 +52,36 @@ private class RecordingBackend < TestBackend
   def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
     RecordingBackend.calls << objects.map(&.iri)
     objects.map { Judgment.new(included: true).as(Judgment | Failure) }
+  end
+
+  def validate_params(params : Hash(String, JSON::Any)) : Array(String)
+    [] of String
+  end
+end
+
+# Counts how often it is asked about a post. Includes every post.
+# Fails if told do to.
+#
+private class CountingBackend < TestBackend
+  getter asked = 0
+
+  property? failing = false
+
+  property revision = "1"
+
+  def revision(params : Hash(String, JSON::Any)) : String
+    revision
+  end
+
+  def judge(feed : Feed, objects : Array(ActivityPub::Object)) : Array(Judgment | Failure)
+    @asked += objects.size
+    objects.map do
+      if failing?
+        Failure.new(:transient, "judge failed")
+      else
+        Judgment.new(included: true)
+      end
+    end
   end
 
   def validate_params(params : Hash(String, JSON::Any)) : Array(String)
@@ -205,6 +243,127 @@ Spectator.describe Feed::Judging do
         it "asks the judge about it" do
           Feed::Judging.answer([question, second])
           expect(RecordingBackend.calls).to eq([[hit.iri, other.iri]])
+        end
+      end
+    end
+
+    context "given a post the judge has answered" do
+      let(judge) { CountingBackend.new }
+
+      register_backend("counting", judge)
+
+      after_each { Feed::Judging.forget("counting") }
+
+      let_create!(:feed, owner: actor, backend: "counting")
+      let_create!(:object, named: parent)
+      let_create!(:actor, named: followed)
+      let_create!(:follow_relationship, actor: actor, object: followed, confirmed: true)
+
+      before_each { hit.assign(in_reply_to: parent).save }
+
+      before_each { Feed::Judging.answered!(feed, hit) }
+
+      it "does not ask the judge again" do
+        Feed::Judging.answer([question])
+        expect(judge.asked).to eq(0)
+      end
+
+      context "and the post is edited" do
+        before_each { hit.assign(content: "<p>something else</p>").save }
+
+        it "asks the judge again" do
+          Feed::Judging.answer([question])
+          expect(judge.asked).to eq(1)
+        end
+
+        context "and the judge has answered" do
+          before_each do
+            Feed::Judging.answer([question])
+          end
+
+          it "does not ask the judge again" do
+            expect { Feed::Judging.answer([question]) }.not_to change { judge.asked }
+          end
+        end
+
+        context "and the judge has failed to answer" do
+          before_each do
+            judge.failing = true
+            Feed::Judging.answer([question])
+          end
+
+          it "asks the judge again" do
+            expect { Feed::Judging.answer([question]) }.to change { judge.asked }.by(1)
+          end
+        end
+      end
+
+      context "and its author posts again" do
+        let_create!(:object, named: nil, attributed_to: hit.attributed_to, published: Time.utc)
+
+        it "asks the judge again" do
+          Feed::Judging.answer([question])
+          expect(judge.asked).to eq(1)
+        end
+      end
+
+      context "and someone the owner follows posts" do
+        let_create!(:object, named: nil, attributed_to: followed, published: Time.utc)
+
+        it "asks the judge again" do
+          Feed::Judging.answer([question])
+          expect(judge.asked).to eq(1)
+        end
+      end
+
+      context "and the post it replies to is edited" do
+        before_each { parent.assign(content: "<p>edited</p>").save }
+
+        it "asks the judge again" do
+          Feed::Judging.answer([question])
+          expect(judge.asked).to eq(1)
+        end
+      end
+
+      context "and the feed is renamed" do
+        before_each { feed.assign(name: "Renamed").save }
+
+        it "asks the judge again" do
+          Feed::Judging.answer([question])
+          expect(judge.asked).to eq(1)
+        end
+      end
+
+      context "and the feed moves to a new revision of the judge" do
+        before_each do
+          judge.revision = "2"
+          feed.save
+        end
+
+        it "asks the judge again" do
+          Feed::Judging.answer([question])
+          expect(judge.asked).to eq(1)
+        end
+      end
+
+      context "and enough other posts have been answered since that its answer is no longer kept" do
+        let_create!(:object, named: other)
+
+        around_each do |proc|
+          limit = Feed::Judging.fingerprint_limit
+          Feed::Judging.fingerprint_limit = 1
+          begin
+            proc.call
+          ensure
+            Feed::Judging.fingerprint_limit = limit
+          end
+        end
+
+        before_each { Feed::Judging.answered!(feed, other) }
+
+        it "asks the judge again" do
+          Feed::Judging.answer([question])
+          expect(judge.asked).to eq(1)
         end
       end
     end

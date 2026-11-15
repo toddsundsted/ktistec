@@ -649,6 +649,38 @@ Spectator.describe StreamingController do
       \n
       HTML
     end
+
+    it "splits the body on a bare CR" do
+      str = String.build do |io|
+        described_class.stream_action(io, body: "<br>\r<br>", action: "foobar", target: nil, selector: nil)
+      end
+      expect(str).to eq(
+        %Q|data: <turbo-stream action="foobar"><template><br>\n| \
+        %Q|data: <br></template></turbo-stream>\n| \
+        %Q|\n|,
+      )
+    end
+
+    it "splits the body on CRLF" do
+      str = String.build do |io|
+        described_class.stream_action(io, body: "<br>\r\n<br>", action: "foobar", target: nil, selector: nil)
+      end
+      expect(str).to eq(
+        %Q|data: <turbo-stream action="foobar"><template><br>\n| \
+        %Q|data: <br></template></turbo-stream>\n| \
+        %Q|\n|,
+      )
+    end
+
+    it "replaces invalid UTF-8 in the body" do
+      str = String.build do |io|
+        described_class.stream_action(io, body: String.new(Bytes[0x61, 0xff, 0x62]), action: "foobar", target: nil, selector: nil)
+      end
+      expect(str).to eq(
+        %Q|data: <turbo-stream action="foobar"><template>a�b</template></turbo-stream>\n| \
+        %Q|\n|,
+      )
+    end
   end
 end
 

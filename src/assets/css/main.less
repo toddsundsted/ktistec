@@ -755,6 +755,11 @@ turbo-stream-source + .ui.feed { margin-top: 0; }
 .ui.iconic.button:hover { color: var(--text-primary) !important; }
 .ui.iconic.blue.button { color: var(--semantic-primary) !important; }
 .ui.iconic.purple.button { color: var(--color-purple) !important; }
+/* Fomantic gives button icons `opacity: .8` and `backface-visibility: hidden`. Either
+   one puts the icon on its own layer, and iOS Safari doesn't repaint that layer when an
+   in-place text change (a Turbo morph) shifts the icon, so it's left at its old position.
+   Without the opacity, the icon is also the same shade as its label. */
+.ui.iconic.button > i.icon { opacity: 1; -webkit-backface-visibility: visible; backface-visibility: visible; }
 
 /* used on social actions */
 .ui.accept.button { background: var(--semantic-affirmative) !important; color: var(--color-white) !important; }

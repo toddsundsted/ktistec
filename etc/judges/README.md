@@ -6,7 +6,8 @@ belong in a feed. The four judges here are working examples.
 ## Writing a judge
 
 1. Name it. The filename is the judge's name. Use letters, digits,
-   `.`, `_`, and `-`.
+   `.`, `_`, and `-`. Start with a letter or digit. Don't name it
+   `criteria`, which is taken by the built-in judge.
 
 2. Declare its settings in comments in its first 10 lines, in
    whatever comment syntax its language uses:
@@ -18,8 +19,8 @@ belong in a feed. The four judges here are working examples.
    # ktistec: param=exclude type=string required
    ```
 
-   - `revision`: change it when the judge's answers change, so that
-     feeds are judged again.
+   - `revision`: change it when the judge's answers change, and
+     restart the server, so that feeds are judged again.
    - `batch-size`: the most posts it is asked about at once (default
      is 1).
    - `param`: a param a feed can set in the UI. `type` is `integer`
@@ -79,7 +80,7 @@ belong in a feed. The four judges here are working examples.
      - `poll` is a JSON object of `options`, `multiple_choice`, and
        `closed_at`, or null if the post isn't a poll.
 
-   Reading the file:
+   Querying the database:
 
    - Name every column you read and write. Don't read rows by
      position (`SELECT *` with tuple indexes) or insert without a
@@ -107,10 +108,10 @@ belong in a feed. The four judges here are working examples.
    A post with a transient failure is asked about again later. A post
    with a permanent failure is not.
 
-   An exclusion isn't stored, by default, unless the answer sets
-   `keep` to 1. Set it when an exclusion would be hard to reconstruct
-   later, like one that comes from a model, and leave it out when it's
-   trivial. `keep` has no effect on other answers:
+   An exclusion isn't recorded, by default, to save space. Set `keep`
+   to 1 to record it, with its reason, when you'll want to know later
+   why a post was left out, like an exclusion that comes from a model.
+   `keep` has no effect on other answers:
 
    ```python
    db.execute(
@@ -120,7 +121,7 @@ belong in a feed. The four judges here are working examples.
    ```
 
 4. Handle failure. A post without an answer, a judge that exits
-   non-zero, and a judge that runs longer than 5 minutes (it is
+   with an error, and a judge that runs longer than 5 minutes (it is
    killed) all count as transient failures. A judge that fails three
    batches in a row is paused, for 5 minutes at first and twice as
    long each time after, up to a day.
@@ -135,7 +136,9 @@ belong in a feed. The four judges here are working examples.
    )
    ```
 
-   `retry_after` (UTC, optional) shortens the pause.
+   `retry_after` (UTC, optional) shortens the pause. A judge that says
+   it is unavailable is asked about the whole batch again after the
+   pause, so any answers it wrote are ignored.
 
 5. Log. Each line the judge writes to stdout is logged at info, and to
    stderr at warn, tagged with the judge's path.
@@ -151,10 +154,11 @@ Make it executable:
 chmod +x etc/judges/polls
 ```
 
-Ktistec looks for judges at startup and every minute after. An edit to
-a judge takes effect within a minute, except a new `revision` or new
-params, which take effect only when the server restarts. Editing a
-judge (even with `touch`) also resumes it if it is paused.
+Ktistec looks for judges at startup and about every 10 minutes after.
+An edit to a judge takes effect within about 10 minutes, except a new
+`revision` or a new `param` declaration, which take effect only when
+the server restarts. Editing a judge (even with `touch`) also resumes
+it if it is paused.
 
 ## Testing a judge
 
@@ -184,11 +188,14 @@ posts and can't hurt anything.
    arrive, and watch the log for the judge's output.
 
 4. Publish the feed. Publishing backfills it: the judge is asked about
-   every post from the last 30 days, 250 at a time. After that, it is
-   asked about each new post as it arrives.
+   every post from the last 30 days. After that, it is asked about
+   each new post as it arrives, and about a post again when something
+   about it changes, like an edit or an announce.
 
-Answers are kept by feed owner, judge, params, and revision. A
-preview or backfill doesn't ask about a post the judge already
-answered, so after changing what a judge decides, change its
-`revision` and restart the server (or change a param) to see the
-new answers.
+Answers are kept for each combination of feed owner, judge, params,
+and revision, and a preview or backfill judges each post once per
+combination. Editing a judge's code doesn't change answers it already
+gave; only new and changed posts get the new code's answers. To have
+posts judged again after changing what a judge decides, change its
+`revision` and restart the server, or change the value of one of the
+feed's params in the UI.

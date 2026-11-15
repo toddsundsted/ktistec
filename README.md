@@ -265,6 +265,11 @@ for how to write one, and the examples there.
 
 Your feeds are listed under *Feeds* in the menu on your home page.
 
+Your home page can show a feed in place of your timeline. Choose any
+published feed as your *Home Feed* in *Settings*, or choose *Timeline*
+to go back to the default. If that feed is deleted, your home page
+shows the default timeline again.
+
 A feed you haven't published yet is kept as a draft, so you can come
 back to it later, and editing a published feed leaves the new version
 a draft until you publish your changes.

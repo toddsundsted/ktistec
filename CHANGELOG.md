@@ -1,6 +1,22 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.16.0]
+### Added
+- Let a user choose a published feed as its timeline feed.
+- Retry rejected outbound requests with an RFC 9421 signature.
+- Add a link to Feeds in the top nav when on the deck.
+- Accept private labels as feed criteria.
+
+### Fixed
+- Restore the deck's scroll positions.
+- Map public keys from actor documents that omit the security context.
+- Decrement cached tag counts when a tag is destroyed.
+- Prefer alt text over `figcaption` in the image viewer's caption.
+
+### Changed
+- Put new feeds at the front of the deck.
+
 ## [v3.15.0]
 ### Added
 - Verify inbound RFC 9421 HTTP Message Signatures (`rsa-v1_5-sha256`).
@@ -1005,6 +1021,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.16.0]: https://github.com/toddsundsted/ktistec/compare/c40ba2ab...25d10229
 [v3.15.0]: https://github.com/toddsundsted/ktistec/compare/0aedeb42...3db34af4
 [v3.14.0]: https://github.com/toddsundsted/ktistec/compare/f175932e...35c3ef5c
 [v3.13.0]: https://github.com/toddsundsted/ktistec/compare/02c9f7d8...4f3c2f40

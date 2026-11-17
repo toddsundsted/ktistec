@@ -49,6 +49,14 @@ class ExceptionTask < BaseTask
   end
 end
 
+class InvalidUTF8ExceptionTask < BaseTask
+  # raise an exception whose message is not valid UTF-8.
+
+  def perform
+    raise "bad\xFF"
+  end
+end
+
 class ServerShutdownExceptionTask < BaseTask
   # raise a server shutdown exception.
 
@@ -193,6 +201,12 @@ Spectator.describe TaskWorker do
       task = ExceptionTask.new.save
       described_class.new.work(now)
       expect(task.reload!.backtrace.not_nil!).to have(/Nil assertion failed/)
+    end
+
+    it "stores an exception message that is not valid UTF-8 as valid UTF-8" do
+      task = InvalidUTF8ExceptionTask.new.save
+      described_class.new.work(now)
+      expect(task.reload!.backtrace.not_nil!.first).to eq("Exception: bad�")
     end
 
     it "does not store the backtrace when task throws a server shutdown exception" do

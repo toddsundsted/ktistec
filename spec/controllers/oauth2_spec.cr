@@ -61,6 +61,17 @@ Spectator.describe OAuth2Controller do
       expect(response.status_code).to eq(400)
     end
 
+    context "given a body that is not valid UTF-8" do
+      let(invalid_body) { %Q({"client_name":"bad\xFF","redirect_uris":"https://client.example.com/callback"}) }
+
+      pre_condition { expect(invalid_body.valid_encoding?).to be_false }
+
+      it "rejects the body" do
+        post "/oauth/register", headers: JSON_HEADERS, body: invalid_body
+        expect(response.status_code).to eq(400)
+      end
+    end
+
     it "rejects requests that exceed the body size cap" do
       body = "a" * (OAuth2Controller::MAX_REQUEST_BYTES + 1)
       post "/oauth/register", headers: JSON_HEADERS, body: body

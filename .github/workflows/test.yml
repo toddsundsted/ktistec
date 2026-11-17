@@ -59,6 +59,20 @@ jobs:
             node-${{ runner.os }}-
       - name: Install npm dependencies
         run: npm ci
+      # npm audit checks the copy of DOMPurify that npm installs, not the copy
+      # Trix actually ships. Make sure their versions match, so the audit is
+      # true. If this fails, change the DOMPurify version in package.json to
+      # match the one Trix ships.
+      - name: Check installed DOMPurify matches the copy inlined in Trix
+        run: |
+          inlined=$(grep -o "DOMPurify [0-9][0-9.]*" node_modules/trix/dist/trix.esm.min.js | sort -u)
+          installed=$(npm ls dompurify --json | jq -r '.dependencies.trix.dependencies.dompurify.version')
+          echo "Trix inlines: $inlined; installed: DOMPurify $installed"
+          if [ "$inlined" != "DOMPurify $installed" ]; then
+            echo "Update the trix > dompurify override in package.json to match."
+            exit 1
+          fi
+        shell: bash
       - name: Audit npm dependencies
         run: npm audit --audit-level=high --omit=dev
       - name: Run npm tests

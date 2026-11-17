@@ -74,6 +74,26 @@ jobs:
           fi
         shell: bash
       - name: Audit npm dependencies
-        run: npm audit --audit-level=high --omit=dev
+        # Fails on any high or critical advisory not in the allowlist, and on
+        # any allowlist entry that is no longer reported, so none go stale.
+        run: |
+          audit="$RUNNER_TEMP/audit.json"
+          npm audit --json --omit=dev > "$audit" || true
+          found=$(jq -r '[.vulnerabilities[].via[] | objects
+                          | select(.severity == "high" or .severity == "critical")
+                          | .url | sub(".*/"; "")] | unique[]' "$audit" | LC_ALL=C sort)
+          allowed=$(jq -r '.[].id' .github/npm-audit-allowlist.json | LC_ALL=C sort)
+          unexpected=$(LC_ALL=C comm -23 <(echo "$found") <(echo "$allowed") | grep . || true)
+          stale=$(LC_ALL=C comm -13 <(echo "$found") <(echo "$allowed") | grep . || true)
+          if [ -n "$unexpected" ]; then
+            echo "Advisories not in the allowlist:"
+            echo "$unexpected"
+          fi
+          if [ -n "$stale" ]; then
+            echo "Allowlist entries no longer reported (remove them):"
+            echo "$stale"
+          fi
+          [ -z "$unexpected" ] && [ -z "$stale" ]
+        shell: bash
       - name: Run npm tests
         run: npm run test

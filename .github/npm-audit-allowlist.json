@@ -1,0 +1,6 @@
+[
+  {
+    "id": "GHSA-mrv2-3pqr-j5jr",
+    "reason": "Needs IN_PLACE mode and a hook that removes nodes; Trix uses neither, so the vulnerable path never runs."
+  }
+]

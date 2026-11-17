@@ -344,6 +344,16 @@ Spectator.describe Feed do
     end
   end
 
+  describe ".type_predicate" do
+    # the partial index `idx_relationships_feed_from_iri_type_created_at`
+    # binds only when the read query repeats exactly this predicate. if
+    # this fails, the index migration's predicate must be updated to
+    # match (see `20261117081708-add-feed-index-on-relationships.cr`).
+    it "matches the partial index predicate byte-for-byte" do
+      expect(described_class.type_predicate("type")).to eq("substr(type, 1, 6) = 'Feed::'")
+    end
+  end
+
   describe "#stats" do
     let_create(:feed)
 

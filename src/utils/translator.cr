@@ -65,7 +65,11 @@ module Ktistec
         if bytes > max_bytes
           raise Error.new("Response body too large [>#{max_bytes} bytes]: #{uri}")
         end
-        buf.to_s
+        body = buf.to_s
+        unless body.valid_encoding?
+          raise Error.new("Invalid UTF-8: #{uri}")
+        end
+        body
       else
         ""
       end

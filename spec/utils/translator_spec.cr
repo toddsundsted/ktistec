@@ -103,6 +103,17 @@ Spectator.describe Ktistec::Translator::DeepLTranslator do
         expect { subject.translate("name", nil, nil, "en", "fr") }.to raise_error(Ktistec::Translator::Error, /Response body too large/)
       end
     end
+
+    context "given a response that is not valid UTF-8" do
+      before_each do
+        body = %Q({"translations":[{"text":"nom\xFF"}]})
+        HTTP::Client.cache.set_response(DEEPL_API.to_s, HTTP::Client::Response.new(200, body: body))
+      end
+
+      it "fails with a translator error" do
+        expect { subject.translate("name", nil, nil, "en", "fr") }.to raise_error(Ktistec::Translator::Error, /Invalid UTF-8/)
+      end
+    end
   end
 end
 
@@ -193,6 +204,17 @@ Spectator.describe Ktistec::Translator::LibreTranslateTranslator do
 
       it "rejects the response" do
         expect { subject.translate("name", nil, nil, "en", "fr") }.to raise_error(Ktistec::Translator::Error, /Response body too large/)
+      end
+    end
+
+    context "given a response that is not valid UTF-8" do
+      before_each do
+        body = %Q({"translatedText":["nom\xFF"]})
+        HTTP::Client.cache.set_response(LIBRETRANSLATE_API.to_s, HTTP::Client::Response.new(200, body: body))
+      end
+
+      it "fails with a translator error" do
+        expect { subject.translate("name", nil, nil, "en", "fr") }.to raise_error(Ktistec::Translator::Error, /Invalid UTF-8/)
       end
     end
   end

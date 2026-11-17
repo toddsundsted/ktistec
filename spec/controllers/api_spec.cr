@@ -111,6 +111,17 @@ Spectator.describe APIController do
         json = JSON.parse(response.body)
         expect(json["vapid_key"]).to eq("")
       end
+
+      context "and a client_name that is not valid UTF-8" do
+        let(body) { %Q({"client_name":"bad\xFF","redirect_uris":"https://example.com/callback"}) }
+
+        pre_condition { expect(body.valid_encoding?).to be_false }
+
+        it "returns 400" do
+          post "/api/v1/apps", headers: JSON_HEADERS, body: body
+          expect(response.status_code).to eq(400)
+        end
+      end
     end
 
     context "with form-encoded body" do
@@ -131,6 +142,17 @@ Spectator.describe APIController do
         post "/api/v1/apps", headers: FORM_HEADERS, body: body
         json = JSON.parse(response.body)
         expect(json["scopes"].as_a.map(&.as_s)).to eq(["read", "write"])
+      end
+
+      context "and a client_name that decodes to invalid UTF-8" do
+        let(body) { "client_name=bad%FF&redirect_uris=https%3A%2F%2Fexample.com%2Fcallback" }
+
+        pre_condition { expect(body.valid_encoding?).to be_true }
+
+        it "returns 400" do
+          post "/api/v1/apps", headers: FORM_HEADERS, body: body
+          expect(response.status_code).to eq(400)
+        end
       end
     end
 

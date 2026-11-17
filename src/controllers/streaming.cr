@@ -514,7 +514,7 @@ class StreamingController
         str << "</template>"
       end
       str << "</turbo-stream>"
-    end.split("\n").each do |line|
+    end.scrub.split(/\r\n|\r|\n/).each do |line|
       io.puts "data: #{line}"
     end
 

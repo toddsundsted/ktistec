@@ -102,6 +102,11 @@ class APIController
       website = params["website"]?
     end
 
+    unless (redirect_uris + [client_name, scopes, website].compact).all?(&.valid_encoding?)
+      Log.debug { "Invalid UTF-8" }
+      bad_request "Invalid UTF-8"
+    end
+
     Log.trace { "apps[POST]: client_name=#{client_name}, redirect_uris=#{redirect_uris}, scopes=#{scopes}" }
 
     result = OAuth2::ClientRegistration.register(

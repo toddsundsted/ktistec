@@ -190,7 +190,7 @@ posts and can't hurt anything.
 4. Publish the feed. Publishing backfills it: the judge is asked about
    every post from the last 30 days. After that, it is asked about
    each new post as it arrives, and about a post again when something
-   about it changes, like an edit or an announce.
+   it can see about the post changes, like an edit or an announce.
 
 Answers are kept for each combination of feed owner, judge, params,
 and revision, and a preview or backfill judges each post once per

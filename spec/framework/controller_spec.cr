@@ -189,6 +189,17 @@ Spectator.describe Ktistec::Controller do
       expect(XML.parse_html(response.body).xpath_nodes("//cite").first).to eq("html")
     end
 
+    # the `Accept` header Bridgy Fed sends when it fetches an actor
+    it "responds with json when the client ranks html lower" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => %q|application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams", text/html; q=0.5|}
+      expect(JSON.parse(response.body)).to eq("json")
+    end
+
+    it "omits the quality from the content type" do
+      get "/foo/bar/ok", HTTP::Headers{"Accept" => "application/activity+json; q=0.9"}
+      expect(response.headers["Content-Type"]).to eq("application/activity+json")
+    end
+
     it "sets the content type" do
       get "/foo/bar/ok", HTTP::Headers{"Accept" => %q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|}
       expect(response.headers["Content-Type"]).to eq(%q|application/ld+json; profile="https://www.w3.org/ns/activitystreams"|)

@@ -169,6 +169,20 @@ Spectator.describe MCPController do
       end
     end
 
+    context "with JSON that is not valid UTF-8" do
+      let(json) { %Q|{"jsonrpc": "2.0", "id": "init-1", "method": "initialize", "params": {"protocolVersion": "2025-03-26", "clientInfo": {"name": "Test\xFF", "version": "1.0.0"}}}| }
+
+      pre_condition { expect(json.valid_encoding?).to be_false }
+
+      it "returns parse error" do
+        post "/mcp", authenticated_headers, json
+        expect(response.status_code).to eq(400)
+
+        parsed = JSON.parse(response.body)
+        expect(parsed["error"]["code"]).to eq(-32700)
+      end
+    end
+
     context "with unknown method" do
       let(json) { %Q|{"jsonrpc": "2.0", "id": "unknown-1", "method": "unknown/method"}| }
 

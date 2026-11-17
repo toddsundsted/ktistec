@@ -113,7 +113,7 @@ class TaskWorker
   rescue ServerShutdownException
     # no-op
   rescue ex
-    message = ex.message ? "#{ex.class}: #{ex.message}" : ex.class.to_s
+    message = (msg = ex.message) ? "#{ex.class}: #{msg.scrub}" : ex.class.to_s
     task.backtrace = [message] + ex.backtrace
   ensure
     @@performing_tasks -= 1

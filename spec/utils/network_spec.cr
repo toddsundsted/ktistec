@@ -62,6 +62,34 @@ Spectator.describe Ktistec::Network do
           expect(described_class.get(key_pair, "https://external/redirected-off-origin").final_url).to eq("https://elsewhere/specified-page")
         end
       end
+
+      context "to a location that is not valid UTF-8" do
+        let(location) { "https://external/\xFF" }
+
+        pre_condition { expect(location.valid_encoding?).to be_false }
+
+        before_each do
+          HTTP::Client.cache.set_response(
+            "https://external/redirected-invalid-utf8",
+            HTTP::Client::Response.new(301, headers: HTTP::Headers{"Location" => location}),
+          )
+        end
+
+        it "rejects the redirect" do
+          expect { described_class.get(key_pair, "https://external/redirected-invalid-utf8") }.to raise_error(Ktistec::Network::PermanentError)
+        end
+
+        it "reports the failure in valid UTF-8" do
+          message =
+            begin
+              described_class.get(key_pair, "https://external/redirected-invalid-utf8")
+              nil
+            rescue err : Ktistec::Network::PermanentError
+              err.message
+            end
+          expect(message.try(&.valid_encoding?)).to be_true
+        end
+      end
     end
 
     it "fails on errors" do
@@ -313,6 +341,20 @@ Spectator.describe Ktistec::Network do
       end
     end
 
+    context "given a response body that is not valid UTF-8" do
+      let(body) { %Q({"a":"\xFF"}) }
+
+      pre_condition { expect(body.valid_encoding?).to be_false }
+
+      before_each do
+        HTTP::Client.cache.set_response("https://external/invalid-utf8", HTTP::Client::Response.new(200, body: body))
+      end
+
+      it "rejects the response" do
+        expect { described_class.get(key_pair, "https://external/invalid-utf8") }.to raise_error(Ktistec::Network::PermanentError, /Invalid UTF-8/)
+      end
+    end
+
     context "given a deadline that has not passed" do
       let(deadline) { Time.instant + 1.hour }
 
@@ -545,6 +587,21 @@ Spectator.describe Ktistec::Network do
       it "limits the bytes read" do
         response = described_class.post(key_pair, "https://external/oversize", body, content_type)
         expect(response.body.bytesize).to eq(Ktistec::Network::MAX_POST_RESPONSE_BYTES)
+      end
+    end
+
+    context "given a response body that is not valid UTF-8 within the cap" do
+      let(response_body) { "x" * (Ktistec::Network::MAX_POST_RESPONSE_BYTES - 1) + "é" }
+
+      pre_condition { expect(response_body.byte_slice(0, Ktistec::Network::MAX_POST_RESPONSE_BYTES).valid_encoding?).to be_false }
+
+      before_each do
+        HTTP::Client.cache.set_response("https://external/oversize", HTTP::Client::Response.new(200, body: response_body))
+      end
+
+      it "replaces the invalid bytes" do
+        response = described_class.post(key_pair, "https://external/oversize", body, content_type)
+        expect(response.body).to eq("x" * (Ktistec::Network::MAX_POST_RESPONSE_BYTES - 1) + "�")
       end
     end
 

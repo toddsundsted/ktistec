@@ -34,7 +34,11 @@ class OAuth2Controller
 
     cap_request_body env, MAX_REQUEST_BYTES
 
-    body = env.request.body.not_nil!
+    body = env.request.body.not_nil!.gets_to_end
+    unless body.valid_encoding?
+      Log.debug { "Invalid UTF-8" }
+      bad_request "Invalid UTF-8"
+    end
     begin
       json = JSON.parse(body)
     rescue JSON::ParseException

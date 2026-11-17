@@ -82,6 +82,10 @@ class MCPController
         bad_request "Empty Request"
       end
 
+      unless json.valid_encoding?
+        raise JSON::ParseException.new("Invalid UTF-8", 0, 0)
+      end
+
       request = JSON::RPC::Request.from_json(json)
       Log.debug { "new request: method=#{request.method} id=#{request.id}" }
 

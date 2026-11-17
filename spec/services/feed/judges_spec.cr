@@ -93,6 +93,7 @@ Spectator.describe Feed::Judges do
 
         context "and is paused" do
           before_each { Feed::Queue.pause("summarize", until: 1.hour.from_now) }
+          after_each { Feed::Queue.resume("summarize") }
 
           it "keeps the judge paused while its file is unchanged" do
             described_class.scan
@@ -132,6 +133,11 @@ Spectator.describe Feed::Judges do
             File.write(path, "#!/bin/sh\nexit 1\n")
             File.touch(path, 1.minute.from_now)
             described_class.scan
+          end
+
+          after_each do
+            Feed::Queue.resume("summarize")
+            Feed::Judging.forget("summarize")
           end
 
           context "and is one failed batch away from being paused" do

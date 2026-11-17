@@ -388,6 +388,9 @@ module Ktistec
     # by the time remaining, and `DeadlineExceeded` is raised -- before
     # any I/O -- once it is spent.
     #
+    # The response body and any redirect `Location` must be valid
+    # UTF-8.
+    #
     def get(key_pair, url, headers = HTTP::Headers.new, attempts = 10, *, max_bytes : Int32 = MAX_GET_RESPONSE_BYTES, deadline : Time::Instant? = nil) : Response
       was = url
       error_class = TransientError # default error class
@@ -434,11 +437,11 @@ module Ktistec
             status = HTTP::Status.new(status_code)
             return Response.new(url.to_s, status, body: body_capped, headers: response_headers)
           when 301, 302, 303, 307, 308
-            if (tmp = response_headers["Location"]?) && (url = uri.resolve(tmp).to_s)
+            if (tmp = response_headers["Location"]?) && tmp.valid_encoding? && (url = uri.resolve(tmp).to_s)
               next
             else
               error_class = PermanentError
-              message = "Could not redirect [#{status_code}] [#{tmp}]"
+              message = "Could not redirect [#{status_code}] [#{tmp.try(&.scrub)}]"
               break
             end
           when 401
@@ -514,7 +517,8 @@ module Ktistec
     end
 
     # Reads up to `max` bytes from `io` into a String. Raises if `io`
-    # has more bytes available past the limit.
+    # has more bytes available past the limit, or if the bytes are
+    # not valid UTF-8.
     #
     # Rechecks `deadline` between reads.
     #
@@ -532,7 +536,11 @@ module Ktistec
       if buf.bytesize > max
         raise PermanentError.new("Response body too large [>#{max} bytes]: #{url}")
       end
-      buf.to_s
+      body = buf.to_s
+      unless body.valid_encoding?
+        raise PermanentError.new("Invalid UTF-8: #{url}")
+      end
+      body
     end
 
     # :ditto:
@@ -585,7 +593,7 @@ module Ktistec
     # Signs the request internally with `key_pair`.
     #
     # The returned response carries up to `MAX_POST_RESPONSE_BYTES` of
-    # the response body.
+    # the response body, with invalid UTF-8 replaced.
     #
     # Does not follow redirects.
     #
@@ -681,7 +689,7 @@ module Ktistec
     private def read_capped(io : IO, max : Int32) : String
       buf = IO::Memory.new
       IO.copy(io, buf, max)
-      buf.to_s
+      buf.to_s.scrub
     end
 
     class Error < Exception

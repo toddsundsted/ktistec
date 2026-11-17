@@ -6,8 +6,14 @@ require "./ext/kemal"
 require "../views/view_helper"
 
 class HTTP::Server::Context
+  JSON_MIME_TYPES = {"application/ld+json", "application/activity+json", "application/json"}
+
   # Returns a true value if the request accepts, or otherwise
   # indicates, any of the specified mime types.
+  #
+  # "text/html" doesn't match if the request prefers a JSON mime type.
+  # Otherwise, quality is ignored and the caller's order of checks
+  # decides.
   #
   # Sets the "Content-Type" header on the response to a compatible
   # value as a side-effect.
@@ -15,23 +21,37 @@ class HTTP::Server::Context
   def accepts?(*mime_types)
     @accepts ||=
       if (accept = self.request.headers["Accept"]?)
-        accept.split(",").reduce(Hash(String, String).new) do |accepts, content_type|
-          accepts.merge({content_type.split(";").first.strip => content_type})
+        accept.split(",").reduce(Hash(String, {String, Float64}).new) do |accepts, media_range|
+          accepts.merge(parse_media_range(media_range))
         end
       elsif (content_type = self.request.headers["Content-Type"]?)
-        {content_type.split(";").first.strip => content_type}
+        {content_type.split(";").first.strip => {content_type, 1.0}}
       else
-        {} of String => String
+        {} of String => {String, Float64}
       end
     if (accepts = @accepts)
-      if (accept = accepts.find(&.first.in?(mime_types)))
-        self.response.content_type = accept.last
+      json = accepts.select { |type, _| type.in?(JSON_MIME_TYPES) }.max_of?(&.last.last)
+      if (accept = accepts.find { |type, (_, quality)| type.in?(mime_types) && !(type == "text/html" && json && json > quality) })
+        self.response.content_type = accept.last.first
       end
     end
   end
 
+  # Maps one "Accept" header entry's mime type to: the entry without
+  # its quality, and its quality.
+  #
+  private def parse_media_range(media_range)
+    type, *params = media_range.split(";").map(&.strip)
+    quality = 1.0
+    if (index = params.index(&.starts_with?("q=")))
+      quality = params[index].lchop("q=").to_f? || 1.0
+      params = params[0...index]
+    end
+    {type => {[type, *params].join("; "), quality}}
+  end
+
   def accepts_json?
-    accepts?("application/ld+json", "application/activity+json", "application/json") ? true : false
+    accepts?(*JSON_MIME_TYPES) ? true : false
   end
 
   def accepts_turbo_stream?
@@ -138,7 +158,7 @@ module Ktistec
           \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.json.ecr") %}
             \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
             register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
-            if accepts?("application/ld+json", "application/activity+json", "application/json")
+            if accepts_json?
               halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
             end
           \{% end %}
@@ -162,7 +182,7 @@ module Ktistec
           \{% if file_exists?(view = "#{_basedir.id}/#{_message.id}.json.ecr") %}
             \{% key = "_view_#{view.gsub(%r[\/|\.], "_").id}" %}
             register_view(\{{key}}, \{{view}}, \{{opts.double_splat}})
-            accepts?("application/ld+json", "application/activity+json", "application/json")  # sets the content type as a side effect
+            accepts_json?  # sets the content type as a side effect
             halt env, status_code: \{{_status_code}}, response: ::Ktistec::ViewHelper.\{{key.id}}(\{{opts.double_splat}})
           \{% end %}
         \{% else %}
@@ -188,7 +208,7 @@ module Ktistec
             end
           \{% end %}
           # JSON SECOND
-          if accepts?("application/ld+json", "application/activity+json", "application/json")
+          if accepts_json?
             halt env, status_code: \{{_status_code}}, response: ({msg: \{{_message}}.downcase}.to_json)
           end
           # TEXT THIRD

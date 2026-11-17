@@ -137,7 +137,7 @@ class Feed
               serialized_stats.posting_rate.median,
               serialized_stats.posting_rate.q3,
             )
-            referenced = objects.flat_map { |object| [object.in_reply_to?(include_deleted: true), object.quote?(include_deleted: true)] }.compact.uniq!(&.iri)
+            referenced = objects.flat_map { |object| Serializers::Post.referenced(object) }.uniq!(&.iri)
             (objects + referenced).compact_map(&.attributed_to?(include_deleted: true)).uniq!(&.iri).each do |actor|
               serialized_author = Serializers::Author.from(actor, feed.owner_iri, now)
               db.exec(

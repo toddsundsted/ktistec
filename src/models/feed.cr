@@ -187,6 +187,15 @@ class Feed
     "Feed::#{id.not_nil!}"
   end
 
+  # The predicate matching every feed's relationship type.
+  #
+  # `#contents` repeats it so SQLite uses the partial index. It must
+  # stay identical to the predicate in the index's migration.
+  #
+  def self.type_predicate(column : String) : String
+    "substr(#{column}, 1, 6) = 'Feed::'"
+  end
+
   # The size of a feed and the arrival time of its newest post.
   #
   record Stats, count : Int64, newest : Time?
@@ -254,20 +263,18 @@ class Feed
     min_cursor = translate_object_id_to_feed_created_at_and_id(min_id) if min_id
     # a dropped cursor would otherwise return page one
     return Ktistec::Util::PaginatedArray(ActivityPub::Object).new if (max_id && !max_cursor) || (min_id && !min_cursor)
-    # the pinned index is the only one with a `(from_iri, type)`
-    # equality prefix; the broader composites over `created_at` were
-    # dropped because they regressed other queries' plans, and the
-    # timeline's `(from_iri, created_at)` index is partial over the
-    # timeline types.
+    # the partial index over feed rows delivers them in arrival order,
+    # so a page joins only its own rows.
     query = <<-QUERY
         SELECT #{ActivityPub::Object.columns(prefix: "o")}
-          FROM relationships AS f INDEXED BY idx_relationships_from_iri_type
+          FROM relationships AS f INDEXED BY idx_relationships_feed_from_iri_type_created_at
           JOIN objects AS o
             ON o.iri = f.to_iri
           JOIN actors AS c
             ON c.iri = o.attributed_to_iri
          WHERE f.from_iri = ?
            AND f.type = ?
+           AND #{Feed.type_predicate("f.type")}
            #{ActivityPub.common_filters(objects: "o", actors: "c")}
            AND %{cursor_condition}
     QUERY

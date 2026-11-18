@@ -33,6 +33,11 @@ Spectator.describe ActorUpdateDistributor do
       expect(activity.object_iri).to eq(account.actor.iri)
     end
 
+    it "makes the update visible" do
+      ActorUpdateDistributor.distribute(account, deliver_task_class: MockDeliverTask)
+      expect(MockDeliverTask.last_activity.not_nil!.visible).to be_true
+    end
+
     it "addresses the update to the public collection" do
       ActorUpdateDistributor.distribute(account, deliver_task_class: MockDeliverTask)
       expect(MockDeliverTask.last_activity.not_nil!.to).to contain(Ktistec::Constants::PUBLIC)

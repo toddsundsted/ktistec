@@ -38,6 +38,7 @@ lib LibSQLite3
   fun memory_used = sqlite3_memory_used : Int64
   fun result_text = sqlite3_result_text(SQLite3Context, UInt8*, Int32, Void*) : Nil
   fun test_control = sqlite3_test_control(Int32, ...) : Int32
+  fun value_bytes = sqlite3_value_bytes(SQLite3Value) : Int32
   fun version_number = sqlite3_libversion_number : Int32
   fun version = sqlite3_libversion : UInt8*
 end
@@ -55,7 +56,7 @@ module Ktistec
 
     private def self.strip_fn(context : LibSQLite3::SQLite3Context, argc : Int32, argv : LibSQLite3::SQLite3Value*)
       txt = LibSQLite3.value_text(argv[0])
-      str = String.new(txt)
+      str = String.new(txt, LibSQLite3.value_bytes(argv[0]))
       unless str.blank?
         str = Ktistec::Util.parse_fragment(str).xpath_string("string()")
       end

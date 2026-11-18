@@ -129,6 +129,11 @@ Spectator.describe "SQLite3 extensions" do
       query = %q|SELECT strip('<body class="foobar"><div style="margin: inherit">line 1</div> <div>line <span>2</span></div></body>')|
       expect(Ktistec.database.scalar(query)).to eq("line 1 line 2")
     end
+
+    it "keeps the text after a NUL" do
+      query = %q|SELECT strip(?)|
+      expect(Ktistec.database.scalar(query, "this is \u0000spam")).to eq("this is spam")
+    end
   end
 
   describe ".probe?" do

@@ -92,6 +92,10 @@ Spectator.describe Ktistec::Util do
       expect(described_class.parse_fragment("a<style>b").children.map(&.to_xml)).to eq(["a", "<style><![CDATA[b]]></style>"])
     end
 
+    it "drops NUL characters" do
+      expect(described_class.parse_fragment("<p>\u0000spam</p>").children.map(&.to_xml)).to eq(["<p>spam</p>"])
+    end
+
     it "drops the content after a stray </body>" do
       expect(described_class.parse_fragment("a</body>b").xpath_string("string(/)")).to eq("a")
     end

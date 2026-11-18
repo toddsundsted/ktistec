@@ -42,7 +42,7 @@ module Ktistec
     # Parses an HTML fragment.
     #
     def parse_fragment(content : String) : XML::Node
-      doc = XML.parse_html("<p>#{content}", Constants::HTML_PARSER_OPTIONS & ~XML::HTMLParserOptions::NOIMPLIED) # ameba:disable Ktistec/ParseHtmlWhitelist
+      doc = XML.parse_html("<p>#{content.delete('\u0000')}", Constants::HTML_PARSER_OPTIONS & ~XML::HTMLParserOptions::NOIMPLIED) # ameba:disable Ktistec/ParseHtmlWhitelist
       body = doc.xpath_node("/html/body").not_nil!
       paragraph = body.first_element_child.not_nil!
       cursor = paragraph

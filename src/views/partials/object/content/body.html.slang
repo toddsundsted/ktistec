@@ -8,7 +8,7 @@ crystal:
   end
   attachments = object.display_attachments
   if html
-    urls = XML.parse_html(html, Ktistec::Constants::HTML_PARSER_OPTIONS).xpath_nodes("//img/@src").map(&.text)
+    urls = Ktistec::Util.parse_fragment(html).xpath_nodes("//img/@src").map(&.text)
     attachments.reject!(&.url.in?(urls))
   end
 - partial "partials/object/content/attachments"

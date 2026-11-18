@@ -1,6 +1,7 @@
 require "html"
 require "uri"
 require "xml"
+require "libxml_ext"
 
 require "../ktistec/constants"
 require "../safe/safe_html"
@@ -38,13 +39,28 @@ module Ktistec
       slug.presence || "feed"
     end
 
+    # Parses an HTML fragment.
+    #
+    def parse_fragment(content : String) : XML::Node
+      doc = XML.parse_html("<p>#{content}", Constants::HTML_PARSER_OPTIONS & ~XML::HTMLParserOptions::NOIMPLIED) # ameba:disable Ktistec/ParseHtmlWhitelist
+      body = doc.xpath_node("/html/body").not_nil!
+      paragraph = body.first_element_child.not_nil!
+      cursor = paragraph
+      paragraph.children.each { |child| cursor = cursor.add_sibling(child) }
+      paragraph.unlink
+      html = body.parent.not_nil!
+      html.children.each { |node| node.unlink unless node == body }
+      doc.children.each { |node| node.unlink unless node == html }
+      body
+    end
+
     # Renders content as simple text.
     #
     def render_as_text(content)
       return "" if content.nil? || content.empty?
       String.build do |build|
-        render_as_text(XML.parse_html("<div>#{content}</div>", Constants::HTML_PARSER_OPTIONS), build)
-      end.chomp
+        render_as_text(parse_fragment(content), build)
+      end
     end
 
     # Generates a summary from long content.
@@ -62,7 +78,7 @@ module Ktistec
     #
     def quote_inline_href?(content : String?) : String?
       return if content.nil? || content.empty?
-      XML.parse_html("<div>#{content}</div>", Constants::HTML_PARSER_OPTIONS)
+      parse_fragment(content)
         .xpath_nodes("//*[contains(@class, 'quote-inline')]//a/@href")
         .first?.try(&.text.presence)
     end
@@ -98,8 +114,8 @@ module Ktistec
     def sanitize(content : String?) : Ktistec::SafeHTML
       return Ktistec::SafeHTML.assert_safe("") if content.nil? || content.empty?
       result = String.build do |build|
-        sanitize(XML.parse_html("<div>#{content}</div>", Constants::HTML_PARSER_OPTIONS), build)
-      end.gsub(/^<div>|<\/div>$/, "")
+        sanitize(parse_fragment(content), build)
+      end
       Ktistec::SafeHTML.assert_safe(result)
     end
 
@@ -316,10 +332,7 @@ module Ktistec
           build << "</" << name << ">"
         end
       elsif html.element? || html.document?
-        empty = html.element? && build.empty?
-        build << "<p>" if empty
         html.children.each { |child| sanitize(child, build) }
-        build << "</p>" if empty
       elsif html.text?
         html.to_s(build)
       end

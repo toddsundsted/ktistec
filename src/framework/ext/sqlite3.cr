@@ -2,7 +2,7 @@ require "json"
 require "xml"
 require "sqlite3"
 
-require "../../ktistec/constants"
+require "../util"
 
 module DB
   abstract class Statement
@@ -57,7 +57,7 @@ module Ktistec
       txt = LibSQLite3.value_text(argv[0])
       str = String.new(txt)
       unless str.blank?
-        str = XML.parse_html(str, Ktistec::Constants::HTML_PARSER_OPTIONS).xpath_string("string()")
+        str = Ktistec::Util.parse_fragment(str).xpath_string("string()")
       end
       LibSQLite3.result_text(context, str, str.bytesize, TRANSIENT)
       nil

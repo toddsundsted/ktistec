@@ -2396,10 +2396,36 @@ Spectator.describe ActivityPub::Actor do
         actor3.block!
         expect(subject.timeline(max_id: object3.id, limit: 5).to_a.map(&.object)).to eq([object5, object4, object2, object1])
       end
+    end
 
-      it "returns the first page" do
-        object3.assign(in_reply_to: object2).save
-        expect(subject.timeline(exclude_replies: true, max_id: object3.id, limit: 5).to_a.map(&.object)).to eq([object5, object4, object2, object1])
+    context "with a cursor pointing at an object excluded by a view filter" do
+      context "given a reply" do
+        before_each { object3.assign(in_reply_to: object2).save }
+
+        it "pages from the cursor" do
+          expect(subject.timeline(exclude_replies: true, max_id: object3.id, limit: 2)).to eq([timeline2, timeline1])
+        end
+
+        it "pages from the cursor" do
+          expect(subject.timeline(exclude_replies: true, min_id: object3.id, limit: 1)).to eq([timeline4])
+        end
+      end
+
+      # the fixture's posts are all shares, so this is "hide creates", but it demonstrates the principle
+
+      context "given a create" do
+        let_build(:object, named: created)
+        let_create!(:timeline_create, named: nil, owner: subject, object: created, created_at: timeline3.created_at)
+
+        pre_condition { expect(subject.timeline(limit: 3).to_a.map(&.object)).to eq([object5, object4, created]) }
+
+        it "pages from the cursor" do
+          expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Announce], max_id: created.id, limit: 2)).to eq([timeline3, timeline2])
+        end
+
+        it "pages from the cursor" do
+          expect(subject.timeline(inclusion: [Relationship::Content::Timeline::Announce], min_id: created.id, limit: 1)).to eq([timeline4])
+        end
       end
     end
   end

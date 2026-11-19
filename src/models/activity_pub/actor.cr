@@ -1167,11 +1167,11 @@ module ActivityPub
     # Translates an `Object.id` (external cursor) into the timeline
     # row's `(created_at, id)` cursor pair. There is at most one
     # timeline row per object, so the `ORDER BY t.id DESC LIMIT 1` is
-    # defensive. Filters the same way as `#timeline` so the cursor
-    # lands on a row the result set would contain. Returns nil for
-    # unknown ids or ids of objects that wouldn't appear.
+    # defensive. Ignores the view filters (`inclusion` and
+    # `exclude_replies`) because they can change while paging, and the
+    # cursor must still locate the row.
     #
-    private def translate_object_id_to_timeline_created_at_and_id(o_id : Int64, inclusion_clause : String, exclude_replies_clause : String) : {Time, Int64}?
+    private def translate_object_id_to_timeline_created_at_and_id(o_id : Int64) : {Time, Int64}?
       query = <<-QUERY
         SELECT t.created_at, t.id
           FROM relationships AS t
@@ -1181,9 +1181,7 @@ module ActivityPub
             ON c.iri = o.attributed_to_iri
          WHERE t.from_iri = ?
            AND t.type IN (#{Timeline.type_in_list})
-           #{inclusion_clause}
            AND o.id = ?
-           #{exclude_replies_clause}
            #{common_filters(objects: "o", actors: "c")}
          ORDER BY t.id DESC
          LIMIT 1
@@ -1218,8 +1216,8 @@ module ActivityPub
         end
       exclude_replies_clause =
         exclude_replies ? "AND likelihood(o.in_reply_to_iri IS NULL, 0.25)" : ""
-      max_cursor = translate_object_id_to_timeline_created_at_and_id(max_id, inclusion_clause, exclude_replies_clause) if max_id
-      min_cursor = translate_object_id_to_timeline_created_at_and_id(min_id, inclusion_clause, exclude_replies_clause) if min_id
+      max_cursor = translate_object_id_to_timeline_created_at_and_id(max_id) if max_id
+      min_cursor = translate_object_id_to_timeline_created_at_and_id(min_id) if min_id
       query = <<-QUERY
           SELECT #{Timeline.columns(prefix: "t")}
             FROM relationships AS t

@@ -19,7 +19,7 @@ module ActorUpdateDistributor
       actor: actor,
       object: actor,
       published: Time.utc,
-      visible: false,
+      visible: true,
       to: [Ktistec::Constants::PUBLIC],
       cc: [actor.followers].compact,
     )

@@ -51,6 +51,56 @@ Spectator.describe Ktistec::Util do
     end
   end
 
+  describe ".parse_fragment" do
+    it "keeps the text" do
+      expect(described_class.parse_fragment("text").children.map(&.to_xml)).to eq(["text"])
+    end
+
+    it "keeps the text around an inline element" do
+      expect(described_class.parse_fragment("this is <b>sp</b>am, really").children.map(&.to_xml)).to eq(["this is ", "<b>sp</b>", "am, really"])
+    end
+
+    it "keeps the text after a stray end tag" do
+      expect(described_class.parse_fragment("this is </div>spam").children.map(&.to_xml)).to eq(["this is spam"])
+    end
+
+    it "keeps the text around a block element" do
+      expect(described_class.parse_fragment("foo<div>x</div>bar").children.map(&.to_xml)).to eq(["foo", "<div>x</div>", "bar"])
+    end
+
+    it "keeps a leading paragraph" do
+      expect(described_class.parse_fragment("<p>foo</p>").children.map(&.to_xml)).to eq(["<p>foo</p>"])
+    end
+
+    it "keeps a leading script" do
+      expect(described_class.parse_fragment("<script>b</script>c").children.map(&.to_xml)).to eq(["<script><![CDATA[b]]></script>", "c"])
+    end
+
+    it "keeps a leading style" do
+      expect(described_class.parse_fragment("<style>b</style>c").children.map(&.to_xml)).to eq(["<style><![CDATA[b]]></style>", "c"])
+    end
+
+    it "keeps a leading link" do
+      expect(described_class.parse_fragment(%(<link rel="x" href="y">text)).children.map(&.to_xml)).to eq([%(<link rel="x" href="y"/>), "text"])
+    end
+
+    it "contains an unclosed script" do
+      expect(described_class.parse_fragment("a<script>b").children.map(&.to_xml)).to eq(["a", "<script><![CDATA[b]]></script>"])
+    end
+
+    it "contains an unclosed style" do
+      expect(described_class.parse_fragment("a<style>b").children.map(&.to_xml)).to eq(["a", "<style><![CDATA[b]]></style>"])
+    end
+
+    it "drops NUL characters" do
+      expect(described_class.parse_fragment("<p>\u0000spam</p>").children.map(&.to_xml)).to eq(["<p>spam</p>"])
+    end
+
+    it "drops the content after a stray </body>" do
+      expect(described_class.parse_fragment("a</body>b").xpath_string("string(/)")).to eq("a")
+    end
+  end
+
   describe ".render_as_text" do
     it "ignores empty content" do
       expect(described_class.render_as_text("")).to eq("")
@@ -241,6 +291,11 @@ Spectator.describe Ktistec::Util do
     it "doesn't corrupt element order" do
       content = "<figure></figure><p></p>"
       expect(described_class.sanitize(content)).to eq("<figure></figure><p></p>")
+    end
+
+    it "preserves a div around the content" do
+      content = "<div>some text</div>"
+      expect(described_class.sanitize(content)).to eq("<div>some text</div>")
     end
 
     it "leaves bare text alone" do

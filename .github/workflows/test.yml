@@ -59,7 +59,41 @@ jobs:
             node-${{ runner.os }}-
       - name: Install npm dependencies
         run: npm ci
+      # npm audit checks the copy of DOMPurify that npm installs, not the copy
+      # Trix actually ships. Make sure their versions match, so the audit is
+      # true. If this fails, change the DOMPurify version in package.json to
+      # match the one Trix ships.
+      - name: Check installed DOMPurify matches the copy inlined in Trix
+        run: |
+          inlined=$(grep -o "DOMPurify [0-9][0-9.]*" node_modules/trix/dist/trix.esm.min.js | sort -u)
+          installed=$(npm ls dompurify --json | jq -r '.dependencies.trix.dependencies.dompurify.version')
+          echo "Trix inlines: $inlined; installed: DOMPurify $installed"
+          if [ "$inlined" != "DOMPurify $installed" ]; then
+            echo "Update the trix > dompurify override in package.json to match."
+            exit 1
+          fi
+        shell: bash
       - name: Audit npm dependencies
-        run: npm audit --audit-level=high --omit=dev
+        # Fails on any high or critical advisory not in the allowlist, and on
+        # any allowlist entry that is no longer reported, so none go stale.
+        run: |
+          audit="$RUNNER_TEMP/audit.json"
+          npm audit --json --omit=dev > "$audit" || true
+          found=$(jq -r '[.vulnerabilities[].via[] | objects
+                          | select(.severity == "high" or .severity == "critical")
+                          | .url | sub(".*/"; "")] | unique[]' "$audit" | LC_ALL=C sort)
+          allowed=$(jq -r '.[].id' .github/npm-audit-allowlist.json | LC_ALL=C sort)
+          unexpected=$(LC_ALL=C comm -23 <(echo "$found") <(echo "$allowed") | grep . || true)
+          stale=$(LC_ALL=C comm -13 <(echo "$found") <(echo "$allowed") | grep . || true)
+          if [ -n "$unexpected" ]; then
+            echo "Advisories not in the allowlist:"
+            echo "$unexpected"
+          fi
+          if [ -n "$stale" ]; then
+            echo "Allowlist entries no longer reported (remove them):"
+            echo "$stale"
+          fi
+          [ -z "$unexpected" ] && [ -z "$stale" ]
+        shell: bash
       - name: Run npm tests
         run: npm run test

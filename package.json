@@ -32,5 +32,10 @@
     "filepond-plugin-image-transform": "^3.8.7",
     "fomantic-ui-css": "^2.9.4",
     "trix": "^2.1.18"
+  },
+  "overrides": {
+    "trix": {
+      "dompurify": "3.2.7"
+    }
   }
 }

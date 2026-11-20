@@ -2140,14 +2140,38 @@ Spectator.describe MCP::Tools do
         expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Projection must be/)
       end
 
+      private def thread_object(projection, object_id)
+        response = described_class.handle_tools_call(get_thread_request("get-thread-object", root_note.id, projection), account)
+        objects = JSON.parse(response["content"].as_a.first["text"].as_s)["objects"].as_a
+        objects.find! { |o| o["object_id"].as_i64 == object_id }
+      end
+
+      it "does not flag the actor as deleted" do
+        expect(thread_object("metadata", reply2.id)["actor"]["deleted"].as_bool).to be_false
+      end
+
+      it "does not flag the actor as blocked" do
+        expect(thread_object("metadata", reply2.id)["actor"]["blocked"].as_bool).to be_false
+      end
+
+      context "given a deleted actor" do
+        before_each { other_actor.delete! }
+
+        it "flags the actor as deleted" do
+          expect(thread_object("metadata", reply2.id)["actor"]["deleted"].as_bool).to be_true
+        end
+      end
+
+      context "given a blocked actor" do
+        before_each { other_actor.block! }
+
+        it "flags the actor as blocked" do
+          expect(thread_object("metadata", reply2.id)["actor"]["blocked"].as_bool).to be_true
+        end
+      end
+
       context "given a deleted reply" do
         before_each { reply2.delete! }
-
-        private def thread_object(projection, object_id)
-          response = described_class.handle_tools_call(get_thread_request("get-thread-deleted", root_note.id, projection), account)
-          objects = JSON.parse(response["content"].as_a.first["text"].as_s)["objects"].as_a
-          objects.find { |o| o["object_id"].as_i64 == object_id }
-        end
 
         it "includes the deleted reply with minimal projection" do
           expect(thread_object("minimal", reply2.id)).not_to be_nil
@@ -2368,6 +2392,28 @@ Spectator.describe MCP::Tools do
 
         object_ids = branch["object_ids"].as_a
         expect(object_ids.size).to eq(5)
+      end
+
+      private def key_participant_for_object(object)
+        response = described_class.handle_tools_call(analyze_thread_request("analyze-thread-participant", root_note.id), account)
+        participants = JSON.parse(response["content"].as_a.first["text"].as_s)["key_participants"].as_a
+        participants.find! { |p| p["object_ids"].as_a.map(&.as_i64).includes?(object.id) }
+      end
+
+      context "given a deleted key participant" do
+        before_each { second_actor.delete! }
+
+        it "flags the participant as deleted" do
+          expect(key_participant_for_object(reply3)["actor"]["deleted"].as_bool?).to be_true
+        end
+      end
+
+      context "given a blocked key participant" do
+        before_each { second_actor.block! }
+
+        it "flags the participant as blocked" do
+          expect(key_participant_for_object(reply3)["actor"]["blocked"].as_bool?).to be_true
+        end
       end
 
       private def reply_branch(reply)

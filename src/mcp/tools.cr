@@ -546,10 +546,12 @@ module MCP
               hash = {} of String => JSON::Any
               hash["object_id"] = JSON::Any.new(tuple[:id])
               hash["iri"] = JSON::Any.new(tuple[:iri])
-              if (attributed_to_iri = tuple[:attributed_to_iri]) && (attributed_to = ActivityPub::Actor.find?(iri: attributed_to_iri))
+              if (attributed_to_iri = tuple[:attributed_to_iri]) && (attributed_to = ActivityPub::Actor.find?(iri: attributed_to_iri, include_deleted: true))
                 hash["actor"] = JSON::Any.new({
-                  "id"     => JSON::Any.new(attributed_to.id),
-                  "handle" => JSON::Any.new(attributed_to.handle),
+                  "id"      => JSON::Any.new(attributed_to.id),
+                  "handle"  => JSON::Any.new(attributed_to.handle),
+                  "deleted" => JSON::Any.new(attributed_to.deleted?),
+                  "blocked" => JSON::Any.new(attributed_to.blocked?),
                 })
               else
                 hash["actor"] = JSON::Any.new(nil)
@@ -646,11 +648,13 @@ module MCP
         "duration_ms"    => analysis.duration_ms,
 
         "key_participants" => analysis.key_participants.map do |p|
-          actor = ActivityPub::Actor.find?(iri: p.actor_iri)
+          actor = ActivityPub::Actor.find?(iri: p.actor_iri, include_deleted: true)
           {
             "actor" => {
-              "id"     => actor ? actor.id : nil,
-              "handle" => actor ? actor.handle : nil,
+              "id"      => actor ? actor.id : nil,
+              "handle"  => actor ? actor.handle : nil,
+              "deleted" => actor ? actor.deleted? : nil,
+              "blocked" => actor ? actor.blocked? : nil,
             },
             "object_count" => p.object_count,
             "depth_range"  => [p.depth_range[0], p.depth_range[1]],

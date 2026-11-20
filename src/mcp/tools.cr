@@ -522,12 +522,12 @@ module MCP
           case projection
           when "minimal"
             results = object.thread_query(projection: ActivityPub::Object::PROJECTION_MINIMAL)
+            ids_by_iri = results.to_h { |t| {t[:iri].downcase, t[:id]} }
             objects = results.map do |tuple|
-              thread_obj = ActivityPub::Object.find(tuple[:id])
               hash = {} of String => JSON::Any
               hash["object_id"] = JSON::Any.new(tuple[:id])
               hash["iri"] = JSON::Any.new(tuple[:iri])
-              hash["parent_id"] = JSON::Any.new(thread_obj.in_reply_to?.try(&.id))
+              hash["parent_id"] = JSON::Any.new(tuple[:in_reply_to_iri].try { |iri| ids_by_iri[iri.downcase]? })
               hash["thread"] = JSON::Any.new(tuple[:thread])
               hash["depth"] = JSON::Any.new(tuple[:depth])
               JSON::Any.new(hash)
@@ -541,12 +541,12 @@ module MCP
             )
           when "metadata"
             results = object.thread_query(projection: ActivityPub::Object::PROJECTION_METADATA)
+            ids_by_iri = results.to_h { |t| {t[:iri].downcase, t[:id]} }
             objects = results.map do |tuple|
-              thread_obj = ActivityPub::Object.find(tuple[:id])
               hash = {} of String => JSON::Any
               hash["object_id"] = JSON::Any.new(tuple[:id])
               hash["iri"] = JSON::Any.new(tuple[:iri])
-              if tuple[:attributed_to_iri] && (attributed_to = thread_obj.attributed_to?)
+              if (attributed_to_iri = tuple[:attributed_to_iri]) && (attributed_to = ActivityPub::Actor.find?(iri: attributed_to_iri))
                 hash["actor"] = JSON::Any.new({
                   "id"     => JSON::Any.new(attributed_to.id),
                   "handle" => JSON::Any.new(attributed_to.handle),
@@ -554,7 +554,7 @@ module MCP
               else
                 hash["actor"] = JSON::Any.new(nil)
               end
-              hash["parent_id"] = JSON::Any.new(thread_obj.in_reply_to?.try(&.id))
+              hash["parent_id"] = JSON::Any.new(tuple[:in_reply_to_iri].try { |iri| ids_by_iri[iri.downcase]? })
               hash["thread"] = JSON::Any.new(tuple[:thread])
               hash["published"] = JSON::Any.new(tuple[:published].try(&.to_rfc3339))
               hash["deleted"] = JSON::Any.new(tuple[:deleted])
@@ -660,9 +660,12 @@ module MCP
         end,
 
         "notable_branches" => analysis.notable_branches.map do |b|
+          root = ActivityPub::Object.find(b.root_id, include_deleted: true)
           {
             "root_id"      => b.root_id,
-            "root_preview" => (preview = ActivityPub::Object.find(b.root_id).preview) && Ktistec::Util.render_as_text_and_truncate(preview, 120),
+            "root_preview" => !root.deleted? && !root.blocked? && (preview = root.preview) ? Ktistec::Util.render_as_text_and_truncate(preview, 120) : nil,
+            "root_deleted" => root.deleted?,
+            "root_blocked" => root.blocked?,
             "object_count" => b.object_count,
             "author_count" => b.author_count,
             "depth_range"  => [b.depth_range[0], b.depth_range[1]],

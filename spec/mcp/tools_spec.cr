@@ -2140,6 +2140,60 @@ Spectator.describe MCP::Tools do
         expect { described_class.handle_tools_call(request, account) }.to raise_error(MCPError, /Projection must be/)
       end
 
+      private def thread_object(projection, object_id)
+        response = described_class.handle_tools_call(get_thread_request("get-thread-object", root_note.id, projection), account)
+        objects = JSON.parse(response["content"].as_a.first["text"].as_s)["objects"].as_a
+        objects.find! { |o| o["object_id"].as_i64 == object_id }
+      end
+
+      it "does not flag the actor as deleted" do
+        expect(thread_object("metadata", reply2.id)["actor"]["deleted"].as_bool).to be_false
+      end
+
+      it "does not flag the actor as blocked" do
+        expect(thread_object("metadata", reply2.id)["actor"]["blocked"].as_bool).to be_false
+      end
+
+      context "given a deleted actor" do
+        before_each { other_actor.delete! }
+
+        it "flags the actor as deleted" do
+          expect(thread_object("metadata", reply2.id)["actor"]["deleted"].as_bool).to be_true
+        end
+      end
+
+      context "given a blocked actor" do
+        before_each { other_actor.block! }
+
+        it "flags the actor as blocked" do
+          expect(thread_object("metadata", reply2.id)["actor"]["blocked"].as_bool).to be_true
+        end
+      end
+
+      context "given a deleted reply" do
+        before_each { reply2.delete! }
+
+        it "includes the deleted reply with minimal projection" do
+          expect(thread_object("minimal", reply2.id)).not_to be_nil
+        end
+
+        it "flags the deleted reply with metadata projection" do
+          expect(thread_object("metadata", reply2.id).try(&.["deleted"].as_bool)).to be_true
+        end
+
+        context "and a reply to it" do
+          let_create!(:object, named: :reply4, attributed_to: op_actor, in_reply_to: reply2, visible: true)
+
+          it "reports the deleted reply as the parent with minimal projection" do
+            expect(thread_object("minimal", reply4.id).try(&.["parent_id"].as_i64?)).to eq(reply2.id)
+          end
+
+          it "reports the deleted reply as the parent with metadata projection" do
+            expect(thread_object("metadata", reply4.id).try(&.["parent_id"].as_i64?)).to eq(reply2.id)
+          end
+        end
+      end
+
       private def get_thread_continuation_request(id, cursor)
         args_hash = {"cursor" => cursor}
         args_json = args_hash.map { |k, v| %Q|#{k.inspect}: #{v.inspect}| }.join(", ")
@@ -2338,6 +2392,76 @@ Spectator.describe MCP::Tools do
 
         object_ids = branch["object_ids"].as_a
         expect(object_ids.size).to eq(5)
+      end
+
+      private def key_participant_for_object(object)
+        response = described_class.handle_tools_call(analyze_thread_request("analyze-thread-participant", root_note.id), account)
+        participants = JSON.parse(response["content"].as_a.first["text"].as_s)["key_participants"].as_a
+        participants.find! { |p| p["object_ids"].as_a.map(&.as_i64).includes?(object.id) }
+      end
+
+      context "given a deleted key participant" do
+        before_each { second_actor.delete! }
+
+        it "flags the participant as deleted" do
+          expect(key_participant_for_object(reply3)["actor"]["deleted"].as_bool?).to be_true
+        end
+      end
+
+      context "given a blocked key participant" do
+        before_each { second_actor.block! }
+
+        it "flags the participant as blocked" do
+          expect(key_participant_for_object(reply3)["actor"]["blocked"].as_bool?).to be_true
+        end
+      end
+
+      private def reply_branch(reply)
+        response = described_class.handle_tools_call(analyze_thread_request("analyze-thread-branch", root_note.id), account)
+        JSON.parse(response["content"].as_a.first["text"].as_s)["notable_branches"].as_a.find! { |b| b["root_id"].as_i64 == reply.id }
+      end
+
+      it "does not flag the branch root as deleted" do
+        expect(reply_branch(reply2)["root_deleted"].as_bool).to be_false
+      end
+
+      it "does not flag the branch root as blocked" do
+        expect(reply_branch(reply2)["root_blocked"].as_bool).to be_false
+      end
+
+      context "given a deleted branch root" do
+        before_each { reply2.delete! }
+
+        it "identifies notable branches" do
+          request = analyze_thread_request("analyze-thread-deleted", root_note.id)
+
+          response = described_class.handle_tools_call(request, account)
+          content = response["content"].as_a
+          data = JSON.parse(content.first["text"].as_s)
+
+          root_ids = data["notable_branches"].as_a.map(&.["root_id"].as_i64)
+          expect(root_ids).to eq([reply2.id])
+        end
+
+        it "withholds the branch root preview" do
+          expect(reply_branch(reply2)["root_preview"].raw).to be_nil
+        end
+
+        it "flags the branch root as deleted" do
+          expect(reply_branch(reply2)["root_deleted"].as_bool).to be_true
+        end
+      end
+
+      context "given a blocked branch root" do
+        before_each { reply2.block! }
+
+        it "withholds the branch root preview" do
+          expect(reply_branch(reply2)["root_preview"].raw).to be_nil
+        end
+
+        it "flags the branch root as blocked" do
+          expect(reply_branch(reply2)["root_blocked"].as_bool).to be_true
+        end
       end
     end
   end

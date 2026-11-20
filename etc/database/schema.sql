@@ -103,6 +103,8 @@ INSERT INTO migrations VALUES(20260929170015,'add-failure-to-feed-verdicts');
 INSERT INTO migrations VALUES(20261001140656,'create-feed-questions');
 INSERT INTO migrations VALUES(20261014215422,'move-feed-tasks-under-feed');
 INSERT INTO migrations VALUES(20261019065700,'add-revision-to-feed-versions');
+INSERT INTO migrations VALUES(20261111211151,'add-timeline-feed-to-accounts');
+INSERT INTO migrations VALUES(20261117081708,'add-feed-index-on-relationships');
 CREATE TABLE accounts (
     id integer PRIMARY KEY AUTOINCREMENT,
     created_at datetime NOT NULL,
@@ -118,7 +120,8 @@ CREATE TABLE accounts (
     manually_approve_quotes BOOLEAN NOT NULL DEFAULT 1,
     default_editor TEXT,
     pinned_collections TEXT,
-    feed_order TEXT
+    feed_order TEXT,
+    timeline_feed TEXT
   );
 CREATE TABLE sessions (
     id integer PRIMARY KEY AUTOINCREMENT,
@@ -450,6 +453,9 @@ CREATE UNIQUE INDEX idx_quote_decisions_quote_authorization_iri
     ON quote_decisions (quote_authorization_iri);
 CREATE INDEX idx_relationships_created_at
     ON relationships (created_at DESC);
+CREATE INDEX idx_relationships_feed_from_iri_type_created_at
+    ON relationships (from_iri ASC, type ASC, created_at DESC, id DESC)
+    WHERE substr(type, 1, 6) = 'Feed::';
 CREATE INDEX idx_relationships_from_iri_type
     ON relationships (from_iri ASC, type ASC);
 CREATE INDEX idx_relationships_public_tagged_from_iri_created_at

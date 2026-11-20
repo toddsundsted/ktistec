@@ -1,6 +1,22 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## [v3.16.1]
+### Added
+- Report deleted and blocked posts and actors in the `get_thread` and `analyze_thread` MCP tools.
+
+### Fixed
+- Serve JSON to clients that rank JSON above HTML in `Accept`.
+- Give federated attachments a `type` of "Document".
+- Make a local actor's `Update` publicly fetchable.
+- Reject or replace invalid UTF-8 in inbound requests and responses.
+- Keep the timeline's page when toggling the timeline filters.
+- Keep action button icons next to their labels.
+
+### Changed
+- Don't ask a feed's judge about a post again until it changes.
+- Speed up reading a feed's posts with a partial index.
+
 ## [v3.16.0]
 ### Added
 - Let a user choose a published feed as its timeline feed.
@@ -1021,6 +1037,7 @@ Note: Crystal version 1.17.0 introduced two breaking issues for Ktistec:
 - Remove `prefix` parameter from initialize and assign.
 
 ## Footnotes
+[v3.16.1]: https://github.com/toddsundsted/ktistec/compare/5d5bdaa5...6e8e6e0f
 [v3.16.0]: https://github.com/toddsundsted/ktistec/compare/c40ba2ab...25d10229
 [v3.15.0]: https://github.com/toddsundsted/ktistec/compare/0aedeb42...3db34af4
 [v3.14.0]: https://github.com/toddsundsted/ktistec/compare/f175932e...35c3ef5c

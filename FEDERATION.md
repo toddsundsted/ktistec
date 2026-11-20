@@ -120,6 +120,8 @@ A request carrying a `Signature-Input` header is verified as RFC 9421.
 **Emitted content type:**
 - `application/ld+json; profile="https://www.w3.org/ns/activitystreams"`
 
+A request whose `Accept` header ranks a JSON type above `text/html` gets JSON.
+
 ### JSON-LD processing
 
 Ktistec performs **full JSON-LD expansion** using cached contexts. The server caches standard and commonly-encountered third-party contexts (e.g. ActivityStreams, PURL) locally for performance and reliability.
@@ -226,7 +228,7 @@ Attachments are supported via the `attachment` property on objects.
 
 An attachment's type is taken from its `mediaType` property. When `mediaType` is absent, it is inferred from the file extension of the attachment's URL. Attachments whose type cannot be determined, or whose URL uses an unsafe scheme, are dropped.
 
-Locally uploaded media files are stored on the instance and served from the `/uploads` path.
+Locally uploaded media files are stored on the instance and served from the `/uploads` path. Outbound attachments have a `type` of `Document`.
 
 ### Deletion, updates, and edits
 

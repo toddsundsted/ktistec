@@ -19,30 +19,6 @@ class Task
     belongs_to activity, class_name: ActivityPub::Activity, foreign_key: subject_iri, primary_key: iri
     validates(activity) { "missing: #{subject_iri}" unless activity? }
 
-    class State
-      include JSON::Serializable
-
-      property recipients : Array(String)?
-
-      def initialize(@recipients = nil)
-      end
-    end
-
-    @[Persistent]
-    @[Insignificant]
-    property state : State { State.new }
-
-    @[Assignable]
-    @recipients : Array(String)?
-
-    def recipients
-      state.recipients || [] of String
-    end
-
-    def recipients=(@recipients : Array(String)?)
-      state.recipients = recipients
-    end
-
     def perform
       if (activity = self.activity) && (activity.is_a?(ActivityPub::Activity::ObjectActivity) || activity.is_a?(ActivityPub::Activity::Update)) && (object = activity.object?) && object.is_a?(ActivityPub::Object)
         if (quote = object.quote?(include_deleted: true) || object.quote?(receiver, dereference: true))

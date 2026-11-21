@@ -26,6 +26,30 @@ class Task
     @[Insignificant]
     property failures : Array(Failure) { [] of Failure }
 
+    class State
+      include JSON::Serializable
+
+      property recipients : Array(String)?
+
+      def initialize(@recipients = nil)
+      end
+    end
+
+    @[Persistent]
+    @[Insignificant]
+    property state : State { State.new }
+
+    @[Assignable]
+    @recipients : Array(String)?
+
+    def recipients
+      state.recipients || [] of String
+    end
+
+    def recipients=(@recipients : Array(String)?)
+      state.recipients = recipients
+    end
+
     # Sanitizes a message for logging.
     #
     private def sanitize_log_message(message : String, max_length : Int32 = 200) : String

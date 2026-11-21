@@ -24,30 +24,6 @@ class Task
       @sender ||= ActivityPub::Actor.find(iri: source_iri, include_deleted: true)
     end
 
-    class State
-      include JSON::Serializable
-
-      property recipients : Array(String)?
-
-      def initialize(@recipients = nil)
-      end
-    end
-
-    @[Persistent]
-    @[Insignificant]
-    property state : State { State.new }
-
-    @[Assignable]
-    @recipients : Array(String)?
-
-    def recipients
-      state.recipients || [] of String
-    end
-
-    def recipients=(@recipients : Array(String)?)
-      state.recipients = recipients
-    end
-
     def perform
       transfer activity, from: sender, to: recipients
     end

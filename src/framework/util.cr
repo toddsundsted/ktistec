@@ -144,6 +144,7 @@ module Ktistec
         keep:  ["src", "alt", "title"],
         all:   [{"class", "ui image"}, {"loading", "lazy"}],
         class: ["emoji"],
+        style: /\Aobject-position: \d+(\.\d+)?% \d+(\.\d+)?%\z/,
       },
       audio: {
         keep: ["src"],
@@ -283,6 +284,9 @@ module Ktistec
               next if attribute.in?("href", "src") && !safe_url?(value)
               build << " #{attribute}='#{::HTML.escape(value)}'"
             end
+          end
+          if (pattern = attributes[:style]?) && (style = html["style"]?) && style.matches?(pattern)
+            build << " style='#{::HTML.escape(style)}'"
           end
           if (classes = attributes[:class]?) && (class_attribute = html.attributes["class"]?)
             classes = classes & class_attribute.content.split

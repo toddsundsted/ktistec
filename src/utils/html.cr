@@ -37,14 +37,19 @@ module Ktistec
               begin
                 if (parsed = JSON.parse(attachment_data)) && parsed.as_h?
                   caption = parsed["alt"]?.try(&.as_s?)
+                  focal_point = Attachment.focal_point?(parsed["focalPoint"]?)
                 end
               rescue JSON::ParseException
                 #
               end
             end
-            enhancements.attachments << Attachment.new(image["src"], figure["data-trix-content-type"], caption)
+            attachment = Attachment.new(image["src"], figure["data-trix-content-type"], caption, focal_point)
+            enhancements.attachments << attachment
             if caption.presence
               image["alt"] = caption
+            end
+            if focal_point
+              image["style"] = "object-position: #{attachment.css_object_position}"
             end
           end
           figure.xpath_nodes(".//a[.//img]").each do |anchor|

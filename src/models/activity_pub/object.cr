@@ -238,6 +238,15 @@ module ActivityPub
         end
       end
 
+      def self.focal_point?(value : JSON::Any?) : Tuple(Float64, Float64)?
+        if (pair = value.try(&.as_a?)) && pair.size == 2
+          x, y = pair.map(&.as_f?)
+          if x && y
+            {x, y}
+          end
+        end
+      end
+
       def has_focal_point?
         return false unless (fp = focal_point)
         fp[0].finite? && fp[1].finite?
@@ -1385,18 +1394,7 @@ module ActivityPub
             # some servers (e.g. Threads) omit `mediaType`
             media_type ||= Attachment.infer_media_type(url) if url
             name = ActivityPub.dig_text?(attachment, "https://www.w3.org/ns/activitystreams#name").presence
-            focal_point =
-              if (fp = attachment.as_h["http://joinmastodon.org/ns#focalPoint"]?)
-                # parse as array and convert to tuple
-                if (fp_array = fp.as_a?)
-                  if fp_array.size == 2
-                    # handle both integer [0, 0] and float [0.0, 0.0] formats
-                    x = fp_array[0].as_i64?.try(&.to_f64) || fp_array[0].as_f?.try(&.to_f64)
-                    y = fp_array[1].as_i64?.try(&.to_f64) || fp_array[1].as_f?.try(&.to_f64)
-                    {x, y} if x && y && x.finite? && y.finite?
-                  end
-                end
-              end
+            focal_point = Attachment.focal_point?(attachment.as_h["http://joinmastodon.org/ns#focalPoint"]?)
             ActivityPub::Object::Attachment.new(url, media_type, name, focal_point) if url && media_type
           end,
           "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),

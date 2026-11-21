@@ -870,7 +870,7 @@ trix-editor {
     }
 }
 
-.trix-alt-text-modal {
+.trix-image-modal {
     display: none;
     position: fixed;
     width: 100%;
@@ -907,6 +907,39 @@ trix-editor {
 
     .modal-body {
         margin-bottom: 1em;
+
+        /* the dot is positioned in percent of this frame, so the
+           frame must shrink to fit the image exactly */
+        .modal-frame {
+            position: relative;
+            width: fit-content;
+            margin: 0 auto 1em;
+            cursor: crosshair;
+            touch-action: none;
+
+            img {
+                display: block;
+                max-width: 100%;
+                max-height: 40vh;
+                user-select: none;
+            }
+
+            .focal-point {
+                position: absolute;
+                width: 18px;
+                height: 18px;
+                margin: -9px 0 0 -9px;
+                border: 2px solid white;
+                border-radius: 50%;
+                box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6);
+                background-color: rgba(255, 255, 255, 0.3);
+
+                &:focus-visible {
+                    outline: 2px solid var(--semantic-primary);
+                    outline-offset: 2px;
+                }
+            }
+        }
 
         textarea {
             width: 100%;

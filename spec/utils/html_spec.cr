@@ -59,6 +59,37 @@ Spectator.describe Ktistec::HTML do
       end
     end
 
+    context "focal point" do
+      def enhance_with_focal_point(focal_point)
+        content = %Q|<figure data-trix-attachment='{"contentType":"image/png","url":"https://test.test/img.png","focalPoint":#{focal_point}}' data-trix-content-type="image/png"><img src="https://test.test/img.png"></figure>|
+        described_class.enhance(content)
+      end
+
+      it "records the focal point on the attachment" do
+        expect(enhance_with_focal_point("[0.5,-0.5]").attachments.first.focal_point).to eq({0.5, -0.5})
+      end
+
+      it "positions the image at the focal point" do
+        expect(enhance_with_focal_point("[1,-1]").content).to contain(%q|style="object-position: 100.0% 100.0%"|)
+      end
+
+      it "accepts whole numbers" do
+        expect(enhance_with_focal_point("[1,0]").attachments.first.focal_point).to eq({1.0, 0.0})
+      end
+
+      it "ignores a focal point that isn't numbers" do
+        expect(enhance_with_focal_point(%q|["a","b"]|).attachments.first.focal_point).to be_nil
+      end
+
+      it "ignores a focal point that isn't an array" do
+        expect(enhance_with_focal_point(%q|"abc"|).attachments.first.focal_point).to be_nil
+      end
+
+      it "ignores a focal point that isn't a pair" do
+        expect(enhance_with_focal_point("[0.5]").attachments.first.focal_point).to be_nil
+      end
+    end
+
     it "strips attributes from the figure" do
       content = %q|<figure data-trix-content-type="" data-trix-attributes=""></figure>|
       expect(described_class.enhance(content).content).to eq(%q|<figure></figure>|)

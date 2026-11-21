@@ -114,6 +114,27 @@ Spectator.describe Task::Transfer do
       expect(subject.failures).to have(/Secure connection failure/)
     end
 
+    it "returns a recipient that could not be reached" do
+      result = subject.transfer(activity, from: transferer, to: ["https://unreachable/openssl-error"])
+      expect(result).to contain_exactly("https://unreachable/openssl-error")
+    end
+
+    it "returns a recipient for a transient status" do
+      [401, 408, 429, 500, 502, 503, 504].each do |status|
+        remote_recipient.assign(inbox: "https://remote/returns-#{status}").save
+        result = subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(result).to contain_exactly(remote_recipient.iri), "expected #{status} to be transient"
+      end
+    end
+
+    it "does not return a recipient for a permanent status" do
+      [400, 403, 404, 410, 422].each do |status|
+        remote_recipient.assign(inbox: "https://remote/returns-#{status}").save
+        result = subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(result).to be_empty, "expected #{status} to be permanent"
+      end
+    end
+
     it "does not dereference the transferer" do
       subject.transfer(activity, from: transferer, to: [transferer.iri])
       expect(HTTP::Client.requests).to be_empty
@@ -160,6 +181,11 @@ Spectator.describe Task::Transfer do
         expect(subject.failures).to have(/Secure connection failure: #{local_recipient.inbox}/)
       end
 
+      it "returns the recipient" do
+        result = subject.transfer(activity, from: transferer, to: [local_recipient.iri])
+        expect(result).to contain_exactly(local_recipient.iri)
+      end
+
       it "does not mark the recipient as down" do
         expect { subject.transfer(activity, from: transferer, to: [local_recipient.iri]) }
           .not_to change { local_recipient.down? }
@@ -201,6 +227,11 @@ Spectator.describe Task::Transfer do
       it "records a failure" do
         subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
         expect(subject.failures).to have(/Request to private address denied/)
+      end
+
+      it "does not return the recipient" do
+        result = subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(result).to be_empty
       end
     end
 
@@ -349,6 +380,11 @@ Spectator.describe Task::Transfer do
         it "does not record failures" do
           subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
           expect(subject.failures).to be_empty
+        end
+
+        it "does not return the recipients" do
+          result = subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
+          expect(result).to be_empty
         end
 
         context "and the personal inbox is the shared inbox" do

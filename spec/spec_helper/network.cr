@@ -274,6 +274,12 @@ class HTTP::Client
         raise IO::Error.new
       when /reconnect-error/
         raise "This HTTP::Client cannot be reconnected"
+      when /returns-([0-9]{3})/
+        HTTP::Client::Response.new(
+          $1.to_i,
+          headers: HTTP::Headers.new,
+          body: $1,
+        )
       when /([^\/]+)\/inbox/
         HTTP::Client::Response.new(
           200,

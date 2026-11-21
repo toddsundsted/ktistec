@@ -86,9 +86,21 @@ class Task
       end
     end
 
+    # Returns `true` if a delivery that failed with the given response
+    # status might succeed later.
+    #
+    def self.transient_status?(status_code : Int32) : Bool
+      status_code.in?(401, 408, 429) || status_code >= 500
+    end
+
+    # Transfers the activity to the recipients.
+    #
+    # Returns the recipients whose delivery failed transiently.
+    #
     def transfer(activity, from transferer, to recipients)
       recipient_to_actor = {} of String => ActivityPub::Actor
       inbox_to_recipients = {} of String => Array(String)
+      transient_recipients = [] of String
 
       # dereference all recipients and group by target inbox
       recipients.each do |recipient|
@@ -97,6 +109,7 @@ class Task
         rescue ex : Ktistec::Network::TransientError
           message = "failed to dereference recipient: #{recipient}: #{ex.message}"
           failures << Failure.new(recipient, message)
+          transient_recipients << recipient
           Log.debug { message }
           next
         rescue Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
@@ -124,15 +137,21 @@ class Task
         inbox, inbox_recipients = entry
         body = activity.to_json_ld
         success = false
+        transient = false
         message = ""
         begin
           response = Ktistec::Network.post(transferer, inbox, body, Ktistec::Constants::CONTENT_TYPE_HEADER)
           if response.success?
             success = true
           else
+            transient = Transfer.transient_status?(response.status_code)
             message = "failed to deliver to #{inbox}: [#{response.status_code}] #{response.body}"
             Log.debug { sanitize_log_message(message) }
           end
+        rescue ex : Ktistec::Network::TransientError
+          transient = true
+          message = "#{ex.message}"
+          Log.debug { message }
         rescue ex : Ktistec::Network::Error
           message = "#{ex.message}"
           Log.debug { message }
@@ -146,6 +165,7 @@ class Task
               fallback_inboxes[actor_inbox] << recipient
             else
               failures << Failure.new(recipient, message)
+              transient_recipients << recipient if transient
             end
           end
           fallback_inboxes.each do |actor_inbox, recipients_for_inbox|
@@ -163,6 +183,8 @@ class Task
           end
         end
       end
+
+      transient_recipients
     end
   end
 end

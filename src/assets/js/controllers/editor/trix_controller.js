@@ -49,7 +49,7 @@ export default class extends Controller {
   static targets = ["trixEditor"]
 
   connect() {
-    this.createAltTextModal()
+    this.createImageModal()
 
     this.boundAdd = this.add.bind(this)
     this.boundRemove = this.remove.bind(this)
@@ -63,9 +63,9 @@ export default class extends Controller {
   }
 
   disconnect() {
-    if (this.altTextModal) {
-      this.altTextModal.remove()
-      this.altTextModal = null
+    if (this.imageModal) {
+      this.imageModal.remove()
+      this.imageModal = null
     }
 
     if (this.boundAdd) {
@@ -198,8 +198,6 @@ export default class extends Controller {
 
     if (!attachment.isPreviewable || !attachment.isPreviewable()) return
 
-    if (toolbar.querySelector('[data-alt-text-button]')) return
-
     let buttonRow = toolbar.querySelector('.trix-button-row')
     if (!buttonRow) {
       buttonRow = document.createElement('div')
@@ -214,16 +212,16 @@ export default class extends Controller {
       buttonRow.appendChild(buttonGroup)
     }
 
-    const altTextButton = document.createElement('button')
-    altTextButton.type = 'button'
-    altTextButton.className = 'trix-button trix-button--alt-text'
-    altTextButton.setAttribute('title', 'Edit alt text')
-    altTextButton.textContent = 'Alt Text'
+    const imageButton = document.createElement('button')
+    imageButton.type = 'button'
+    imageButton.className = 'trix-button trix-button--image'
+    imageButton.setAttribute('title', 'Edit alt text and focal point')
+    imageButton.textContent = 'Edit'
 
-    altTextButton.addEventListener('click', (e) => {
+    imageButton.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
-      this.showAltTextModal(attachment)
+      this.showImageModal(attachment)
     })
 
     const removeButton = document.createElement('button')
@@ -235,28 +233,28 @@ export default class extends Controller {
 
     const oldButton = buttonGroup.querySelector('[data-trix-action="remove"]')
     if (oldButton) {
-      buttonGroup.insertBefore(altTextButton, oldButton)
+      buttonGroup.insertBefore(imageButton, oldButton)
       buttonGroup.insertBefore(removeButton, oldButton)
       buttonGroup.removeChild(oldButton)
     } else {
-      buttonGroup.appendChild(altTextButton)
+      buttonGroup.appendChild(imageButton)
       buttonGroup.appendChild(removeButton)
     }
   }
 
-  createAltTextModal() {
-    if (this.altTextModal) return
+  createImageModal() {
+    if (this.imageModal) return
 
     const modal = document.createElement('div')
-    modal.className = 'trix-alt-text-modal'
+    modal.className = 'trix-image-modal'
     modal.setAttribute('aria-hidden', 'true')
     modal.setAttribute('aria-modal', 'true')
-    modal.setAttribute('aria-label', 'Edit image alt text')
+    modal.setAttribute('aria-label', 'Edit image alt text and focal point')
     modal.setAttribute('role', 'dialog')
 
     const overlay = document.createElement('div')
     overlay.className = 'modal-overlay'
-    overlay.addEventListener('click', () => this.hideAltTextModal())
+    overlay.addEventListener('click', () => this.hideImageModal())
 
     const content = document.createElement('div')
     content.className = 'modal-content'
@@ -264,10 +262,58 @@ export default class extends Controller {
     const body = document.createElement('div')
     body.className = 'modal-body'
 
+    // the focal point uses mastodon's convention: x and y in [-1, 1],
+    // with y increasing upward, and (0, 0) at the center.
+
+    const frame = document.createElement('div')
+    frame.className = 'modal-frame'
+
+    const image = document.createElement('img')
+    image.alt = ''
+    image.draggable = false
+
+    const dot = document.createElement('div')
+    dot.className = 'focal-point'
+    dot.setAttribute('tabindex', '0')
+    dot.setAttribute('aria-label', 'Focal point (use the arrow keys to move)')
+
+    frame.appendChild(image)
+    frame.appendChild(dot)
+
+    // pressing a non-focusable element moves focus out of the modal,
+    // which would break escape and the focus trap
+    frame.addEventListener('mousedown', (e) => e.preventDefault())
+    frame.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return
+      this.dragging = true
+      if (frame.setPointerCapture) frame.setPointerCapture(e.pointerId)
+      this.setFocalPointFromPointer(e)
+    })
+    frame.addEventListener('pointermove', (e) => {
+      if (this.dragging) this.setFocalPointFromPointer(e)
+    })
+    frame.addEventListener('pointerup', () => { this.dragging = false })
+    frame.addEventListener('pointercancel', () => { this.dragging = false })
+
+    dot.addEventListener('keydown', (e) => {
+      const [x, y] = this.focalPoint
+      const moves = {
+        ArrowLeft: [x - 0.1, y],
+        ArrowRight: [x + 0.1, y],
+        ArrowUp: [x, y + 0.1],
+        ArrowDown: [x, y - 0.1],
+      }
+      if (moves[e.key]) {
+        e.preventDefault()
+        this.setFocalPoint(moves[e.key])
+      }
+    })
+
     const textarea = document.createElement('textarea')
     textarea.id = 'trix-alt-textarea'
     textarea.setAttribute('placeholder', 'Describe the image')
 
+    body.appendChild(frame)
     body.appendChild(textarea)
 
     const footer = document.createElement('div')
@@ -277,13 +323,13 @@ export default class extends Controller {
     saveButton.className = 'ui tiny primary button'
     saveButton.type = 'button'
     saveButton.textContent = 'Save'
-    saveButton.addEventListener('click', () => this.saveAltText())
+    saveButton.addEventListener('click', () => this.saveImage())
 
     const cancelButton = document.createElement('button')
     cancelButton.className = 'ui tiny button'
     cancelButton.type = 'button'
     cancelButton.textContent = 'Cancel'
-    cancelButton.addEventListener('click', () => this.hideAltTextModal())
+    cancelButton.addEventListener('click', () => this.hideImageModal())
 
     footer.appendChild(saveButton)
     footer.appendChild(cancelButton)
@@ -297,10 +343,10 @@ export default class extends Controller {
     modal.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        this.hideAltTextModal()
+        this.hideImageModal()
       } else if (e.key === 'Enter' && !e.shiftKey && e.target === textarea) {
         e.preventDefault()
-        this.saveAltText()
+        this.saveImage()
       } else if (e.key === 'Tab') {
         // focus trap
         const focusable = modal.querySelectorAll('button, textarea, [tabindex]:not([tabindex="-1"])')
@@ -318,16 +364,23 @@ export default class extends Controller {
 
     document.body.appendChild(modal)
 
-    this.altTextModal = modal
+    this.imageModal = modal
   }
 
-  showAltTextModal(attachment) {
+  showImageModal(attachment) {
     this.currentAttachment = attachment
+    this.dragging = false
 
-    const textarea = this.altTextModal.querySelector('textarea')
+    // while the image is uploading it has no URL, only a local preview
+    const image = this.imageModal.querySelector('.modal-frame img')
+    image.src = attachment.getURL() || attachment.getPreviewURL()
+
+    this.setFocalPoint(attachment.getAttribute('focalPoint') || [0, 0])
+
+    const textarea = this.imageModal.querySelector('textarea')
     textarea.value = attachment.getAttribute('alt') || ''
 
-    this.altTextModal.setAttribute('aria-hidden', 'false')
+    this.imageModal.setAttribute('aria-hidden', 'false')
 
     requestAnimationFrame(() => {
       textarea.focus()
@@ -335,22 +388,43 @@ export default class extends Controller {
     })
   }
 
-  hideAltTextModal() {
-    if (!this.altTextModal) return
+  hideImageModal() {
+    if (!this.imageModal) return
 
-    this.altTextModal.setAttribute('aria-hidden', 'true')
+    this.imageModal.setAttribute('aria-hidden', 'true')
 
     this.currentAttachment = null
   }
 
-  saveAltText() {
+  setFocalPoint([x, y]) {
+    // clamp to [-1, 1]. round so that repeated 0.1 keyboard steps
+    // don't accumulate floating point error (0.1 + 0.1 + 0.1 should
+    // be 0.3 not 0.30000000000000004).
+    const normalize = (v) => Math.round(Math.min(1, Math.max(-1, v)) * 100) / 100
+    this.focalPoint = [normalize(x), normalize(y)]
+
+    const dot = this.imageModal.querySelector('.focal-point')
+    dot.style.left = `${(this.focalPoint[0] / 2 + 0.5) * 100}%`
+    dot.style.top = `${(-this.focalPoint[1] / 2 + 0.5) * 100}%`
+  }
+
+  setFocalPointFromPointer(event) {
+    const rect = this.imageModal.querySelector('.modal-frame img').getBoundingClientRect()
+    if (!rect.width || !rect.height) return
+
+    const x = 2 * (event.clientX - rect.left) / rect.width - 1
+    const y = -(2 * (event.clientY - rect.top) / rect.height - 1)
+    this.setFocalPoint([x, y])
+  }
+
+  saveImage() {
     if (!this.currentAttachment) return
 
-    const textarea = this.altTextModal.querySelector('textarea')
+    const textarea = this.imageModal.querySelector('textarea')
     const altText = textarea.value.trim()
 
-    this.currentAttachment.setAttributes({ alt: altText })
+    this.currentAttachment.setAttributes({ alt: altText, focalPoint: this.focalPoint })
 
-    this.hideAltTextModal()
+    this.hideImageModal()
   }
 }

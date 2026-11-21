@@ -254,6 +254,26 @@ Spectator.describe Ktistec::Util do
       expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' alt='picture' class='ui image' loading='lazy'>")
     end
 
+    it "preserves object-position style on images" do
+      content = "<img src='https://test.test/pic.jpg' style='object-position: 85.36% 14.64%'>"
+      expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' style='object-position: 85.36% 14.64%' class='ui image' loading='lazy'>")
+    end
+
+    it "drops style on images that starts with something else" do
+      content = "<img src='https://test.test/pic.jpg' style='color: red; object-position: 50% 50%'>"
+      expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' class='ui image' loading='lazy'>")
+    end
+
+    it "drops style on images that ends with something else" do
+      content = "<img src='https://test.test/pic.jpg' style='object-position: 50% 50%; color: red'>"
+      expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' class='ui image' loading='lazy'>")
+    end
+
+    it "drops style on images that has something else in the middle" do
+      content = "<img src='https://test.test/pic.jpg' style='object-position: 0% 0%; color: red; object-position: 5% 5%'>"
+      expect(described_class.sanitize(content)).to eq("<img src='https://test.test/pic.jpg' class='ui image' loading='lazy'>")
+    end
+
     it "preserves src on audio, adds controls attribute and compatibility classes" do
       content = "<audio src='https://test.test/snd.mp3'></audio>"
       expect(described_class.sanitize(content)).to eq("<audio src='https://test.test/snd.mp3' class='ui audio' controls></audio>")

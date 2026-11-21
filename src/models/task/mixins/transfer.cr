@@ -92,7 +92,14 @@ class Task
 
       # dereference all recipients and group by target inbox
       recipients.each do |recipient|
-        unless (actor = ActivityPub::Actor.dereference?(transferer, recipient))
+        begin
+          actor = ActivityPub::Actor.dereference(transferer, recipient, deadline: nil)
+        rescue ex : Ktistec::Network::TransientError
+          message = "failed to dereference recipient: #{recipient}: #{ex.message}"
+          failures << Failure.new(recipient, message)
+          Log.debug { message }
+          next
+        rescue Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
           message = "recipient does not exist: #{recipient}"
           failures << Failure.new(recipient, message)
           Log.debug { message }

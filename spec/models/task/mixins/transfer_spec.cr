@@ -82,6 +82,38 @@ Spectator.describe Task::Transfer do
       expect(HTTP::Client.requests).to have("GET https://unknown-recipient/")
     end
 
+    it "stores a message when a remote recipient does not exist" do
+      subject.transfer(activity, from: transferer, to: ["https://unknown-recipient/"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores a message when a local recipient does not exist" do
+      subject.transfer(activity, from: transferer, to: ["https://test.test/actors/missing"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores a message when a recipient is bad JSON" do
+      subject.transfer(activity, from: transferer, to: ["https://remote/actors/bad-json"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores a message when a recipient is not an actor" do
+      HTTP::Client.objects["https://remote/objects/note"] = %Q|{"@id":"https://remote/objects/note","@type":"Note"}|
+      subject.transfer(activity, from: transferer, to: ["https://remote/objects/note"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores a message when a recipient is served with another id" do
+      HTTP::Client.actors["https://remote/actors/requested"] = %Q|{"@id":"https://remote/actors/other","@type":"Person"}|
+      subject.transfer(activity, from: transferer, to: ["https://remote/actors/requested"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores the reason a recipient could not be reached" do
+      subject.transfer(activity, from: transferer, to: ["https://unreachable/openssl-error"])
+      expect(subject.failures).to have(/Secure connection failure/)
+    end
+
     it "does not dereference the transferer" do
       subject.transfer(activity, from: transferer, to: [transferer.iri])
       expect(HTTP::Client.requests).to be_empty

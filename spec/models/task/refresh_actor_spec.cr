@@ -215,7 +215,7 @@ Spectator.describe Task::RefreshActor do
       end
 
       context "and refresh fails" do
-        let(actor) { super.assign(iri: "https://remote/returns-404") }
+        let(actor) { super.assign(iri: "https://remote/returns-404").save }
 
         it "does not mark the actor as up" do
           expect { subject.perform }.not_to change { actor.reload!.down? }
@@ -226,11 +226,55 @@ Spectator.describe Task::RefreshActor do
     context "when actor is marked as up" do
       before_each { actor.up! }
 
-      context "and refresh fails" do
-        let(actor) { super.assign(iri: "https://remote/returns-404") }
+      context "and refresh fails permanently" do
+        let(actor) { super.assign(iri: "https://remote/returns-404").save }
 
         it "marks the actor as down" do
           expect { subject.perform }.to change { actor.reload!.down? }.from(false).to(true)
+        end
+
+        context "because the actor is served as bad JSON" do
+          let(actor) { super.assign(iri: "https://remote/actors/bad-json").save }
+
+          it "marks the actor as down" do
+            expect { subject.perform }.to change { actor.reload!.down? }.from(false).to(true)
+          end
+        end
+
+        context "because the actor is not an actor" do
+          let(actor) { super.assign(iri: "https://remote/objects/note").save }
+
+          before_each { HTTP::Client.objects[actor.iri] = %Q|{"@id":"#{actor.iri}","@type":"Note"}| }
+
+          it "marks the actor as down" do
+            expect { subject.perform }.to change { actor.reload!.down? }.from(false).to(true)
+          end
+        end
+
+        context "because the actor is served with another id" do
+          let(actor) { super.assign(iri: "https://remote/actors/requested").save }
+
+          before_each { HTTP::Client.actors[actor.iri] = %Q|{"@id":"https://remote/actors/other","@type":"Person"}| }
+
+          it "marks the actor as down" do
+            expect { subject.perform }.to change { actor.reload!.down? }.from(false).to(true)
+          end
+        end
+
+        context "because the actor's IRI has a fragment" do
+          let(actor) { super.assign(iri: "https://remote/actors/fragment#main").save }
+
+          it "marks the actor as down" do
+            expect { subject.perform }.to change { actor.reload!.down? }.from(false).to(true)
+          end
+        end
+      end
+
+      context "and refresh fails transiently" do
+        let(actor) { super.assign(iri: "https://remote/returns-503").save }
+
+        it "does not mark the actor as down" do
+          expect { subject.perform }.not_to change { actor.reload!.down? }.from(false)
         end
       end
     end

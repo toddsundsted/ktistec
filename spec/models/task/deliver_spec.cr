@@ -65,4 +65,17 @@ Spectator.describe Task::Deliver do
       expect(subject.recipients).to be_empty
     end
   end
+
+  describe "#perform" do
+    context "given a recipient that fails transiently" do
+      let_create!(:actor, named: :recipient, iri: "https://remote/actors/recipient", inbox: "https://remote/returns-503")
+
+      before_each { subject.recipients = [recipient.iri] }
+
+      it "schedules a retry" do
+        subject.perform
+        expect(subject.next_attempt_at).not_to be_nil
+      end
+    end
+  end
 end

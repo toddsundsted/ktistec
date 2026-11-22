@@ -35,10 +35,21 @@ Spectator.describe Task::Transfer do
   let_create!(:actor, named: :local_recipient, iri: "https://test.test/actors/local")
   let_create!(:actor, named: :remote_recipient, iri: "https://remote/actors/remote")
 
-  def failed_transfer_factory(recipient_iri = nil, recipient = false, created_at = Time.utc)
-    recipient = actor_factory unless recipient_iri || recipient.nil? || recipient # ameba:disable Ktistec/NoDirectFactoryCalls
-    failure = Task::Transfer::Failure.new(recipient.as(ActivityPub::Actor).iri, "failure", created_at)
-    FooBarTransfer.new(**{running: false, complete: true, failures: [failure], created_at: created_at})
+  # every actor in `delivered` and `failed` is a recipient; each actor
+  # in `failed` gets a failure.
+
+  def transfer_factory(delivered = [] of ActivityPub::Actor, failed = [] of ActivityPub::Actor, created_at = Time.utc)
+    FooBarTransfer.new(
+      recipients: (delivered + failed).map(&.iri),
+      failures: failed.map { |actor| Task::Transfer::Failure.new(actor.iri, "failure", created_at) },
+      running: false,
+      complete: true,
+      created_at: created_at,
+    )
+  end
+
+  def failed_transfer_factory(recipient, created_at = Time.utc)
+    transfer_factory(failed: [recipient], created_at: created_at) # ameba:disable Ktistec/NoDirectFactoryCalls
   end
 
   describe "#sanitize_log_message" do
@@ -74,12 +85,65 @@ Spectator.describe Task::Transfer do
     end
   end
 
-  describe "#transfer" do
+  describe "#transfer(activity, from:, to:)" do
     subject { FooBarTransfer.new }
 
     it "dereferences the recipient" do
       subject.transfer(activity, from: transferer, to: ["https://unknown-recipient/"])
       expect(HTTP::Client.requests).to have("GET https://unknown-recipient/")
+    end
+
+    it "stores a message when a remote recipient does not exist" do
+      subject.transfer(activity, from: transferer, to: ["https://unknown-recipient/"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores a message when a local recipient does not exist" do
+      subject.transfer(activity, from: transferer, to: ["https://test.test/actors/missing"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores a message when a recipient is bad JSON" do
+      subject.transfer(activity, from: transferer, to: ["https://remote/actors/bad-json"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores a message when a recipient is not an actor" do
+      HTTP::Client.objects["https://remote/objects/note"] = %Q|{"@id":"https://remote/objects/note","@type":"Note"}|
+      subject.transfer(activity, from: transferer, to: ["https://remote/objects/note"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores a message when a recipient is served with another id" do
+      HTTP::Client.actors["https://remote/actors/requested"] = %Q|{"@id":"https://remote/actors/other","@type":"Person"}|
+      subject.transfer(activity, from: transferer, to: ["https://remote/actors/requested"])
+      expect(subject.failures).to have(/recipient does not exist/)
+    end
+
+    it "stores the reason a recipient could not be reached" do
+      subject.transfer(activity, from: transferer, to: ["https://unreachable/openssl-error"])
+      expect(subject.failures).to have(/Secure connection failure/)
+    end
+
+    it "returns a recipient that could not be reached" do
+      result = subject.transfer(activity, from: transferer, to: ["https://unreachable/openssl-error"])
+      expect(result).to contain_exactly("https://unreachable/openssl-error")
+    end
+
+    it "returns a recipient for a transient status" do
+      [401, 408, 429, 500, 502, 503, 504].each do |status|
+        remote_recipient.assign(inbox: "https://remote/returns-#{status}").save
+        result = subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(result).to contain_exactly(remote_recipient.iri), "expected #{status} to be transient"
+      end
+    end
+
+    it "does not return a recipient for a permanent status" do
+      [400, 403, 404, 410, 422].each do |status|
+        remote_recipient.assign(inbox: "https://remote/returns-#{status}").save
+        result = subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(result).to be_empty, "expected #{status} to be permanent"
+      end
     end
 
     it "does not dereference the transferer" do
@@ -128,6 +192,11 @@ Spectator.describe Task::Transfer do
         expect(subject.failures).to have(/Secure connection failure: #{local_recipient.inbox}/)
       end
 
+      it "returns the recipient" do
+        result = subject.transfer(activity, from: transferer, to: [local_recipient.iri])
+        expect(result).to contain_exactly(local_recipient.iri)
+      end
+
       it "does not mark the recipient as down" do
         expect { subject.transfer(activity, from: transferer, to: [local_recipient.iri]) }
           .not_to change { local_recipient.down? }
@@ -169,6 +238,11 @@ Spectator.describe Task::Transfer do
       it "records a failure" do
         subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
         expect(subject.failures).to have(/Request to private address denied/)
+      end
+
+      it "does not return the recipient" do
+        result = subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
+        expect(result).to be_empty
       end
     end
 
@@ -319,6 +393,11 @@ Spectator.describe Task::Transfer do
           expect(subject.failures).to be_empty
         end
 
+        it "does not return the recipients" do
+          result = subject.transfer(activity, from: transferer, to: [remote_recipient.iri, another_recipient.iri])
+          expect(result).to be_empty
+        end
+
         context "and the personal inbox is the shared inbox" do
           before_each do
             remote_recipient.assign(inbox: "https://remote/openssl-error", shared_inbox: "https://remote/openssl-error").save
@@ -365,6 +444,130 @@ Spectator.describe Task::Transfer do
     end
   end
 
+  describe "#transfer(activity, from:)" do
+    let_create!(:actor, named: :permanent_recipient, iri: "https://remote/actors/permanent")
+    let_create!(:actor, named: :transient_recipient, iri: "https://remote/actors/transient")
+
+    subject { FooBarTransfer.new(recipients: [transient_recipient.iri, permanent_recipient.iri]) }
+
+    def run
+      subject.transfer(activity, from: transferer)
+    end
+
+    context "given a recipient that fails permanently" do
+      before_each { permanent_recipient.assign(inbox: "https://remote/returns-404").save }
+
+      it "does not schedule a retry" do
+        expect { run }.not_to change { subject.next_attempt_at }.from(nil)
+      end
+
+      context "and a recipient that fails transiently" do
+        before_each { transient_recipient.assign(inbox: "https://remote/returns-503").save }
+
+        context "after the first attempt" do
+          before_each { run }
+
+          it "schedules a retry in five minutes" do
+            expect(subject.next_attempt_at).to be_close(5.minutes.from_now, delta: 10.seconds)
+          end
+
+          context "after the first retry" do
+            before_each do
+              HTTP::Client.requests.clear
+              run
+            end
+
+            it "retries only the recipient that failed transiently" do
+              expect(HTTP::Client.requests).to have("POST #{transient_recipient.inbox}")
+              expect(HTTP::Client.requests).not_to have("POST #{permanent_recipient.inbox}")
+            end
+
+            it "schedules the next retry in ten minutes" do
+              expect(subject.next_attempt_at).to be_close(10.minutes.from_now, delta: 20.seconds)
+            end
+
+            context "after the fifth retry" do
+              before_each { 4.times { run } }
+
+              it "schedules a retry in 160 minutes" do
+                expect(subject.next_attempt_at).to be_close(160.minutes.from_now, delta: 5.minutes)
+              end
+
+              it "gives up after the sixth retry" do
+                expect { run }.not_to change { subject.next_attempt_at }
+              end
+            end
+          end
+
+          context "after a retry that succeeds" do
+            before_each do
+              transient_recipient.assign(inbox: "https://remote/actors/transient/inbox").save
+              run
+            end
+
+            it "clears the failures of the recipient that succeeded" do
+              expect(subject.failures.map(&.recipient)).not_to contain(transient_recipient.iri)
+            end
+
+            it "keeps the failures of the recipient that failed permanently" do
+              expect(subject.failures.map(&.recipient)).to contain(permanent_recipient.iri)
+            end
+          end
+        end
+
+        context "and earlier failures for the permanent recipient spanning days" do
+          let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 7.days.ago)
+          let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 4.days.ago)
+          let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 1.day.ago)
+
+          context "after the first attempt" do
+            before_each { run }
+
+            it "marks the permanent recipient down" do
+              expect(permanent_recipient.reload!.down?).to be_true
+            end
+          end
+        end
+
+        context "and earlier failures for the transient recipient spanning days" do
+          let_create!(:failed_transfer, named: nil, recipient: transient_recipient, created_at: 7.days.ago)
+          let_create!(:failed_transfer, named: nil, recipient: transient_recipient, created_at: 4.days.ago)
+          let_create!(:failed_transfer, named: nil, recipient: transient_recipient, created_at: 1.day.ago)
+
+          context "after the first attempt" do
+            before_each { run }
+
+            it "does not mark the recipient down" do
+              expect(transient_recipient.reload!.down?).to be_false
+            end
+
+            context "after the last retry" do
+              before_each { 6.times { run } }
+
+              it "marks the recipient down" do
+                expect(transient_recipient.reload!.down?).to be_true
+              end
+            end
+          end
+        end
+      end
+
+      context "and earlier failures for the permanent recipient spanning days" do
+        let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 7.days.ago)
+        let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 4.days.ago)
+        let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 1.day.ago)
+
+        context "after the first attempt" do
+          before_each { run }
+
+          it "marks the recipient down" do
+            expect(permanent_recipient.reload!.down?).to be_true
+          end
+        end
+      end
+    end
+  end
+
   describe ".recipient_down?" do
     let_build(:actor, named: :recipient, iri: "https://remote/recipient")
 
@@ -378,30 +581,12 @@ Spectator.describe Task::Transfer do
 
     let_build(:actor, named: :other, iri: "https://remote/other")
 
-    # failure to other recipient
-    let(failure_other_5d) do
-      FooBarTransfer.new(
-        failures: [
-          Task::Transfer::Failure.new(other.iri, "error", 5.days.ago),
-        ],
-        created_at: 5.days.ago,
-      )
-    end
+    # failed for recipient and other
+    let_build(:transfer, named: :failure_multi_7d, failed: [recipient, other], created_at: 7.days.ago)
 
-    # failure to multiple recipients
-    let(failure_multi_7d) do
-      FooBarTransfer.new(
-        failures: [
-          Task::Transfer::Failure.new(recipient.iri, "error", 7.days.ago),
-          Task::Transfer::Failure.new(other.iri, "error", 7.days.ago),
-        ],
-        created_at: 7.days.ago,
-      )
-    end
-
-    # success!
-    let(success_5d) { FooBarTransfer.new(created_at: 5.days.ago) }
-    let(success_now) { FooBarTransfer.new(created_at: 1.hour.ago) }
+    # delivered to recipient
+    let_build(:transfer, named: :success_5d, delivered: [recipient], created_at: 5.days.ago)
+    let_build(:transfer, named: :success_now, delivered: [recipient], created_at: 1.hour.ago)
 
     context "with no tasks" do
       it "returns false" do
@@ -439,11 +624,19 @@ Spectator.describe Task::Transfer do
       end
     end
 
-    # a failure to `other` without a failure to `recipient` counts as a success
+    context "with 3+ failures spanning 80+ hours and an intermediate success that failed for another recipient" do
+      let_build(:transfer, named: :partial_success_5d, delivered: [recipient], failed: [other], created_at: 5.days.ago)
 
-    context "with 3+ failures spanning 80+ hours with intermediate success" do
       it "returns false" do
-        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, failure_other_5d, failure_4d, failure_1d])).to be_false
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, partial_success_5d, failure_4d, failure_1d])).to be_false
+      end
+    end
+
+    context "with 3+ failures spanning 80+ hours and an intermediate success to another recipient" do
+      let_build(:transfer, named: :success_other_5d, delivered: [other], created_at: 5.days.ago)
+
+      it "returns true" do
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, success_other_5d, failure_4d, failure_1d])).to be_true
       end
     end
 

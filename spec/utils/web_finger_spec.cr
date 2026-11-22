@@ -36,5 +36,15 @@ Spectator.describe Ktistec::WebFinger do
     it "leaves a profile-style URL with a path unchanged" do
       expect(described_class.resolve("https://foo.bar/quux/@baz")).to eq("https://foo.bar/quux/@baz")
     end
+
+    context "given a self link with a blank href" do
+      before_each { described_class.resolve("baz@foo.bar", to: "") }
+
+      pre_condition { expect(described_class.query("acct:baz@foo.bar").link("self").href).to eq("") }
+
+      it "raises an error" do
+        expect { described_class.resolve("baz@foo.bar") }.to raise_error(Ktistec::WebFinger::ResultError)
+      end
+    end
   end
 end

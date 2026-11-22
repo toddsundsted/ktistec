@@ -110,6 +110,20 @@ Spectator.describe Ktistec::HostMeta::Client do
       end
     end
 
+    it "raises an error if the content type is malformed" do
+      HTTP::Client.cache.set_response(
+        "https://example.com/.well-known/host-meta",
+        HTTP::Client::Response.new(
+          200,
+          headers: HTTP::Headers{"Content-Type" => ";;;"},
+          body: "{}",
+        ),
+      )
+      expect_raises(Ktistec::HostMeta::ResultError) do
+        Ktistec::HostMeta::Client.query("example.com")
+      end
+    end
+
     it "follows redirects" do
       HTTP::Client.cache.set_response(
         "https://example.com/.well-known/host-meta",

@@ -137,6 +137,21 @@ Spectator.describe Ktistec::WebFinger::Client do
       end
     end
 
+    it "raises an error if the content type is malformed" do
+      stub_host_meta("example.com")
+      HTTP::Client.cache.set_response(
+        "https://example.com/webfinger?r=acct%3Afoobar%40example.com",
+        HTTP::Client::Response.new(
+          200,
+          headers: HTTP::Headers{"Content-Type" => ";;;"},
+          body: "{}",
+        ),
+      )
+      expect_raises(Ktistec::WebFinger::ResultError) do
+        Ktistec::WebFinger::Client.query("acct:foobar@example.com")
+      end
+    end
+
     it "follows redirects" do
       stub_host_meta("example.com")
       HTTP::Client.cache.set_response(
@@ -235,6 +250,55 @@ Spectator.describe Ktistec::WebFinger::Client do
       )
       expect_raises(Ktistec::WebFinger::NotFoundError, /private address/) do
         Ktistec::WebFinger::Client.query("acct:foobar@example.com")
+      end
+    end
+
+    context "given a webfinger record at the well-known URL" do
+      before_each do
+        HTTP::Client.cache.set_response(
+          "https://example.com/.well-known/webfinger?resource=acct%3Afoobar%40example.com",
+          HTTP::Client::Response.new(
+            200,
+            headers: HTTP::Headers{"Content-Type" => "application/jrd+json"},
+            body: "{}",
+          ),
+        )
+      end
+
+      context "and host-meta with no lrdd link" do
+        before_each do
+          HTTP::Client.cache.set_response(
+            "https://example.com/.well-known/host-meta",
+            HTTP::Client::Response.new(
+              200,
+              headers: HTTP::Headers{"Content-Type" => "application/xrd+xml"},
+              body: %(<?xml version="1.0"?><XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0"><Link rel="other" template="https://example.com/other?r={uri}"/></XRD>),
+            ),
+          )
+        end
+
+        it "falls back to the well-known webfinger URL" do
+          Ktistec::WebFinger::Client.query("acct:foobar@example.com")
+          expect(HTTP::Client.requests).to have("GET https://example.com/.well-known/webfinger?resource=acct%3Afoobar%40example.com")
+        end
+      end
+
+      context "and host-meta with an lrdd link with no template" do
+        before_each do
+          HTTP::Client.cache.set_response(
+            "https://example.com/.well-known/host-meta",
+            HTTP::Client::Response.new(
+              200,
+              headers: HTTP::Headers{"Content-Type" => "application/xrd+xml"},
+              body: %(<?xml version="1.0"?><XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0"><Link rel="lrdd" href="https://example.com/"/></XRD>),
+            ),
+          )
+        end
+
+        it "falls back to the well-known webfinger URL" do
+          Ktistec::WebFinger::Client.query("acct:foobar@example.com")
+          expect(HTTP::Client.requests).to have("GET https://example.com/.well-known/webfinger?resource=acct%3Afoobar%40example.com")
+        end
       end
     end
 

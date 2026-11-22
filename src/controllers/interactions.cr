@@ -64,7 +64,7 @@ class InteractionsController
         else
           {location: location}.to_json
         end
-      rescue ex : Ktistec::HostMeta::Error | Ktistec::WebFinger::Error | NilAssertionError | KeyError
+      rescue ex : Ktistec::WebFinger::Error | NilAssertionError
         bad_request "interactions/index", env: env, message: message, error: ex.message, target: target, action: action, domain: domain
       end
     else

@@ -98,13 +98,15 @@ module Ktistec
             end
         end
         new(subject, aliases, properties, links)
+      rescue ex : XML::Error | KeyError
+        raise ResultError.new(ex.message)
       end
 
       def property(key)
         unless (p = @properties)
           raise ResultError.new("No properties in result")
         end
-        p[key]
+        p.fetch(key) { raise ResultError.new("No property #{key} in result") }
       end
 
       def property?(key)
@@ -117,7 +119,7 @@ module Ktistec
         unless (l = @links)
           raise ResultError.new("No links in result")
         end
-        l[key]
+        l.fetch(key) { raise ResultError.new("No link #{key} in result") }
       end
 
       def link?(key)

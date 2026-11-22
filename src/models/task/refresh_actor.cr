@@ -64,13 +64,21 @@ class Task
     end
 
     def perform
-      if (instance = ActivityPub::Actor.dereference?(source, actor.iri, ignore_cached: true))
+      instance =
+        begin
+          ActivityPub::Actor.dereference(source, actor.iri, ignore_cached: true, deadline: nil)
+        rescue Ktistec::Network::TransientError
+          nil
+        rescue Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+          actor.down!
+          nil
+        end
+      if instance
         instance.verify_handle!
         instance.save.up!
         sync_featured_collection(instance) if sync_featured_collection
         Ktistec::Topic{"/actor/refresh"}.notify_subscribers(actor.id.to_s)
       else
-        actor.down!
         message = "failed to dereference #{actor.iri}"
         failures << Failure.new(message)
         Log.debug { message }

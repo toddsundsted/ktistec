@@ -35,10 +35,21 @@ Spectator.describe Task::Transfer do
   let_create!(:actor, named: :local_recipient, iri: "https://test.test/actors/local")
   let_create!(:actor, named: :remote_recipient, iri: "https://remote/actors/remote")
 
-  def failed_transfer_factory(recipient_iri = nil, recipient = false, created_at = Time.utc)
-    recipient = actor_factory unless recipient_iri || recipient.nil? || recipient # ameba:disable Ktistec/NoDirectFactoryCalls
-    failure = Task::Transfer::Failure.new(recipient.as(ActivityPub::Actor).iri, "failure", created_at)
-    FooBarTransfer.new(**{running: false, complete: true, failures: [failure], created_at: created_at})
+  # every actor in `delivered` and `failed` is a recipient; each actor
+  # in `failed` gets a failure.
+
+  def transfer_factory(delivered = [] of ActivityPub::Actor, failed = [] of ActivityPub::Actor, created_at = Time.utc)
+    FooBarTransfer.new(
+      recipients: (delivered + failed).map(&.iri),
+      failures: failed.map { |actor| Task::Transfer::Failure.new(actor.iri, "failure", created_at) },
+      running: false,
+      complete: true,
+      created_at: created_at,
+    )
+  end
+
+  def failed_transfer_factory(recipient, created_at = Time.utc)
+    transfer_factory(failed: [recipient], created_at: created_at) # ameba:disable Ktistec/NoDirectFactoryCalls
   end
 
   describe "#sanitize_log_message" do
@@ -570,30 +581,15 @@ Spectator.describe Task::Transfer do
 
     let_build(:actor, named: :other, iri: "https://remote/other")
 
-    # failure to other recipient
-    let(failure_other_5d) do
-      FooBarTransfer.new(
-        failures: [
-          Task::Transfer::Failure.new(other.iri, "error", 5.days.ago),
-        ],
-        created_at: 5.days.ago,
-      )
-    end
+    # delivered to recipient, failed for other
+    let_build(:transfer, named: :failure_other_5d, delivered: [recipient], failed: [other], created_at: 5.days.ago)
 
-    # failure to multiple recipients
-    let(failure_multi_7d) do
-      FooBarTransfer.new(
-        failures: [
-          Task::Transfer::Failure.new(recipient.iri, "error", 7.days.ago),
-          Task::Transfer::Failure.new(other.iri, "error", 7.days.ago),
-        ],
-        created_at: 7.days.ago,
-      )
-    end
+    # failed for recipient and other
+    let_build(:transfer, named: :failure_multi_7d, failed: [recipient, other], created_at: 7.days.ago)
 
-    # success!
-    let(success_5d) { FooBarTransfer.new(created_at: 5.days.ago) }
-    let(success_now) { FooBarTransfer.new(created_at: 1.hour.ago) }
+    # delivered to recipient
+    let_build(:transfer, named: :success_5d, delivered: [recipient], created_at: 5.days.ago)
+    let_build(:transfer, named: :success_now, delivered: [recipient], created_at: 1.hour.ago)
 
     context "with no tasks" do
       it "returns false" do

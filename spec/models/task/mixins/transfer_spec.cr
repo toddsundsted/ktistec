@@ -581,9 +581,6 @@ Spectator.describe Task::Transfer do
 
     let_build(:actor, named: :other, iri: "https://remote/other")
 
-    # delivered to recipient, failed for other
-    let_build(:transfer, named: :failure_other_5d, delivered: [recipient], failed: [other], created_at: 5.days.ago)
-
     # failed for recipient and other
     let_build(:transfer, named: :failure_multi_7d, failed: [recipient, other], created_at: 7.days.ago)
 
@@ -627,11 +624,19 @@ Spectator.describe Task::Transfer do
       end
     end
 
-    # a failure to `other` without a failure to `recipient` counts as a success
+    context "with 3+ failures spanning 80+ hours and an intermediate success that failed for another recipient" do
+      let_build(:transfer, named: :partial_success_5d, delivered: [recipient], failed: [other], created_at: 5.days.ago)
 
-    context "with 3+ failures spanning 80+ hours with intermediate success" do
       it "returns false" do
-        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, failure_other_5d, failure_4d, failure_1d])).to be_false
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, partial_success_5d, failure_4d, failure_1d])).to be_false
+      end
+    end
+
+    context "with 3+ failures spanning 80+ hours and an intermediate success to another recipient" do
+      let_build(:transfer, named: :success_other_5d, delivered: [other], created_at: 5.days.ago)
+
+      it "returns true" do
+        expect(Task::Transfer.recipient_down?(recipient.iri, [failure_7d, success_other_5d, failure_4d, failure_1d])).to be_true
       end
     end
 

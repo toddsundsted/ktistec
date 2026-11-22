@@ -77,8 +77,8 @@ class Task
     # successful deliveries to that recipient since the earliest
     # failure.
     #
-    # A delivery is deemed successful when the recipient is not in the
-    # failures list.
+    # A delivery is deemed successful when the task was addressed to
+    # the recipient and the recipient is not in the failures list.
     #
     def self.recipient_down?(recipient_iri : String, tasks : Array(Task)) : Bool
       failures = tasks.flat_map(&.failures).select(&.recipient.==(recipient_iri))
@@ -90,6 +90,7 @@ class Task
 
       !tasks.any? do |task|
         next false if task.created_at <= earliest
+        next false unless task.recipients.includes?(recipient_iri)
         !task.failures.any?(&.recipient.==(recipient_iri))
       end
     end

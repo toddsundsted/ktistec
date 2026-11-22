@@ -81,7 +81,7 @@ class InteractionsController
     end
     begin
       uri = Ktistec::WebFinger.resolve(uri)
-    rescue ex : Ktistec::WebFinger::Error
+    rescue ex : Ktistec::WebFinger::Error | URI::Error
       bad_request("Can't Resolve URI")
     end
     actor_or_object =

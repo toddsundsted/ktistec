@@ -511,6 +511,20 @@ Spectator.describe SearchesController do
         end
       end
 
+      context "given a malformed URL" do
+        it "returns 400" do
+          get "/search?query=http%3A%2F%2Fa%3Ab%2F", HTML_HEADERS
+          expect(response.status_code).to eq(400)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/Invalid URI/)
+        end
+
+        it "returns 400" do
+          get "/search?query=http%3A%2F%2Fa%3Ab%2F", JSON_HEADERS
+          expect(response.status_code).to eq(400)
+          expect(JSON.parse(response.body).as_h["msg"]).to match(/Invalid URI/)
+        end
+      end
+
       context "given a non-existent host" do
         it "returns 400" do
           get "/search?query=foo_bar@no-such-host", HTML_HEADERS

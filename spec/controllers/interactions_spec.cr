@@ -286,6 +286,11 @@ Spectator.describe InteractionsController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 400 if the uri is malformed" do
+        get "/authorize-interaction?uri=http%3A%2F%2Fa%3Ab%2F"
+        expect(response.status_code).to eq(400)
+      end
+
       context "given an actor" do
         let_build(:actor, named: :foobar, iri: "https://remote/actors/foobar")
 

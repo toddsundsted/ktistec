@@ -291,6 +291,16 @@ Spectator.describe InteractionsController do
         expect(response.status_code).to eq(400)
       end
 
+      it "returns 400 if the local actor doesn't exist" do
+        get "/authorize-interaction?uri=https%3A%2F%2Ftest.test%2Factors%2Fmissing"
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the local object doesn't exist" do
+        get "/authorize-interaction?uri=https%3A%2F%2Ftest.test%2Fobjects%2Fmissing"
+        expect(response.status_code).to eq(400)
+      end
+
       context "given an actor" do
         let_build(:actor, named: :foobar, iri: "https://remote/actors/foobar")
 

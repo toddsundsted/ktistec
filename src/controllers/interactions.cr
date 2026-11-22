@@ -86,9 +86,9 @@ class InteractionsController
     end
     actor_or_object =
       if uri.starts_with?("#{host}/actors/")
-        ActivityPub::Actor.find(uri)
+        ActivityPub::Actor.find?(uri)
       elsif uri.starts_with?("#{host}/objects/")
-        ActivityPub::Object.find(uri)
+        ActivityPub::Object.find?(uri)
       else
         headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
         begin

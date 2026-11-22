@@ -497,6 +497,20 @@ Spectator.describe SearchesController do
         end
       end
 
+      context "given a URL to a local actor that does not exist" do
+        it "returns 400" do
+          get "/search?query=#{Ktistec.host}/actors/missing", HTML_HEADERS
+          expect(response.status_code).to eq(400)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/not found/)
+        end
+
+        it "returns 400" do
+          get "/search?query=#{Ktistec.host}/actors/missing", JSON_HEADERS
+          expect(response.status_code).to eq(400)
+          expect(JSON.parse(response.body).as_h["msg"]).to match(/not found/)
+        end
+      end
+
       context "given a non-existent host" do
         it "returns 400" do
           get "/search?query=foo_bar@no-such-host", HTML_HEADERS

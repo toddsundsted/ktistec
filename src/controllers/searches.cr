@@ -59,7 +59,7 @@ class SearchesController
         ok "searches/actors", env: env, actors: actors, message: message, query: query
       end
     end
-  rescue ex : Errors
+  rescue ex : Socket::Addrinfo::Error | JSON::ParseException | Ktistec::HostMeta::Error | Ktistec::WebFinger::Error | Ktistec::Network::Error | Ktistec::JSON_LD::MismatchedIRI | Ktistec::Model::NotFound | NilAssertionError
     bad_request "searches/form", env: env, message: ex.message, query: query
   end
 
@@ -96,8 +96,4 @@ class SearchesController
   rescue XML::Error | URI::Error
     nil
   end
-
-  private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |
-                         Ktistec::HostMeta::Error | Ktistec::WebFinger::Error | Ktistec::Network::Error |
-                         Ktistec::JSON_LD::MismatchedIRI | NilAssertionError
 end

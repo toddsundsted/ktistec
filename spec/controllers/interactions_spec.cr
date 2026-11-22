@@ -246,6 +246,20 @@ Spectator.describe InteractionsController do
         expect(JSON.parse(response.body).dig?("location")).to eq("https://remote.com/authorize-interaction?uri=#{object.iri}")
       end
     end
+
+    context "given a remote server that doesn't say where to send the user" do
+      before_each { Ktistec::WebFinger.serve("remote.com", %q|{"links":[{"rel":"http://ostatus.org/schema/1.0/subscribe"}]}|) }
+
+      it "returns 400" do
+        post "/remote-interaction", HTML_HEADERS, "action=follow&target=#{URI.encode_path(actor.iri)}&domain=remote.com"
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400" do
+        post "/remote-interaction", JSON_HEADERS, %Q|{"action":"reply","target":#{object.iri.to_json},"domain":"remote.com"}|
+        expect(response.status_code).to eq(400)
+      end
+    end
   end
 
   describe "GET /authorize-interaction" do
@@ -264,6 +278,11 @@ Spectator.describe InteractionsController do
 
       it "returns 400 if the uri can't be dereferenced" do
         get "/authorize-interaction?uri=https://remote/returns-404"
+        expect(response.status_code).to eq(400)
+      end
+
+      it "returns 400 if the handle can't be resolved" do
+        get "/authorize-interaction?uri=foobar%40no-such-host"
         expect(response.status_code).to eq(400)
       end
 

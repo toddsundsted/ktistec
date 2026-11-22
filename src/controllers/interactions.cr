@@ -58,13 +58,16 @@ class InteractionsController
     if domain
       begin
         location = Ktistec::WebFinger.query(domain).link("http://ostatus.org/schema/1.0/subscribe").template
-        location = location.not_nil!.gsub("{uri}", target)
+        unless location
+          bad_request "interactions/index", env: env, message: message, error: "No subscribe template", target: target, action: action, domain: domain
+        end
+        location = location.gsub("{uri}", target)
         if accepts?("text/html")
           redirect location
         else
           {location: location}.to_json
         end
-      rescue ex : Ktistec::WebFinger::Error | NilAssertionError
+      rescue ex : Ktistec::WebFinger::Error
         bad_request "interactions/index", env: env, message: message, error: ex.message, target: target, action: action, domain: domain
       end
     else
@@ -76,7 +79,11 @@ class InteractionsController
     unless (uri = env.params.query["uri"]?)
       bad_request("Missing URI")
     end
-    uri = Ktistec::WebFinger.resolve(uri)
+    begin
+      uri = Ktistec::WebFinger.resolve(uri)
+    rescue ex : Ktistec::WebFinger::Error
+      bad_request("Can't Resolve URI")
+    end
     actor_or_object =
       if uri.starts_with?("#{host}/actors/")
         ActivityPub::Actor.find(uri)

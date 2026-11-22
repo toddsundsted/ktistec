@@ -362,8 +362,15 @@ module Ktistec
       @@hrefs[account.lchop("acct:")] = href
     end
 
+    @@results = {} of String => Ktistec::WebFinger::Result
+
+    def self.serve(account : String, json : String)
+      @@results[account.lchop("acct:")] = Ktistec::WebFinger::Result.from_json(json)
+    end
+
     def self.reset
       @@hrefs.clear
+      @@results.clear
     end
 
     def self.query(account, *args, **options)
@@ -373,7 +380,9 @@ module Ktistec
       name = $~["name"]?
       host = $~["host"]
       key = account.lchop("acct:")
-      if name =~ /no-such-name/
+      if (result = @@results[key]?)
+        result
+      elsif name =~ /no-such-name/
         raise Ktistec::WebFinger::NotFoundError.new("No such name")
       elsif host =~ /no-such-host/
         raise Ktistec::WebFinger::NotFoundError.new("No such host")

@@ -74,7 +74,7 @@ Spectator.describe Task::Transfer do
     end
   end
 
-  describe "#transfer" do
+  describe "#transfer(activity, from:, to:)" do
     subject { FooBarTransfer.new }
 
     it "dereferences the recipient" do
@@ -427,6 +427,130 @@ Spectator.describe Task::Transfer do
           it "records failure" do
             subject.transfer(activity, from: transferer, to: [remote_recipient.iri])
             expect(subject.failures.map(&.recipient)).to contain_exactly(remote_recipient.iri)
+          end
+        end
+      end
+    end
+  end
+
+  describe "#transfer(activity, from:)" do
+    let_create!(:actor, named: :permanent_recipient, iri: "https://remote/actors/permanent")
+    let_create!(:actor, named: :transient_recipient, iri: "https://remote/actors/transient")
+
+    subject { FooBarTransfer.new(recipients: [transient_recipient.iri, permanent_recipient.iri]) }
+
+    def run
+      subject.transfer(activity, from: transferer)
+    end
+
+    context "given a recipient that fails permanently" do
+      before_each { permanent_recipient.assign(inbox: "https://remote/returns-404").save }
+
+      it "does not schedule a retry" do
+        expect { run }.not_to change { subject.next_attempt_at }.from(nil)
+      end
+
+      context "and a recipient that fails transiently" do
+        before_each { transient_recipient.assign(inbox: "https://remote/returns-503").save }
+
+        context "after the first attempt" do
+          before_each { run }
+
+          it "schedules a retry in five minutes" do
+            expect(subject.next_attempt_at).to be_close(5.minutes.from_now, delta: 10.seconds)
+          end
+
+          context "after the first retry" do
+            before_each do
+              HTTP::Client.requests.clear
+              run
+            end
+
+            it "retries only the recipient that failed transiently" do
+              expect(HTTP::Client.requests).to have("POST #{transient_recipient.inbox}")
+              expect(HTTP::Client.requests).not_to have("POST #{permanent_recipient.inbox}")
+            end
+
+            it "schedules the next retry in ten minutes" do
+              expect(subject.next_attempt_at).to be_close(10.minutes.from_now, delta: 20.seconds)
+            end
+
+            context "after the fifth retry" do
+              before_each { 4.times { run } }
+
+              it "schedules a retry in 160 minutes" do
+                expect(subject.next_attempt_at).to be_close(160.minutes.from_now, delta: 5.minutes)
+              end
+
+              it "gives up after the sixth retry" do
+                expect { run }.not_to change { subject.next_attempt_at }
+              end
+            end
+          end
+
+          context "after a retry that succeeds" do
+            before_each do
+              transient_recipient.assign(inbox: "https://remote/actors/transient/inbox").save
+              run
+            end
+
+            it "clears the failures of the recipient that succeeded" do
+              expect(subject.failures.map(&.recipient)).not_to contain(transient_recipient.iri)
+            end
+
+            it "keeps the failures of the recipient that failed permanently" do
+              expect(subject.failures.map(&.recipient)).to contain(permanent_recipient.iri)
+            end
+          end
+        end
+
+        context "and earlier failures for the permanent recipient spanning days" do
+          let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 7.days.ago)
+          let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 4.days.ago)
+          let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 1.day.ago)
+
+          context "after the first attempt" do
+            before_each { run }
+
+            it "marks the permanent recipient down" do
+              expect(permanent_recipient.reload!.down?).to be_true
+            end
+          end
+        end
+
+        context "and earlier failures for the transient recipient spanning days" do
+          let_create!(:failed_transfer, named: nil, recipient: transient_recipient, created_at: 7.days.ago)
+          let_create!(:failed_transfer, named: nil, recipient: transient_recipient, created_at: 4.days.ago)
+          let_create!(:failed_transfer, named: nil, recipient: transient_recipient, created_at: 1.day.ago)
+
+          context "after the first attempt" do
+            before_each { run }
+
+            it "does not mark the recipient down" do
+              expect(transient_recipient.reload!.down?).to be_false
+            end
+
+            context "after the last retry" do
+              before_each { 6.times { run } }
+
+              it "marks the recipient down" do
+                expect(transient_recipient.reload!.down?).to be_true
+              end
+            end
+          end
+        end
+      end
+
+      context "and earlier failures for the permanent recipient spanning days" do
+        let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 7.days.ago)
+        let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 4.days.ago)
+        let_create!(:failed_transfer, named: nil, recipient: permanent_recipient, created_at: 1.day.ago)
+
+        context "after the first attempt" do
+          before_each { run }
+
+          it "marks the recipient down" do
+            expect(permanent_recipient.reload!.down?).to be_true
           end
         end
       end

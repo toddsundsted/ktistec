@@ -25,7 +25,7 @@ class Task
     end
 
     def perform
-      transfer activity, from: sender, to: recipients
+      transfer activity, from: sender
     end
   end
 end

@@ -35,7 +35,7 @@ class Task
         end
       end
 
-      transfer activity, from: receiver, to: recipients
+      transfer activity, from: receiver
     end
   end
 end

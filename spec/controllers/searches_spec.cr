@@ -51,6 +51,8 @@ Spectator.describe SearchesController do
       before_each { HTTP::Client.objects << object.assign(content: "foo bar") }
 
       context "given a username" do
+        let(actor) { register(username: "zed").actor }
+
         let_create!(:actor, named: :alice, username: "alice")
         let_create!(:actor, named: :alicia, username: "alicia")
         let_create!(:actor, named: :bob, username: "bob")

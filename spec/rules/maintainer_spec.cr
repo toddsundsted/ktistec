@@ -208,9 +208,9 @@ Spectator.describe Rules::Maintainer do
     context "a representative-keyed view" do
       let(view) { SyntheticRepresentativeKeyedView.new }
 
-      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
-      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
-      let_create(:object, named: third, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc)
+      let_create!(:object, named: first, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create(:object, named: third, attributed_to_iri: GROUP, created_at: Time.utc)
 
       context "given an older member" do
         before_each { Rules::Maintainer.reconcile(view) }
@@ -290,9 +290,9 @@ Spectator.describe Rules::Maintainer do
     context "a representative-keyed view" do
       let(view) { SyntheticRepresentativeKeyedView.new }
 
-      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
-      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
-      let_create(:object, named: third, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc)
+      let_create!(:object, named: first, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create(:object, named: third, attributed_to_iri: GROUP, created_at: Time.utc)
 
       it "stores the latest member" do
         Rules::Maintainer.reconcile_for(view, group_key)
@@ -332,9 +332,9 @@ Spectator.describe Rules::Maintainer do
     context "a stable-keyed recency view" do
       let(view) { SyntheticStableKeyedView.new }
 
-      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
-      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
-      let_create(:object, named: third, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc)
+      let_create!(:object, named: first, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create(:object, named: third, attributed_to_iri: GROUP, created_at: Time.utc)
 
       it "stores the member at the latest position" do
         Rules::Maintainer.reconcile_for(view, group_key)
@@ -383,8 +383,8 @@ Spectator.describe Rules::Maintainer do
     context "given several objects in a group" do
       let(view) { SyntheticRepresentativeKeyedView.new }
 
-      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
-      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create!(:object, named: first, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
 
       before_each { Rules::View.register(view) }
 
@@ -397,8 +397,8 @@ Spectator.describe Rules::Maintainer do
     context "given objects that share a key" do
       let(view) { SyntheticCountingView.new }
 
-      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
-      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create!(:object, named: first, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
 
       before_each { Rules::View.register(view) }
 
@@ -511,8 +511,8 @@ Spectator.describe Rules::Maintainer do
     context "a representative-keyed view" do
       let(view) { SyntheticRepresentativeKeyedView.new }
 
-      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
-      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create!(:object, named: first, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
 
       it "produces the same membership" do
         Rules::Maintainer.reconcile(view)
@@ -531,8 +531,8 @@ Spectator.describe Rules::Maintainer do
     context "a stable-keyed recency view" do
       let(view) { SyntheticStableKeyedView.new }
 
-      let_create!(:object, named: first, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
-      let_create!(:object, named: second, attributed_to: nil, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
+      let_create!(:object, named: first, attributed_to_iri: GROUP, created_at: Time.utc - 2.hours)
+      let_create!(:object, named: second, attributed_to_iri: GROUP, created_at: Time.utc - 1.minute)
 
       it "produces the same position" do
         Rules::Maintainer.reconcile(view)

@@ -414,6 +414,21 @@ Spectator.describe InteractionsController do
             expect(HTTP::Client.requests).not_to have("GET #{foobar.iri}")
           end
         end
+
+        context "whose author can't be retrieved" do
+          before_each { HTTP::Client.actors.delete(foobar.attributed_to.iri) }
+
+          pre_condition { expect(ActivityPub::Actor.find?(foobar.attributed_to.iri)).to be_nil }
+
+          it "does not save the object" do
+            expect { get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Fobjects%2Ffoobar", HTML_HEADERS }.not_to change { ActivityPub::Object.count(iri: foobar.iri) }
+          end
+
+          it "returns 400" do
+            get "/authorize-interaction?uri=https%3A%2F%2Fremote%2Fobjects%2Ffoobar", HTML_HEADERS
+            expect(response.status_code).to eq(400)
+          end
+        end
       end
     end
   end

@@ -111,7 +111,9 @@ class InteractionsController
       end
       ok "actors/remote", env: env, actor: actor, pinned: pinned, objects: objects
     when ActivityPub::Object
-      actor_or_object.attributed_to?(env.account.actor, dereference: true)
+      unless actor_or_object.attributed_to?(include_deleted: true) || actor_or_object.attributed_to?(env.account.actor, dereference: true)
+        bad_request("Can't Retrieve Author")
+      end
       object = actor_or_object.save
       ok "objects/object", env: env, object: object, recursive: false
     else

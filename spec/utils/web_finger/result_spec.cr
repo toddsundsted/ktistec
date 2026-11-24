@@ -24,10 +24,19 @@ Spectator.describe Ktistec::WebFinger::Result do
       expect(Ktistec::WebFinger::Result.from_xml(result).properties).to eq({"one" => "1", "two" => nil})
     end
 
+    it "raises an error if the document is empty" do
+      expect { Ktistec::WebFinger::Result.from_xml("") }.to raise_error(Ktistec::WebFinger::ResultError)
+    end
+
     context "links" do
       it "parses links" do
         result = Ktistec::Constants::XRD_ENV % "<Link rel='one' href='1'/>"
         expect(Ktistec::WebFinger::Result.from_xml(result).links).to be_a(Hash(String, Ktistec::WebFinger::Result::Link))
+      end
+
+      it "raises an error if a link has no rel" do
+        result = Ktistec::Constants::XRD_ENV % "<Link href='1'/>"
+        expect { Ktistec::WebFinger::Result.from_xml(result) }.to raise_error(Ktistec::WebFinger::ResultError)
       end
 
       it "maps rel" do
@@ -149,6 +158,11 @@ Spectator.describe Ktistec::WebFinger::Result do
       result = %[{"properties":{"one":"1","two":null}}]
       expect(Ktistec::WebFinger::Result.from_json(result).property("one")).to eq("1")
     end
+
+    it "raises an error if the key is missing" do
+      result = %[{"properties":{"one":"1","two":null}}]
+      expect { Ktistec::WebFinger::Result.from_json(result).property("three") }.to raise_error(Ktistec::WebFinger::ResultError)
+    end
   end
 
   describe "#property?" do
@@ -162,6 +176,11 @@ Spectator.describe Ktistec::WebFinger::Result do
     it "returns the value of the key" do
       result = %[{"links":[{"rel":"next","href":"next/1"},{"rel":"prev","href":"prev/1"}]}]
       expect(Ktistec::WebFinger::Result.from_json(result).link("next").href).to eq("next/1")
+    end
+
+    it "raises an error if the key is missing" do
+      result = %[{"links":[{"rel":"next","href":"next/1"},{"rel":"prev","href":"prev/1"}]}]
+      expect { Ktistec::WebFinger::Result.from_json(result).link("self") }.to raise_error(Ktistec::WebFinger::ResultError)
     end
   end
 

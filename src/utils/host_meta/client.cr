@@ -37,7 +37,7 @@ module Ktistec
         else
           Result.from_xml(response.body)
         end
-      rescue err : JSON::ParseException
+      rescue err : JSON::ParseException | MIME::Error
         raise ResultError.new(err.message)
       rescue err : Ktistec::Network::Error
         raise NotFoundError.new(err.message)

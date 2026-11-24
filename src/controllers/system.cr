@@ -8,6 +8,10 @@ class SystemController
 
     log_levels = Ktistec::LogLevel.all_as_hash
 
+    if env.params.query.fetch_all("filters").includes?("no-defaults")
+      sources = sources.select { |source| log_levels.has_key?(source) }
+    end
+
     ok "system/index", env: env, log_levels: log_levels, sources: sources
   end
 
@@ -28,7 +32,7 @@ class SystemController
 
     ::Log.setup log_levels.transform_values(&.severity)
 
-    redirect system_path
+    redirect back_path(system_path)
   end
 
   private def self.params(env)

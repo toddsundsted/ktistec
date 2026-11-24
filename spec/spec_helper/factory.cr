@@ -141,7 +141,7 @@ def object_factory(clazz = ActivityPub::Object, iri = nil, attributed_to_iri = n
   clazz.new({
     "iri"               => iri,
     "attributed_to_iri" => attributed_to_iri,
-    "attributed_to"     => attributed_to,
+    "attributed_to"     => attributed_to || nil,
     "visible"           => visible,
     "published"         => options[:created_at]? || KTISTEC_EPOCH,
   }.merge(options.to_h.transform_keys(&.to_s)).compact)
@@ -282,7 +282,7 @@ end
 def notification_factory(clazz, activity_clazz = ActivityPub::Activity, owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   activity = activity_factory(activity_clazz, actor_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, actor: owner) unless activity_iri || activity.nil? || activity
-  relationship_factory(clazz, **{from_iri: owner_iri, owner: owner, to_iri: activity_iri, activity: activity}.merge(options))
+  relationship_factory(clazz, **{from_iri: owner_iri, owner: owner || nil, to_iri: activity_iri, activity: activity || nil}.merge(options))
 end
 
 def notification_announce_factory(**options)
@@ -311,22 +311,22 @@ end
 
 def notification_follow_thread_factory(object_iri = nil, object = false, **options)
   object = object_factory unless object_iri || object.nil? || object
-  notification_factory(Relationship::Content::Notification::Follow::Thread, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
+  notification_factory(Relationship::Content::Notification::Follow::Thread, **{to_iri: object_iri, object: object || nil, activity: nil}.merge(options))
 end
 
 def notification_poll_expiry_factory(question_iri = nil, question = false, **options)
   question = question_factory unless question_iri || question.nil? || question
-  notification_factory(Relationship::Content::Notification::Poll::Expiry, **{question_iri: question_iri, question: question, activity: nil}.merge(options))
+  notification_factory(Relationship::Content::Notification::Poll::Expiry, **{to_iri: question_iri, question: question || nil, activity: nil}.merge(options))
 end
 
 def notification_reply_factory(object_iri = nil, object = false, **options)
   object = object_factory unless object_iri || object.nil? || object
-  notification_factory(Relationship::Content::Notification::Reply, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
+  notification_factory(Relationship::Content::Notification::Reply, **{to_iri: object_iri, object: object || nil, activity: nil}.merge(options))
 end
 
 def notification_mention_factory(object_iri = nil, object = false, **options)
   object = object_factory unless object_iri || object.nil? || object
-  notification_factory(Relationship::Content::Notification::Mention, **{object_iri: object_iri, object: object, activity: nil}.merge(options))
+  notification_factory(Relationship::Content::Notification::Mention, **{to_iri: object_iri, object: object || nil, activity: nil}.merge(options))
 end
 
 def notification_quote_factory(**options)
@@ -336,7 +336,7 @@ end
 def timeline_factory(clazz, owner_iri = nil, owner = false, object_iri = nil, object = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   object = object_factory(created_at: options[:created_at]?, attributed_to_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, attributed_to: owner) unless object_iri || object.nil? || object
-  relationship_factory(clazz, **{from_iri: owner_iri, owner: owner, to_iri: object_iri, object: object}.merge(options))
+  relationship_factory(clazz, **{from_iri: owner_iri, owner: owner || nil, to_iri: object_iri, object: object || nil}.merge(options))
 end
 
 def timeline_announce_factory(**options)
@@ -349,31 +349,31 @@ end
 
 def public_timeline_factory(object_iri = nil, object = false, **options)
   object = object_factory unless object_iri || object.nil? || object
-  relationship_factory(Relationship::Content::PublicTimeline, **{from_iri: Ktistec::Constants::PUBLIC, to_iri: object_iri, object: object}.merge(options))
+  relationship_factory(Relationship::Content::PublicTimeline, **{from_iri: Ktistec::Constants::PUBLIC, to_iri: object_iri, object: object || nil}.merge(options))
 end
 
 def public_tagged_factory(name = nil, from_iri = nil, object_iri = nil, object = false, **options)
   from_iri = "#{Ktistec.host}/tags/#{name}" if name && from_iri.nil?
   object = object_factory unless object_iri || object.nil? || object
-  relationship_factory(Relationship::Content::PublicTagged, **{from_iri: from_iri, to_iri: object_iri, object: object}.merge(options))
+  relationship_factory(Relationship::Content::PublicTagged, **{from_iri: from_iri, to_iri: object_iri, object: object || nil}.merge(options))
 end
 
 def inbox_relationship_factory(owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   activity = activity_factory(actor_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, actor: owner) unless activity_iri || activity.nil? || activity
-  relationship_factory(Relationship::Content::Inbox, **{from_iri: owner_iri, owner: owner, to_iri: activity_iri, activity: activity}.merge(options))
+  relationship_factory(Relationship::Content::Inbox, **{from_iri: owner_iri, owner: owner || nil, to_iri: activity_iri, activity: activity || nil}.merge(options))
 end
 
 def outbox_relationship_factory(owner_iri = nil, owner = false, activity_iri = nil, activity = false, **options)
   owner = actor_factory unless owner_iri || owner.nil? || owner
   activity = activity_factory(actor_iri: owner_iri || owner.responds_to?(:iri) && owner.iri, actor: owner) unless activity_iri || activity.nil? || activity
-  relationship_factory(Relationship::Content::Outbox, **{from_iri: owner_iri, owner: owner, to_iri: activity_iri, activity: activity}.merge(options))
+  relationship_factory(Relationship::Content::Outbox, **{from_iri: owner_iri, owner: owner || nil, to_iri: activity_iri, activity: activity || nil}.merge(options))
 end
 
 def follow_relationship_factory(confirmed = true, actor_iri = nil, actor = false, object_iri = nil, object = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
   object = actor_factory unless object_iri || object.nil? || object
-  relationship_factory(Relationship::Social::Follow, **{confirmed: confirmed, from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
+  relationship_factory(Relationship::Social::Follow, **{confirmed: confirmed, from_iri: actor_iri, actor: actor || nil, to_iri: object_iri, object: object || nil}.merge(options))
 end
 
 def follow_hashtag_relationship_factory(**options)
@@ -395,13 +395,13 @@ end
 def bookmark_relationship_factory(object_iri = nil, object = false, actor_iri = nil, actor = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
   object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
-  relationship_factory(Relationship::Content::Bookmark, **{from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
+  relationship_factory(Relationship::Content::Bookmark, **{from_iri: actor_iri, actor: actor || nil, to_iri: object_iri, object: object || nil}.merge(options))
 end
 
 def pin_relationship_factory(object_iri = nil, object = false, actor_iri = nil, actor = false, **options)
   actor = actor_factory unless actor_iri || actor.nil? || actor
   object = object_factory(created_at: options[:created_at]?, attributed_to_iri: actor_iri, attributed_to: actor) unless object_iri || object.nil? || object
-  relationship_factory(Relationship::Content::Pin, **{from_iri: actor_iri, actor: actor, to_iri: object_iri, object: object}.merge(options))
+  relationship_factory(Relationship::Content::Pin, **{from_iri: actor_iri, actor: actor || nil, to_iri: object_iri, object: object || nil}.merge(options))
 end
 
 def canonical_relationship_factory(**options)
@@ -416,12 +416,12 @@ end
 
 def fetch_hashtag_task_factory(source_iri = nil, source = false, **options)
   source = actor_factory(local: true) unless source_iri || source.nil? || source
-  task_factory(Task::Fetch::Hashtag, **{source: source, source_iri: source_iri}.merge(options))
+  task_factory(Task::Fetch::Hashtag, **{source: source || nil, source_iri: source_iri}.merge(options))
 end
 
 def fetch_thread_task_factory(source_iri = nil, source = false, **options)
   source = actor_factory(local: true) unless source_iri || source.nil? || source
-  task_factory(Task::Fetch::Thread, **{source: source, source_iri: source_iri}.merge(options))
+  task_factory(Task::Fetch::Thread, **{source: source || nil, source_iri: source_iri}.merge(options))
 end
 
 def handle_follow_request_task_factory(source_iri = nil, recipient = false, subject_iri = nil, activity = false, **options)
@@ -510,21 +510,31 @@ end
 def poll_factory(clazz = Poll, question_iri = nil, question = false, options = nil, **__options)
   question = question_factory unless question_iri || question.nil? || question
   options ||= [Poll::Option.new("Yes"), Poll::Option.new("No")]
-  clazz.new(**{question_iri: question_iri, question: question, options: options}.merge(__options))
+  clazz.new({
+    "question_iri" => question_iri,
+    "question"     => question || nil,
+    "options"      => options,
+  }.merge(__options.to_h.transform_keys(&.to_s)).compact)
 end
 
 # quote decision factory
 
 def quote_decision_factory(clazz = QuoteDecision, quote_authorization_iri = nil, quote_authorization = false, **__options)
   quote_authorization = quote_authorization_factory unless quote_authorization_iri || quote_authorization.nil? || quote_authorization
-  clazz.new(**{quote_authorization_iri: quote_authorization_iri, quote_authorization: quote_authorization}.merge(__options))
+  clazz.new({
+    "quote_authorization_iri" => quote_authorization_iri,
+    "quote_authorization"     => quote_authorization || nil,
+  }.merge(__options.to_h.transform_keys(&.to_s)).compact)
 end
 
 # filter term factory
 
 def filter_term_factory(clazz = FilterTerm, actor_id = nil, actor = false, **options)
   actor = actor_factory(local: true) unless actor_id || actor.nil? || actor
-  clazz.new(**{actor_id: actor_id, actor: actor}.merge(options))
+  clazz.new({
+    "actor_id" => actor_id,
+    "actor"    => actor || nil,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
 # feed factories
@@ -588,7 +598,10 @@ end
 
 def translation_factory(clazz = Translation, origin_id = nil, origin = false, **options)
   origin = object_factory unless origin_id || origin.nil? || origin
-  clazz.new(**{origin_id: origin_id, origin: origin}.merge(options))
+  clazz.new({
+    "origin_id" => origin_id,
+    "origin"    => origin || nil,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
 # account factory
@@ -601,9 +614,14 @@ class Account
   end
 end
 
-def account_factory(clazz = Account, actor_iri = nil, actor = false, username = random_username, password = random_password, language = "en", **options)
-  actor = actor_factory(username: username, local: true) unless actor_iri || actor.nil? || actor
-  clazz.new(**{actor_iri: actor_iri || actor.responds_to?(:iri) && actor.iri, actor: actor, username: username, password: password, language: language}.merge(options))
+def account_factory(clazz = Account, actor = false, username = random_username, password = random_password, language = "en", **options)
+  actor = actor_factory(username: username, local: true) unless actor.nil? || actor
+  clazz.new({
+    "actor"    => actor,
+    "username" => username,
+    "password" => password,
+    "language" => language,
+  }.merge(options.to_h.transform_keys(&.to_s)).compact)
 end
 
 # oauth2 factories

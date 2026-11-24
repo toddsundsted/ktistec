@@ -15,7 +15,7 @@ crystal:
 - if judges.size > 1
   form.ui.form method="GET" action=new_actor_feed_path(owner) data-controller="submit-on-change" data-turbo-frame="judge"
     = select_tag("Judge", feed, backend, judges, data: {action: "change->submit-on-change#change"})
-    button.ui.button type="submit" data-submit-on-change-target="fallback" Choose
+    button.ui.button.noscript type="submit" Choose
 = form_tag(feed, action, data: {controller: "unsaved-changes"}) do
   = error_messages(feed)
   = input_tag("Name", feed, name, placeholder: "e.g. Fediverse")

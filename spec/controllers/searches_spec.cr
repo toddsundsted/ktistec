@@ -51,6 +51,8 @@ Spectator.describe SearchesController do
       before_each { HTTP::Client.objects << object.assign(content: "foo bar") }
 
       context "given a username" do
+        let(actor) { register(username: "zed").actor }
+
         let_create!(:actor, named: :alice, username: "alice")
         let_create!(:actor, named: :alicia, username: "alicia")
         let_create!(:actor, named: :bob, username: "bob")
@@ -339,6 +341,32 @@ Spectator.describe SearchesController do
           expect(JSON.parse(response.body).as_h.dig("object", "content")).to eq("foo bar")
         end
 
+        context "whose author can't be retrieved" do
+          before_each { HTTP::Client.actors.delete(other.iri) }
+
+          pre_condition { expect(ActivityPub::Actor.find?(other.iri)).to be_nil }
+
+          it "does not save the object" do
+            expect { get "/search?query=https://remote/objects/foo_bar", HTML_HEADERS }.not_to change { ActivityPub::Object.count(iri: object.iri) }
+          end
+
+          it "does not save the object" do
+            expect { get "/search?query=https://remote/objects/foo_bar", JSON_HEADERS }.not_to change { ActivityPub::Object.count(iri: object.iri) }
+          end
+
+          it "returns 400" do
+            get "/search?query=https://remote/objects/foo_bar", HTML_HEADERS
+            expect(response.status_code).to eq(400)
+            expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/Can't retrieve the post's author/)
+          end
+
+          it "returns 400" do
+            get "/search?query=https://remote/objects/foo_bar", JSON_HEADERS
+            expect(response.status_code).to eq(400)
+            expect(JSON.parse(response.body).as_h["msg"]).to match(/Can't retrieve the post's author/)
+          end
+        end
+
         context "of an existing object" do
           before_each { object.assign(content: "bar foo").save }
 
@@ -494,6 +522,34 @@ Spectator.describe SearchesController do
             get "/search?query=#{permalink}", JSON_HEADERS
             expect(HTTP::Client.requests.count { |request| request === "GET https://remote/objects/foo_bar" }).to eq(1)
           end
+        end
+      end
+
+      context "given a URL to a local actor that does not exist" do
+        it "returns 400" do
+          get "/search?query=#{Ktistec.host}/actors/missing", HTML_HEADERS
+          expect(response.status_code).to eq(400)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/not found/)
+        end
+
+        it "returns 400" do
+          get "/search?query=#{Ktistec.host}/actors/missing", JSON_HEADERS
+          expect(response.status_code).to eq(400)
+          expect(JSON.parse(response.body).as_h["msg"]).to match(/not found/)
+        end
+      end
+
+      context "given a malformed URL" do
+        it "returns 400" do
+          get "/search?query=http%3A%2F%2Fa%3Ab%2F", HTML_HEADERS
+          expect(response.status_code).to eq(400)
+          expect(XML.parse_html(response.body).xpath_nodes("//div[contains(@class,'error message')]").first).to match(/Invalid URI/)
+        end
+
+        it "returns 400" do
+          get "/search?query=http%3A%2F%2Fa%3Ab%2F", JSON_HEADERS
+          expect(response.status_code).to eq(400)
+          expect(JSON.parse(response.body).as_h["msg"]).to match(/Invalid URI/)
         end
       end
 

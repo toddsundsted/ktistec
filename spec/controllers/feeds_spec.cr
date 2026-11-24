@@ -605,7 +605,7 @@ Spectator.describe FeedsController do
 
         it "renders a button to choose the judge" do
           get "/actors/#{actor.username}/feeds/new", ACCEPT_HTML
-          buttons = XML.parse_html(response.body).xpath_nodes("//form[.//select[@name='backend']]//button[@type='submit']")
+          buttons = XML.parse_html(response.body).xpath_nodes("//form[.//select[@name='backend']]//button[@type='submit'][contains(@class,'noscript')]")
           expect(buttons).not_to be_empty
         end
 

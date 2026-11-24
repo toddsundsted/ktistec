@@ -14,10 +14,19 @@ Spectator.describe Ktistec::HostMeta::Result do
       expect(Ktistec::HostMeta::Result.from_xml(result).properties).to eq({"one" => "1", "two" => nil})
     end
 
+    it "raises an error if the document is empty" do
+      expect { Ktistec::HostMeta::Result.from_xml("") }.to raise_error(Ktistec::HostMeta::ResultError)
+    end
+
     context "links" do
       it "parses links" do
         result = Ktistec::Constants::XRD_ENV % "<Link rel='one' href='1'/>"
         expect(Ktistec::HostMeta::Result.from_xml(result).links).to be_a(Array(Ktistec::HostMeta::Result::Link))
+      end
+
+      it "raises an error if a link has no rel" do
+        result = Ktistec::Constants::XRD_ENV % "<Link href='1'/>"
+        expect { Ktistec::HostMeta::Result.from_xml(result) }.to raise_error(Ktistec::HostMeta::ResultError)
       end
 
       it "maps rel" do
@@ -100,6 +109,11 @@ Spectator.describe Ktistec::HostMeta::Result do
     it "returns the value of the property" do
       result = Ktistec::Constants::XRD_ENV % "<Property type='one'>1</Property><Property type='two' xsi:nil='true'/>"
       expect(Ktistec::HostMeta::Result.from_xml(result).property("one")).to eq("1")
+    end
+
+    it "raises an error if the property is missing" do
+      result = Ktistec::Constants::XRD_ENV % "<Property type='one'>1</Property><Property type='two' xsi:nil='true'/>"
+      expect { Ktistec::HostMeta::Result.from_xml(result).property("three") }.to raise_error(Ktistec::HostMeta::ResultError)
     end
   end
 

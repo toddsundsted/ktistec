@@ -44,10 +44,10 @@ module Ktistec
 
         template =
           begin
-            Ktistec::HostMeta.query(host, deadline: deadline).links("lrdd").first.template.not_nil!
-          rescue Ktistec::HostMeta::Error | NilAssertionError | IndexError
-            "https://#{host}/.well-known/webfinger?resource={uri}"
+            Ktistec::HostMeta.query(host, deadline: deadline).links("lrdd").first?.try(&.template)
+          rescue Ktistec::HostMeta::Error
           end
+        template ||= "https://#{host}/.well-known/webfinger?resource={uri}"
 
         url = template.gsub("{uri}", URI.encode_www_form(account))
 
@@ -62,7 +62,7 @@ module Ktistec
         else
           Result.from_xml(response.body)
         end
-      rescue err : JSON::ParseException
+      rescue err : JSON::ParseException | MIME::Error
         raise ResultError.new(err.message)
       rescue err : Ktistec::Network::Error
         raise NotFoundError.new(err.message)

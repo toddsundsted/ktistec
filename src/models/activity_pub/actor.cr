@@ -264,7 +264,7 @@ module ActivityPub
             else
               Log.notice { "verify_handle! - #{iri} - claimed #{claimed.inspect} resolved to #{href.inspect}" }
             end
-          rescue ex : Ktistec::WebFinger::Error | KeyError
+          rescue ex : Ktistec::WebFinger::Error
             Log.debug { "verify_handle! - #{iri} - #{claimed.inspect} - #{ex.message}" }
           end
         else

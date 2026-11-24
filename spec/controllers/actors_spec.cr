@@ -161,6 +161,11 @@ Spectator.describe ActorsController do
         expect(post_ids).to contain_exactly("object-#{create.object.id}", "object-#{announce.object.id}").in_any_order
       end
 
+      it "renders a button to apply the filters" do
+        get "/actors/#{actor.username}", ACCEPT_HTML
+        expect(XML.parse_html(response.body).xpath_nodes("//form[@id='timeline-controls']//*[contains(@class,'noscript')]//button[@type='submit']")).not_to be_empty
+      end
+
       context "given a published feed" do
         let_create!(:feed, owner: actor, name: "Feed", draft: false)
         let_create(:object, named: post)

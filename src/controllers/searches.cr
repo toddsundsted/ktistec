@@ -48,7 +48,9 @@ class SearchesController
 
       ok "searches/actor", env: env, actor: actor, message: message, query: query
     when ActivityPub::Object
-      actor_or_object.attributed_to?(env.account.actor, dereference: true)
+      unless actor_or_object.attributed_to?(include_deleted: true) || actor_or_object.attributed_to?(env.account.actor, dereference: true)
+        bad_request "searches/form", env: env, message: "Can't retrieve the post's author", query: query
+      end
       object = actor_or_object.save
 
       ok "searches/object", env: env, object: object, message: message, query: query
@@ -59,7 +61,7 @@ class SearchesController
         ok "searches/actors", env: env, actors: actors, message: message, query: query
       end
     end
-  rescue ex : Errors
+  rescue ex : Socket::Addrinfo::Error | JSON::ParseException | Ktistec::WebFinger::Error | Ktistec::Network::Error | Ktistec::JSON_LD::MismatchedIRI | Ktistec::Model::NotFound | URI::Error
     bad_request "searches/form", env: env, message: ex.message, query: query
   end
 
@@ -96,8 +98,4 @@ class SearchesController
   rescue XML::Error | URI::Error
     nil
   end
-
-  private alias Errors = Socket::Addrinfo::Error | JSON::ParseException |
-                         Ktistec::HostMeta::Error | Ktistec::WebFinger::Error | Ktistec::Network::Error |
-                         Ktistec::JSON_LD::MismatchedIRI | NilAssertionError
 end

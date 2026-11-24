@@ -36,6 +36,8 @@ crystal:
       .ui.mini.toggle.checkbox
         input#timeline-no-replies type="checkbox" name="filters" value="no-replies" data-action="change->submit-on-change#change" checked=filters.includes?("no-replies")
         label for="timeline-no-replies" Hide replies
+    .item.noscript
+      button.ui.mini.compact.button type="submit" Apply
 turbo-frame#main-timeline
   - unless Ktistec::ViewHelper.cursor_paginated?(env.params.query)
     - if (_slug = feed.try(&.slug))

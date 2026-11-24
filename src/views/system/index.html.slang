@@ -10,6 +10,8 @@ form.feed-controls.ui.secondary.pointing.menu method="GET" action=system_path da
     .ui.mini.toggle.checkbox
       input#system-no-defaults type="checkbox" name="filters" value="no-defaults" data-action="change->submit-on-change#change" checked=no_defaults
       label for="system-no-defaults" Hide defaulted
+  .item.noscript
+    button.ui.mini.compact.button type="submit" Apply
 - if sources.empty?
   p No log levels differ from the default.
 - else

@@ -30,6 +30,11 @@ Spectator.describe SystemController do
 
         before_each { Log.trace { "test" } }
 
+        it "renders a button to apply the filter" do
+          get "/system", HTML_HEADERS
+          expect(XML.parse_html(response.body).xpath_nodes("//form[@data-controller='submit-on-change']//*[contains(@class,'noscript')]//button[@type='submit']")).not_to be_empty
+        end
+
         it "does not check the toggle" do
           get "/system", HTML_HEADERS
           expect(XML.parse_html(response.body).xpath_nodes("//input[@name='filters'][@value='no-defaults'][@checked]")).to be_empty

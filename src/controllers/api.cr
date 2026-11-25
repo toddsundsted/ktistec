@@ -158,11 +158,7 @@ class APIController
         bad_request "Invalid JSON"
       end
 
-    files =
-      begin
-        env.params.files.presence
-      rescue HTTP::FormData::Error | MIME::Multipart::Error
-      end
+    files = env.params.files.presence if env.multipart?
 
     display_name = params["display_name"]?.as?(String)
     note = params["note"]?.as?(String)

@@ -61,6 +61,10 @@ class HTTP::Server::Context
   def in_turbo_frame?
     @request.headers.has_key?("Turbo-Frame")
   end
+
+  def multipart?
+    @request.headers["Content-Type"]?.try(&.split(";").first.strip.downcase) == "multipart/form-data"
+  end
 end
 
 module Ktistec

@@ -852,6 +852,38 @@ Spectator.describe APIController do
             .to change { actor.reload!.image }.from(nil)
         end
 
+        context "and an icon larger than the profile cap" do
+          let(form) do
+            String.build do |io|
+              HTTP::FormData.build(io) do |form_data|
+                avatar = HTTP::FormData::FileMetadata.new(filename: "avatar.jpg")
+                form_data.file("avatar", IO::Memory.new("x" * (APIController::MAX_PROFILE_REQUEST_BYTES + 1)), avatar)
+              end
+            end
+          end
+
+          it "succeeds" do
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: form
+            expect(response.status_code).to eq(200)
+          end
+        end
+
+        context "and an image larger than the profile cap" do
+          let(form) do
+            String.build do |io|
+              HTTP::FormData.build(io) do |form_data|
+                header_file = HTTP::FormData::FileMetadata.new(filename: "header.jpg")
+                form_data.file("header", IO::Memory.new("x" * (APIController::MAX_PROFILE_REQUEST_BYTES + 1)), header_file)
+              end
+            end
+          end
+
+          it "succeeds" do
+            patch "/api/v1/accounts/update_credentials", headers: headers, body: form
+            expect(response.status_code).to eq(200)
+          end
+        end
+
         it "federates an Update of the actor" do
           expect { patch "/api/v1/accounts/update_credentials", headers: headers, body: form }
             .to change { ActivityPub::Activity::Update.count }.by(1)

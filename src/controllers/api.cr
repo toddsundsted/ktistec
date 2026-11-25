@@ -147,7 +147,10 @@ class APIController
       unauthorized "api/error", error: "The access token is invalid"
     end
 
-    cap_request_body env, MAX_PROFILE_REQUEST_BYTES
+    # multipart bodies carry avatar and header files
+    unless env.multipart?
+      cap_request_body env, MAX_PROFILE_REQUEST_BYTES
+    end
 
     actor = account.actor
 

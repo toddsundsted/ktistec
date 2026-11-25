@@ -55,7 +55,7 @@ module Ktistec
     def call(context)
       return call_next(context) if exclude_match?(context)
 
-      content_type = context.request.headers["Content-Type"]?.try(&.split(";").first.strip.presence)
+      content_type = context.request.headers["Content-Type"]?.try(&.split(";").first.strip.downcase.presence)
       return call_next(context) unless content_type.nil? || @enforced_content_types.includes?(content_type)
       return call_next(context) if @allowed_methods.includes?(context.request.method)
 

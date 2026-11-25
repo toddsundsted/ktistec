@@ -141,17 +141,28 @@ Spectator.describe SessionsController do
     end
 
     context "cookie attributes" do
-      it "sets a secure, host-only cookie" do
-        body = "username=#{username}&password=#{password}"
-        post "/sessions", HTML_HEADERS, body
+      before_each { post "/sessions", HTML_HEADERS, "username=#{username}&password=#{password}" }
 
-        expect(response.status_code).to eq(302)
+      let(cookie) { response.cookies["__Host-AuthToken"] }
 
-        set_cookie_header = response.headers["Set-Cookie"]
-        expect(set_cookie_header).to contain("__Host-AuthToken=")
-        expect(set_cookie_header).to contain("path=/")
-        expect(set_cookie_header).to contain("HttpOnly")
-        expect(set_cookie_header).to contain("Secure")
+      it "is HttpOnly" do
+        expect(cookie.http_only).to be_true
+      end
+
+      it "is Secure" do
+        expect(cookie.secure).to be_true
+      end
+
+      it "is scoped to the root path" do
+        expect(cookie.path).to eq("/")
+      end
+
+      it "is host-only" do
+        expect(cookie.domain).to be_nil
+      end
+
+      it "is SameSite=Lax" do
+        expect(cookie.samesite).to eq(HTTP::Cookie::SameSite::Lax)
       end
     end
   end

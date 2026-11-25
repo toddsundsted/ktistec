@@ -107,6 +107,7 @@ class HTTP::Server::Context
       max_age: 30.days,
       http_only: true,
       secure: true,
+      samesite: HTTP::Cookie::SameSite::Lax,
     )
   end
 end

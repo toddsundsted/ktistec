@@ -36,6 +36,7 @@ require "../framework/signature/cavage"
 require "../framework/signature/rfc9421"
 
 require "../framework/handlers/auth"
+require "../framework/handlers/limits"
 require "../framework/handlers/csrf"
 require "../framework/handlers/method"
 require "../framework/handlers/rewrite"

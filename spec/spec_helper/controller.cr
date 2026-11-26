@@ -1,4 +1,5 @@
 require "../../src/framework/handlers/auth"
+require "../../src/framework/handlers/limits"
 require "../../src/framework/handlers/csrf"
 require "../../src/framework/handlers/method"
 require "../../src/framework/handlers/rewrite"

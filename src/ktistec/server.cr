@@ -4,16 +4,53 @@
   {% raise "Crystal 1.20.0 is not supported (lexer regression in percent-literal macro interpolation): use 1.19.x or >= 1.20.1" %}
 {% end %}
 
-require "../rules/**"       # ameba:disable Ktistec/NoRequireGlob
-require "../framework/**"   # ameba:disable Ktistec/NoRequireGlob
+require "../rules/**" # ameba:disable Ktistec/NoRequireGlob
+
+require "../framework/assets"
+require "../framework/controller"
+require "../framework/database"
+require "../framework/exceptions"
+require "../framework/framework"
+require "../framework/json_ld"
+require "../framework/jwt"
+require "../framework/key_pair"
+require "../framework/model"
+require "../framework/observable"
+require "../framework/signature"
+require "../framework/themes"
+require "../framework/topic"
+require "../framework/util"
+require "../framework/ext/array"
+require "../framework/ext/context"
+require "../framework/ext/hash"
+require "../framework/ext/kemal"
+require "../framework/ext/log"
+require "../framework/ext/openssl"
+require "../framework/ext/params"
+require "../framework/ext/sqlite3"
+require "../framework/model/common"
+require "../framework/model/deletable"
+require "../framework/model/polymorphic"
+require "../framework/model/undoable"
+require "../framework/signature/cavage"
+require "../framework/signature/rfc9421"
+
+require "../framework/handlers/auth"
+require "../framework/handlers/csrf"
+require "../framework/handlers/method"
+require "../framework/handlers/rewrite"
+require "../handlers/canonical"
+require "../handlers/upload_headers"
+
 require "../models/**"      # ameba:disable Ktistec/NoRequireGlob
 require "../controllers/**" # ameba:disable Ktistec/NoRequireGlob
-require "../handlers/**"    # ameba:disable Ktistec/NoRequireGlob
 require "../workers/**"     # ameba:disable Ktistec/NoRequireGlob
-require "../services/feed/judging"
-require "../services/feed/queue"
+
 require "../services/feed/backend/criteria"
+require "../services/feed/backend/executable"
+
 require "../services/feed/judges"
+require "../services/feed/queue"
 require "../services/feed/revisions"
 
 Ktistec::Server.run do

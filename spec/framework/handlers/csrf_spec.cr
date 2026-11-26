@@ -22,7 +22,7 @@
 
 require "spectator"
 
-require "../../src/framework/csrf"
+require "../../../src/framework/handlers/csrf"
 
 private def process_request_and_return_response(handler, request)
   io = IO::Memory.new

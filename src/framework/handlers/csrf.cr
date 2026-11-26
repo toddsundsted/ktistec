@@ -22,8 +22,8 @@
 
 require "kemal"
 
-require "./ext/context"
-require "./controller"
+require "../ext/context"
+require "../controller"
 
 module Ktistec
   # CSRF preventing middleware.

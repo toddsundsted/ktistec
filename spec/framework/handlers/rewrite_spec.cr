@@ -1,6 +1,6 @@
-require "../../src/framework/rewrite"
+require "../../../src/framework/handlers/rewrite"
 
-require "../spec_helper/controller"
+require "../../spec_helper/controller"
 
 class FooBarController
   include Ktistec::Controller

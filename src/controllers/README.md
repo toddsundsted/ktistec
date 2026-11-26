@@ -26,7 +26,7 @@ In Ktistec:
 
 ### How It Works
 
-The `Ktistec::Auth` handler (`src/framework/auth.cr`) runs before every request:
+The `Ktistec::Auth` handler (`src/framework/handlers/auth.cr`) runs before every request:
 
 1. Checks if `env.session.account?` returns an authenticated account
 2. If authenticated (or route is excluded via `skip_auth`), allows request to proceed
@@ -415,6 +415,6 @@ end
 - Add a 413 wire-up spec per capped route
 
 For examples, refer to:
-- Framework code: `src/framework/auth.cr`, `src/framework/ext/context.cr`
+- Framework code: `src/framework/handlers/auth.cr`, `src/framework/ext/context.cr`
 - Example controllers: `src/controllers/filters.cr`, `src/controllers/relationships.cr`, `src/controllers/uploads.cr`
 - Test examples: `spec/controllers/filters_spec.cr`

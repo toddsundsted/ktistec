@@ -1,7 +1,7 @@
-require "../../src/framework/method"
-require "../../src/framework/controller"
+require "../../../src/framework/handlers/method"
+require "../../../src/framework/controller"
 
-require "../spec_helper/controller"
+require "../../spec_helper/controller"
 
 class FooBarController
   include Ktistec::Controller

@@ -1447,7 +1447,7 @@ private module ActorModelHelper
     actor_iri = json.dig?("@id").try(&.as_s?)
     {
       "iri"            => actor_iri,
-      "_type"          => json.dig?("@type").try(&.as_s.split("#").last),
+      "_type"          => json.dig?("@type").try(&.as_s?).try(&.split("#").last),
       "username"       => Ktistec::JSON_LD.dig?(json, "https://www.w3.org/ns/activitystreams#preferredUsername"),
       "webfinger"      => Ktistec::JSON_LD.dig?(json, "https://purl.archive.org/socialweb/webfinger#webfinger").try(&.lchop("acct:")),
       "pem_public_key" => Ktistec::JSON_LD.dig?(json, "https://w3id.org/security#publicKey", "https://w3id.org/security#publicKeyPem"),
@@ -1484,9 +1484,9 @@ private module ActorModelHelper
 
   def self.map_icon?(json, *selector)
     json.dig?(*selector).try do |icons|
-      if icons.as_a?
+      if (array = icons.as_a?)
         icon =
-          icons.as_a.map do |ico|
+          array.map do |ico|
             if (width = Ktistec::JSON_LD.dig?(ico, "https://www.w3.org/ns/activitystreams#width", as: Int64)) && (height = Ktistec::JSON_LD.dig?(ico, "https://www.w3.org/ns/activitystreams#height", as: Int64))
               {width * height, ico}
             else

@@ -16,6 +16,7 @@ require "../src/ameba/ktistec/trailing_comma_on_stacked"
 require "../src/ameba/ktistec/assert_safe_whitelist"
 require "../src/ameba/ktistec/parse_html_whitelist"
 require "../src/ameba/ktistec/no_require_glob"
+require "../src/ameba/ktistec/no_raising_json_cast"
 
 # Slang and ECR templates compile to Crystal at build time. Ameba
 # normally only scans `.cr` files. These monkey-patches bridge that:

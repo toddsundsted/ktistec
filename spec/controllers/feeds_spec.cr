@@ -661,16 +661,6 @@ Spectator.describe FeedsController do
         expect(response.status_code).to eq(404)
       end
 
-      it "returns 413 if the body is too large" do
-        post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=#{"x" * FeedsController::MAX_REQUEST_BYTES}"
-        expect(response.status_code).to eq(413)
-      end
-
-      it "returns 413 if the body is too large" do
-        post "/actors/#{actor.username}/feeds", JSON_HEADERS, %({"name":"Robotics","any":"#{"x" * FeedsController::MAX_REQUEST_BYTES}"})
-        expect(response.status_code).to eq(413)
-      end
-
       it "creates a feed" do
         expect { post "/actors/#{actor.username}/feeds", FORM_HEADERS, "name=Robotics&any=%23cnc" }
           .to change { Feed.count }.by(1)
@@ -1265,16 +1255,6 @@ Spectator.describe FeedsController do
           post "/actors/#{actor.username}/feeds/#{other.id}", JSON_HEADERS, %({"name":"Other","any":"#robotics"})
           expect(response.status_code).to eq(404)
         end
-      end
-
-      it "returns 413 if the body is too large" do
-        post "/actors/#{actor.username}/feeds/#{feed.id}", FORM_HEADERS, "name=Robotics&any=#{"x" * FeedsController::MAX_REQUEST_BYTES}"
-        expect(response.status_code).to eq(413)
-      end
-
-      it "returns 413 if the body is too large" do
-        post "/actors/#{actor.username}/feeds/#{feed.id}", JSON_HEADERS, %({"name":"Robotics","any":"#{"x" * FeedsController::MAX_REQUEST_BYTES}"})
-        expect(response.status_code).to eq(413)
       end
 
       def robotics_feed

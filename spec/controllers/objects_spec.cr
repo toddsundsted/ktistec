@@ -2879,16 +2879,6 @@ Spectator.describe ObjectsController do
         expect(response.status_code).to eq(400)
       end
 
-      it "returns 413 if the body is too large" do
-        post_form("x" * ObjectsController::MAX_REQUEST_BYTES)
-        expect(response.status_code).to eq(413)
-      end
-
-      it "returns 413 if the body is too large" do
-        post_json("x" * ObjectsController::MAX_REQUEST_BYTES)
-        expect(response.status_code).to eq(413)
-      end
-
       it "returns 404 if the user can't view the object" do
         post "/remote/objects/#{notvisible.id}/labels", FORM_DATA, "labels=foo"
         expect(response.status_code).to eq(404)

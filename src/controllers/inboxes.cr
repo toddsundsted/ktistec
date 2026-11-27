@@ -13,8 +13,6 @@ class InboxesController
 
   Log = ::Log.for("inbox")
 
-  MAX_INBOX_REQUEST_BYTES = 1_048_576
-
   # How an inbound activity was verified.
   #
   enum Verification
@@ -334,8 +332,6 @@ class InboxesController
     if env.params.url["username"]? && account.nil?
       gone
     end
-
-    cap_request_body env, MAX_INBOX_REQUEST_BYTES
 
     unless (body = env.request.body.try(&.gets_to_end).presence)
       bad_request("Body Is Blank")

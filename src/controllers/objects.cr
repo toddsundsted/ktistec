@@ -15,8 +15,6 @@ class ObjectsController
 
   skip_auth ["/objects/:id", "/objects/:id/replies", "/objects/:id/thread"], GET
 
-  MAX_REQUEST_BYTES = 4_096
-
   # Authorizes object access.
   #
   # Returns the object if the user is authorized to view it, `nil`
@@ -538,8 +536,6 @@ class ObjectsController
 
   post "/remote/objects/:id/labels" do |env|
     not_found unless (object = get_object(env, id_param(env))) && !object.draft?
-
-    cap_request_body env, MAX_REQUEST_BYTES
 
     bad_request unless (names = label_names(env))
 

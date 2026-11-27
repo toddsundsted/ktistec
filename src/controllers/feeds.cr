@@ -44,8 +44,6 @@ require "../services/feed/queue"
 class FeedsController
   include Ktistec::Controller
 
-  MAX_REQUEST_BYTES = 16_384
-
   # The number of a draft's most recent candidates a preview queues
   # to be judged.
   #
@@ -124,8 +122,6 @@ class FeedsController
       not_found
     end
 
-    cap_request_body env, MAX_REQUEST_BYTES
-
     backend = backend_param(env)
     params = feed_params(env, backend)
 
@@ -188,8 +184,6 @@ class FeedsController
     unless (feed = get_feed_with_ownership(env))
       not_found
     end
-
-    cap_request_body env, MAX_REQUEST_BYTES
 
     params = feed_params(env, feed.backend)
 

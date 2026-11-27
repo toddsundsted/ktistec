@@ -219,7 +219,7 @@ module ActivityPub
                 end
               end
             else
-              raise TypeCastError.new("unsupported JSON type")
+              raise Ktistec::JSON_LD::Error.new("unsupported JSON type")
             end
           end
         end

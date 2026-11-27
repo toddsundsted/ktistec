@@ -19,12 +19,20 @@ Spectator.describe ActivityPub do
       expect(described_class.from_json_ld("{}", default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
     end
 
+    it "defaults the instance to the specified class" do
+      expect(described_class.from_json_ld(%q[{"@type":"FooBar"}], default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
+    end
+
     it "raises an error if the type is not supported" do
       expect { described_class.from_json_ld(%q[{"@type":"FooBar"}]) }.to raise_error(NotImplementedError)
     end
 
-    it "defaults the instance to the specified class" do
-      expect(described_class.from_json_ld(%q[{"@type":"FooBar"}], default: ActivityPub::Collection)).to be_a(ActivityPub::Collection)
+    it "raises an error if the type is not a string" do
+      expect { described_class.from_json_ld(%q[{"@type":123}]) }.to raise_error(Ktistec::JSON_LD::Error)
+    end
+
+    it "raises an error if the id is not a string" do
+      expect { described_class.from_json_ld(%q[{"@type":"Note","@id":123}]) }.to raise_error(Ktistec::JSON_LD::Error)
     end
 
     it "instantiates the correct subclass" do
@@ -122,16 +130,6 @@ Spectator.describe ActivityPub do
         described_class.from_json_ld(json).save
         expect(ActivityPub::Activity.find?(undone_activity.iri, include_undone: true).try(&.summary)).to eq("original")
       end
-    end
-  end
-
-  describe ".from_json_ld?" do
-    it "returns nil if the type is not specified" do
-      expect(described_class.from_json_ld?("{}")).to be_nil
-    end
-
-    it "returns nil if the type is not supported" do
-      expect(described_class.from_json_ld?(%q[{"@type":"FooBar"}])).to be_nil
     end
   end
 

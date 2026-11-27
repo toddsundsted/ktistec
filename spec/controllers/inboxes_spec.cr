@@ -266,6 +266,16 @@ Spectator.describe InboxesController do
       end
     end
 
+    context "given a body that is not an activity" do
+      let(body) { %q({"@context":"https://www.w3.org/ns/activitystreams","type":"Note","id":"https://remote/note"}) }
+
+      it "rejects the body" do
+        post "/actors/#{actor.username}/inbox", headers, body
+        expect(JSON.parse(response.body)["msg"]).to eq("invalid json-ld")
+        expect(response.status_code).to eq(400)
+      end
+    end
+
     it "returns 400 if activity can't be verified" do
       post "/actors/#{actor.username}/inbox", headers, activity.to_json_ld
       expect(JSON.parse(response.body)["msg"]).to eq("can't be verified")

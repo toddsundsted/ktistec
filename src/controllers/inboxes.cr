@@ -365,6 +365,9 @@ class InboxesController
       rescue ex : Ktistec::JSON_LD::MismatchedIRI
         Log.debug { "[#{request_id}] owner mismatch: #{ex.message}" }
         bad_request("Owner Mismatch")
+      rescue ex : Ktistec::JSON_LD::Error
+        Log.debug { "[#{request_id}] invalid JSON-LD: #{ex.message}" }
+        bad_request("Invalid JSON-LD")
       end
 
     outer_actor_iri =

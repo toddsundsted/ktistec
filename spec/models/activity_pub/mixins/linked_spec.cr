@@ -684,7 +684,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(TypeCastError)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
       end
     end
 
@@ -1129,7 +1129,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects[object.iri] = %Q|{"@type":5}| }
 
       it "raises an error" do
-        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(TypeCastError)
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
       end
     end
 

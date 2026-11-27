@@ -69,7 +69,7 @@ class Task
           ActivityPub::Actor.dereference(source, actor.iri, ignore_cached: true, deadline: nil)
         rescue Ktistec::Network::TransientError
           nil
-        rescue Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+        rescue Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | NotImplementedError
           actor.down!
           nil
         end

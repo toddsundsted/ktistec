@@ -115,7 +115,7 @@ module Ktistec
         rescue ::Ktistec::Model::NotFound
           # absence is not a failure
           nil
-        rescue ex : ::Ktistec::Network::Error | ::Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+        rescue ex : ::Ktistec::Network::Error | ::Ktistec::JSON_LD::Error | JSON::ParseException | NotImplementedError
           Log.info { "#{self}.dereference? - #{iri} - #{ex.message}" }
           nil
         end
@@ -173,7 +173,7 @@ module Ktistec
                     rescue ::Ktistec::Model::NotFound
                       # absence is not a failure
                       nil
-                    rescue ex : ::Ktistec::Network::Error | ::Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+                    rescue ex : ::Ktistec::Network::Error | ::Ktistec::JSON_LD::Error | JSON::ParseException | NotImplementedError
                       Log.info { "#{self.class}##{{{name.stringify}}}? - #{self.{{foreign_key}}} -- #{ex.message}" }
                       nil
                     end
@@ -190,7 +190,8 @@ module Ktistec
                             headers = HTTP::Headers{"Accept" => Ktistec::Constants::ACCEPT_HEADER}
                             Ktistec::Network.get(key_pair, {{foreign_key}}, headers, deadline: deadline) do |response|
                               if Ktistec::Model::Linked.json_response?(response)
-                                {{name}}_ = ActivityPub.from_json_ld(response.body, **options).as({{clazz}})
+                                instance = ActivityPub.from_json_ld(response.body, **options)
+                                {{name}}_ = instance.as?({{clazz}}) || raise ::Ktistec::JSON_LD::Error.new("#{instance.class} is not a #{{{clazz}}}")
                                 if {{name}}_
                                   unless {{name}}_.iri_matches?({{foreign_key}}) || {{name}}_.iri_matches?(response.final_url)
                                     raise ::Ktistec::JSON_LD::MismatchedIRI.new("IRI mismatch: requested #{{{foreign_key}}}, served from #{response.final_url}, got #{{{name}}_.iri}")

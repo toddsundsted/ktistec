@@ -175,7 +175,7 @@ class InboxesController
     Log.trace { "[#{request_id}] dereference failed (transient): #{ex.message}" }
     transient.failure = true
     nil
-  rescue ex : Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+  rescue ex : Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | NotImplementedError
     Log.trace { "[#{request_id}] dereference failed (permanent): #{ex.message}" }
     nil
   end

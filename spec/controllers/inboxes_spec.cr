@@ -234,6 +234,26 @@ Spectator.describe InboxesController do
       expect(response.status_code).to eq(400)
     end
 
+    context "given a body that is not JSON" do
+      let(body) { %q({"type":) }
+
+      it "rejects the body" do
+        post "/actors/#{actor.username}/inbox", headers, body
+        expect(JSON.parse(response.body)["msg"]).to eq("invalid json")
+        expect(response.status_code).to eq(400)
+      end
+    end
+
+    context "given a body that is not a JSON-LD object" do
+      let(body) { %q([{"type":"Create"}]) }
+
+      it "rejects the body" do
+        post "/actors/#{actor.username}/inbox", headers, body
+        expect(JSON.parse(response.body)["msg"]).to eq("invalid json-ld")
+        expect(response.status_code).to eq(400)
+      end
+    end
+
     context "given a body that is not valid UTF-8" do
       let(body) { %Q({"a":"\xFF"}) }
 
@@ -246,18 +266,14 @@ Spectator.describe InboxesController do
       end
     end
 
-    it "returns 413 when Content-Length exceeds the cap" do
-      body = "a" * (InboxesController::MAX_INBOX_REQUEST_BYTES + 1)
-      post "/actors/#{actor.username}/inbox", headers, body
-      expect(JSON.parse(response.body)["msg"]).to eq("payload too large")
-      expect(response.status_code).to eq(413)
-    end
+    context "given a body that is not an activity" do
+      let(body) { %q({"@context":"https://www.w3.org/ns/activitystreams","type":"Note","id":"https://remote/note"}) }
 
-    it "returns 413 when the body size exceeds the cap" do
-      body = IO::Memory.new("a" * (InboxesController::MAX_INBOX_REQUEST_BYTES + 1))
-      post "/actors/#{actor.username}/inbox", headers, body
-      expect(JSON.parse(response.body)["msg"]).to eq("payload too large")
-      expect(response.status_code).to eq(413)
+      it "rejects the body" do
+        post "/actors/#{actor.username}/inbox", headers, body
+        expect(JSON.parse(response.body)["msg"]).to eq("invalid json-ld")
+        expect(response.status_code).to eq(400)
+      end
     end
 
     it "returns 400 if activity can't be verified" do

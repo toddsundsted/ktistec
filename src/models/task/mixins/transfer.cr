@@ -135,7 +135,7 @@ class Task
           transient_recipients << recipient
           Log.debug { message }
           next
-        rescue Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+        rescue Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | NotImplementedError
           message = "recipient does not exist: #{recipient}"
           failures << Failure.new(recipient, message)
           Log.debug { message }

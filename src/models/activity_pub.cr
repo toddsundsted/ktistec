@@ -27,14 +27,24 @@ module ActivityPub
     end
   end
 
+  # Returns the string value of the JSON-LD keyword `key`, if present.
+  #
+  private def self.keyword?(json, key)
+    if (value = json[key]?)
+      value.as_s? || raise Ktistec::JSON_LD::Error.new("#{key} is not a string")
+    end
+  end
+
   # Note: Take care when modifying this method. In particular,
   # avoid calling `map` on a subclass directly unless the subclass
   # explicitly defines it!
 
   def self.from_json_ld(json, **options)
     json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
+    type = keyword?(json, "@type").try(&.split("#").last)
+    iri = keyword?(json, "@id")
     {% begin %}
-      case (type = json["@type"]?.try(&.as_s.split("#").last))
+      case type
       {% for includer in @type.includers %}
         {% for subclass in includer.all_subclasses << includer %}
           {% name = subclass.stringify.split("::").last %}
@@ -54,13 +64,13 @@ module ActivityPub
           else
             attrs["type"] = "{{includer}}::#{type}"
           end
-          find_or_build({{includer}}, {{subclass}}, json["@id"]?.try(&.as_s), attrs)
+          find_or_build({{includer}}, {{subclass}}, iri, attrs)
         {% end %}
       {% end %}
       else
         if (default = options[:default]?)
           attrs = default.map(json, **options)
-          find_or_build(default, default, json["@id"]?.try(&.as_s), attrs)
+          find_or_build(default, default, iri, attrs)
         elsif (type = json["@type"]?)
           raise NotImplementedError.new(type.as_s)
         else
@@ -70,22 +80,13 @@ module ActivityPub
     {% end %}
   end
 
-  def self.from_json_ld?(json, **options)
-    from_json_ld(json, **options)
-  rescue ex : NotImplementedError | TypeCastError
-    Log.debug { ex.message }
-  end
-
-  # the following methods wrap the methods above and ensure that the
+  # the following method wraps the method above and ensures that the
   # returned instance is of the correct type
 
   macro included
     def self.from_json_ld(json, **options)
-      ActivityPub.from_json_ld(json, **options.merge(default: self)).as(self)
-    end
-
-    def self.from_json_ld?(json, **options)
-      ActivityPub.from_json_ld?(json, **options.merge(default: self)).as(self?)
+      instance = ActivityPub.from_json_ld(json, **options.merge(default: self))
+      instance.as?(self) || raise ::Ktistec::JSON_LD::Error.new("#{instance.class} is not a #{self}")
     end
   end
 

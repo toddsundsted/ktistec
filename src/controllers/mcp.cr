@@ -12,8 +12,6 @@ class MCPController
 
   Log = ::Log.for("mcp")
 
-  MAX_REQUEST_BYTES = 1_048_576
-
   skip_auth ["/mcp"], OPTIONS, GET, POST # skip the built-in authentication and implement custom authentication
 
   SERVER_VERSIONS = %w[2024-11-05 2025-03-26 2025-06-18]
@@ -68,8 +66,6 @@ class MCPController
     unless (account = authenticate_request(env))
       unauthorized
     end
-
-    cap_request_body env, MAX_REQUEST_BYTES
 
     unless accepts?("application/json")
       bad_request "Bad Request"

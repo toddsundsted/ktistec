@@ -130,7 +130,12 @@ class StreamingController
 
   @@sessions_pools = Hash(Session, ConnectionPool).new { |h, k| h[k] = ConnectionPool.new(5) }
 
+  # Kemal serves HEAD with the GET handler but discards the body, so
+  # writes never fail and a subscription would never end. Respond
+  # with the headers only.
+  #
   private macro subscribe(*subjects, &block)
+    next if env.request.method == "HEAD"
     Ktistec::Topic{{{subjects.splat}}}.tap do |%topic|
       @@sessions_pools[env.session].push(env.response.@io)
       %topic.subscribe(timeout: 1.minute) do |{{block.args.join(",").id}}|
@@ -147,13 +152,29 @@ class StreamingController
     end
   end
 
+  get "/stream/everything" do |env|
+    setup_response(env)
+    subscribe "/actor/refresh", everything_path.to_s do |subject, values|
+      values.each do |value|
+        case subject
+        when "/actor/refresh"
+          if (id = value.to_i64?)
+            replace_actor_icon(env.response, id)
+          end
+        else
+          stream_refresh(env.response)
+        end
+      end
+    end
+  end
+
   get "/stream/mentions/:mention" do |env|
     mention = env.params.url["mention"]
     if Tag::Mention.all_objects_count(mention) < 1
       not_found
     end
     href = Tag::Mention.dominant_href(mention)
-    setup_response(env.response)
+    setup_response(env)
     subscribe "/actor/refresh", mention_path(mention).to_s do |subject, values|
       values.each do |value|
         case subject
@@ -179,7 +200,7 @@ class StreamingController
     if Tag::Hashtag.all_objects_count(hashtag) < 1
       not_found
     end
-    setup_response(env.response)
+    setup_response(env)
     subscribe "/actor/refresh", hashtag_path(hashtag).to_s do |subject, values|
       values.each do |value|
         case subject
@@ -206,7 +227,7 @@ class StreamingController
     unless ActivityPub::Object.find?(id)
       not_found
     end
-    setup_response(env.response)
+    setup_response(env)
     subscribe "/actor/refresh" do |subject, values|
       values.each do |value|
         case subject
@@ -224,7 +245,7 @@ class StreamingController
     unless (object = ActivityPub::Object.find?(id))
       not_found
     end
-    setup_response(env.response)
+    setup_response(env)
     subscribe "/actor/refresh", object.thread! do |subject, values|
       values.each do |value|
         case subject
@@ -251,7 +272,7 @@ class StreamingController
     unless (actor = ActivityPub::Actor.find?(id))
       not_found
     end
-    setup_response(env.response)
+    setup_response(env)
     subscribe "/actor/refresh", "/actor/#{actor.id}/refresh" do |subject, values|
       values.each do |value|
         case subject
@@ -267,7 +288,7 @@ class StreamingController
   end
 
   get "/stream/actor/homepage" do |env|
-    setup_response(env.response)
+    setup_response(env)
     if env.request.headers["Last-Event-ID"]? =~ /^(\d+):(\d+)$/ && (seconds = $1.to_i?) && (count = $2.to_i?)
       since = Time.unix(seconds)
       first_count = count
@@ -322,7 +343,7 @@ class StreamingController
   end
 
   get "/stream/actor/deck" do |env|
-    setup_response(env.response)
+    setup_response(env)
 
     actor = env.account.actor
     feeds = DeckController.panes_for(env.account)
@@ -399,7 +420,7 @@ class StreamingController
     unless (feed = Feed.find?(actor, slug))
       not_found
     end
-    setup_response(env.response)
+    setup_response(env)
     baseline = open_feed(env.response, feed, env.request.headers["Last-Event-ID"]?)
     subscribe "/actor/refresh", "#{actor_path(actor)}/notifications", Rules::Feeds.view_for(feed).subjects(env.account.username).first do |subject, values|
       values.each do |value|
@@ -446,7 +467,7 @@ class StreamingController
     unless (feed = Feed.find?(id)) && feed.owner_iri == env.account.actor.iri
       not_found
     end
-    setup_response(env.response)
+    setup_response(env)
     replace_feed_preview(env.response, env, feed)
     subscribe "/actor/refresh", Rules::Feeds.view_for(feed).subjects(env.account.username).first do |subject, values|
       values.each do |value|
@@ -462,29 +483,17 @@ class StreamingController
     end
   end
 
-  get "/stream/everything" do |env|
-    setup_response(env.response)
-    subscribe "/actor/refresh", everything_path.to_s do |subject, values|
-      values.each do |value|
-        case subject
-        when "/actor/refresh"
-          if (id = value.to_i64?)
-            replace_actor_icon(env.response, id)
-          end
-        else
-          stream_refresh(env.response)
-        end
-      end
-    end
-  end
-
-  def self.setup_response(response : HTTP::Server::Response)
+  def self.setup_response(env : HTTP::Server::Context)
+    response = env.response
     response.content_type = "text/event-stream"
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
-    # call `upgrade` to write the headers to the output
-    response.upgrade { }
-    response.flush
+    # call `upgrade` to write the headers to the output now. Kemal
+    # writes the headers of a HEAD response when it closes it.
+    unless env.request.method == "HEAD"
+      response.upgrade { }
+      response.flush
+    end
   end
 
   # Sends a no-op action.

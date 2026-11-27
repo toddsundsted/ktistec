@@ -480,11 +480,6 @@ Spectator.describe DeckController do
         expect(response.status_code).to eq(400)
       end
 
-      it "returns 413 if the body is too large" do
-        move(woodworking.id, "9" * DeckController::MAX_REQUEST_BYTES)
-        expect(response.status_code).to eq(413)
-      end
-
       it "returns 302" do
         move(woodworking.id, 0, FORM_HEADERS)
         expect(response.status_code).to eq(302)

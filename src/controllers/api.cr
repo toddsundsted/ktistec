@@ -26,10 +26,6 @@ class APIController
 
   Log = ::Log.for("api")
 
-  MAX_PROFILE_REQUEST_BYTES = 16_384
-  MAX_STATUS_REQUEST_BYTES  = 65_536
-  MAX_VOTE_REQUEST_BYTES    =  4_096
-
   # `Ktistec::Auth` is the cookie-backed web-UI gate. the
   # Mastodon-compatible API authenticates per-route via
   # `env.account?` and returns its own JSON errors, so `/api/*`
@@ -49,8 +45,6 @@ class APIController
   end
 
   post "/api/v1/apps" do |env|
-    cap_request_body env, OAuth2Controller::MAX_REQUEST_BYTES
-
     client_name : String
     redirect_uris : Array(String)
     scopes : String
@@ -147,8 +141,6 @@ class APIController
       unauthorized "api/error", error: "The access token is invalid"
     end
 
-    cap_request_body env, MAX_PROFILE_REQUEST_BYTES
-
     actor = account.actor
 
     params =
@@ -158,11 +150,7 @@ class APIController
         bad_request "Invalid JSON"
       end
 
-    files =
-      begin
-        env.params.files.presence
-      rescue HTTP::FormData::Error | MIME::Multipart::Error
-      end
+    files = env.params.files.presence if env.multipart?
 
     display_name = params["display_name"]?.as?(String)
     note = params["note"]?.as?(String)
@@ -508,8 +496,6 @@ class APIController
       unauthorized "api/error", error: "The access token is invalid"
     end
 
-    cap_request_body env, MAX_STATUS_REQUEST_BYTES
-
     params = normalize_params(env.params.body.presence || env.params.json)
 
     unless (status_text = params["status"]?.try(&.as(String)).presence)
@@ -767,8 +753,6 @@ class APIController
     unless (account = env.account?)
       unauthorized "api/error", error: "The access token is invalid"
     end
-
-    cap_request_body env, MAX_VOTE_REQUEST_BYTES
 
     unless (poll = Poll.find?(id_param(env)))
       not_found "api/error", error: "Poll not found"

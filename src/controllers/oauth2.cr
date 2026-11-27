@@ -12,8 +12,6 @@ class OAuth2Controller
 
   Log = ::Log.for("oauth2")
 
-  MAX_REQUEST_BYTES = 16_384
-
   skip_auth ["/oauth/register", "/oauth/token"], OPTIONS, POST
 
   private macro set_headers
@@ -31,8 +29,6 @@ class OAuth2Controller
 
   post "/oauth/register" do |env|
     set_headers
-
-    cap_request_body env, MAX_REQUEST_BYTES
 
     body = env.request.body.not_nil!.gets_to_end
     unless body.valid_encoding?
@@ -236,8 +232,6 @@ class OAuth2Controller
 
   post "/oauth/token" do |env|
     set_headers
-
-    cap_request_body env, MAX_REQUEST_BYTES
 
     params =
       begin

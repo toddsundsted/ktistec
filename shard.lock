@@ -10,7 +10,7 @@ shards:
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.14.0
+    version: 0.15.0
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
@@ -34,8 +34,9 @@ shards:
 
   spectator:
     git: https://gitlab.com/arctic-fox/spectator.git
-    version: 0.12.2
+    version: 0.12.4
 
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
-    version: 0.22.0
+    version: 0.24.0
+

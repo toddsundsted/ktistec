@@ -12,8 +12,6 @@ class DeckController
 
   POSTS_PER_PANE = 20
 
-  MAX_REQUEST_BYTES = 4_096
-
   # Authorizes access to a user's deck.
   #
   # Returns the account if the authenticated user owns the account,
@@ -77,8 +75,6 @@ class DeckController
     unless (account = get_account_with_ownership(env))
       not_found
     end
-
-    cap_request_body env, MAX_REQUEST_BYTES
 
     params = normalize_params(env.params.body.presence || env.params.json)
 

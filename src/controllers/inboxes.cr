@@ -13,8 +13,6 @@ class InboxesController
 
   Log = ::Log.for("inbox")
 
-  MAX_INBOX_REQUEST_BYTES = 1_048_576
-
   # How an inbound activity was verified.
   #
   enum Verification
@@ -177,7 +175,7 @@ class InboxesController
     Log.trace { "[#{request_id}] dereference failed (transient): #{ex.message}" }
     transient.failure = true
     nil
-  rescue ex : Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | TypeCastError | NotImplementedError
+  rescue ex : Ktistec::Network::PermanentError | Ktistec::Model::NotFound | Ktistec::JSON_LD::Error | JSON::ParseException | NotImplementedError
     Log.trace { "[#{request_id}] dereference failed (permanent): #{ex.message}" }
     nil
   end
@@ -335,8 +333,6 @@ class InboxesController
       gone
     end
 
-    cap_request_body env, MAX_INBOX_REQUEST_BYTES
-
     unless (body = env.request.body.try(&.gets_to_end).presence)
       bad_request("Body Is Blank")
     end
@@ -347,7 +343,15 @@ class InboxesController
 
     Log.trace { "[#{request_id}] new post" }
 
-    json_ld = Ktistec::JSON_LD.expand(JSON.parse(body))
+    json_ld =
+      begin
+        Ktistec::JSON_LD.expand(JSON.parse(body))
+      rescue JSON::ParseException
+        bad_request("Invalid JSON")
+      rescue ex : Ktistec::JSON_LD::Error
+        Log.debug { "[#{request_id}] invalid JSON-LD: #{ex.message}" }
+        bad_request("Invalid JSON-LD")
+      end
 
     # detect a community-relayed activity.
 
@@ -361,6 +365,9 @@ class InboxesController
       rescue ex : Ktistec::JSON_LD::MismatchedIRI
         Log.debug { "[#{request_id}] owner mismatch: #{ex.message}" }
         bad_request("Owner Mismatch")
+      rescue ex : Ktistec::JSON_LD::Error
+        Log.debug { "[#{request_id}] invalid JSON-LD: #{ex.message}" }
+        bad_request("Invalid JSON-LD")
       end
 
     outer_actor_iri =

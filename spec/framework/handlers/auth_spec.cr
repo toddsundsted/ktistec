@@ -1,8 +1,8 @@
-require "../../src/framework/auth"
-require "../../src/framework/controller"
+require "../../../src/framework/handlers/auth"
+require "../../../src/framework/controller"
 
-require "../spec_helper/controller"
-require "../spec_helper/factory"
+require "../../spec_helper/controller"
+require "../../spec_helper/factory"
 
 class FooBarController
   include Ktistec::Controller

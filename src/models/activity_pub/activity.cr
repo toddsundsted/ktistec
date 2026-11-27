@@ -116,8 +116,8 @@ module ActivityPub
         activity_origin = Ktistec::Util.origin?(json.dig?("@id").try(&.as_s?))
         actor_origin = Ktistec::Util.origin?(Ktistec::JSON_LD.dig_id?(json, "https://www.w3.org/ns/activitystreams#actor"))
         {
-          "iri"       => json.dig?("@id").try(&.as_s),
-          "_type"     => json.dig?("@type").try(&.as_s.split("#").last),
+          "iri"       => json.dig?("@id").try(&.as_s?),
+          "_type"     => json.dig?("@type").try(&.as_s?).try(&.split("#").last),
           "published" => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#published"),
           # pick up the actor's id and the embedded actor if the origins match
           "actor_iri" => if (actor = Ktistec::JSON_LD.dig_first?(json, "https://www.w3.org/ns/activitystreams#actor"))

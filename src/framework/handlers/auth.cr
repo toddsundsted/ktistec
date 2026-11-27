@@ -1,6 +1,6 @@
 require "kemal"
 
-require "./controller"
+require "../controller"
 
 module Ktistec
   # Authentication middleware.

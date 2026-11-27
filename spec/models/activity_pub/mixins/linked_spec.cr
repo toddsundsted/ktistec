@@ -448,6 +448,17 @@ Spectator.describe Ktistec::Model::Linked do
       end
     end
 
+    context "given a document of another class" do
+      before_each do
+        HTTP::Client.objects[object.iri] = %Q|{"@id":"#{object.iri}","@type":"Note"}|
+        subject.linked_model_iri = object.iri
+      end
+
+      it "does not raise an error" do
+        expect { subject.linked_model?(key_pair, dereference: true) }.not_to raise_error
+      end
+    end
+
     context "when the deadline has passed" do
       it "does not fetch and does not return the object" do
         expect(subject.linked_model?(key_pair, dereference: true, deadline: Time.instant - 1.second)).to be_nil
@@ -684,7 +695,7 @@ Spectator.describe Ktistec::Model::Linked do
       end
 
       it "raises an error" do
-        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(TypeCastError)
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
       end
     end
 
@@ -696,6 +707,17 @@ Spectator.describe Ktistec::Model::Linked do
 
       it "raises an error" do
         expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(NotImplementedError)
+      end
+    end
+
+    context "given a document of another class" do
+      before_each do
+        HTTP::Client.objects[object.iri] = %Q|{"@id":"#{object.iri}","@type":"Note"}|
+        subject.linked_model_iri = object.iri
+      end
+
+      it "raises an error" do
+        expect { subject.linked_model(key_pair, dereference: true, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
       end
     end
   end
@@ -1129,7 +1151,7 @@ Spectator.describe Ktistec::Model::Linked do
       before_each { HTTP::Client.objects[object.iri] = %Q|{"@type":5}| }
 
       it "raises an error" do
-        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(TypeCastError)
+        expect { subject.dereference(key_pair, object.iri, deadline: nil) }.to raise_error(Ktistec::JSON_LD::Error)
       end
     end
 

@@ -1338,7 +1338,7 @@ module ActivityPub
         end
         {
           "iri"               => object_iri,
-          "_type"             => json.dig?("@type").try(&.as_s.split("#").last),
+          "_type"             => json.dig?("@type").try(&.as_s?).try(&.split("#").last),
           "published"         => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#published"),
           "updated"           => Ktistec::JSON_LD.dig_time?(json, "https://www.w3.org/ns/activitystreams#updated"),
           "attributed_to_iri" => attributed_to_iri,
@@ -1394,7 +1394,7 @@ module ActivityPub
             # some servers (e.g. Threads) omit `mediaType`
             media_type ||= Attachment.infer_media_type(url) if url
             name = ActivityPub.dig_text?(attachment, "https://www.w3.org/ns/activitystreams#name").presence
-            focal_point = Attachment.focal_point?(attachment.as_h["http://joinmastodon.org/ns#focalPoint"]?)
+            focal_point = Attachment.focal_point?(attachment.as_h?.try(&.["http://joinmastodon.org/ns#focalPoint"]?))
             ActivityPub::Object::Attachment.new(url, media_type, name, focal_point) if url && media_type
           end,
           "urls" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#url"),

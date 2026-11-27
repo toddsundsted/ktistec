@@ -131,7 +131,7 @@ module ActivityPub
         json = Ktistec::JSON_LD.expand(JSON.parse(json)) if json.is_a?(String | IO)
         collection_iri = json.dig?("@id").try(&.as_s?)
         {
-          "iri"        => json.dig?("@id").try(&.as_s),
+          "iri"        => json.dig?("@id").try(&.as_s?),
           "items_iris" => Ktistec::JSON_LD.dig_ids?(json, "https://www.w3.org/ns/activitystreams#items"),
           "items"      => if (items = json.dig?("https://www.w3.org/ns/activitystreams#items"))
             map_items(items, collection_iri)
@@ -207,9 +207,9 @@ module ActivityPub
 
       private def self.map_items(items, collection_iri)
         ([] of ActivityPub | String).tap do |array|
-          items.as_a.each do |item|
-            if item.as_s?
-              array << item.as_s
+          (items.as_a? || [items]).each do |item|
+            if (string = item.as_s?)
+              array << string
             elsif item.as_h?
               if (item_id = item.dig?("@id").try(&.as_s?))
                 if Ktistec::Util.same_origin?(item_id, collection_iri)
@@ -219,7 +219,7 @@ module ActivityPub
                 end
               end
             else
-              raise TypeCastError.new("unsupported JSON type")
+              raise Ktistec::JSON_LD::Error.new("unsupported JSON type")
             end
           end
         end

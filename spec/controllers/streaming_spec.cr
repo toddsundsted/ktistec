@@ -7,6 +7,13 @@ require "../spec_helper/factory"
 Spectator.describe StreamingController do
   setup_spec
 
+  describe "GET /stream/everything" do
+    it "returns 401 if not authorized" do
+      get "/stream/everything"
+      expect(response.status_code).to eq(401)
+    end
+  end
+
   describe "GET /stream/mentions/:mention" do
     it "returns 401 if not authorized" do
       get "/stream/mentions/mention@example.com"
@@ -105,13 +112,6 @@ Spectator.describe StreamingController do
   describe "GET /stream/actor/homepage" do
     it "returns 401 if not authorized" do
       get "/stream/actor/homepage"
-      expect(response.status_code).to eq(401)
-    end
-  end
-
-  describe "GET /stream/everything" do
-    it "returns 401 if not authorized" do
-      get "/stream/everything"
       expect(response.status_code).to eq(401)
     end
   end
@@ -577,10 +577,12 @@ Spectator.describe StreamingController do
   end
 
   describe ".setup_response" do
+    let(method) { "GET" }
+
     subject do
       String.build do |io|
-        response = HTTP::Server::Response.new(io)
-        described_class.setup_response(response)
+        env = HTTP::Server::Context.new(HTTP::Request.new(method, "/"), HTTP::Server::Response.new(io))
+        described_class.setup_response(env)
       end
     end
 
@@ -594,6 +596,14 @@ Spectator.describe StreamingController do
 
     it "sets X-Accel-Buffering" do
       expect(subject.lines).to have("X-Accel-Buffering: no")
+    end
+
+    context "given a HEAD request" do
+      let(method) { "HEAD" }
+
+      it "leaves the headers unwritten" do
+        expect(subject).to be_empty
+      end
     end
   end
 

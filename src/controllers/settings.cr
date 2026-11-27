@@ -93,13 +93,7 @@ class SettingsController
   private def self.actor_params(env)
     params = (env.params.body.presence || env.params.json)
 
-    # check for the presense of uploaded files. `rescue` because the
-    # `files` invocation will fail if called on anything other than
-    # form data, or on malformed/truncated multipart form data.
-    files = begin
-      env.params.files.presence
-    rescue HTTP::FormData::Error | MIME::Multipart::Error
-    end
+    files = env.params.files.presence if env.multipart?
     if files
       ["image", "icon"].each do |name|
         if (upload = files[name]?) && (filename = upload.filename.presence) && upload.tempfile.size > 0
@@ -141,13 +135,7 @@ class SettingsController
   private def self.service_params(env)
     params = (env.params.body.presence || env.params.json)
 
-    # check for the presense of uploaded files. `rescue` because the
-    # `files` invocation will fail if called on anything other than
-    # form data, or on malformed/truncated multipart form data.
-    files = begin
-      env.params.files.presence
-    rescue HTTP::FormData::Error | MIME::Multipart::Error
-    end
+    files = env.params.files.presence if env.multipart?
     if files
       ["image"].each do |name|
         if (upload = files[name]?) && (filename = upload.filename.presence) && upload.tempfile.size > 0

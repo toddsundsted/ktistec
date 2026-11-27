@@ -22,7 +22,7 @@
 
 require "spectator"
 
-require "../../src/framework/csrf"
+require "../../../src/framework/handlers/csrf"
 
 private def process_request_and_return_response(handler, request)
   io = IO::Memory.new
@@ -99,6 +99,31 @@ Spectator.describe Ktistec::CSRF do
     handler = described_class.new
     request = HTTP::Request.new("POST", "/",
       headers: HTTP::Headers{"Content-Type" => "text/plain"},
+    )
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(403)
+  end
+
+  it "blocks POSTs with mixed-case content types without the token" do
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/",
+      body: "foo=bar",
+      headers: HTTP::Headers{"Content-Type" => "Application/X-WWW-Form-Urlencoded"},
+    )
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(403)
+
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/",
+      body: %Q|--1Aa\r\nContent-Disposition: form-data; name="foo"\r\n\r\nbar\r\n--1Aa--"|,
+      headers: HTTP::Headers{"Content-Type" => "Multipart/Form-Data; boundary=1Aa"},
+    )
+    _, client_response = process_request_and_return_response(handler, request)
+    expect(client_response.status_code).to eq(403)
+
+    handler = described_class.new
+    request = HTTP::Request.new("POST", "/",
+      headers: HTTP::Headers{"Content-Type" => "TEXT/PLAIN"},
     )
     _, client_response = process_request_and_return_response(handler, request)
     expect(client_response.status_code).to eq(403)

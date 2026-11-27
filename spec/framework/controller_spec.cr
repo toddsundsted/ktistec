@@ -63,6 +63,26 @@ class FooBarController
   end
 end
 
+Spectator.describe HTTP::Server::Context do
+  describe "#multipart?" do
+    let(headers) { HTTP::Headers.new }
+
+    subject { HTTP::Server::Context.new(HTTP::Request.new("POST", "/", headers), HTTP::Server::Response.new(IO::Memory.new)) }
+
+    it "is false" do
+      expect(subject.multipart?).to be_false
+    end
+
+    context "given a mixed-case multipart content type" do
+      before_each { headers["Content-Type"] = "Multipart/Form-Data; boundary=1Aa" }
+
+      it "is true" do
+        expect(subject.multipart?).to be_true
+      end
+    end
+  end
+end
+
 Spectator.describe Ktistec::Controller do
   describe "GET /foo/bar/accepts" do
     it "responds with html" do

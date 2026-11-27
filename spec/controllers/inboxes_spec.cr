@@ -234,6 +234,26 @@ Spectator.describe InboxesController do
       expect(response.status_code).to eq(400)
     end
 
+    context "given a body that is not JSON" do
+      let(body) { %q({"type":) }
+
+      it "rejects the body" do
+        post "/actors/#{actor.username}/inbox", headers, body
+        expect(JSON.parse(response.body)["msg"]).to eq("invalid json")
+        expect(response.status_code).to eq(400)
+      end
+    end
+
+    context "given a body that is not a JSON-LD object" do
+      let(body) { %q([{"type":"Create"}]) }
+
+      it "rejects the body" do
+        post "/actors/#{actor.username}/inbox", headers, body
+        expect(JSON.parse(response.body)["msg"]).to eq("invalid json-ld")
+        expect(response.status_code).to eq(400)
+      end
+    end
+
     context "given a body that is not valid UTF-8" do
       let(body) { %Q({"a":"\xFF"}) }
 

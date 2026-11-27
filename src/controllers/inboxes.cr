@@ -343,7 +343,15 @@ class InboxesController
 
     Log.trace { "[#{request_id}] new post" }
 
-    json_ld = Ktistec::JSON_LD.expand(JSON.parse(body))
+    json_ld =
+      begin
+        Ktistec::JSON_LD.expand(JSON.parse(body))
+      rescue JSON::ParseException
+        bad_request("Invalid JSON")
+      rescue ex : Ktistec::JSON_LD::Error
+        Log.debug { "[#{request_id}] invalid JSON-LD: #{ex.message}" }
+        bad_request("Invalid JSON-LD")
+      end
 
     # detect a community-relayed activity.
 
